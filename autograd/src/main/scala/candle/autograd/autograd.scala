@@ -2,8 +2,9 @@ package candle.autograd
 import org.saddle._
 import org.saddle.ops.BinOps._
 import org.saddle.linalg._
-import aten.Tensor
+import aten.{Tensor, ATen}
 import java.{util => ju}
+import aten.TensorOptions
 
 /**
   * Params: the input and the function which calculates the partial derivative
@@ -34,29 +35,35 @@ import java.{util => ju}
   */
 trait Op {
   val value: Variable
-  val params: List[(Variable, (Mat[Double], Mat[Double]) => Unit)]
+  val params: List[(Variable, (Tensor, Tensor) => Unit)]
 }
 
+// Variable takes ownership of the value:Tensor
+// therefore it must be the sole owner
 case class Variable(
     op: Op,
-    value: Mat[Double],
+    value: Tensor,
     needsGrad: Boolean = true
 ) {
+  def release() = value.release
+
   val id = ju.UUID.randomUUID()
 
   def detached = copy(needsGrad = false)
 
   def backprop(): Unit = Autograd.backprop(this)
 
-  def zipBackward(fn: (Mat[Double], Mat[Double]) => Unit) = (this, fn)
+  def zipBackward(fn: (Tensor, Tensor) => Unit) = (this, fn)
 
   def accumulateGrad(
-      incoming: Mat[Double],
-      computeGrad: (Mat[Double], Mat[Double]) => Unit
+      incoming: Tensor,
+      computeGrad: (Tensor, Tensor) => Unit
   ) = if (needsGrad) {
 
     if (partialDerivative.isEmpty) {
-      partialDerivative = Some(mat.zeros(value.numRows, value.numCols))
+      partialDerivative = Some(
+        ATen.zeros(value.sizes, TensorOptions.dtypeDouble)
+      )
     }
     computeGrad(incoming, partialDerivative.get)
   }
@@ -65,27 +72,27 @@ case class Variable(
     if (printValue)
       s"$op == $value"
     else s"$op"
-  var partialDerivative: Option[Mat[Double]] = None
+  var partialDerivative: Option[Tensor] = None
 
   def +(other: Variable) = Add(this, other).value
   def -(other: Variable) = Minus(this, other).value
   def *(other: Variable) = Mult(this, other).value
-  def /(other: Variable) = Div(this, other).value
-  def mm(other: Variable) = MatMul(this, other).value
-  def relu = Relu(this).value
+  // def /(other: Variable) = Div(this, other).value
+  // def mm(other: Variable) = MatMul(this, other).value
+  // def relu = Relu(this).value
   def sum = Sum(this).value
-  def rowSum = RowSum(this).value
-  def colSum = ColSum(this).value
-  def exp = Exp(this).value
-  def log = Log(this).value
-  def sin = Sin(this).value
-  def cos = Cos(this).value
-  def tan = Tan(this).value
-  def atan = ArcTan(this).value
-  def pow(const: Double) = PowConst(this, const).value
-  def logSoftMax = LogSoftMaxRowWise(this).value
-  def crossEntropy(other: Variable) = CrossEntropyRowWiseLog(this, other).value
-  def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
+  // def rowSum = RowSum(this).value
+  // def colSum = ColSum(this).value
+  // def exp = Exp(this).value
+  // def log = Log(this).value
+  // def sin = Sin(this).value
+  // def cos = Cos(this).value
+  // def tan = Tan(this).value
+  // def atan = ArcTan(this).value
+  // def pow(const: Double) = PowConst(this, const).value
+  // def logSoftMax = LogSoftMaxRowWise(this).value
+  // def crossEntropy(other: Variable) = CrossEntropyRowWiseLog(this, other).value
+  // def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
 
 }
 
@@ -119,7 +126,9 @@ object Autograd {
 
   }
   def backprop(v: Variable): Unit = {
-    v.partialDerivative = Some(mat.ones(v.value.numRows, v.value.numCols))
+    v.partialDerivative = Some(
+      ATen.ones_like(v.value, TensorOptions.dtypeDouble)
+    )
     topologicalSort(v).foreach { v =>
       v.op.params.foreach {
         case (v1, computeGrad) =>

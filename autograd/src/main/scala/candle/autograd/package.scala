@@ -1,6 +1,7 @@
 package candle
 import org.saddle.Mat
+import aten.Tensor
 package object autograd {
-  def const(m: Mat[Double]): Variable = Constant(m).value.detached
-  def param(m: Mat[Double]): Variable = Constant(m).value
+  def const(m: Tensor): Variable = Constant(m).value.detached
+  def param(m: Tensor): Variable = Constant(m).value
 }
