@@ -38,7 +38,7 @@ trait Op {
   val params: List[(Variable, (Tensor, Tensor) => Unit)]
 }
 
-// Variable takes ownership of the value:Tensor
+// Variable takes ownership of the value: Tensor
 // therefore it must be the sole owner
 case class Variable(
     op: Op,
@@ -77,22 +77,22 @@ case class Variable(
   def +(other: Variable) = Add(this, other).value
   def -(other: Variable) = Minus(this, other).value
   def *(other: Variable) = Mult(this, other).value
-  // def /(other: Variable) = Div(this, other).value
-  // def mm(other: Variable) = MatMul(this, other).value
-  // def relu = Relu(this).value
+  def /(other: Variable) = Div(this, other).value
+  def mm(other: Variable) = MatMul(this, other).value
+  def relu = Relu(this).value
   def sum = Sum(this).value
-  // def rowSum = RowSum(this).value
-  // def colSum = ColSum(this).value
-  // def exp = Exp(this).value
-  // def log = Log(this).value
-  // def sin = Sin(this).value
-  // def cos = Cos(this).value
-  // def tan = Tan(this).value
-  // def atan = ArcTan(this).value
-  // def pow(const: Double) = PowConst(this, const).value
-  // def logSoftMax = LogSoftMaxRowWise(this).value
-  // def crossEntropy(other: Variable) = CrossEntropyRowWiseLog(this, other).value
-  // def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
+  def rowSum = RowSum(this).value
+  def colSum = ColSum(this).value
+  def exp = Exp(this).value
+  def log = Log(this).value
+  def sin = Sin(this).value
+  def cos = Cos(this).value
+  def tan = Tan(this).value
+  def atan = ArcTan(this).value
+  def pow(const: Double) = PowConst(this, const).value
+  def logSoftMax = LogSoftMaxRowWise(this).value
+  def crossEntropy(other: Variable) = ((this.*(other)).rowSum).*(const(-1))
+  def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
 
 }
 
