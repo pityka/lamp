@@ -64,6 +64,7 @@ lazy val autograd = project
   .in(file("autograd"))
   .settings(commonSettings: _*)
   .settings(
+    name := "lamp-autograd",
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "saddle-core" % "2.0.0-M24",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M24",

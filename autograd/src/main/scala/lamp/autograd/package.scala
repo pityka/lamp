@@ -1,4 +1,4 @@
-package candle
+package lamp
 import org.saddle.Mat
 import aten.Tensor
 import aten.ATen

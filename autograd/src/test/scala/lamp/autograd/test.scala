@@ -1,4 +1,4 @@
-package candle.autograd
+package lamp.autograd
 
 import org.saddle._
 import org.saddle.ops.BinOps._

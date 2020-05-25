@@ -1,4 +1,4 @@
-package candle.autograd
+package lamp.autograd
 
 import aten.Tensor
 import org.saddle._
