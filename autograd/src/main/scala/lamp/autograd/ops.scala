@@ -6,17 +6,35 @@ import java.{util => ju}
 import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
+import TensorHelpers.{unbroadcast => ub}
 
 case class Constant(const: Tensor) extends Op {
   val params = Nil
-  val value = Variable(this, const)
+  val value = Variable(this, const, leaf = true)
   override def toString = s"$const"
+}
+case class Transpose(a: Variable) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val tmp = ATen.t(p)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release()
+    }
+  )
+  val value = Variable(this, ATen.t(a.value))
+  override def toString = s"T(${a.stringify()})"
 }
 
 case class Add(a: Variable, b: Variable) extends Op {
   val params = List(
-    a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) },
-    b.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) }
+    a.zipBackward { (p, out) =>
+      val p2 = ub(p, a.sizes)
+      ATen.add_out(out, out, p2, 1d)
+    },
+    b.zipBackward { (p, out) =>
+      val p2 = ub(p, b.sizes)
+      ATen.add_out(out, out, p2, 1d)
+    }
   )
   val value = Variable(this, ATen.add_0(a.value, b.value, 1d))
 

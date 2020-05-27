@@ -213,26 +213,33 @@ class GradientSuite extends AnyFunSuite {
       x1.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
   }
-  // testGradientAndValue("crossentropy - left")(mat2x3, -182.0) {
-  //   (m, doBackprop) =>
-  //     val x1 = param(m)
-  //     val x2 = param(mat2x3 * 2)
-  //     val L = x1.crossEntropy(x2).sum
-  //     if (doBackprop) {
-  //       L.backprop()
-  //     }
-  //     (L.value.raw(0), x1.partialDerivative)
-  // }
-  // testGradientAndValue("crossentropy - right")(mat2x3, -182.0) {
-  //   (m, doBackprop) =>
-  //     val x1 = param(m)
-  //     val x2 = param(mat2x3 * 2)
-  //     val L = x2.crossEntropy(x1).sum
-  //     if (doBackprop) {
-  //       L.backprop()
-  //     }
-  //     (L.value.raw(0), x1.partialDerivative)
-  // }
+  testGradientAndValue("crossentropy - left")(mat2x3, -182.0) {
+    (m, doBackprop) =>
+      val x1 = param(TensorHelpers.fromMat(m))
+      val x2 = param(TensorHelpers.fromMat(mat2x3 * 2))
+      
+      val L = x1.crossEntropy(x2).sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+      )
+  }
+  testGradientAndValue("crossentropy - right")(mat2x3, -182.0) {
+    (m, doBackprop) =>
+      val x1 = param(TensorHelpers.fromMat(m))
+      val x2 = param(TensorHelpers.fromMat(mat2x3 * 2))
+      val L = x2.crossEntropy(x1).sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+      )
+  }
 
   testGradientAndValue("relu")(mat2x3_2, 16d) { (m, doBackprop) =>
     val x1 = param(TensorHelpers.fromMat(m))
@@ -339,6 +346,17 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("squaredFrobenius")(mat2x3_2, 91d) { (m, doBackprop) =>
     val x1 = param(TensorHelpers.fromMat(m))
     val L = x1.squaredFrobenius.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
+  testGradientAndValue("transpose")(mat2x3_2, 11d) { (m, doBackprop) =>
+    val x1 = param(TensorHelpers.fromMat(m))
+    val L = x1.t.sum
     if (doBackprop) {
       L.backprop()
     }

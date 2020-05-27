@@ -36,6 +36,7 @@ import aten.TensorOptions
 trait Op {
   val value: Variable
   val params: List[(Variable, (Tensor, Tensor) => Unit)]
+  def release(): Unit = params.filterNot(_._1.leaf).foreach(_._1.release)
 }
 
 // Variable takes ownership of the value: Tensor
@@ -43,15 +44,40 @@ trait Op {
 case class Variable(
     op: Op,
     value: Tensor,
-    needsGrad: Boolean = true
+    needsGrad: Boolean = true,
+    leaf: Boolean = true
 ) {
-  def release() = value.release
+
+  var partialDerivative: Option[Tensor] = None
+
+  val sizes = value.sizes.toList
 
   val id = ju.UUID.randomUUID()
 
+  def release(): Unit = {
+    value.release
+    op.release
+  }
   def detached = copy(needsGrad = false)
+  def zeroGrad() = {
+    partialDerivative.foreach { t => ATen.zero_(t) }
+  }
 
-  def backprop(): Unit = Autograd.backprop(this)
+  def wengert = Autograd.topologicalSort(this)
+
+  def backprop(): Unit = {
+    partialDerivative = Some(
+      ATen.ones_like(value, TensorOptions.dtypeDouble)
+    )
+    wengert.foreach { v =>
+      v.op.params.foreach {
+        case (v1, computeGrad) =>
+          v1.accumulateGrad(v.partialDerivative.get, computeGrad)
+
+      }
+    }
+
+  }
 
   def zipBackward(fn: (Tensor, Tensor) => Unit) = (this, fn)
 
@@ -72,8 +98,8 @@ case class Variable(
     if (printValue)
       s"$op == $value"
     else s"$op"
-  var partialDerivative: Option[Tensor] = None
 
+  def t = Transpose(this).value
   def +(other: Variable) = Add(this, other).value
   def -(other: Variable) = Minus(this, other).value
   def *(other: Variable) = Mult(this, other).value
@@ -91,14 +117,14 @@ case class Variable(
   def atan = ArcTan(this).value
   def pow(const: Double) = PowConst(this, const).value
   def logSoftMax = LogSoftMaxRowWise(this).value
-  def crossEntropy(other: Variable) = ((this.*(other)).rowSum).*(const(-1))
+  def crossEntropy(other: Variable) = (const(-1)) * ((this.*(other)).rowSum)
   def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
 
 }
 
 object Autograd {
 
-  private def topologicalSort[D](root: Variable): Seq[Variable] = {
+  private[autograd] def topologicalSort[D](root: Variable): Seq[Variable] = {
     type V = Variable
     var order = List.empty[V]
     var marks = Set.empty[ju.UUID]
@@ -125,17 +151,5 @@ object Autograd {
     order
 
   }
-  def backprop(v: Variable): Unit = {
-    v.partialDerivative = Some(
-      ATen.ones_like(v.value, TensorOptions.dtypeDouble)
-    )
-    topologicalSort(v).foreach { v =>
-      v.op.params.foreach {
-        case (v1, computeGrad) =>
-          v1.accumulateGrad(v.partialDerivative.get, computeGrad)
 
-      }
-    }
-
-  }
 }

@@ -68,7 +68,7 @@ lazy val autograd = project
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "saddle-core" % "2.0.0-M24",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M24",
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+4-1e75fdbc+20200525-2021",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+6-5132b75d+20200527-1849",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     )
   )
