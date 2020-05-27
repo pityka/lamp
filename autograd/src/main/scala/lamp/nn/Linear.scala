@@ -15,16 +15,6 @@ case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
     bias.map(_ + v).getOrElse(v)
 
   }
-
-  def withWeights(t: Variable) = {
-    assert(t.sizes == weights.sizes)
-    copy(weights = t)
-  }
-  def withBias(t: Variable) = {
-    assert(t.sizes == List(weights.sizes.dropRight(1).last))
-    copy(bias = Some(t))
-  }
-  def withoutBias = copy(bias = None)
 }
 
 object Linear {

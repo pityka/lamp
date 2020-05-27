@@ -108,7 +108,7 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
       param(ATen.ones(Array(k, dim), TensorOptions.dtypeDouble)),
       Some(param(ATen.ones(Array(1, k), TensorOptions.dtypeDouble)))
     ),
-    (v: Variable) => v.logSoftMax
+    (_: Variable).logSoftMax
   )
 
   def forward(x: Variable): Variable =
