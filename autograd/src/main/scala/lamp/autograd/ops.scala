@@ -42,8 +42,8 @@ case class Add(a: Variable, b: Variable) extends Op {
 }
 case class Minus(a: Variable, b: Variable) extends Op {
   val params = List(
-    a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) },
-    b.zipBackward { (p, out) => ATen.add_out(out, out, p, -1d) }
+    a.zipBackward { (p, out) => ATen.add_out(out, out, ub(p, a.sizes), 1d) },
+    b.zipBackward { (p, out) => ATen.add_out(out, out, ub(p, b.sizes), -1d) }
   )
   val value = Variable(this, ATen.add_0(a.value, b.value, -1d))
 
@@ -52,8 +52,16 @@ case class Minus(a: Variable, b: Variable) extends Op {
 
 case class Mult(a: Variable, b: Variable) extends Op {
   val params = List(
-    a.zipBackward { (p, out) => ATen.addcmul_out(out, out, p, b.value, 1d) },
-    b.zipBackward { (p, out) => ATen.addcmul_out(out, out, p, a.value, 1d) }
+    a.zipBackward { (p, out) =>
+      val tmp = ATen.mul_0(p, b.value)
+      ATen.add_out(out, out, ub(tmp, a.sizes), 1d)
+      tmp.release
+    },
+    b.zipBackward { (p, out) =>
+      val tmp = ATen.mul_0(p, a.value)
+      ATen.add_out(out, out, ub(tmp, b.sizes), 1d)
+      tmp.release
+    }
   )
 
   val value = Variable(this, ATen.mul_0(a.value, b.value))
@@ -62,11 +70,16 @@ case class Mult(a: Variable, b: Variable) extends Op {
 }
 case class Div(a: Variable, b: Variable) extends Op {
   val params = List(
-    a.zipBackward { (p, out) => ATen.addcdiv_out(out, out, p, b.value, 1d) },
+    a.zipBackward { (p, out) =>
+      val tmp = ATen.div_0(p, b.value)
+      ATen.add_out(out, out, ub(tmp, a.sizes), 1d)
+      tmp.release
+    },
     b.zipBackward { (p, out) =>
       // out += p * (a.value * b.value.map(x => -1d / (x * x)))
       val tmp = ATen.div_0(value.value, b.value)
-      ATen.addcmul_out(out, out, p, tmp, -1d)
+      ATen.mul_out(tmp, tmp, p)
+      ATen.add_out(out, out, ub(tmp, b.sizes), -1d)
       tmp.release()
     }
   )

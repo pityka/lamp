@@ -22,7 +22,7 @@ object TensorHelpers {
       val dims = zipped.zipWithIndex
         .filter { case ((a, b), _) => a == 1 && b > 1 }
       val narrowed = dims.map(_._2).foldLeft(p) { (t, dim) =>
-        val r = ATen.sum_1(t, Array(dim), false)
+        val r = ATen.sum_1(t, Array(dim), true)
         if (t != p) {
           t.release
         }
