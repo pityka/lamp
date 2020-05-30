@@ -18,14 +18,19 @@ case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
 }
 
 object Linear {
-  def apply(in: Int, out: Int, bias: Boolean = true): Linear =
+  def apply(
+      in: Int,
+      out: Int,
+      bias: Boolean = true,
+      tOpt: TensorOptions = TensorOptions.dtypeDouble
+  ): Linear =
     Linear(
       weights = param(
-        ATen.rand(Array(out, in), TensorOptions.dtypeDouble)
+        ATen.rand(Array(out, in), tOpt)
       ),
       bias =
         if (bias)
-          Some(param(ATen.rand(Array(1, out), TensorOptions.dtypeDouble)))
+          Some(param(ATen.rand(Array(1, out), tOpt)))
         else None
     )
 }

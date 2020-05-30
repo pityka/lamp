@@ -48,6 +48,8 @@ case class Variable(
     leaf: Boolean = true
 ) {
 
+  def options = value.options
+
   var partialDerivative: Option[Tensor] = None
 
   val sizes = value.sizes.toList
@@ -67,7 +69,7 @@ case class Variable(
 
   def backprop(): Unit = {
     partialDerivative = Some(
-      ATen.ones_like(value, TensorOptions.dtypeDouble)
+      ATen.ones_like(value, value.options)
     )
     wengert.foreach { v =>
       v.op.params.foreach {
