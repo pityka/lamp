@@ -78,7 +78,7 @@ lazy val autograd = project
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "saddle-core" % "2.0.0-M24",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M24",
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+19-2264ef08",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+19-2264ef08+20200530-2239",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),

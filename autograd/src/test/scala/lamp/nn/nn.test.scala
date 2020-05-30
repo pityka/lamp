@@ -16,9 +16,10 @@ class NNSuite extends AnyFunSuite {
   def testGradientAndValue(
       id: String,
       cuda: Boolean = false
-  )(m: Mat[Double], module: Module, expectedValue: Double) =
+  )(m: Mat[Double], moduleF: () => Module, expectedValue: Double) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
       val d = const(TensorHelpers.fromMat(m, cuda))
+      val module = moduleF()
       val output = module.forward(d)
       val sum = output.sum
       val value = TensorHelpers.toMat(sum.value).raw(0)
@@ -74,26 +75,32 @@ class NNSuite extends AnyFunSuite {
   }
   testGradientAndValue("Linear 0")(
     mat2x3,
-    Linear(
-      param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
-      Some(param(ATen.ones(Array(1), TensorOptions.dtypeDouble)))
-    ),
+    () =>
+      Linear(
+        param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
+        Some(param(ATen.ones(Array(1), TensorOptions.dtypeDouble)))
+      ),
     23d
   )
   testGradientAndValue("Logistic 1")(
     mat3x2,
-    LogisticRegression1(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
+    () => LogisticRegression1(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
     151.0000008318073
   )
   testGradientAndValue("Logistic 2")(
     mat3x2,
-    LogisticRegression2(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
+    () => LogisticRegression2(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
     12.295836866004327
   )
   testGradientAndValue("Logistic 2 - cuda", true)(
     mat3x2,
-    LogisticRegression2(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
-    12.295836866004327
+    () =>
+      LogisticRegression2(
+        2,
+        3,
+        const(TensorHelpers.fromMat(mat.ident(3), cuda = true))
+      ),
+    12.295836866004326
   )
 
 }

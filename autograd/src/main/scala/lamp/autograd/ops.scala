@@ -170,7 +170,7 @@ case class Tan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
     val tmp1 = ATen.pow_0(value.value, 2d)
     val one =
-      ATen.ones(Array(1L), TensorOptions.fromScalarType(tmp1.scalarType))
+      ATen.ones(Array(1L), tmp1.options)
     ATen.add_out(tmp1, tmp1, one, 1d)
     ATen.addcmul_out(out, out, p, tmp1, 1d)
     tmp1.release
@@ -183,7 +183,7 @@ case class ArcTan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
     val tmp1 = ATen.pow_0(a.value, 2d)
     val one =
-      ATen.ones(Array(1L), TensorOptions.fromScalarType(tmp1.scalarType))
+      ATen.ones(Array(1L), tmp1.options())
     ATen.add_out(tmp1, tmp1, one, 1d)
     ATen.reciprocal_(tmp1)
     ATen.addcmul_out(out, out, p, tmp1, 1d)
@@ -207,9 +207,9 @@ case class Relu(a: Variable) extends Op {
     a.zipBackward { (p, out) =>
       val pred = ATen.lt_0(a.value, 0d)
       val ones =
-        ATen.ones(Array(1), TensorOptions.fromScalarType(a.value.scalarType()))
+        ATen.ones(Array(1), a.value.options)
       val zeros =
-        ATen.zeros(Array(1), TensorOptions.fromScalarType(a.value.scalarType()))
+        ATen.zeros(Array(1), a.value.options)
       val tmp = ATen.where_0(pred, zeros, ones)
       ATen.addcmul_out(out, out, p, tmp, 1d)
       tmp.release

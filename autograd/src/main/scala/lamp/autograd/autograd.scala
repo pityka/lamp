@@ -90,7 +90,7 @@ case class Variable(
 
     if (partialDerivative.isEmpty) {
       partialDerivative = Some(
-        ATen.zeros(value.sizes, TensorOptions.dtypeDouble)
+        ATen.zeros(value.sizes, value.options())
       )
     }
     computeGrad(incoming, partialDerivative.get)
