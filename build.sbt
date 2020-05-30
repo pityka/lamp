@@ -69,8 +69,8 @@ lazy val commonSettings = Seq(
 
 lazy val Cuda = config("cuda").extend(Test)
 
-lazy val autograd = project
-  .in(file("autograd"))
+lazy val core = project
+  .in(file("core"))
   .configs(Cuda)
   .settings(commonSettings: _*)
   .settings(
@@ -92,4 +92,4 @@ lazy val root = project
   .settings(
     publishArtifact := false
   )
-  .aggregate(autograd)
+  .aggregate(core)
