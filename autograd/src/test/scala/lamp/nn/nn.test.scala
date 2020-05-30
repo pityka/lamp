@@ -7,14 +7,18 @@ import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
 import lamp.autograd._
 import aten.TensorOptions
+import org.scalatest.Tag
+
+object CudaTest extends Tag("cuda")
 
 class NNSuite extends AnyFunSuite {
 
   def testGradientAndValue(
-      id: String
+      id: String,
+      cuda: Boolean = false
   )(m: Mat[Double], module: Module, expectedValue: Double) =
-    test(id + ": gradient is correct") {
-      val d = const(TensorHelpers.fromMat(m))
+    test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+      val d = const(TensorHelpers.fromMat(m, cuda))
       val output = module.forward(d)
       val sum = output.sum
       val value = TensorHelpers.toMat(sum.value).raw(0)
@@ -23,7 +27,7 @@ class NNSuite extends AnyFunSuite {
         val oldparam = ATen.clone(paramT.value)
         val param = TensorHelpers.toMat(paramT.value)
         def f(p: Mat[Double]) = {
-          val p2 = TensorHelpers.fromMat(p)
+          val p2 = TensorHelpers.fromMat(p, cuda)
           ATen.zero_(paramT.value)
           ATen.add_out(
             paramT.value,
@@ -86,6 +90,11 @@ class NNSuite extends AnyFunSuite {
     LogisticRegression2(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
     12.295836866004327
   )
+  testGradientAndValue("Logistic 2 - cuda", true)(
+    mat3x2,
+    LogisticRegression2(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
+    12.295836866004327
+  )
 
 }
 
@@ -105,8 +114,8 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
 
   val mod = Sequential(
     Linear(
-      param(ATen.ones(Array(k, dim), TensorOptions.dtypeDouble)),
-      Some(param(ATen.ones(Array(1, k), TensorOptions.dtypeDouble)))
+      param(ATen.ones(Array(k, dim), y.options)),
+      Some(param(ATen.ones(Array(1, k), y.options)))
     ),
     (_: Variable).logSoftMax
   )

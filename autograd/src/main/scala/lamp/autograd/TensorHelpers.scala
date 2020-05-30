@@ -52,13 +52,17 @@ object TensorHelpers {
       Mat.apply(1, shape(0).toInt, arr)
     } else ???
   }
-  def fromMat(m: Mat[Double]) = {
+  def fromMat(m: Mat[Double], cuda: Boolean = false) = {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.numRows.toLong, m.numCols.toLong),
       TensorOptions.dtypeDouble
     )
     t.copyFromDoubleArray(arr)
-    t
+    if (cuda) {
+      val t2 = t.cuda
+      t.release
+      t2
+    } else t
   }
 }

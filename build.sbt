@@ -1,3 +1,8 @@
+resolvers in ThisBuild += Resolver.githubPackages("pityka")
+
+githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
+  .Environment("GITHUB_TOKEN")
+
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.11",
   parallelExecution in Test := false,
@@ -57,20 +62,29 @@ lazy val commonSettings = Seq(
       </developers>
   },
   fork := true,
-  cancelable in Global := true
+  cancelable in Global := true,
+  githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
+    .Environment("GITHUB_TOKEN")
 )
+
+lazy val Cuda = config("cuda").extend(Test)
 
 lazy val autograd = project
   .in(file("autograd"))
+  .configs(Cuda)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-autograd",
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "saddle-core" % "2.0.0-M24",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M24",
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+15-ea370e83",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+19-2264ef08",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
-    )
+    ),
+    inConfig(Cuda)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda"),
+    testOptions in Cuda -= Tests.Argument("-l", "cuda"),
+    testOptions in Cuda += Tests.Argument("-n", "cuda")
   )
 
 lazy val root = project
