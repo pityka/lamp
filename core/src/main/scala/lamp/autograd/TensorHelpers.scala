@@ -37,6 +37,10 @@ object TensorHelpers {
   }
 
   def toMat(t: Tensor) = {
+    assert(
+      t.options.scalarTypeByte == 7,
+      s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+    )
     val shape = t.sizes()
     if (shape.size == 2) {
       val arr = Array.ofDim[Double]((shape(0) * shape(1)).toInt)
@@ -49,6 +53,26 @@ object TensorHelpers {
     } else if (shape.size == 1) {
       val arr = Array.ofDim[Double](shape(0).toInt)
       val data = t.copyToDoubleArray(arr)
+      Mat.apply(1, shape(0).toInt, arr)
+    } else ???
+  }
+  def toMatLong(t: Tensor) = {
+    assert(
+      t.options.scalarTypeByte == 4,
+      s"Expected Long Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+    )
+    val shape = t.sizes()
+    if (shape.size == 2) {
+      val arr = Array.ofDim[Long]((shape(0) * shape(1)).toInt)
+      val data = t.copyToLongArray(arr)
+      Mat.apply(shape(0).toInt, shape(1).toInt, arr)
+    } else if (shape.size == 0) {
+      val arr = Array.ofDim[Long](1)
+      val data = t.copyToLongArray(arr)
+      Mat.apply(1, 1, arr)
+    } else if (shape.size == 1) {
+      val arr = Array.ofDim[Long](shape(0).toInt)
+      val data = t.copyToLongArray(arr)
       Mat.apply(1, shape(0).toInt, arr)
     } else ???
   }
