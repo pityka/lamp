@@ -78,7 +78,8 @@ lazy val core = project
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "saddle-core" % "2.0.0-M24",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M24",
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+19-2264ef08+20200530-2239",
+      "org.typelevel" %% "cats-core" % "2.1.1",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+23-d6bc1b1d",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),

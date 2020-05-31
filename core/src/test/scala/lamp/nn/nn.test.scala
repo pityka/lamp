@@ -24,33 +24,34 @@ class NNSuite extends AnyFunSuite {
       val sum = output.sum
       val value = TensorHelpers.toMat(sum.value).raw(0)
       val gradAuto = module.gradients(sum).map(TensorHelpers.toMat)
-      val gradNum = module.parameters.map { paramT =>
-        val oldparam = ATen.clone(paramT.value)
-        val param = TensorHelpers.toMat(paramT.value)
-        def f(p: Mat[Double]) = {
-          val p2 = TensorHelpers.fromMat(p, cuda)
-          ATen.zero_(paramT.value)
-          ATen.add_out(
-            paramT.value,
-            paramT.value,
-            ATen._unsafe_view(p2, paramT.sizes.toArray),
-            1d
-          )
-          TensorHelpers.toMat(module.forward(d).sum.value).raw(0)
-        }
-        val eps = 1e-6
-        val r = mat.zeros(param.numRows, param.numCols).mapRows {
-          case (row, i) =>
-            (0 until row.length).map { j =>
-              val epsM = mat.zeros(param.numRows, param.numCols)
-              epsM(i, j) = eps
+      val gradNum = module.parameters.map {
+        case (paramT, _) =>
+          val oldparam = ATen.clone(paramT.value)
+          val param = TensorHelpers.toMat(paramT.value)
+          def f(p: Mat[Double]) = {
+            val p2 = TensorHelpers.fromMat(p, cuda)
+            ATen.zero_(paramT.value)
+            ATen.add_out(
+              paramT.value,
+              paramT.value,
+              ATen._unsafe_view(p2, paramT.sizes.toArray),
+              1d
+            )
+            TensorHelpers.toMat(module.forward(d).sum.value).raw(0)
+          }
+          val eps = 1e-6
+          val r = mat.zeros(param.numRows, param.numCols).mapRows {
+            case (row, i) =>
+              (0 until row.length).map { j =>
+                val epsM = mat.zeros(param.numRows, param.numCols)
+                epsM(i, j) = eps
 
-              (f(param + epsM) - f(param - epsM)) / (2 * eps)
-            }.toVec
-        }
-        ATen.zero_(paramT.value)
-        ATen.add_out(paramT.value, paramT.value, oldparam, 1d)
-        r
+                (f(param + epsM) - f(param - epsM)) / (2 * eps)
+              }.toVec
+          }
+          ATen.zero_(paramT.value)
+          ATen.add_out(paramT.value, paramT.value, oldparam, 1d)
+          r
       }
       assert(gradAuto.size == gradNum.size)
       gradAuto.zip(gradNum).foreach {
@@ -113,8 +114,8 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
   def forward(x: Variable): Variable =
     ((x.mm(w)).logSoftMax.crossEntropy(y).sum + w.squaredFrobenius)
 
-  def parameters: Seq[Variable] =
-    List(w)
+  def parameters: Seq[(Variable, PTag)] =
+    List(w -> NoTag)
 
 }
 case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
@@ -124,16 +125,16 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
       param(ATen.ones(Array(k, dim), y.options)),
       Some(param(ATen.ones(Array(1, k), y.options)))
     ),
-    (_: Variable).logSoftMax
+    Fun(_.logSoftMax)
   )
 
   def forward(x: Variable): Variable =
     mod.forward(x).crossEntropy(y).sum +
       mod.parameters
-        .map(_.squaredFrobenius)
+        .map(_._1.squaredFrobenius)
         .reduce(_ + _)
 
-  def parameters: Seq[Variable] =
+  def parameters: Seq[(Variable, PTag)] =
     mod.parameters
 
 }

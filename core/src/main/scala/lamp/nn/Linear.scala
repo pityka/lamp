@@ -7,8 +7,8 @@ import lamp.autograd.TensorHelpers
 case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
 
   val parameters = List(
-    weights
-  ) ++ bias.toList
+    weights -> Linear.Weights
+  ) ++ bias.toList.map(b => (b, Linear.Bias))
 
   def forward(x: Variable): Variable = {
     val v = x.mm(weights.t)
@@ -18,6 +18,8 @@ case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
 }
 
 object Linear {
+  case object Weights extends LeafTag
+  case object Bias extends LeafTag
   def apply(
       in: Int,
       out: Int,

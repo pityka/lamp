@@ -10,7 +10,7 @@ object TrainLoop {
       module: Module,
       data1: Tensor,
       target1: Tensor,
-      optimizerFactory: Seq[Variable] => Optimizer,
+      optimizerFactory: Seq[(Variable, PTag)] => Optimizer,
       epochs: Int
   ) = {
     val optim = optimizerFactory(module.parameters)
@@ -29,38 +29,42 @@ object TrainLoop {
 }
 
 case class Sequential(members: Module*) extends Module {
-  def parameters = members.flatMap(_.parameters)
+  def parameters =
+    members.flatMap(member =>
+      member.parameters.zipWithIndex.map {
+        case ((param, ptag), idx) => (param, Sequential.Tag(ptag, idx))
+      }
+    )
   def forward(x: Variable) =
     members.foldLeft(x)((x, b) => b.forward(x))
 }
+object Sequential {
+  case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
+    def leaf = t
+  }
+}
 
-case class FunctionModule(fun: Variable => Variable) extends Module {
+case class Fun(fun: Variable => Variable) extends Module {
   def parameters = Nil
   def forward(x: Variable): Variable = fun(x)
 }
 
 trait Module {
   def forward(x: Variable): Variable
-  def parameters: Seq[Variable]
+  def parameters: Seq[(Variable, PTag)]
   def gradients(loss: Variable): Seq[Tensor] = {
-    parameters.foreach(_.zeroGrad())
+    parameters.foreach { case (param, _) => param.zeroGrad() }
     loss.backprop()
-    val g = parameters.map(_.partialDerivative.get)
+    val g = parameters.map { case (param, _) => param.partialDerivative.get }
     loss.release
     g
   }
 }
 
-trait Optimizer {
-  def step(gradients: Seq[Tensor]): Unit
+trait PTag {
+  def leaf: PTag
 }
-
-case class SGD(learningRate: Double, parameters: Seq[Tensor])
-    extends Optimizer {
-  def step(gradients: Seq[Tensor]) = {
-    parameters.zip(gradients).foreach {
-      case (param, gradients) =>
-        ATen.add_out(param, param, gradients, learningRate)
-    }
-  }
+trait LeafTag extends PTag {
+  def leaf: PTag = this
 }
+case object NoTag extends LeafTag

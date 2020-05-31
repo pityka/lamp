@@ -3,5 +3,5 @@ import scala.language.implicitConversions
 import lamp.autograd.Variable
 
 package object nn {
-  implicit def funToModule(fun: Variable => Variable) = FunctionModule(fun)
+  implicit def funToModule(fun: Variable => Variable) = Fun(fun)
 }
