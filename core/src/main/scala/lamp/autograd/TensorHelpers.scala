@@ -65,4 +65,17 @@ object TensorHelpers {
       t2
     } else t
   }
+  def fromLongMat(m: Mat[Long], cuda: Boolean = false) = {
+    val arr = m.toArray
+    val t = ATen.zeros(
+      Array(m.numRows.toLong, m.numCols.toLong),
+      TensorOptions.dtypeLong
+    )
+    t.copyFromLongArray(arr)
+    if (cuda) {
+      val t2 = t.cuda
+      t.release
+      t2
+    } else t
+  }
 }

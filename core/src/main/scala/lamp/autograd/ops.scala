@@ -235,6 +235,62 @@ case class LogSoftMaxRowWise(a: Variable) extends Op {
 
 }
 
+sealed trait Reduction {
+  def asLong: Long
+}
+case object NoReduction extends Reduction {
+  def asLong = 0L
+}
+case object Mean extends Reduction {
+  def asLong = 1L
+}
+case object Sum extends Reduction {
+  def asLong = 2L
+}
+
+case class NllLoss(
+    input: Variable,
+    target: Tensor,
+    numClasses: Int,
+    reduction: Reduction
+) extends Op {
+  assert(
+    input.sizes.size == 2,
+    "Nll Loss assumes 2D input (samples x classes). Higher dimensions not implemented."
+  )
+  assert(
+    target.sizes.size == 1,
+    "Target should be a 1D tensor with [0,C-1] integers, C number of classes."
+  )
+  val weights = ATen.ones(Array(numClasses), target.options.toDouble)
+  val params = List(
+    input.zipBackward { (p, out) =>
+      val tmp =
+        ATen.nll_loss_backward(
+          p,
+          input.value,
+          target,
+          weights,
+          reduction.asLong,
+          -100,
+          total_weight
+        )
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+    }
+  )
+  val (value1, total_weight) =
+    ATen.nll_loss_forward(input.value, target, weights, reduction.asLong, -100)
+
+  val value =
+    Variable(
+      this,
+      value1
+    )
+  override def toString = s"NLL(${input.stringify()})"
+
+}
+
 case class SquaredFrobeniusMatrixNorm(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
     ATen.addcmul_out(out, out, p, a.value, 2d)

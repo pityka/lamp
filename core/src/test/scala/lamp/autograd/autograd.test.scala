@@ -501,5 +501,45 @@ class GradientSuite extends AnyFunSuite {
       w.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
   }
+  testGradientAndValue("l2 logistic regression loss - nll_loss")(
+    mat2x3_2,
+    151.0000008318073
+  ) { (m, doBackprop, cuda) =>
+    val w = param(TensorHelpers.fromMat(m))
+    val data = const(TensorHelpers.fromMat(mat3x2))
+    val y =
+      const(ATen.squeeze_0(TensorHelpers.fromLongMat(Mat(Vec(0L, 1L, 2L)))))
+    val L =
+      ((data.mm(w)).logSoftMax.nllLoss(y.value, 3, Sum) + w.squaredFrobenius)
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      w.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
+  testGradientAndValue("l2 logistic regression loss - nll_loss unreduced")(
+    mat2x3_2,
+    151.0000008318073
+  ) { (m, doBackprop, cuda) =>
+    val w = param(TensorHelpers.fromMat(m))
+    val data = const(TensorHelpers.fromMat(mat3x2))
+    val y =
+      const(ATen.squeeze_0(TensorHelpers.fromLongMat(Mat(Vec(0L, 1L, 2L)))))
+    val L =
+      ((data
+        .mm(w))
+        .logSoftMax
+        .nllLoss(y.value, 3, NoReduction)
+        .sum + w.squaredFrobenius)
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      w.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
 
 }
