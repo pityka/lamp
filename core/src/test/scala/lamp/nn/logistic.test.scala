@@ -50,6 +50,8 @@ class LogisticSuite extends AnyFunSuite {
       weightDecay = simple(0.001d)
     )
 
+    var lastAccuracy = 0d
+    var lastLoss = 1000000d
     var i = 0
     while (i < 1000) {
       val output = model.forward(x)
@@ -60,11 +62,14 @@ class LogisticSuite extends AnyFunSuite {
       )
 
       val loss: Variable = output.nllLoss(target, 10)
-      println((correct.mean2, TensorHelpers.toMat(loss.value).raw(0)))
+      lastAccuracy = correct.mean2
+      lastLoss = TensorHelpers.toMat(loss.value).raw(0)
       val gradients = model.gradients(loss)
       optim.step(gradients)
       i += 1
     }
+    assert(lastAccuracy > 0.6)
+    assert(lastLoss < 100d)
   // println(data)
   // val target = dat
 
