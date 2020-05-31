@@ -79,7 +79,7 @@ lazy val core = project
       "io.github.pityka" %% "saddle-core" % "2.0.0-M24",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M24",
       "org.typelevel" %% "cats-core" % "2.1.1",
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+27-a03173e7+20200531-1742",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+28-81be02d9",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
