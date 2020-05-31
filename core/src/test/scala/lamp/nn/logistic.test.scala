@@ -35,7 +35,8 @@ class LogisticSuite extends AnyFunSuite {
         cuda
       )
     )
-    val x = const(TensorHelpers.fromMat(data.filterIx(_ != "label").toMat))
+    val x =
+      const(TensorHelpers.fromMat(data.filterIx(_ != "label").toMat, cuda))
 
     val model = logisticRegression(
       x.sizes(1).toInt,
