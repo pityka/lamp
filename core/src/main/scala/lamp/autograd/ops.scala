@@ -247,6 +247,20 @@ case class Gelu(a: Variable) extends Op {
   override def toString = s"GELU(${a.stringify()})"
 
 }
+case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) => ATen.addcmul_out(out, out, p, mask, 1d) }
+  )
+  val mask = {
+    val ones = ATen.ones_like(a.value, a.options)
+    ATen.dropout_(ones, prob, train)
+    ones
+  }
+  val value = Variable(this, ATen.mul_0(a.value, mask))
+  override def toString = s"DROPOUT(${a.stringify()})"
+
+}
 
 sealed trait Reduction {
   def asLong: Long

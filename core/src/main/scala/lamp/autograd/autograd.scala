@@ -113,6 +113,7 @@ case class Variable(
   def mm(other: Variable) = MatMul(this, other).value
   def relu = Relu(this).value
   def gelu = Gelu(this).value
+  def dropout(prob: Double, train: Boolean) = Dropout(this, prob, train).value
   def sum = Sum(this).value
   def rowSum = RowSum(this).value
   def colSum = ColSum(this).value
