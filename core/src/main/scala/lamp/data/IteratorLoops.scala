@@ -6,7 +6,7 @@ import aten.ATen
 import aten.TensorOptions
 import lamp.nn._
 
-object TrainLoops {
+object IteratorLoops {
 
   def iteratorEpochs(
       model: SupervisedModel,

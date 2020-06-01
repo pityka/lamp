@@ -9,7 +9,7 @@ import lamp.nn._
 import aten.ATen
 import aten.TensorOptions
 
-class IteratorLoopSuite extends AnyFunSuite {
+class IOLoopSuite extends AnyFunSuite {
 
   def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions) =
     Sequential(
@@ -45,24 +45,18 @@ class IteratorLoopSuite extends AnyFunSuite {
       LossFunctions.NLL(10)
     )
 
-    IteratorLoops.iteratorEpochs(
+    val trainedModel = IOLoops.epochs(
       model = model,
       optimizerFactory = SGDW
         .factory(
           learningRate = simple(0.0001),
           weightDecay = simple(0.001d)
         ),
-      trainBatchesOverEpoch = () => {
-        val xcl = device.to(x)
-        val tcl = device.to(target)
-        List((xcl, tcl)).iterator
-      },
-      validationBatchesOverEpoch = () => {
-        val xcl = device.to(x)
-        val tcl = device.to(target)
-        List((xcl, tcl)).iterator
-      },
-      epochs = 100
+      trainBatchesOverEpoch =
+        () => BatchStream.fromFullBatch(x, target, device),
+      validationBatchesOverEpoch =
+        () => BatchStream.fromFullBatch(x, target, device),
+      epochs = 50
     ) { (validationOutput, validationTarget, validationLoss) =>
       val prediction = {
         val t = ATen.argmax(validationOutput, 1, false)
@@ -77,6 +71,9 @@ class IteratorLoopSuite extends AnyFunSuite {
       )((a, b) => if (a == b) 1d else 0d)
     // println("Validation loss: " + validationLoss + " " + correct.mean2)
     }
+
+    val (loss, output) = trainedModel.unsafeRunSync().lossAndOutput(x, target)
+    assert(loss < 900)
 
   }
 }
