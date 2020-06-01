@@ -5,6 +5,19 @@ import aten.ATen
 import cats.implicits._
 import lamp.autograd.TensorHelpers
 
+object AdamW {
+  def factory(
+      weightDecay: OptimizerHyperparameter,
+      learningRate: OptimizerHyperparameter = simple(0.001),
+      beta1: OptimizerHyperparameter = simple(0.9),
+      beta2: OptimizerHyperparameter = simple(0.999),
+      eps: Double = 1e-8,
+      scheduler: Long => Double = _ => 1d
+  ) =
+    (parameters: Seq[(Tensor, PTag)]) =>
+      AdamW(parameters, weightDecay, learningRate, beta1, beta2, eps, scheduler)
+}
+
 // https://arxiv.org/pdf/1711.05101.pdf Algorithm 2
 case class AdamW(
     parameters: Seq[(Tensor, PTag)],

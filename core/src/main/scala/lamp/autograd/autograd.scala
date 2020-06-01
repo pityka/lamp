@@ -36,7 +36,7 @@ import aten.TensorOptions
 trait Op {
   val value: Variable
   val params: List[(Variable, (Tensor, Tensor) => Unit)]
-  def release(): Unit = params.filterNot(_._1.leaf).foreach(_._1.release)
+
 }
 
 // Variable takes ownership of the value: Tensor
@@ -45,7 +45,7 @@ case class Variable(
     op: Op,
     value: Tensor,
     needsGrad: Boolean = true,
-    leaf: Boolean = true
+    leaf: Boolean = false
 ) {
 
   def options = value.options
@@ -56,21 +56,25 @@ case class Variable(
 
   val id = ju.UUID.randomUUID()
 
-  def release(): Unit = {
-    value.release
-    op.release
+  def releaseAll(): Unit = {
+    wengert.filterNot(_.leaf).foreach { variable =>
+      variable.value.release
+      variable.partialDerivative.foreach(_.release)
+    }
   }
   def detached = copy(needsGrad = false)
   def zeroGrad() = {
     partialDerivative.foreach { t => ATen.zero_(t) }
   }
 
-  def wengert = Autograd.topologicalSort(this)
+  lazy val wengert = Autograd.topologicalSort(this)
 
   def backprop(): Unit = {
-    partialDerivative = Some(
-      ATen.ones_like(value, value.options)
-    )
+    if (partialDerivative.isEmpty) {
+      partialDerivative = Some(
+        ATen.ones_like(value, value.options)
+      )
+    }
     wengert.foreach { v =>
       v.op.params.foreach {
         case (v1, computeGrad) =>

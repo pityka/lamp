@@ -55,8 +55,12 @@ class LogisticSuite extends AnyFunSuite {
     var i = 0
     while (i < 1000) {
       val output = model.forward(x)
-      val prediction =
-        TensorHelpers.toMatLong(ATen.argmax(output.value, 1, false)).toVec
+      val prediction = {
+        val argm = ATen.argmax(output.value, 1, false)
+        val r = TensorHelpers.toMatLong(argm).toVec
+        argm.release
+        r
+      }
       val correct = prediction.zipMap(data.firstCol("label").toVec)((a, b) =>
         if (a == b) 1d else 0d
       )

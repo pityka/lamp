@@ -79,6 +79,7 @@ lazy val core = project
       "io.github.pityka" %% "saddle-core" % "2.0.0-M24",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M24",
       "org.typelevel" %% "cats-core" % "2.1.1",
+      "org.typelevel" %% "cats-effect" % "2.1.3",
       "io.github.pityka" %% "aten-scala-core" % "0.0.0+28-81be02d9",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),

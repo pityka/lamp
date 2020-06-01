@@ -4,6 +4,17 @@ import aten.Tensor
 import aten.ATen
 import cats.implicits._
 
+object SGDW {
+  def factory(
+      learningRate: OptimizerHyperparameter,
+      weightDecay: OptimizerHyperparameter,
+      momentum: Option[OptimizerHyperparameter] = None,
+      scheduler: Long => Double = _ => 1d
+  ) =
+    (parameters: Seq[(Tensor, PTag)]) =>
+      SGDW(parameters, learningRate, weightDecay, momentum, scheduler)
+}
+
 // https://arxiv.org/pdf/1711.05101.pdf algorithm 1
 case class SGDW(
     parameters: Seq[(Tensor, PTag)],

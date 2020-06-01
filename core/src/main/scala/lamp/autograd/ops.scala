@@ -11,7 +11,7 @@ import TensorHelpers.{unbroadcast => ub}
 case class Constant(const: Tensor) extends Op {
   val params = Nil
   val value = Variable(this, const, leaf = true)
-  override def toString = s"$const"
+  override def toString = s"CONST($const)"
 }
 case class Transpose(a: Variable) extends Op {
   val params = List(
