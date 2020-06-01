@@ -27,6 +27,7 @@ object BatchStream {
         xcl.release
         val d2 = device.to(tcl)
         tcl.release
+        idxT.release
         Some((d1, d2)): Option[(Tensor, Tensor)]
       }) {
         case None => IO.unit
