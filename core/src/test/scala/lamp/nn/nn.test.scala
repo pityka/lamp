@@ -69,8 +69,8 @@ class NNSuite extends AnyFunSuite {
     val linear = Linear(3, 1)
     val output = linear.forward(const(TensorHelpers.fromMat(mat2x3)))
     val sum = output.sum
-    val grad = linear.gradients(sum)
     assert(output.value.sizes.toList == List(2, 1))
+    val grad = linear.gradients(sum)
     assert(grad.size == 2)
 
   }

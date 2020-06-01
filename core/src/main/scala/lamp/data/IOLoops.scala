@@ -14,7 +14,7 @@ object IOLoops {
   )(callbackTraining: Double => Unit)(
       callbackOnValidationOutputAndTarget: (Tensor, Tensor, Double) => Unit
   ): IO[SupervisedModel] = {
-    val modelWithOptimizer = model.zipOptimizer(optimizerFactory)
+    val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
     def loop(epoch: Int, currentValidation: BatchStream): IO[SupervisedModel] =
       if (epoch >= epochs) IO.pure(modelWithOptimizer.model)
@@ -47,10 +47,11 @@ object IOLoops {
         IO {
           option.map {
             case (validationSample, validationTarget) =>
-              val (validationLoss, validationOutput) = model.lossAndOutput(
-                validationSample,
-                validationTarget
-              )
+              val (validationLoss, validationOutput) =
+                model.asEval.lossAndOutput(
+                  validationSample,
+                  validationTarget
+                )
               callbackOnValidationOutputAndTarget(
                 validationOutput,
                 validationTarget,

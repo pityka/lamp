@@ -6,6 +6,8 @@ import aten.ATen
 import aten.TensorOptions
 
 case class Sequential(members: Module*) extends Module {
+  override def asEval: Module = Sequential(members.map(_.asEval): _*)
+  override def asTraining: Module = Sequential(members.map(_.asTraining): _*)
   def parameters =
     members.flatMap(member =>
       member.parameters.zipWithIndex.map {
@@ -24,9 +26,12 @@ object Sequential {
 case class Fun(fun: Variable => Variable) extends Module {
   def parameters = Nil
   def forward(x: Variable): Variable = fun(x)
+
 }
 
 trait Module {
+  def asEval: Module = this
+  def asTraining: Module = this
   def forward(x: Variable): Variable
   def parameters: Seq[(Variable, PTag)]
   def gradients(loss: Variable): Seq[Tensor] = {

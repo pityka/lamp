@@ -9,6 +9,8 @@ case class SupervisedModel(
     module: Module,
     lossFunction: (Variable, Tensor) => Variable
 ) {
+  def asEval = copy(module = module.asEval)
+  def asTraining = copy(module = module.asTraining)
   def lossAndOutput(
       samples: Tensor,
       target: Tensor

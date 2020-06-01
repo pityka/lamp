@@ -53,7 +53,7 @@ class LogisticSuite extends AnyFunSuite {
     var lastAccuracy = 0d
     var lastLoss = 1000000d
     var i = 0
-    while (i < 1000) {
+    while (i < 300) {
       val output = model.forward(x)
       val prediction = {
         val argm = ATen.argmax(output.value, 1, false)
