@@ -234,6 +234,19 @@ case class LogSoftMaxRowWise(a: Variable) extends Op {
   override def toString = s"LOGSOFTMAX(${a.stringify()})"
 
 }
+case class Gelu(a: Variable) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val tmp = ATen.gelu_backward(p, a.value)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+    }
+  )
+  val value = Variable(this, ATen.gelu(a.value))
+  override def toString = s"GELU(${a.stringify()})"
+
+}
 
 sealed trait Reduction {
   def asLong: Long

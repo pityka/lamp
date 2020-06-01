@@ -112,6 +112,7 @@ case class Variable(
   def /(other: Variable) = Div(this, other).value
   def mm(other: Variable) = MatMul(this, other).value
   def relu = Relu(this).value
+  def gelu = Gelu(this).value
   def sum = Sum(this).value
   def rowSum = RowSum(this).value
   def colSum = ColSum(this).value
