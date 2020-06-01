@@ -54,7 +54,7 @@ object TensorHelpers {
       val arr = Array.ofDim[Double](shape(0).toInt)
       val data = t.copyToDoubleArray(arr)
       Mat.apply(1, shape(0).toInt, arr)
-    } else ???
+    } else throw new RuntimeException("shape: " + shape.deep)
   }
   def toMatLong(t: Tensor) = {
     assert(
@@ -93,6 +93,19 @@ object TensorHelpers {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.numRows.toLong, m.numCols.toLong),
+      TensorOptions.dtypeLong
+    )
+    t.copyFromLongArray(arr)
+    if (cuda) {
+      val t2 = t.cuda
+      t.release
+      t2
+    } else t
+  }
+  def fromLongVec(m: Vec[Long], cuda: Boolean = false) = {
+    val arr = m.toArray
+    val t = ATen.zeros(
+      Array(m.length.toLong),
       TensorOptions.dtypeLong
     )
     t.copyFromLongArray(arr)

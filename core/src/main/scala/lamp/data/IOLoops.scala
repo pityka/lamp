@@ -11,7 +11,7 @@ object IOLoops {
       trainBatchesOverEpoch: () => BatchStream,
       validationBatchesOverEpoch: () => BatchStream,
       epochs: Int
-  )(
+  )(callbackTraining: Double => Unit)(
       callbackOnValidationOutputAndTarget: (Tensor, Tensor, Double) => Unit
   ): IO[SupervisedModel] = {
     val modelWithOptimizer = model.zipOptimizer(optimizerFactory)
@@ -20,9 +20,9 @@ object IOLoops {
       if (epoch >= epochs) IO.pure(modelWithOptimizer.model)
       else {
         for {
-          _ <- oneEpoch(modelWithOptimizer, trainBatchesOverEpoch()) {
-            trainLoss => ()
-          }
+          _ <- oneEpoch(modelWithOptimizer, trainBatchesOverEpoch())(
+            callbackTraining
+          )
           replaceValidation <- runValidation(
             modelWithOptimizer.model,
             currentValidation.nextBatch
