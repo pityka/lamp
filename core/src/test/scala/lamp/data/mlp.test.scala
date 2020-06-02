@@ -8,6 +8,7 @@ import lamp.autograd.{Variable, const, param, TensorHelpers}
 import lamp.nn._
 import aten.ATen
 import aten.TensorOptions
+import aten.Tensor
 
 class MLPSuite extends AnyFunSuite {
 
@@ -27,26 +28,86 @@ class MLPSuite extends AnyFunSuite {
 
   test1("mnist tabular mini batch") { cuda =>
     val device = if (cuda) CudaDevice(0) else CPU
-    val data = org.saddle.csv.CsvParser
+    val testData = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source
           .fromInputStream(getClass.getResourceAsStream("/mnist_test.csv"))
       )
       .right
       .get
-    val x =
-      TensorHelpers.fromMat(data.filterIx(_ != "label").toMat, cuda)
-    val target = ATen.squeeze_0(
+    val testDataTensor =
+      TensorHelpers.fromMat(testData.filterIx(_ != "label").toMat, cuda)
+    val testTarget = ATen.squeeze_0(
       TensorHelpers.fromLongMat(
-        Mat(data.firstCol("label").toVec.map(_.toLong)),
+        Mat(testData.firstCol("label").toVec.map(_.toLong)),
+        cuda
+      )
+    )
+
+    val trainData = org.saddle.csv.CsvParser
+      .parseSourceWithHeader[Double](
+        scala.io.Source
+          .fromInputStream(
+            new java.util.zip.GZIPInputStream(
+              getClass.getResourceAsStream("/mnist_train.csv.gz")
+            )
+          )
+      )
+      .right
+      .get
+    val trainDataTensor =
+      TensorHelpers.fromMat(trainData.filterIx(_ != "label").toMat, cuda)
+    val trainTarget = ATen.squeeze_0(
+      TensorHelpers.fromLongMat(
+        Mat(trainData.firstCol("label").toVec.map(_.toLong)),
         cuda
       )
     )
 
     val model = SupervisedModel(
-      mlp(data.numCols - 1, 10, device.options),
+      mlp(784, 10, device.options),
       LossFunctions.NLL(10)
     )
+
+    val makeValidationBatch = () =>
+      BatchStream.minibatchesFromFull(
+        200,
+        true,
+        testDataTensor,
+        testTarget,
+        device
+      )
+    val makeTrainingBatch = () =>
+      BatchStream.minibatchesFromFull(
+        200,
+        true,
+        trainDataTensor,
+        trainTarget,
+        device
+      )
+
+    val validationCallback = new ValidationCallback {
+      def apply(
+          validationOutput: Tensor,
+          validationTarget: Tensor,
+          validationLoss: Double,
+          epochCount: Long
+      ): Unit = {
+        val prediction = {
+          val t = ATen.argmax(validationOutput, 1, false)
+          val r = TensorHelpers
+            .toMatLong(t)
+            .toVec
+          t.release
+          r
+        }
+        val correct = prediction.zipMap(
+          TensorHelpers.toMatLong(validationTarget).toVec
+        )((a, b) => if (a == b) 1d else 0d)
+        // println(correct)
+        // println("Validation loss: " + validationLoss + " " + correct.mean2)
+      }
+    }
 
     val trainedModel = IOLoops.epochs(
       model = model,
@@ -55,16 +116,15 @@ class MLPSuite extends AnyFunSuite {
           learningRate = simple(0.0001),
           weightDecay = simple(0.001d)
         ),
-      trainBatchesOverEpoch =
-        () => BatchStream.minibatchesFromFull(200, true, x, target, device),
-      validationBatchesOverEpoch =
-        () => BatchStream.minibatchesFromFull(200, true, x, target, device),
-      epochs = 50,
+      trainBatchesOverEpoch = makeTrainingBatch,
+      validationBatchesOverEpoch = makeValidationBatch,
+      epochs = 10,
       trainingCallback = TrainingCallback.noop,
-      validationCallback = ValidationCallback.noop
+      validationCallback = validationCallback
     )
-    val (loss, output) = trainedModel.unsafeRunSync().lossAndOutput(x, target)
-    assert(loss < 900)
+    val (loss, output) =
+      trainedModel.unsafeRunSync().lossAndOutput(testDataTensor, testTarget)
+    assert(loss < 50)
 
   }
 }
