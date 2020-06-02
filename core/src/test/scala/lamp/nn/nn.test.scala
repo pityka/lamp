@@ -103,6 +103,26 @@ class NNSuite extends AnyFunSuite {
       ),
     12.295836866004326
   )
+  testGradientAndValue("Mlp1 ", false)(
+    mat3x2,
+    () =>
+      Mlp1(
+        2,
+        3,
+        const(TensorHelpers.fromMat(mat.ident(3), cuda = false))
+      ),
+    192.08796576929555
+  )
+  testGradientAndValue("Mlp1 - cuda", true)(
+    mat3x2,
+    () =>
+      Mlp1(
+        2,
+        3,
+        const(TensorHelpers.fromMat(mat.ident(3), cuda = true))
+      ),
+    192.08796576929555
+  )
 
 }
 
@@ -126,6 +146,32 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
       Some(param(ATen.ones(Array(1, k), y.options)))
     ),
     Fun(_.logSoftMax)
+  )
+
+  def forward(x: Variable): Variable =
+    mod.forward(x).crossEntropy(y).sum +
+      mod.parameters
+        .map(_._1.squaredFrobenius)
+        .reduce(_ + _)
+
+  def parameters: Seq[(Variable, PTag)] =
+    mod.parameters
+
+}
+
+case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
+
+  val mod = Sequential(
+    Linear(
+      param(ATen.ones(Array(32, dim), y.options)),
+      Some(param(ATen.ones(Array(1, 32), y.options)))
+    ),
+    Fun(_.logSoftMax),
+    Fun(_.gelu),
+    Linear(
+      param(ATen.ones(Array(k, 32), y.options)),
+      Some(param(ATen.ones(Array(1, k), y.options)))
+    )
   )
 
   def forward(x: Variable): Variable =
