@@ -8,6 +8,7 @@ import lamp.autograd.{Variable, const, param, TensorHelpers}
 import lamp.nn._
 import aten.ATen
 import aten.TensorOptions
+import aten.Tensor
 
 class IteratorLoopSuite extends AnyFunSuite {
 
@@ -45,7 +46,29 @@ class IteratorLoopSuite extends AnyFunSuite {
       LossFunctions.NLL(10)
     )
 
-    IteratorLoops.iteratorEpochs(
+    val validationCallback = new ValidationCallback {
+      def apply(
+          validationOutput: Tensor,
+          validationTarget: Tensor,
+          validationLoss: Double,
+          epochCount: Long
+      ): Unit = {
+        val prediction = {
+          val t = ATen.argmax(validationOutput, 1, false)
+          val r = TensorHelpers
+            .toMatLong(t)
+            .toVec
+          t.release
+          r
+        }
+        val correct = prediction.zipMap(
+          TensorHelpers.toMatLong(validationTarget).toVec
+        )((a, b) => if (a == b) 1d else 0d)
+        // println("Validation loss: " + validationLoss + " " + correct.mean2)
+      }
+    }
+
+    val trainedModel = IteratorLoops.iteratorEpochs(
       model = model,
       optimizerFactory = SGDW
         .factory(
@@ -62,21 +85,13 @@ class IteratorLoopSuite extends AnyFunSuite {
         val tcl = device.to(target)
         List((xcl, tcl)).iterator
       },
-      epochs = 100
-    ) { (validationOutput, validationTarget, validationLoss) =>
-      val prediction = {
-        val t = ATen.argmax(validationOutput, 1, false)
-        val r = TensorHelpers
-          .toMatLong(t)
-          .toVec
-        t.release
-        r
-      }
-      val correct = prediction.zipMap(
-        TensorHelpers.toMatLong(validationTarget).toVec
-      )((a, b) => if (a == b) 1d else 0d)
-    // println("Validation loss: " + validationLoss + " " + correct.mean2)
-    }
+      epochs = 50,
+      TrainingCallback.noop,
+      validationCallback
+    )
+
+    val (loss, output) = trainedModel.lossAndOutput(x, target)
+    assert(loss < 900)
 
   }
 }

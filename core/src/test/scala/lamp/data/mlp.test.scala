@@ -59,23 +59,10 @@ class MLPSuite extends AnyFunSuite {
         () => BatchStream.minibatchesFromFull(200, true, x, target, device),
       validationBatchesOverEpoch =
         () => BatchStream.minibatchesFromFull(200, true, x, target, device),
-      epochs = 50
-    )(trainingLoss => ()) {
-      (validationOutput, validationTarget, validationLoss) =>
-        val prediction = {
-          val t = ATen.argmax(validationOutput, 1, false)
-          val r = TensorHelpers
-            .toMatLong(t)
-            .toVec
-          t.release
-          r
-        }
-        val correct = prediction.zipMap(
-          TensorHelpers.toMatLong(validationTarget).toVec
-        )((a, b) => if (a == b) 1d else 0d)
-      // println("Validation loss: " + validationLoss + " " + correct.mean2)
-    }
-
+      epochs = 50,
+      trainingCallback = TrainingCallback.noop,
+      validationCallback = ValidationCallback.noop
+    )
     val (loss, output) = trainedModel.unsafeRunSync().lossAndOutput(x, target)
     assert(loss < 900)
 

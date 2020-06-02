@@ -6,6 +6,34 @@ import aten.ATen
 import aten.TensorOptions
 import lamp.nn._
 
+trait TrainingCallback {
+  def apply(trainingLoss: Double, batchCount: Int): Unit
+}
+object TrainingCallback {
+  val noop = new TrainingCallback {
+    def apply(trainingLoss: Double, batchCount: Int) = ()
+  }
+}
+
+trait ValidationCallback {
+  def apply(
+      validationOutput: Tensor,
+      validationTarget: Tensor,
+      validationLoss: Double,
+      epochCount: Long
+  ): Unit
+}
+object ValidationCallback {
+  val noop = new ValidationCallback {
+    def apply(
+        validationOutput: Tensor,
+        validationTarget: Tensor,
+        validationLoss: Double,
+        epochCount: Long
+    ) = ()
+  }
+}
+
 object IteratorLoops {
 
   def iteratorEpochs(
@@ -13,16 +41,20 @@ object IteratorLoops {
       optimizerFactory: Seq[(Tensor, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => Iterator[(Tensor, Tensor)],
       validationBatchesOverEpoch: () => Iterator[(Tensor, Tensor)],
-      epochs: Int
-  )(callbackOnValidationOutputAndTarget: (Tensor, Tensor, Double) => Unit) = {
+      epochs: Int,
+      trainingCallback: TrainingCallback,
+      validationCallbackk: ValidationCallback
+  ) = {
     var epoch = 0L
     val modelWithOptimizer = model.zipOptimizer(optimizerFactory)
 
     var currentValidation = validationBatchesOverEpoch()
     while (epoch < epochs) {
       var currentTrain = trainBatchesOverEpoch()
-      iteratorOneEpoch(modelWithOptimizer, trainBatchesOverEpoch())(trainLoss =>
-        () // println(s"Training loss $trainLoss")
+      iteratorOneEpoch(
+        modelWithOptimizer,
+        trainBatchesOverEpoch(),
+        trainingCallback
       )
 
       if (currentValidation.hasNext) {
@@ -31,10 +63,11 @@ object IteratorLoops {
           validationSample,
           validationTarget
         )
-        callbackOnValidationOutputAndTarget(
+        validationCallbackk(
           validationOutput,
           validationTarget,
-          validationLoss
+          validationLoss,
+          epoch
         )
         validationSample.release
         validationTarget.release
@@ -47,17 +80,20 @@ object IteratorLoops {
       epoch += 1
     }
 
+    modelWithOptimizer.model
+
   }
 
   def iteratorOneEpoch(
       model: ModelWithOptimizer,
-      trainBatches: Iterator[(Tensor, Tensor)]
-  )(callback: Double => Unit) = {
-    trainBatches.foreach {
-      case (sample, target) =>
+      trainBatches: Iterator[(Tensor, Tensor)],
+      trainingCallback: TrainingCallback
+  ) = {
+    trainBatches.zipWithIndex.foreach {
+      case ((sample, target), idx) =>
         val (loss, gradients) =
           model.model.lossAndGradients(sample, target)
-        callback(loss)
+        trainingCallback(loss, idx)
         model.optimizer.step(gradients)
         sample.release()
         target.release()

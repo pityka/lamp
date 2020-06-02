@@ -10,9 +10,9 @@ object IOLoops {
       optimizerFactory: Seq[(Tensor, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream,
       validationBatchesOverEpoch: () => BatchStream,
-      epochs: Int
-  )(callbackTraining: Double => Unit)(
-      callbackOnValidationOutputAndTarget: (Tensor, Tensor, Double) => Unit
+      epochs: Int,
+      trainingCallback: TrainingCallback,
+      validationCallback: ValidationCallback
   ): IO[SupervisedModel] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
@@ -20,13 +20,17 @@ object IOLoops {
       if (epoch >= epochs) IO.pure(modelWithOptimizer.model)
       else {
         for {
-          _ <- oneEpoch(modelWithOptimizer, trainBatchesOverEpoch())(
-            callbackTraining
+          _ <- oneEpoch(
+            modelWithOptimizer,
+            trainBatchesOverEpoch(),
+            trainingCallback
           )
           replaceValidation <- runValidation(
             modelWithOptimizer.model,
-            currentValidation.nextBatch
-          )(callbackOnValidationOutputAndTarget)
+            currentValidation.nextBatch,
+            validationCallback,
+            epoch
+          )
           next <- loop(
             epoch + 1,
             if (replaceValidation) validationBatchesOverEpoch()
@@ -40,8 +44,10 @@ object IOLoops {
 
   def runValidation(
       model: SupervisedModel,
-      validationBatch: Resource[IO, Option[(Tensor, Tensor)]]
-  )(callbackOnValidationOutputAndTarget: (Tensor, Tensor, Double) => Unit) = {
+      validationBatch: Resource[IO, Option[(Tensor, Tensor)]],
+      validationCallback: ValidationCallback,
+      epochCount: Int
+  ) = {
     validationBatch
       .use { option =>
         IO {
@@ -52,10 +58,11 @@ object IOLoops {
                   validationSample,
                   validationTarget
                 )
-              callbackOnValidationOutputAndTarget(
+              validationCallback(
                 validationOutput,
                 validationTarget,
-                validationLoss
+                validationLoss,
+                epochCount
               )
 
               validationOutput.release
@@ -68,10 +75,11 @@ object IOLoops {
 
   def oneEpoch(
       model: ModelWithOptimizer,
-      trainBatches: BatchStream
-  )(callback: Double => Unit): IO[Unit] = {
+      trainBatches: BatchStream,
+      trainingCallback: TrainingCallback
+  ): IO[Unit] = {
 
-    def loop(): IO[Unit] = {
+    def loop(batchCount: Int): IO[Unit] = {
       trainBatches.nextBatch
         .use { option =>
           IO {
@@ -79,18 +87,18 @@ object IOLoops {
               case (sample, target) =>
                 val (loss, gradients) =
                   model.model.lossAndGradients(sample, target)
-                callback(loss)
+                trainingCallback(loss, batchCount)
                 model.optimizer.step(gradients)
             }
           }
         }
         .flatMap {
           case None => IO.unit
-          case _    => loop()
+          case _    => loop(batchCount + 1)
         }
 
     }
 
-    loop()
+    loop(0)
   }
 }
