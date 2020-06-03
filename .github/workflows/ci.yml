@@ -8,8 +8,9 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: pityka/base-ubuntu-libtorch:3
-      env: {GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}}
+      image: 'pityka/base-ubuntu-libtorch:3'
+      env: 
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       
     
     steps:
