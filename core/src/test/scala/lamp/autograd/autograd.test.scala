@@ -40,8 +40,8 @@ class GradientSuite extends AnyFunSuite {
         fun(m, true, false)._2.get
       }
       assert(
-        Vec(fun(m, false, false)._1).roundTo(10) == Vec(expectedValue).roundTo(
-          10
+        Vec(fun(m, false, false)._1).roundTo(4) == Vec(expectedValue).roundTo(
+          4
         )
       )
 
@@ -551,6 +551,32 @@ class GradientSuite extends AnyFunSuite {
       TensorHelpers.toMat(L.value).raw(0),
       w.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
+  }
+  testGradientAndValue("weight norm - wrt g")(mat2x3.row(Array(0)), 12.7279) {
+    (m, doBackprop, cuda) =>
+      val v = param(TensorHelpers.fromMat(mat.ones(2, 3), cuda))
+      val g = param(TensorHelpers.fromMat(m, cuda))
+      val L = WeightNorm(v, g, 0).value.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        g.partialDerivative.map(t => TensorHelpers.toMat(t))
+      )
+  }
+  testGradientAndValue("weight norm - wrt v")(mat2x3, 4.1500) {
+    (m, doBackprop, cuda) =>
+      val v = param(TensorHelpers.fromMat(m, cuda))
+      val g = param(TensorHelpers.fromMat(mat.ones(1, 3), cuda))
+      val L = WeightNorm(v, g, 0).value.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        v.partialDerivative.map(t => TensorHelpers.toMat(t))
+      )
   }
 
 }

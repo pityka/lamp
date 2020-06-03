@@ -262,6 +262,57 @@ case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
 
 }
 
+// https://arxiv.org/pdf/1602.07868.pdf
+case class WeightNorm(v: Variable, g: Variable, dim: Long) extends Op {
+  assert(v.sizes.size == 2, "WeightNorm: v should have 2 dimensions")
+  assert(
+    g.sizes.toList == List(1, v.sizes(1)),
+    "WeightNorm: g should have dimensions 1 x a where a is the second dimension of v."
+  )
+  def gradg(p: Tensor) = {
+    val tmp0 = ATen.mul_0(p, v.value)
+    val tmp1 = ATen.sum_1(tmp0, Array(0), false)
+    ATen.div_out(tmp1, tmp1, norm)
+    tmp0.release
+    tmp1
+  }
+
+  // https://arxiv.org/pdf/1602.07868.pdf eq3
+  // Mind the dot product (.)
+  val params = List(
+    v.zipBackward { (p, out) =>
+      val tmp1 = ATen.div_0(g.value, norm)
+      val tmp3 = ATen.mul_0(tmp1, p)
+      val gg = gradg(p)
+      val tmp2 = ATen.mul_0(g.value, gg)
+      ATen.div_out(tmp2, tmp2, norm)
+      ATen.div_out(tmp2, tmp2, norm)
+      val tmp4 = ATen.mul_0(tmp2, v.value)
+      ATen.add_out(tmp3, tmp3, tmp4, -1d)
+      ATen.add_out(out, out, tmp3, 1d)
+      tmp1.release
+      tmp2.release
+      tmp3.release
+      tmp4.release
+      gg.release
+    },
+    g.zipBackward { (p, out) =>
+      val tmp2 = gradg(p)
+      ATen.add_out(out, out, tmp2, 1d)
+
+    }
+  )
+  // https://arxiv.org/pdf/1602.07868.pdf eq2
+  val norm =
+    ATen.norm_2(v.value, Array(dim), false, v.options.scalarTypeByte)
+  val w = ATen.mul_0(v.value, g.value)
+  ATen.div_out(w, w, norm)
+
+  val value = Variable(this, w)
+  override def toString = s"WeightNorm(${v.stringify()} ${g.stringify()})"
+
+}
+
 sealed trait Reduction {
   def asLong: Long
 }

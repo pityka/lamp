@@ -83,6 +83,16 @@ class NNSuite extends AnyFunSuite {
       ),
     23d
   )
+  testGradientAndValue("WeightNormLinear 0")(
+    mat2x3,
+    () =>
+      WeightNormLinear(
+        param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
+        param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
+        Some(param(ATen.ones(Array(1), TensorOptions.dtypeDouble)))
+      ),
+    23d
+  )
   testGradientAndValue("Logistic 1")(
     mat3x2,
     () => LogisticRegression1(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
