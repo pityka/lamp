@@ -83,6 +83,15 @@ class NNSuite extends AnyFunSuite {
       ),
     23d
   )
+  testGradientAndValue("Meanshift 0")(
+    mat2x3,
+    () =>
+      Meanshift(
+        size = List(3L),
+        dim = List(0)
+      ),
+    0d
+  )
   testGradientAndValue("WeightNormLinear 0")(
     mat2x3,
     () =>

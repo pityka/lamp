@@ -495,6 +495,17 @@ class GradientSuite extends AnyFunSuite {
       x1.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
   }
+  testGradientAndValue("mean")(mat2x3_2, 5.5d) { (m, doBackprop, cuda) =>
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val L = x1.mean(List(0)).sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
   testGradientAndValue("l2 logistic regression loss")(
     mat2x3_2,
     151.0000008318073

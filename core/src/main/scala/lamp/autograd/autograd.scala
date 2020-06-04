@@ -129,7 +129,10 @@ case class Variable(
   def nllLoss(target: Tensor, numClasses: Int, reduction: Reduction = Mean) =
     NllLoss(this, target, numClasses, reduction).value
   def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
+  def mean(dim: List[Int]) = Mean(this, dim).value
 
+  def toMat = TensorHelpers.toMat(value)
+  def toLongMat = TensorHelpers.toMatLong(value)
 }
 
 object Autograd {

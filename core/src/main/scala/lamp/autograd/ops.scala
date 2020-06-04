@@ -247,6 +247,24 @@ case class Gelu(a: Variable) extends Op {
   override def toString = s"GELU(${a.stringify()})"
 
 }
+
+case class Mean(a: Variable, dim: List[Int]) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      ATen.add_out(
+        out,
+        out,
+        p,
+        1d / dim.map(l => a.sizes.apply(l.toInt)).sum
+      )
+    }
+  )
+  val value =
+    Variable(this, ATen.mean_1(a.value, dim.map(_.toLong).toArray, true))
+  override def toString = s"MEAN(${a.stringify()})"
+
+}
 case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
 
   val params = List(
