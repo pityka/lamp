@@ -460,6 +460,17 @@ class GradientSuite extends AnyFunSuite {
       x1.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
   }
+  testGradientAndValue("tanh")(mat2x3_2, 2.1981) { (m, doBackprop, cuda) =>
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val L = x1.tanh.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
   testGradientAndValue("softmax")(mat2x3_2, -22.441910257332836) {
     (m, doBackprop, cuda) =>
       val x1 = param(TensorHelpers.fromMat(m, cuda))

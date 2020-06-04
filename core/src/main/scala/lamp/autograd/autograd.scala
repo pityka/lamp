@@ -122,6 +122,7 @@ case class Variable(
   def sin = Sin(this).value
   def cos = Cos(this).value
   def tan = Tan(this).value
+  def tanh = Tanh(this).value
   def atan = ArcTan(this).value
   def pow(const: Double) = PowConst(this, const).value
   def logSoftMax = LogSoftMaxRowWise(this).value

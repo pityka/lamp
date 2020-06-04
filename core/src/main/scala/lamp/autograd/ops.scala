@@ -179,6 +179,15 @@ case class Tan(a: Variable) extends Op {
   val value = Variable(this, ATen.tan(a.value))
   override def toString = s"TAN(${a.stringify()})"
 }
+case class Tanh(a: Variable) extends Op {
+  val params = List(a.zipBackward { (p, out) =>
+    val tmp1 = ATen.tanh_backward(p, value.value)
+    ATen.add_out(out, out, tmp1, 1d)
+    tmp1.release
+  })
+  val value = Variable(this, ATen.tanh(a.value))
+  override def toString = s"TANH(${a.stringify()})"
+}
 case class ArcTan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
     val tmp1 = ATen.pow_0(a.value, 2d)
