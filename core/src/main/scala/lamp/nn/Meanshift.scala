@@ -10,9 +10,9 @@ case class Meanshift(
     means: Variable,
     dim: List[Int],
     runningMeanMomentum: Double,
-    training: Boolean
+    training: Boolean,
+    var runningMean: Option[Tensor]
 ) extends Module {
-  var runningMean: Option[Tensor] = None
 
   override def asTraining = copy(training = true)
   override def asEval = copy(training = false)
@@ -46,6 +46,7 @@ object Meanshift {
       dim = dim,
       means = param(ATen.zeros(size.toArray, tOpt)),
       runningMeanMomentum = runningMeanMomentum,
-      training = training
+      training = training,
+      runningMean = None
     )
 }

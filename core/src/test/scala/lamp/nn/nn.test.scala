@@ -8,6 +8,7 @@ import aten.ATen
 import lamp.autograd._
 import aten.TensorOptions
 import org.scalatest.Tag
+import lamp.syntax
 
 object CudaTest extends Tag("cuda")
 
@@ -142,6 +143,23 @@ class NNSuite extends AnyFunSuite {
       ),
     192.08796576929555
   )
+
+  test("mean shfit") {
+    val m = Meanshift(
+      size = List(3L),
+      dim = List(0)
+    )
+    assert(
+      m.forward(const(TensorHelpers.fromMat(mat2x3, false)))
+        .sum
+        .value
+        .toMat
+        .raw(0) == 0d
+    )
+    assert(m.runningMean.get.toMat.roundTo(4) == Mat(Vec(1.5, 3.5d, 5.5)).T)
+    assert(m.asEval.runningMean.get.toMat == Mat(Vec(1.5, 3.5d, 5.5)).T)
+
+  }
 
 }
 
