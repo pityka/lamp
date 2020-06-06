@@ -474,7 +474,7 @@ case class Conv1D(
         Array(1, batchSize * inputChannels, imageSize)
       )
       val zero = ATen.zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options)
-      val conv_1 = ATen.conv1d(
+      val conv_0 = ATen.conv1d(
         input_viewed,
         p_repeated_viewed,
         zero,
@@ -483,6 +483,16 @@ case class Conv1D(
         Array(stride),
         inputChannels * batchSize
       )
+      val conv_0_sizes = conv_0.sizes
+      val conv_1 = ATen._unsafe_view(
+        conv_0,
+        Array(
+          batchSize,
+          conv_0_sizes.apply(1) / batchSize,
+          conv_0_sizes.apply(2)
+        )
+      )
+
       val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
       val conv_1_sum_viewed =
         ATen._unsafe_view(
@@ -494,11 +504,13 @@ case class Conv1D(
       val conv_1_sum_viewed_transposed_narrowed =
         ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
       ATen.add_out(out, out, conv_1_sum_viewed_transposed_narrowed, 1d)
+
       conv_1_sum_viewed_transposed_narrowed.release()
       conv_1_sum_viewed_transposed.release
       conv_1_sum_viewed.release
       conv_1_sum.release
       conv_1.release
+      conv_0.release
       input_viewed.release()
       p_repeated_viewed.release
       p_repeated.release
@@ -534,6 +546,154 @@ case class Conv1D(
   val value =
     Variable(this, {
       ATen.conv1d(
+        input.value,
+        weight.value,
+        bias.value,
+        Array(stride),
+        Array(padding),
+        Array(dilation),
+        groups
+      )
+    })
+}
+
+/** 2D convolution
+  *
+  * @param input batch x in_channels x height x width
+  * @param weight out_channels x in_channels x kernel_size x kernel_size
+  * @param bias out_channels
+  * @return Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)
+  */
+case class Conv2D(
+    input: Variable,
+    weight: Variable,
+    bias: Variable,
+    stride: Long,
+    padding: Long,
+    dilation: Long,
+    groups: Long
+) extends Op {
+
+  assert(input.shape.size == 4, "Input dimensions must be 3")
+  assert(weight.shape.size == 4, "Weight dimensions must be 3")
+  val batchSize = input.shape(0)
+  val inputChannels = input.shape(1)
+  val imageHeight = input.shape(2)
+  val imageWidth = input.shape(3)
+  val kernelSize = weight.shape(2)
+  val outChannels = weight.shape(0)
+  assert(
+    weight.shape(1) == inputChannels,
+    "Weight 2nd dimension must have size equal to input channels (2nd dim of input) "
+  )
+  assert(
+    bias.shape(0) == outChannels,
+    "Number of biases must be the number of output channels"
+  )
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    weight.zipBackward { (p, out) =>
+      val pSize = p.sizes
+
+      val p_repeated = ATen.repeat_interleave_2(p, inputChannels / groups, 1)
+      val p_repeated_size = p_repeated.sizes
+      val p_repeated_viewed =
+        ATen._unsafe_view(
+          p_repeated,
+          Array(
+            p_repeated_size(0) * p_repeated_size(1),
+            1,
+            p_repeated_size(2),
+            p_repeated_size(3)
+          )
+        )
+      val input_viewed = ATen._unsafe_view(
+        input.value,
+        Array(1, batchSize * inputChannels, imageHeight, imageWidth)
+      )
+      val zero = ATen.zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options)
+      val conv_0 = ATen.conv2d(
+        input_viewed,
+        p_repeated_viewed,
+        zero,
+        Array(dilation),
+        Array(padding),
+        Array(stride),
+        inputChannels * batchSize
+      )
+      val conv_0_sizes = conv_0.sizes
+      val conv_1 = ATen._unsafe_view(
+        conv_0,
+        Array(
+          batchSize,
+          conv_0_sizes.apply(1) / batchSize,
+          conv_0_sizes.apply(2),
+          conv_0_sizes.apply(3)
+        )
+      )
+      val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
+      val conv_1_sum_viewed =
+        ATen._unsafe_view(
+          conv_1_sum,
+          Array(
+            inputChannels / groups,
+            outChannels,
+            conv_1.sizes.apply(2),
+            conv_1.sizes.apply(3)
+          )
+        )
+      val conv_1_sum_viewed_transposed = ATen.transpose(conv_1_sum_viewed, 0, 1)
+
+      val conv_1_sum_viewed_transposed_narrowed1 =
+        ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
+      val conv_1_sum_viewed_transposed_narrowed2 =
+        ATen.narrow_0(conv_1_sum_viewed_transposed_narrowed1, 3, 0, kernelSize)
+
+      ATen.add_out(out, out, conv_1_sum_viewed_transposed_narrowed2, 1d)
+
+      conv_1_sum_viewed_transposed_narrowed1.release()
+      conv_1_sum_viewed_transposed_narrowed2.release()
+      conv_1_sum_viewed_transposed.release
+      conv_1_sum_viewed.release
+      conv_1_sum.release
+      conv_1.release
+      conv_0.release
+      input_viewed.release()
+      p_repeated_viewed.release
+      p_repeated.release
+
+    },
+    input.zipBackward { (p, out) =>
+      val pSize = p.sizes
+      val zeros = ATen.zeros(Array(inputChannels), p.options)
+      val outputSizeWithoutExtraPadding =
+        (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
+      val extraPaddingH = out.sizes.apply(2) - outputSizeWithoutExtraPadding
+      val extraPaddingW = out.sizes.apply(3) - outputSizeWithoutExtraPadding
+      val tmp = ATen.conv_transpose2d(
+        p,
+        weight.value,
+        zeros,
+        Array(stride),
+        Array(padding),
+        Array(extraPaddingH, extraPaddingW),
+        groups,
+        Array(dilation)
+      )
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+    },
+    bias.zipBackward { (p, out) =>
+      val p2 = ub(p, out.sizes.toList)
+
+      ATen.add_out(out, out, p2, 1d)
+      p2.release()
+    }
+  )
+
+  val value =
+    Variable(this, {
+      ATen.conv2d(
         input.value,
         weight.value,
         bias.value,

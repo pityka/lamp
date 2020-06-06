@@ -115,6 +115,8 @@ class NNSuite extends AnyFunSuite {
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
   val mat3x2 = mat2x3.T
   val nd1x2x3 = NDArray(mat2x3.toArray, List(1, 2, 3))
+  val nd1x2x3x3 =
+    NDArray((0 until 18).toArray.map(_.toDouble), List(1, 2, 3, 3))
 
   test("linear") {
     val linear = Linear(3, 1)
@@ -236,6 +238,32 @@ class NNSuite extends AnyFunSuite {
         groups = 1
       ),
     22d
+  )
+  testGradientAndValueND("Conv2D ", false)(
+    nd1x2x3x3,
+    () =>
+      Conv2D(
+        param(ATen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble)),
+        param(ATen.ones(Array(1), TensorOptions.dtypeDouble)),
+        stride = 1,
+        padding = 0,
+        dilation = 1,
+        groups = 1
+      ),
+    154d
+  )
+  testGradientAndValueND("Conv2D/cuda ", true)(
+    nd1x2x3x3,
+    () =>
+      Conv1D(
+        param(ATen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble.cuda)),
+        param(ATen.ones(Array(1), TensorOptions.dtypeDouble.cuda)),
+        stride = 1,
+        padding = 0,
+        dilation = 1,
+        groups = 1
+      ),
+    154d
   )
 
 }
