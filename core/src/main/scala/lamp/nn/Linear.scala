@@ -28,11 +28,11 @@ object Linear {
   ): Linear =
     Linear(
       weights = param(
-        ATen.rand(Array(out, in), tOpt)
+        ATen.normal_3(0d, math.sqrt(2d / (in + out)), Array(out, in), tOpt)
       ),
       bias =
         if (bias)
-          Some(param(ATen.rand(Array(1, out), tOpt)))
+          Some(param(ATen.zeros(Array(1, out), tOpt)))
         else None
     )
 }

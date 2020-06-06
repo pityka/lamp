@@ -38,10 +38,15 @@ object Conv1D {
       tOpt: TensorOptions = TensorOptions.dtypeDouble
   ): Conv1D = {
     val weightVar = param(
-      ATen.rand(Array(outChannels, inChannels, kernelSize), tOpt)
+      ATen.normal_3(
+        0d,
+        math.sqrt(2d / (outChannels + inChannels)),
+        Array(outChannels, inChannels, kernelSize),
+        tOpt
+      )
     )
     val biasVar = {
-      val t = ATen.rand(Array(outChannels), tOpt)
+      val t = ATen.zeros(Array(outChannels), tOpt)
       if (bias) param(t) else const(t)
     }
     Conv1D(
