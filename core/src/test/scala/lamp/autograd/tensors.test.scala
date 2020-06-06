@@ -5,6 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
 import aten.TensorOptions
 import lamp.nn.CudaTest
+import lamp.syntax
 
 class TensorHelperSuite extends AnyFunSuite {
   test("to/from cuda", CudaTest) {
@@ -17,5 +18,14 @@ class TensorHelperSuite extends AnyFunSuite {
     val idx = ATen.squeeze_0(TensorHelpers.fromLongMat(Mat(Vec(1L))))
     val m2 = ATen.index(m, Array(idx))
     assert(TensorHelpers.toMat(m2) == Mat(Vec(0d, 1d, 0d)).T)
+  }
+  test("fromMatList") {
+    val m =
+      TensorHelpers.fromMatList(Seq(mat.ident(2), mat.ident(2), mat.ident(2)))
+    assert(m.shape == List(3, 2, 2))
+    assert(
+      m.toDoubleArray.toSeq == Seq(1d, 0d, 0d, 1d, 1d, 0d, 0d, 1d, 1d, 0d, 0d,
+        1d)
+    )
   }
 }

@@ -7,6 +7,8 @@ import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
 import TensorHelpers.{unbroadcast => ub}
+import lamp.syntax
+import lamp.util.NDArray
 
 case class Constant(const: Tensor) extends Op {
   val params = Nil
@@ -30,10 +32,12 @@ case class Add(a: Variable, b: Variable) extends Op {
     a.zipBackward { (p, out) =>
       val p2 = ub(p, a.sizes)
       ATen.add_out(out, out, p2, 1d)
+      p2.release()
     },
     b.zipBackward { (p, out) =>
       val p2 = ub(p, b.sizes)
       ATen.add_out(out, out, p2, 1d)
+      p2.release()
     }
   )
   val value = Variable(this, ATen.add_0(a.value, b.value, 1d))
@@ -42,8 +46,16 @@ case class Add(a: Variable, b: Variable) extends Op {
 }
 case class Minus(a: Variable, b: Variable) extends Op {
   val params = List(
-    a.zipBackward { (p, out) => ATen.add_out(out, out, ub(p, a.sizes), 1d) },
-    b.zipBackward { (p, out) => ATen.add_out(out, out, ub(p, b.sizes), -1d) }
+    a.zipBackward { (p, out) =>
+      val p2 = ub(p, a.sizes)
+      ATen.add_out(out, out, p2, 1d)
+      p2.release()
+    },
+    b.zipBackward { (p, out) =>
+      val p2 = ub(p, b.sizes)
+      ATen.add_out(out, out, p2, -1d)
+      p2.release()
+    }
   )
   val value = Variable(this, ATen.add_0(a.value, b.value, -1d))
 
@@ -72,15 +84,19 @@ case class Div(a: Variable, b: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
       val tmp = ATen.div_0(p, b.value)
-      ATen.add_out(out, out, ub(tmp, a.sizes), 1d)
+      val t2 = ub(tmp, a.sizes)
+      ATen.add_out(out, out, t2, 1d)
       tmp.release
+      t2.release
     },
     b.zipBackward { (p, out) =>
       // out += p * (a.value * b.value.map(x => -1d / (x * x)))
       val tmp = ATen.div_0(value.value, b.value)
       ATen.mul_out(tmp, tmp, p)
-      ATen.add_out(out, out, ub(tmp, b.sizes), -1d)
+      val t2 = ub(tmp, b.sizes)
+      ATen.add_out(out, out, t2, -1d)
       tmp.release()
+      t2.release()
     }
   )
 
@@ -409,6 +425,122 @@ case class SquaredFrobeniusMatrixNorm(a: Variable) extends Op {
   override def toString = s"FROBENIUS(${a.stringify()})"
 }
 
-// // each row is a sample, batches are along the first dimension
-// // https://arxiv.org/pdf/1502.03167.pdf
-// // case class BatchNorm(a: Variable) extends Op
+/** 1D convolution
+  *
+  * @param input batch x in_channels x L
+  * @param weight out_channels x in_channels x kernel_size
+  * @param bias out_channels
+  * @return Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)
+  */
+case class Conv1D(
+    input: Variable,
+    weight: Variable,
+    bias: Variable,
+    stride: Long,
+    padding: Long,
+    dilation: Long,
+    groups: Long
+) extends Op {
+
+  assert(input.shape.size == 3, "Input dimensions must be 3")
+  assert(weight.shape.size == 3, "Weight dimensions must be 3")
+  val batchSize = input.shape(0)
+  val inputChannels = input.shape(1)
+  val imageSize = input.shape(2)
+  val kernelSize = weight.shape(2)
+  val outChannels = weight.shape(0)
+  assert(
+    weight.shape(1) == inputChannels,
+    "Weight 2nd dimension must have size equal to input channels (2nd dim of input) "
+  )
+  assert(
+    bias.shape(0) == outChannels,
+    "Number of biases must be the number of output channels"
+  )
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    weight.zipBackward { (p, out) =>
+      val pSize = p.sizes
+
+      val p_repeated = ATen.repeat_interleave_2(p, inputChannels / groups, 1)
+      val p_repeated_size = p_repeated.sizes
+      val p_repeated_viewed =
+        ATen._unsafe_view(
+          p_repeated,
+          Array(p_repeated_size(0) * p_repeated_size(1), 1, p_repeated_size(2))
+        )
+      val input_viewed = ATen._unsafe_view(
+        input.value,
+        Array(1, batchSize * inputChannels, imageSize)
+      )
+      val zero = ATen.zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options)
+      val conv_1 = ATen.conv1d(
+        input_viewed,
+        p_repeated_viewed,
+        zero,
+        Array(dilation),
+        Array(padding),
+        Array(stride),
+        inputChannels * batchSize
+      )
+      val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
+      val conv_1_sum_viewed =
+        ATen._unsafe_view(
+          conv_1_sum,
+          Array(inputChannels / groups, outChannels, conv_1.sizes.apply(2))
+        )
+      val conv_1_sum_viewed_transposed = ATen.transpose(conv_1_sum_viewed, 0, 1)
+
+      val conv_1_sum_viewed_transposed_narrowed =
+        ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
+      ATen.add_out(out, out, conv_1_sum_viewed_transposed_narrowed, 1d)
+      conv_1_sum_viewed_transposed_narrowed.release()
+      conv_1_sum_viewed_transposed.release
+      conv_1_sum_viewed.release
+      conv_1_sum.release
+      conv_1.release
+      input_viewed.release()
+      p_repeated_viewed.release
+      p_repeated.release
+
+    },
+    input.zipBackward { (p, out) =>
+      val pSize = p.sizes
+      val zeros = ATen.zeros(Array(inputChannels), p.options)
+      val outputSizeWithoutExtraPadding =
+        (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
+      val extraPadding = out.sizes.apply(2) - outputSizeWithoutExtraPadding
+      val tmp = ATen.conv_transpose1d(
+        p,
+        weight.value,
+        zeros,
+        Array(stride),
+        Array(padding),
+        Array(extraPadding),
+        groups,
+        Array(dilation)
+      )
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+    },
+    bias.zipBackward { (p, out) =>
+      val p2 = ub(p, out.sizes.toList)
+
+      ATen.add_out(out, out, p2, 1d)
+      p2.release()
+    }
+  )
+
+  val value =
+    Variable(this, {
+      ATen.conv1d(
+        input.value,
+        weight.value,
+        bias.value,
+        Array(stride),
+        Array(padding),
+        Array(dilation),
+        groups
+      )
+    })
+}

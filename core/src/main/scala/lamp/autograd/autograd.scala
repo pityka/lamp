@@ -54,6 +54,8 @@ case class Variable(
 
   val sizes = value.sizes.toList
 
+  def shape = sizes
+
   val id = ju.UUID.randomUUID()
 
   def releaseAll(): Unit = {

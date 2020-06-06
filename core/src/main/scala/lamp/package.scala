@@ -3,6 +3,7 @@ import aten.ATen
 import cats.effect.{IO, Resource}
 import lamp.autograd.TensorHelpers
 import aten.Tensor
+import org.saddle.Vec
 
 package object lamp {
 
@@ -12,6 +13,25 @@ package object lamp {
       ATen.scalar_tensor(d, self.options())
     }
 
+    def shape = self.sizes.toList
+    def options = self.options
+    def size = self.numel
+
+    def reshape(s: Seq[Long]) = inResource(ATen.reshape(self, s.toArray))
+
+    def select(dim: Long, index: Long) =
+      inResource(ATen.select(self, dim, index))
+    def select(dim: Long, index: Array[Long]) =
+      inResource(TensorHelpers.fromLongVec(Vec(index), cuda = false)).flatMap(
+        index => inResource(ATen.index_select(self, dim, index))
+      )
+
+    def toDoubleArray = {
+      val arr = Array.ofDim[Double](size.toInt)
+      val success = self.copyToDoubleArray(arr)
+      assert(success)
+      arr
+    }
     def toMat = TensorHelpers.toMat(self)
     def toMatLong = TensorHelpers.toMatLong(self)
 
