@@ -80,8 +80,8 @@ class GradientSuite extends AnyFunSuite {
         fun(m, true, true)._2.get
       }
       assert(
-        Vec(fun(m, false, true)._1).roundTo(10) == Vec(expectedValue).roundTo(
-          10
+        Vec(fun(m, false, true)._1).roundTo(4) == Vec(expectedValue).roundTo(
+          4
         )
       )
 

@@ -259,7 +259,7 @@ class NNSuite extends AnyFunSuite {
   testGradientAndValueND("Conv2D/cuda ", true)(
     nd1x2x3x3,
     () =>
-      Conv1D(
+      Conv2D(
         param(ATen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble.cuda)),
         param(ATen.ones(Array(1), TensorOptions.dtypeDouble.cuda)),
         stride = 1,
