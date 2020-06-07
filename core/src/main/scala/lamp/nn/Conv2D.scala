@@ -3,6 +3,7 @@ package lamp.nn
 import lamp.autograd.{Variable, param, Conv2D => Conv2dOp, const}
 import aten.{ATen, TensorOptions}
 import lamp.autograd.TensorHelpers
+import aten.Tensor
 
 case class Conv2D(
     weights: Variable,
@@ -12,6 +13,12 @@ case class Conv2D(
     dilation: Long,
     groups: Long
 ) extends Module {
+
+  def load(parameters: Seq[Tensor]) = {
+    val w = param(parameters.head)
+    val b = param(parameters(1))
+    copy(weights = w, bias = b)
+  }
 
   val parameters = List(
     weights -> Conv2D.Weights,

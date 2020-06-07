@@ -16,6 +16,17 @@ case class Sequential(members: Module*) extends Module {
     )
   def forward(x: Variable) =
     members.foldLeft(x)((x, b) => b.forward(x))
+
+  def load(parameters: Seq[Tensor]) = {
+    val (loadedMembers, _) = members.foldLeft((List[Module](), parameters)) {
+      case ((acc, params), member) =>
+        val numParam = member.parameters.size
+        val loaded = member.load(params.take(numParam))
+        (acc.:+(loaded), params.drop(numParam))
+
+    }
+    Sequential(loadedMembers: _*)
+  }
 }
 object Sequential {
   case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
@@ -26,7 +37,7 @@ object Sequential {
 case class Fun(fun: Variable => Variable) extends Module {
   def parameters = Nil
   def forward(x: Variable): Variable = fun(x)
-
+  def load(parameters: Seq[Tensor]) = this
 }
 
 trait Module {
@@ -41,6 +52,7 @@ trait Module {
     loss.releaseAll
     g
   }
+  def load(parameters: Seq[Tensor]): Module
 }
 
 trait PTag {

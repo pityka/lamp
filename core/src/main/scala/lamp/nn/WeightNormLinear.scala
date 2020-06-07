@@ -3,12 +3,20 @@ package lamp.nn
 import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
 import lamp.autograd.TensorHelpers
+import aten.Tensor
 
 case class WeightNormLinear(
     weightsV: Variable,
     weightsG: Variable,
     bias: Option[Variable]
 ) extends Module {
+
+  def load(parameters: Seq[Tensor]) = {
+    val wV = param(parameters.head)
+    val wG = param(parameters(1))
+    val b = if (bias.isDefined) Some(param(parameters(2))) else None
+    copy(weightsV = wV, weightsG = wG, bias = b)
+  }
 
   val parameters = List(
     weightsV -> WeightNormLinear.WeightsV,

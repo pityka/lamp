@@ -10,6 +10,7 @@ import aten.TensorOptions
 import org.scalatest.Tag
 import lamp.syntax
 import lamp.util.NDArray
+import aten.Tensor
 
 object CudaTest extends Tag("cuda")
 
@@ -285,6 +286,25 @@ class NNSuite extends AnyFunSuite {
     )
   }
 
+  test("load params") {
+
+    val mod = Sequential(
+      Linear(in = 30, out = 3),
+      Linear(in = 3, out = 2),
+      Fun(_.logSoftMax)
+    )
+
+    val parameters = mod.parameters.map(_._1.value)
+
+    val loaded = mod.load(parameters)
+    assert(loaded.parameters.map(_._1.value) == parameters)
+    val p2 = parameters.map { t => ATen.mul_1(t, 3d) }
+    val loaded2 = mod.load(p2)
+
+    assert(loaded2.parameters.map(_._1.value) == p2)
+
+  }
+
 }
 
 case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
@@ -294,6 +314,8 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
 
   def forward(x: Variable): Variable =
     ((x.mm(w)).logSoftMax.crossEntropy(y).sum + w.squaredFrobenius)
+
+  def load(parameters: Seq[Tensor]) = this
 
   def parameters: Seq[(Variable, PTag)] =
     List(w -> NoTag)
@@ -318,9 +340,13 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
   def parameters: Seq[(Variable, PTag)] =
     mod.parameters
 
+  def load(parameters: Seq[Tensor]) = this
+
 }
 
 case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
+
+  def load(parameters: Seq[Tensor]) = this
 
   val mod = Sequential(
     Linear(

@@ -3,9 +3,14 @@ package lamp.nn
 import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
 import lamp.autograd.TensorHelpers
+import aten.Tensor
 
 case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
-
+  def load(parameters: Seq[Tensor]) = {
+    val w = param(parameters.head)
+    val b = if (bias.isDefined) Some(param(parameters(1))) else None
+    copy(weights = w, bias = b)
+  }
   val parameters = List(
     weights -> Linear.Weights
   ) ++ bias.toList.map(b => (b, Linear.Bias))
