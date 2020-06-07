@@ -39,10 +39,11 @@ class IOLoopSuite extends AnyFunSuite {
         cuda
       )
     )
+    val classWeights = ATen.ones(Array(10), x.options())
 
     val model = SupervisedModel(
       logisticRegression(data.numCols - 1, 10, device.options),
-      LossFunctions.NLL(10)
+      LossFunctions.NLL(10, classWeights)
     )
 
     val trainedModel = IOLoops.epochs(
@@ -82,10 +83,11 @@ class IOLoopSuite extends AnyFunSuite {
         cuda
       )
     )
+    val classWeights = ATen.ones(Array(10), x.options())
 
     val model = SupervisedModel(
       logisticRegression(data.numCols - 1, 10, device.options),
-      LossFunctions.NLL(10)
+      LossFunctions.NLL(10, classWeights)
     )
 
     val trainedModel = IOLoops.epochs(

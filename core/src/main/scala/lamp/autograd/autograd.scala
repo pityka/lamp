@@ -129,8 +129,13 @@ case class Variable(
   def pow(const: Double) = PowConst(this, const).value
   def logSoftMax = LogSoftMaxRowWise(this).value
   def crossEntropy(other: Variable) = (const(-1)) * ((this.*(other)).rowSum)
-  def nllLoss(target: Tensor, numClasses: Int, reduction: Reduction = Mean) =
-    NllLoss(this, target, numClasses, reduction).value
+  def nllLoss(
+      target: Tensor,
+      numClasses: Int,
+      weights: Tensor,
+      reduction: Reduction = Mean
+  ) =
+    NllLoss(this, target, weights, numClasses, reduction).value
   def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
   def mean(dim: List[Int]) = Mean(this, dim).value
 

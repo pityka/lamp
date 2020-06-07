@@ -372,6 +372,7 @@ case object Sum extends Reduction {
 case class NllLoss(
     input: Variable,
     target: Tensor,
+    weights: Tensor,
     numClasses: Int,
     reduction: Reduction
 ) extends Op {
@@ -383,7 +384,7 @@ case class NllLoss(
     target.sizes.size == 1,
     "Target should be a 1D tensor with [0,C-1] integers, C number of classes."
   )
-  val weights = ATen.ones(Array(numClasses), target.options.toDouble)
+
   val params = List(
     input.zipBackward { (p, out) =>
       val tmp =
@@ -397,6 +398,7 @@ case class NllLoss(
           total_weight
         )
       ATen.add_out(out, out, tmp, 1d)
+
       tmp.release
     }
   )

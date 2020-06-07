@@ -64,8 +64,8 @@ class LogisticSuite extends AnyFunSuite {
       val correct = prediction.zipMap(data.firstCol("label").toVec)((a, b) =>
         if (a == b) 1d else 0d
       )
-
-      val loss: Variable = output.nllLoss(target, 10)
+      val classWeights = ATen.ones(Array(10), x.options)
+      val loss: Variable = output.nllLoss(target, 10, classWeights)
       lastAccuracy = correct.mean2
       lastLoss = TensorHelpers.toMat(loss.value).raw(0)
       val gradients = model.gradients(loss)

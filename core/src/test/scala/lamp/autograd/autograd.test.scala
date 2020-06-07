@@ -605,8 +605,12 @@ class GradientSuite extends AnyFunSuite {
     val data = const(TensorHelpers.fromMat(mat3x2))
     val y =
       const(ATen.squeeze_0(TensorHelpers.fromLongMat(Mat(Vec(0L, 1L, 2L)))))
+    val classWeights = ATen.ones(Array(3), w.value.options())
     val L =
-      ((data.mm(w)).logSoftMax.nllLoss(y.value, 3, Sum) + w.squaredFrobenius)
+      ((data
+        .mm(w))
+        .logSoftMax
+        .nllLoss(y.value, 3, classWeights, Sum) + w.squaredFrobenius)
     if (doBackprop) {
       L.backprop()
     }
@@ -623,11 +627,12 @@ class GradientSuite extends AnyFunSuite {
     val data = const(TensorHelpers.fromMat(mat3x2))
     val y =
       const(ATen.squeeze_0(TensorHelpers.fromLongMat(Mat(Vec(0L, 1L, 2L)))))
+    val classWeights = ATen.ones(Array(3), w.value.options())
     val L =
       ((data
         .mm(w))
         .logSoftMax
-        .nllLoss(y.value, 3, NoReduction)
+        .nllLoss(y.value, 3, classWeights, NoReduction)
         .sum + w.squaredFrobenius)
     if (doBackprop) {
       L.backprop()

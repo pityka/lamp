@@ -63,10 +63,11 @@ class MLPSuite extends AnyFunSuite {
         cuda
       )
     )
+    val classWeights = ATen.ones(Array(10), device.options)
 
     val model = SupervisedModel(
       mlp(784, 10, device.options),
-      LossFunctions.NLL(10)
+      LossFunctions.NLL(10, classWeights)
     )
 
     val makeValidationBatch = () =>
