@@ -877,9 +877,6 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
-      val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
-
-      val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
       val output =
         MaxPool1D(input, 2, 1, 1, 1).value
 
@@ -896,9 +893,7 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
-      val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
 
-      val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
       val output =
         MaxPool1D(input, 2, 1, 0, 1).value
 
@@ -915,11 +910,43 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
-      val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
 
-      val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
       val output =
         MaxPool1D(input, 2, 2, 0, 1).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("maxpool2d strided")(nd1x2x3x3, 17d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+
+      val output =
+        MaxPool2D(input, 2, 2, 0, 1).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("maxpool2d strided pooled")(nd1x2x3x3, 68d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+
+      val output =
+        MaxPool2D(input, 2, 2, 1, 1).value
 
       val L = output.sum
       if (doBackprop) {
