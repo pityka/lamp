@@ -9,10 +9,11 @@ object SGDW {
       learningRate: OptimizerHyperparameter,
       weightDecay: OptimizerHyperparameter,
       momentum: Option[OptimizerHyperparameter] = None,
-      scheduler: Long => Double = _ => 1d
+      scheduler: Long => Double = _ => 1d,
+      clip: Option[Double] = None
   ) =
     (parameters: Seq[(Tensor, PTag)]) =>
-      SGDW(parameters, learningRate, weightDecay, momentum, scheduler)
+      SGDW(parameters, learningRate, weightDecay, momentum, scheduler, clip)
 }
 
 // https://arxiv.org/pdf/1711.05101.pdf algorithm 1
@@ -21,7 +22,8 @@ case class SGDW(
     learningRate: OptimizerHyperparameter,
     weightDecay: OptimizerHyperparameter,
     momentum: Option[OptimizerHyperparameter] = None,
-    scheduler: Long => Double = _ => 1d
+    scheduler: Long => Double = _ => 1d,
+    clip: Option[Double] = None
 ) extends Optimizer {
   val velocity: List[Option[(Tensor, OptimizerHyperparameter)]] = momentum.map {
     m =>
@@ -33,6 +35,7 @@ case class SGDW(
   var stepCount = 0L
 
   def step(gradients: Seq[Tensor]) = {
+    clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1L
     val scheduleFactor = scheduler(stepCount)
     parameters.zip(gradients).zip(velocity).foreach {

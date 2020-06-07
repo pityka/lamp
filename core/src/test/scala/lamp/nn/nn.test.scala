@@ -14,7 +14,10 @@ import lamp.util.NDArray
 object CudaTest extends Tag("cuda")
 
 class NNSuite extends AnyFunSuite {
-
+  def test1(id: String)(fun: Boolean => Unit) = {
+    test(id) { fun(false) }
+    test(id + "/CUDA", CudaTest) { fun(true) }
+  }
   def testGradientAndValue(
       id: String,
       cuda: Boolean = false
@@ -265,6 +268,22 @@ class NNSuite extends AnyFunSuite {
       ),
     154d
   )
+
+  test1("gradient clipping") { cuda =>
+    val topt =
+      if (cuda) TensorOptions.dtypeDouble().cuda
+      else TensorOptions.dtypeDouble()
+    val t = ATen.ones(Array(1, 2, 3), topt)
+    val t2 = ATen.ones(Array(1, 2), topt)
+    gradientClippingInPlace(Seq(t, t2), 2.1)
+    assert(
+      NDArray.tensorToNDArray(t).toVec.roundTo(4) == NDArray(
+        Array(0.7424621202458749, 0.7424621202458749, 0.7424621202458749,
+          0.7424621202458749, 0.7424621202458749, 0.7424621202458749),
+        List(1, 2, 3)
+      ).toVec.roundTo(4)
+    )
+  }
 
 }
 

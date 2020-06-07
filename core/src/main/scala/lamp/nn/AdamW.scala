@@ -12,10 +12,20 @@ object AdamW {
       beta1: OptimizerHyperparameter = simple(0.9),
       beta2: OptimizerHyperparameter = simple(0.999),
       eps: Double = 1e-8,
-      scheduler: Long => Double = _ => 1d
+      scheduler: Long => Double = _ => 1d,
+      clip: Option[Double] = None
   ) =
     (parameters: Seq[(Tensor, PTag)]) =>
-      AdamW(parameters, weightDecay, learningRate, beta1, beta2, eps, scheduler)
+      AdamW(
+        parameters,
+        weightDecay,
+        learningRate,
+        beta1,
+        beta2,
+        eps,
+        scheduler,
+        clip
+      )
 }
 
 // https://arxiv.org/pdf/1711.05101.pdf Algorithm 2
@@ -26,7 +36,8 @@ case class AdamW(
     beta1: OptimizerHyperparameter = simple(0.9),
     beta2: OptimizerHyperparameter = simple(0.999),
     eps: Double = 1e-8,
-    scheduler: Long => Double = _ => 1d
+    scheduler: Long => Double = _ => 1d,
+    clip: Option[Double] = None
 ) extends Optimizer {
   val mt: List[Tensor] = parameters.toList.map {
     case (param, _) => ATen.zeros_like(param, param.options)
@@ -37,6 +48,7 @@ case class AdamW(
 
   var stepCount = 0L
   def step(gradients: Seq[Tensor]) = {
+    clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1
     parameters.zip(gradients).zip(mt).zip(vt).foreach {
       case ((((param, tag), gradients), mt), vt) =>
