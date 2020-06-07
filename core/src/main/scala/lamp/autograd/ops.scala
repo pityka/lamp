@@ -704,3 +704,63 @@ case class Conv2D(
       )
     })
 }
+
+/** 1D max pooling
+  *
+  * @param input batch x in_channels x L
+  */
+case class MaxPool1D(
+    input: Variable,
+    kernelSize: Long,
+    stride: Long,
+    padding: Long,
+    dilation: Long
+) extends Op {
+
+  assert(input.shape.size == 3, "Input dimensions must be 3")
+  val batchSize = input.shape(0)
+  val inputChannels = input.shape(1)
+  val imageSize = input.shape(2)
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      val zeros = ATen.zeros_like(out, out.options())
+      val p_flatten = ATen.flatten(p, 0, 1)
+      val mask_flatten = ATen.flatten(mask, 0, 1)
+      val zeros_flatten = ATen.flatten(zeros, 0, 1)
+      val addeds = 0L until p_flatten.shape(0) map { i =>
+        val p_select = ATen.select(p_flatten, 0, i)
+        val mask_select = ATen.select(mask_flatten, 0, i)
+        val zeros_select = ATen.select(zeros_flatten, 0, i)
+        val added = ATen.index_add(zeros_select, 0, mask_select, p_select)
+        p_select.release
+        mask_select.release
+        zeros_select.release
+        added
+      }
+
+      val catted = ATen.cat(addeds.toArray, 0)
+      val catted_viewed = ATen._unsafe_view(catted, out.sizes)
+      ATen.add_out(out, out, catted_viewed, 1d)
+
+      catted_viewed.release
+      catted.release
+      zeros_flatten.release
+      mask_flatten.release
+      p_flatten.release
+      zeros.release
+    }
+  )
+
+  val (output, mask) = ATen.max_pool1d_with_indices(
+    input.value,
+    Array(kernelSize),
+    Array(stride),
+    Array(padding),
+    Array(dilation),
+    false
+  )
+
+  val value =
+    Variable(this, output)
+}

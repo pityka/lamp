@@ -107,4 +107,12 @@ object NDArray {
     NDArray(arr, if (shape.size > 0) shape.map(_.toInt) else List(1))
 
   }
+  def tensorToLongNDArray(t: Tensor) = {
+    val shape = t.sizes().toList
+    val s = if (shape.size > 0) shape.reduce(_ * _).toInt else 1
+    val arr = Array.ofDim[Long](s)
+    val data = t.copyToLongArray(arr)
+    NDArray(arr, if (shape.size > 0) shape.map(_.toInt) else List(1))
+
+  }
 }

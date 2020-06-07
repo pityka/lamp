@@ -873,4 +873,61 @@ class GradientSuite extends AnyFunSuite {
       )
   }
 
+  testGradientAndValueND("maxpool1d padded")(nd1x2x3, 32d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+      val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
+
+      val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
+      val output =
+        MaxPool1D(input, 2, 1, 1, 1).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("maxpool1d unpadded")(nd1x2x3, 18d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+      val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
+
+      val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
+      val output =
+        MaxPool1D(input, 2, 1, 0, 1).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("maxpool1d strided")(nd1x2x3, 7d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+      val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
+
+      val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
+      val output =
+        MaxPool1D(input, 2, 2, 0, 1).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
 }
