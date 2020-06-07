@@ -115,4 +115,12 @@ object NDArray {
     NDArray(arr, if (shape.size > 0) shape.map(_.toInt) else List(1))
 
   }
+  def tensorToFloatNDArray(t: Tensor) = {
+    val shape = t.sizes().toList
+    val s = if (shape.size > 0) shape.reduce(_ * _).toInt else 1
+    val arr = Array.ofDim[Float](s)
+    val data = t.copyToFloatArray(arr)
+    NDArray(arr, if (shape.size > 0) shape.map(_.toInt) else List(1))
+
+  }
 }
