@@ -76,11 +76,12 @@ lazy val core = project
   .settings(
     name := "lamp-autograd",
     libraryDependencies ++= Seq(
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+29-2a666ed9",
       "io.github.pityka" %% "saddle-core" % "2.0.0-M24",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M24",
       "org.typelevel" %% "cats-core" % "2.1.1",
       "org.typelevel" %% "cats-effect" % "2.1.3",
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+29-2a666ed9",
+      "com.lihaoyi" %% "ujson" % "1.1.0",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
