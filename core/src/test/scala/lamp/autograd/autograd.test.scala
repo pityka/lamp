@@ -940,13 +940,30 @@ class GradientSuite extends AnyFunSuite {
         input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
       )
   }
-  testGradientAndValueND("maxpool2d strided pooled")(nd1x2x3x3, 68d) {
+  testGradientAndValueND("maxpool2d strided padded")(nd1x2x3x3, 68d) {
     (m, doBackprop, cuda) =>
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
 
       val output =
         MaxPool2D(input, 2, 2, 1, 1).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("avgpool2d strided padded")(nd1x2x3x3, 38.25) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+
+      val output =
+        AvgPool2D(input, 2, 2, 1).value
 
       val L = output.sum
       if (doBackprop) {

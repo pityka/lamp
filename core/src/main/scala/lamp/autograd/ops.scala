@@ -767,7 +767,7 @@ case class MaxPool1D(
 
 /** 2D max pooling
   *
-  * @param input batch x in_channels x L
+  * @param input batch x in_channels x h x w
   */
 case class MaxPool2D(
     input: Variable,
@@ -812,4 +812,54 @@ case class MaxPool2D(
 
   val value =
     Variable(this, output)
+}
+
+/** 2D avg pooling
+  *
+  * @param input batch x in_channels x h x w
+  */
+case class AvgPool2D(
+    input: Variable,
+    kernelSize: Long,
+    stride: Long,
+    padding: Long
+) extends Op {
+
+  assert(input.shape.size == 4, "Input dimensions must be 4")
+  val batchSize = input.shape(0)
+  val inputChannels = input.shape(1)
+  val imageSize = input.shape(2)
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      val tmp = ATen.avg_pool2d_backward(
+        p,
+        input.value,
+        Array(kernelSize),
+        Array(stride),
+        Array(padding),
+        false,
+        true,
+        Long.MinValue
+      )
+
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+
+    }
+  )
+
+  val value =
+    Variable(
+      this,
+      ATen.avg_pool2d(
+        input.value,
+        Array(kernelSize),
+        Array(stride),
+        Array(padding),
+        false,
+        true,
+        Long.MinValue
+      )
+    )
 }
