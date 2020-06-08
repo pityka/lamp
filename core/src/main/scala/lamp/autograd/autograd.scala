@@ -45,7 +45,8 @@ case class Variable(
     op: Op,
     value: Tensor,
     needsGrad: Boolean = true,
-    leaf: Boolean = false
+    leaf: Boolean = false,
+    releaseWith: Seq[Tensor] = Nil
 ) {
 
   def options = value.options
@@ -61,6 +62,7 @@ case class Variable(
   def releaseAll(): Unit = {
     wengert.filterNot(_.leaf).foreach { variable =>
       variable.value.release
+      variable.releaseWith.foreach(_.release)
       variable.partialDerivative.foreach(_.release)
     }
   }
@@ -138,6 +140,8 @@ case class Variable(
     NllLoss(this, target, weights, numClasses, reduction).value
   def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
   def mean(dim: List[Int]) = Mean(this, dim).value
+  def viewAs2D(size: Long) = ViewAs2D(this, size).value
+  def flattenLastDimensions(dims: Int) = FlattenLastDimensions(this, dims).value
 
   def toMat = TensorHelpers.toMat(value)
   def toLongMat = TensorHelpers.toMatLong(value)

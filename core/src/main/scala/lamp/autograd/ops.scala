@@ -300,7 +300,8 @@ case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
     ATen.dropout_(ones, prob, train)
     ones
   }
-  val value = Variable(this, ATen.mul_0(a.value, mask))
+  val value =
+    Variable(this, ATen.mul_0(a.value, mask), releaseWith = List(mask))
   override def toString = s"DROPOUT(${a.stringify()})"
 
 }
@@ -351,7 +352,7 @@ case class WeightNorm(v: Variable, g: Variable, dim: Long) extends Op {
   val w = ATen.mul_0(v.value, g.value)
   ATen.div_out(w, w, norm)
 
-  val value = Variable(this, w)
+  val value = Variable(this, w, releaseWith = List(norm))
   override def toString = s"WeightNorm(${v.stringify()} ${g.stringify()})"
 
 }
@@ -408,7 +409,8 @@ case class NllLoss(
   val value =
     Variable(
       this,
-      value1
+      value1,
+      releaseWith = List(total_weight)
     )
   override def toString = s"NLL(${input.stringify()})"
 
@@ -536,12 +538,14 @@ case class Conv1D(
       )
       ATen.add_out(out, out, tmp, 1d)
       tmp.release
+      zeros.release()
     },
     bias.zipBackward { (p, out) =>
-      val p2 = ub(p, out.sizes.toList)
-
-      ATen.add_out(out, out, p2, 1d)
+      val p2 = ub(p, List(out.sizes.toList.head, 1))
+      val p3 = ATen._unsafe_view(p2, out.sizes)
+      ATen.add_out(out, out, p3, 1d)
       p2.release()
+      p3.release()
     }
   )
 
@@ -684,12 +688,15 @@ case class Conv2D(
       )
       ATen.add_out(out, out, tmp, 1d)
       tmp.release
+      zeros.release()
     },
     bias.zipBackward { (p, out) =>
-      val p2 = ub(p, out.sizes.toList)
+      val p2 = ub(p, List(out.sizes.toList.head, 1, 1))
+      val p3 = ATen._unsafe_view(p2, out.sizes)
 
-      ATen.add_out(out, out, p2, 1d)
+      ATen.add_out(out, out, p3, 1d)
       p2.release()
+      p3.release()
     }
   )
 
@@ -714,9 +721,9 @@ case class Conv2D(
 case class MaxPool1D(
     input: Variable,
     kernelSize: Long,
-    stride: Long,
-    padding: Long,
-    dilation: Long
+    stride: Long = 1,
+    padding: Long = 0,
+    dilation: Long = 1
 ) extends Op {
 
   assert(input.shape.size == 3, "Input dimensions must be 3")
@@ -764,7 +771,7 @@ case class MaxPool1D(
   )
 
   val value =
-    Variable(this, output)
+    Variable(this, output, releaseWith = List(mask))
 }
 
 /** 2D max pooling
@@ -813,7 +820,7 @@ case class MaxPool2D(
   )
 
   val value =
-    Variable(this, output)
+    Variable(this, output, releaseWith = List(mask))
 }
 
 /** 2D avg pooling
@@ -863,5 +870,53 @@ case class AvgPool2D(
         true,
         Long.MinValue
       )
+    )
+}
+/* Flattens the last two dimensions
+ */
+case class ViewAs2D(
+    input: Variable,
+    size: Long
+) extends Op {
+
+  assert(input.shape.size >= 2, "Input dimensions must be 4")
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      val tmp = ATen._unsafe_view(p, out.shape.toArray)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+
+    }
+  )
+
+  val value =
+    Variable(
+      this,
+      ATen._unsafe_view(input.value, Array(-1, size))
+    )
+}
+case class FlattenLastDimensions(
+    input: Variable,
+    last: Int
+) extends Op {
+
+  assert(input.shape.size >= 2, "Input dimensions must be 4")
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      val tmp = ATen._unsafe_view(p, out.shape.toArray)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+
+    }
+  )
+
+  val size = input.shape.takeRight(last).reduce(_ * _)
+
+  val value =
+    Variable(
+      this,
+      ATen._unsafe_view(input.value, Array(-1, size))
     )
 }

@@ -17,10 +17,11 @@ case class Meanshift(
   override def asTraining = copy(training = true)
   override def asEval = copy(training = false)
 
-  def load(parameters: Seq[Tensor]) = {
+  override def load(parameters: Seq[Tensor]) = {
     copy(means = param(parameters.head))
   }
-  def parameters: Seq[(Variable, PTag)] = List(means -> Meanshift.Means)
+  override def parameters: Seq[(Variable, PTag)] =
+    List(means -> Meanshift.Means)
   def forward(x: Variable): Variable = {
     val mean = if (training) x.mean(dim) else const(runningMean.get)
     if (training) {

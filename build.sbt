@@ -90,6 +90,18 @@ lazy val core = project
     testOptions in Cuda += Tests.Argument("-n", "cuda")
   )
 
+lazy val example_cifer100 = project
+  .in(file("example-cifar100"))
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.outr" %% "scribe" % "2.7.3"
+    )
+  )
+  .dependsOn(core)
+
 lazy val root = project
   .in(file("."))
   .settings(

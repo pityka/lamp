@@ -33,6 +33,30 @@ object BufferedImageHelper {
 
     bi
   }
+  def fromDoubleTensor(t: Tensor): BufferedImage = {
+    val shape = t.shape
+    assert(shape.size == 3, "Needs dim of 3")
+    val arr = Array.ofDim[Double](shape.reduce(_ * _).toInt)
+    assert(t.copyToDoubleArray(arr))
+    val stride = arr.size / 3
+    var i = 0
+    val bi = new BufferedImage(
+      shape(1).toInt,
+      shape(2).toInt,
+      BufferedImage.TYPE_INT_ARGB
+    )
+    val width = shape(1).toInt
+    while (i < stride) {
+      val r = arr(i)
+      val g = arr(i + stride)
+      val b = arr(i + stride * 2)
+      val color = new Color(r.toInt, g.toInt, b.toInt).getRGB()
+      bi.setRGB(i % width, i / width, color)
+      i += 1
+    }
+
+    bi
+  }
   def toFloatTensor(image: BufferedImage): Tensor = {
     val dataAsInt =
       image.getRGB(

@@ -8,7 +8,7 @@ import aten.TensorOptions
 case class Sequential(members: Module*) extends Module {
   override def asEval: Module = Sequential(members.map(_.asEval): _*)
   override def asTraining: Module = Sequential(members.map(_.asTraining): _*)
-  def parameters =
+  override def parameters =
     members.flatMap(member =>
       member.parameters.zipWithIndex.map {
         case ((param, ptag), idx) => (param, Sequential.Tag(ptag, idx))
@@ -17,7 +17,7 @@ case class Sequential(members: Module*) extends Module {
   def forward(x: Variable) =
     members.foldLeft(x)((x, b) => b.forward(x))
 
-  def load(parameters: Seq[Tensor]) = {
+  override def load(parameters: Seq[Tensor]) = {
     val (loadedMembers, _) = members.foldLeft((List[Module](), parameters)) {
       case ((acc, params), member) =>
         val numParam = member.parameters.size
@@ -35,16 +35,20 @@ object Sequential {
 }
 
 case class Fun(fun: Variable => Variable) extends Module {
-  def parameters = Nil
   def forward(x: Variable): Variable = fun(x)
-  def load(parameters: Seq[Tensor]) = this
+}
+case class View(size: Int) extends Module {
+  def forward(x: Variable): Variable = x.viewAs2D(size)
+}
+case class FlattenLast(dims: Int) extends Module {
+  def forward(x: Variable): Variable = x.flattenLastDimensions(dims)
 }
 
 trait Module {
   def asEval: Module = this
   def asTraining: Module = this
   def forward(x: Variable): Variable
-  def parameters: Seq[(Variable, PTag)]
+  def parameters: Seq[(Variable, PTag)] = Nil
   def gradients(loss: Variable): Seq[Tensor] = {
     parameters.foreach { case (param, _) => param.zeroGrad() }
     loss.backprop()
@@ -52,7 +56,9 @@ trait Module {
     loss.releaseAll
     g
   }
-  def load(parameters: Seq[Tensor]): Module
+  def load(parameters: Seq[Tensor]): Module = this
+  def learnableParameters =
+    parameters.filter(_._1.needsGrad).map(_._1.value.numel()).sum
 }
 
 trait PTag {

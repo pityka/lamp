@@ -6,12 +6,12 @@ import lamp.autograd.TensorHelpers
 import aten.Tensor
 
 case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
-  def load(parameters: Seq[Tensor]) = {
+  override def load(parameters: Seq[Tensor]) = {
     val w = param(parameters.head)
     val b = if (bias.isDefined) Some(param(parameters(1))) else None
     copy(weights = w, bias = b)
   }
-  val parameters = List(
+  override val parameters = List(
     weights -> Linear.Weights
   ) ++ bias.toList.map(b => (b, Linear.Bias))
 

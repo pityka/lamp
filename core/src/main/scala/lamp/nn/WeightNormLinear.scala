@@ -11,14 +11,14 @@ case class WeightNormLinear(
     bias: Option[Variable]
 ) extends Module {
 
-  def load(parameters: Seq[Tensor]) = {
+  override def load(parameters: Seq[Tensor]) = {
     val wV = param(parameters.head)
     val wG = param(parameters(1))
     val b = if (bias.isDefined) Some(param(parameters(2))) else None
     copy(weightsV = wV, weightsG = wG, bias = b)
   }
 
-  val parameters = List(
+  override val parameters = List(
     weightsV -> WeightNormLinear.WeightsV,
     weightsG -> WeightNormLinear.WeightsG
   ) ++ bias.toList.map(b => (b, WeightNormLinear.Bias))

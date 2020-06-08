@@ -14,13 +14,13 @@ case class Conv1D(
     groups: Long
 ) extends Module {
 
-  def load(parameters: Seq[Tensor]) = {
+  override def load(parameters: Seq[Tensor]) = {
     val w = param(parameters.head)
     val b = param(parameters(1))
     copy(weights = w, bias = b)
   }
 
-  val parameters = List(
+  override val parameters = List(
     weights -> Conv1D.Weights,
     bias -> Conv1D.Bias
   )

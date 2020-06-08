@@ -315,9 +315,9 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
   def forward(x: Variable): Variable =
     ((x.mm(w)).logSoftMax.crossEntropy(y).sum + w.squaredFrobenius)
 
-  def load(parameters: Seq[Tensor]) = this
+  override def load(parameters: Seq[Tensor]) = this
 
-  def parameters: Seq[(Variable, PTag)] =
+  override def parameters: Seq[(Variable, PTag)] =
     List(w -> NoTag)
 
 }
@@ -337,16 +337,16 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
         .map(_._1.squaredFrobenius)
         .reduce(_ + _)
 
-  def parameters: Seq[(Variable, PTag)] =
+  override def parameters: Seq[(Variable, PTag)] =
     mod.parameters
 
-  def load(parameters: Seq[Tensor]) = this
+  override def load(parameters: Seq[Tensor]) = this
 
 }
 
 case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
 
-  def load(parameters: Seq[Tensor]) = this
+  override def load(parameters: Seq[Tensor]) = this
 
   val mod = Sequential(
     Linear(
@@ -367,7 +367,7 @@ case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
         .map(_._1.squaredFrobenius)
         .reduce(_ + _)
 
-  def parameters: Seq[(Variable, PTag)] =
+  override def parameters: Seq[(Variable, PTag)] =
     mod.parameters
 
 }

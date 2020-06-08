@@ -979,4 +979,21 @@ class GradientSuite extends AnyFunSuite {
         input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
       )
   }
+  testGradientAndValueND("viewAs2D")(nd1x2x3x3, 153d) { (m, doBackprop, cuda) =>
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+
+    val output =
+      ViewAs2D(input, 9).value
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
+  }
+
 }
