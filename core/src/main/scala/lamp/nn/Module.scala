@@ -37,12 +37,6 @@ object Sequential {
 case class Fun(fun: Variable => Variable) extends Module {
   def forward(x: Variable): Variable = fun(x)
 }
-case class View(size: Int) extends Module {
-  def forward(x: Variable): Variable = x.viewAs2D(size)
-}
-case class FlattenLast(dims: Int) extends Module {
-  def forward(x: Variable): Variable = x.flattenLastDimensions(dims)
-}
 
 trait Module {
   def asEval: Module = this

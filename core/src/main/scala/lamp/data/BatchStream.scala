@@ -24,8 +24,8 @@ object BatchStream {
         val xcl = ATen.index(features, Array(idxT))
         val tcl = ATen.index(target, Array(idxT))
         val d1 = device.to(xcl)
-        xcl.release
         val d2 = device.to(tcl)
+        xcl.release
         tcl.release
         idxT.release
         Some((d1, d2)): Option[(Tensor, Tensor)]

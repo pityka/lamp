@@ -165,11 +165,11 @@ object Train extends App {
             t.release
             r
           }
-          val accuracy = prediction.zipMap(
+          val corrects = prediction.zipMap(
             TensorHelpers.toMatLong(validationTarget).toVec
           )((a, b) => if (a == b) 1d else 0d)
           scribe.info(
-            s"epoch: $epochCount, validation loss: $validationLoss, accuracy: $accuracy"
+            s"epoch: $epochCount, validation loss: $validationLoss, corrects: $corrects"
           )
         }
       }
