@@ -16,6 +16,13 @@ class GradientSuite extends AnyFunSuite {
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
   val ndx1 = NDArray(Array(1d), List(1))
   val ndx2 = NDArray(Array(1d, 1d), List(2))
+  val ndx3 = NDArray(Array(1d, 2d, 3d), List(3))
+  val ndx6 = NDArray(Array(1d, 2d, 3d, 4d, 5d, 6d), List(6))
+  val ndx18 = NDArray(
+    Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d,
+      6d),
+    List(18)
+  )
   val nd1x2x3 = NDArray(mat2x3.toArray, List(1, 2, 3))
   val nd1x2x3x3 =
     NDArray((0 until 18).toArray.map(_.toDouble), List(1, 2, 3, 3))
@@ -994,6 +1001,285 @@ class GradientSuite extends AnyFunSuite {
       TensorHelpers.toMat(L.value).raw(0),
       input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
     )
+  }
+  testGradientAndValue("batch norm 1d - wrt to input")(mat2x3, 0d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(TensorHelpers.fromMat(m, cuda))
+      val weight = param(TensorHelpers.fromVec(Vec(1d, 2d, 3d), cuda))
+
+      val bias = param(TensorHelpers.fromVec(vec.zeros(3), cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(3), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(3), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weight,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => t.toMat)
+      )
+  }
+  testGradientAndValueND("batch norm 1d - wrt to weight")(ndx3, 0d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(TensorHelpers.fromMat(mat2x3, cuda))
+      val weight = param(NDArray.tensorFromNDArray(m, cuda))
+
+      val bias = param(TensorHelpers.fromVec(vec.zeros(3), cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(3), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(3), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weight,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("batch norm 1d - wrt to bias")(ndx3, 12d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(TensorHelpers.fromMat(mat2x3, cuda))
+      val bias = param(NDArray.tensorFromNDArray(m, cuda))
+
+      val weight = param(TensorHelpers.fromVec(vec.zeros(3), cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(3), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(3), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weight,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("batch norm 2d - wrt to input")(nd1x2x3, 6d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+      val bias = param(TensorHelpers.fromVec(vec.ones(6), cuda))
+
+      val weight = param(TensorHelpers.fromVec(vec.ones(6), cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(6), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(6), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weight,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("batch norm 2d - wrt to weights")(ndx6, 6d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(nd1x2x3, cuda))
+      val bias = param(TensorHelpers.fromVec(vec.ones(6), cuda))
+
+      val weight = param(NDArray.tensorFromNDArray(m, cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(6), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(6), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weight,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("batch norm 2d - wrt to bias")(ndx6, 21d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(nd1x2x3, cuda))
+      val weight = param(TensorHelpers.fromVec(vec.ones(6), cuda))
+
+      val bias = param(NDArray.tensorFromNDArray(m, cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(6), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(6), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weight,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("batch norm 3d - wrt to input")(nd1x2x3x3, 18d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+      val bias = param(TensorHelpers.fromVec(vec.ones(18), cuda))
+
+      val weight = param(TensorHelpers.fromVec(vec.ones(18), cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(18), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(18), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weight,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("batch norm 3d - wrt to weights")(ndx18, 18d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(nd1x2x3x3, cuda))
+      val bias = param(TensorHelpers.fromVec(vec.ones(18), cuda))
+
+      val weight = param(NDArray.tensorFromNDArray(m, cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(18), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(18), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weight,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("batch norm 3d - wrt to bias")(ndx18, 63d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(nd1x2x3x3, cuda))
+      val weights = param(TensorHelpers.fromVec(vec.ones(18), cuda))
+
+      val bias = param(NDArray.tensorFromNDArray(m, cuda))
+      val runningMean = TensorHelpers.fromVec(vec.ones(18), cuda)
+      val runningVar = TensorHelpers.fromVec(vec.ones(18), cuda)
+
+      val output =
+        BatchNorm(
+          input,
+          weights,
+          bias,
+          runningMean,
+          runningVar,
+          training = true,
+          momentum = 0.1,
+          eps = 1e-5
+        ).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
   }
 
 }

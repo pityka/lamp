@@ -269,6 +269,14 @@ class NNSuite extends AnyFunSuite {
       ),
     154d
   )
+  testGradientAndValueND("BatchNorm ", false)(
+    nd1x2x3x3,
+    () =>
+      BatchNorm(
+        18
+      ),
+    0d
+  )
 
   test1("gradient clipping") { cuda =>
     val topt =

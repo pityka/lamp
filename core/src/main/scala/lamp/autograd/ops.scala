@@ -922,3 +922,98 @@ case class FlattenLastDimensions(
       ATen._unsafe_view(input.value, Array(-1, size))
     )
 }
+
+/* 0-th dimension has samples. Everything else is flattened out into features. */
+case class BatchNorm(
+    input: Variable,
+    weight: Variable,
+    bias: Variable,
+    runningMean: Tensor,
+    runningVar: Tensor,
+    training: Boolean,
+    momentum: Double,
+    eps: Double
+) extends Op {
+  val input_flattened = ATen.flatten(input.value, 1, input.shape.size - 1)
+  val expectedShape = List(input_flattened.shape.last)
+  assert(expectedShape == weight.shape)
+  assert(expectedShape == bias.shape)
+  assert(expectedShape == runningMean.shape)
+  assert(expectedShape == runningVar.shape)
+
+  val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
+    input_flattened,
+    weight.value,
+    bias.value,
+    runningMean,
+    runningVar,
+    training,
+    momentum,
+    eps
+  )
+  val output_reshaped = ATen._unsafe_view(output, input.shape.toArray)
+
+  override val value: Variable =
+    Variable(
+      this,
+      output_reshaped,
+      releaseWith = List(saveMean, saveInvstd, input_flattened, output)
+    )
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      val flattened_p =
+        ATen.flatten(p, 1, p.shape.size - 1)
+      val (gradInput, a, b) = ATen.native_batch_norm_backward(
+        flattened_p,
+        input_flattened,
+        weight.value,
+        runningMean,
+        runningVar,
+        saveMean,
+        saveInvstd,
+        training,
+        eps,
+        Array(true, true, true)
+      )
+      val gradInput_reshaped = ATen._unsafe_view(gradInput, out.shape.toArray)
+      ATen.add_out(out, out, gradInput_reshaped, 1d)
+      gradInput.release
+      a.release
+      b.release
+      flattened_p.release()
+      gradInput_reshaped.release
+    },
+    weight.zipBackward { (p, out) =>
+      val flattened_p =
+        ATen.flatten(p, 1, p.shape.size - 1)
+      val (a, gradWeight, b) = ATen.native_batch_norm_backward(
+        flattened_p,
+        input_flattened,
+        weight.value,
+        runningMean,
+        runningVar,
+        saveMean,
+        saveInvstd,
+        training,
+        eps,
+        Array(true, true, true)
+      )
+      val grad_reshaped = ATen._unsafe_view(gradWeight, out.shape.toArray)
+      ATen.add_out(out, out, grad_reshaped, 1d)
+      gradWeight.release
+      grad_reshaped.release
+      a.release
+      b.release
+      flattened_p.release()
+    },
+    bias.zipBackward { (p, out) =>
+      val flattened_p =
+        ATen.flatten(p, 1, p.shape.size - 1)
+      val tmp = ub(flattened_p, out.shape)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+      flattened_p.release
+    }
+  )
+}
