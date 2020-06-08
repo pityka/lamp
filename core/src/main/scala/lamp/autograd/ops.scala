@@ -667,6 +667,7 @@ case class Conv2D(
       input_viewed.release()
       p_repeated_viewed.release
       p_repeated.release
+      zero.release
 
     },
     input.zipBackward { (p, out) =>
@@ -749,6 +750,7 @@ case class MaxPool1D(
       }
 
       val catted = ATen.cat(addeds.toArray, 0)
+      addeds.foreach(_.release)
       val catted_viewed = ATen._unsafe_view(catted, out.sizes)
       ATen.add_out(out, out, catted_viewed, 1d)
 
