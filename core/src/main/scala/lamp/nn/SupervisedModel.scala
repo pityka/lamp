@@ -22,15 +22,16 @@ case class SupervisedModel(
     loss.releaseAll
     (lossAsDouble, outputCloned)
   }
-  def lossAndGradients(
+  def lossAndGradientsAndOutput(
       samples: Tensor,
       target: Tensor
-  ): (Double, Seq[Tensor]) = {
+  ): (Double, Seq[Tensor], Tensor) = {
     val output = module.forward(const(samples))
     val loss = lossFunction(output, target)
     val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
+    val outputCloned = ATen.clone(output.value)
     val gradients = module.gradients(loss)
-    (lossAsDouble, gradients)
+    (lossAsDouble, gradients, outputCloned)
   }
   def zipOptimizer(optimizerFactory: Seq[(Tensor, PTag)] => Optimizer) =
     ModelWithOptimizer(

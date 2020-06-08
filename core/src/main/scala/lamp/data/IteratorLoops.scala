@@ -7,11 +7,21 @@ import aten.TensorOptions
 import lamp.nn._
 
 trait TrainingCallback {
-  def apply(trainingLoss: Double, batchCount: Int): Unit
+  def apply(
+      trainingLoss: Double,
+      batchCount: Int,
+      trainingOutput: Tensor,
+      trainingTarget: Tensor
+  ): Unit
 }
 object TrainingCallback {
   val noop = new TrainingCallback {
-    def apply(trainingLoss: Double, batchCount: Int) = ()
+    def apply(
+        trainingLoss: Double,
+        batchCount: Int,
+        trainingOutput: Tensor,
+        trainingTarget: Tensor
+    ) = ()
   }
 }
 
@@ -91,10 +101,11 @@ object IteratorLoops {
   ) = {
     trainBatches.zipWithIndex.foreach {
       case ((sample, target), idx) =>
-        val (loss, gradients) =
-          model.model.lossAndGradients(sample, target)
-        trainingCallback(loss, idx)
+        val (loss, gradients, output) =
+          model.model.lossAndGradientsAndOutput(sample, target)
+        trainingCallback(loss, idx, output, target)
         model.optimizer.step(gradients)
+        output.release()
         sample.release()
         target.release()
     }

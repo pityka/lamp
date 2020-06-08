@@ -85,10 +85,11 @@ object IOLoops {
           IO {
             option.map {
               case (sample, target) =>
-                val (loss, gradients) =
-                  model.model.lossAndGradients(sample, target)
-                trainingCallback(loss, batchCount)
+                val (loss, gradients, output) =
+                  model.model.lossAndGradientsAndOutput(sample, target)
+                trainingCallback(loss, batchCount, output, target)
                 model.optimizer.step(gradients)
+                output.release
             }
           }
         }

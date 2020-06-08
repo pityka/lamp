@@ -21,6 +21,7 @@ import lamp.nn.simple
 import lamp.nn.LossFunctions
 import lamp.syntax
 import lamp.data.BufferedImageHelper
+import lamp.nn.SGDW
 
 object Cifar {
   def loadImageFile(file: File, numImages: Int) = {
@@ -32,6 +33,7 @@ object Cifar {
       lamp.data.Reader.readFully(bb, channel)
       val label1 = bb.get
       val label2 = bb.get
+
       val to = ByteBuffer.allocate(3072)
       while (to.hasRemaining() && bb.hasRemaining()) {
         to.asInstanceOf[ByteBuffer].put(bb.get)
@@ -51,6 +53,10 @@ object Cifar {
       tmp.release()
       f
     }
+    // val first = ATen.select(fullBatch, 0, 1)
+    // println(tensors.map(_._1.toLong).apply(1))
+    // AWTWindow.showImage(first)
+    // ???
 
     tensors.foreach(_._2.release())
     (labels, fullBatch)
@@ -146,8 +152,26 @@ object Train extends App {
       }
 
       val trainingCallback = new TrainingCallback {
-        def apply(trainingLoss: Double, batchCount: Int): Unit = {
-          scribe.info(s"train loss: ${trainingLoss} - batch count: $batchCount")
+        def apply(
+            trainingLoss: Double,
+            batchCount: Int,
+            trainingOutput: Tensor,
+            trainingTarget: Tensor
+        ): Unit = {
+          // val prediction = {
+          //   val t = ATen.argmax(trainingOutput, 1, false)
+          //   val r = TensorHelpers
+          //     .toMatLong(t)
+          //     .toVec
+          //   t.release
+          //   r
+          // }
+          // val corrects = prediction.toSeq.zip(
+          //   TensorHelpers.toMatLong(trainingTarget).toVec.toSeq
+          // )
+          scribe.info(
+            s"train loss: ${trainingLoss} - batch count: $batchCount"
+          )
         }
       }
       val validationCallback = new ValidationCallback {
@@ -175,7 +199,7 @@ object Train extends App {
       }
 
       val optimizer = AdamW.factory(
-        weightDecay = simple(0.001),
+        weightDecay = simple(0.00),
         learningRate = simple(config.learningRate)
       )
 
