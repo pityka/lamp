@@ -52,7 +52,7 @@ object Cnn {
       Fun(
         MaxPool2D(_, kernelSize = 2, stride = 2, padding = 0, dilation = 1).value
       ),
-      FlattenLast(3),
+      Fun(_.flattenLastDimensions(3)),
       Linear(1024, 120, tOpt = tOpt),
       Fun(_.gelu),
       Dropout(dropOut, training = true),
