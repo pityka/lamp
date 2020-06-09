@@ -25,7 +25,7 @@ case class SupervisedModel(
   def lossAndGradientsAndOutput(
       samples: Tensor,
       target: Tensor
-  ): (Double, Seq[Tensor], Tensor) = {
+  ): (Double, Seq[Option[Tensor]], Tensor) = {
     val output = module.forward(const(samples))
     val loss = lossFunction(output, target)
     val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)

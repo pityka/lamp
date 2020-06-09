@@ -4,16 +4,27 @@ import aten.Tensor
 import lamp.autograd._
 import aten.ATen
 import aten.TensorOptions
+import lamp.syntax
+
+case class Residual(member: Module) extends Module {
+  override def asEval: Module = copy(member.asEval)
+  override def asTraining: Module = copy(member.asTraining)
+  override def parameters = member.parameters
+  def forward(x: Variable) = x + member.forward(x)
+
+  override def load(parameters: Seq[Tensor]) = Residual(member.load(parameters))
+}
 
 case class Sequential(members: Module*) extends Module {
   override def asEval: Module = Sequential(members.map(_.asEval): _*)
   override def asTraining: Module = Sequential(members.map(_.asTraining): _*)
   override def parameters =
-    members.flatMap(member =>
-      member.parameters.zipWithIndex.map {
-        case ((param, ptag), idx) => (param, Sequential.Tag(ptag, idx))
-      }
-    )
+    members.zipWithIndex.flatMap {
+      case (member, idx) =>
+        member.parameters.map {
+          case (param, ptag) => (param, Sequential.Tag(ptag, idx))
+        }
+    }
   def forward(x: Variable) =
     members.foldLeft(x)((x, b) => b.forward(x))
 
@@ -43,10 +54,13 @@ trait Module {
   def asTraining: Module = this
   def forward(x: Variable): Variable
   def parameters: Seq[(Variable, PTag)] = Nil
-  def gradients(loss: Variable): Seq[Tensor] = {
-    parameters.foreach { case (param, _) => param.zeroGrad() }
+  def gradients(loss: Variable): Seq[Option[Tensor]] = {
+    parameters.foreach {
+      case (param, tag) =>
+        param.zeroGrad()
+    }
     loss.backprop()
-    val g = parameters.map { case (param, _) => param.partialDerivative.get }
+    val g = parameters.map { case (param, _) => param.partialDerivative }
     loss.releaseAll
     g
   }

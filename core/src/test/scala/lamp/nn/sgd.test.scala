@@ -26,7 +26,7 @@ class SGDSuite extends AnyFunSuite {
       weightDecay = simple(0.00),
       momentum = None,
       scheduler = _ => 1d
-    ).step(List(gradients))
+    ).step(List(Some(gradients)))
     val updatedParams = TensorHelpers.toMat(params)
     assert(updatedParams == initParams)
   }
@@ -40,7 +40,7 @@ class SGDSuite extends AnyFunSuite {
       weightDecay = simple(0.00),
       momentum = None,
       scheduler = _ => 1d
-    ).step(List(gradients))
+    ).step(List(Some(gradients)))
     val updatedParams = TensorHelpers.toMat(params)
     assert(updatedParams == initParams * 0.5)
   }
@@ -54,7 +54,7 @@ class SGDSuite extends AnyFunSuite {
       weightDecay = simple(0.1),
       momentum = None,
       scheduler = _ => 1d
-    ).step(List(gradients))
+    ).step(List(Some(gradients)))
     val updatedParams = TensorHelpers.toMat(params)
     assert(updatedParams == (initParams * 0.5 - initParams * 0.1))
   }
@@ -69,14 +69,14 @@ class SGDSuite extends AnyFunSuite {
       momentum = None,
       scheduler = _ => 1d
     )
-    optim.step(List(gradients))
+    optim.step(List(Some(gradients)))
     val updatedParams1 = TensorHelpers.toMat(params)
     assert(
       updatedParams1
         .roundTo(4) == (initParams * Mat(Vec(0.5, 0.25)).T - initParams * 0.1)
         .roundTo(4)
     )
-    optim.step(List(gradients))
+    optim.step(List(Some(gradients)))
     val updatedParams2 = TensorHelpers.toMat(params)
     assert(updatedParams2.roundTo(4) == Mat(Vec(-0.1400, -0.6150)).T)
   }

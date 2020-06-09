@@ -27,7 +27,7 @@ class AdamWSuite extends AnyFunSuite {
       beta1 = simple(1d),
       beta2 = simple(1d),
       scheduler = _ => 1d
-    ).step(List(gradients))
+    ).step(List(Some(gradients)))
     val updatedParams = TensorHelpers.toMat(params)
     assert(updatedParams == initParams)
   }
@@ -43,10 +43,10 @@ class AdamWSuite extends AnyFunSuite {
       beta2 = simple(0.9d),
       scheduler = _ => 1d
     )
-    opt.step(List(gradients))
+    opt.step(List(Some(gradients)))
     val updatedParams1 = TensorHelpers.toMat(params)
     assert(updatedParams1 == Mat(Vec(0.9999990000002, 0.9999990000001333)).T)
-    opt.step(List(gradients))
+    opt.step(List(Some(gradients)))
     val updatedParams2 = TensorHelpers.toMat(params)
     assert(updatedParams2 == Mat(Vec(0.9999969728373086, 0.999996902616711)).T)
   }
@@ -62,14 +62,14 @@ class AdamWSuite extends AnyFunSuite {
       beta2 = simple(0.9d),
       scheduler = _ => 1d
     )
-    opt.step(List(gradients))
+    opt.step(List(Some(gradients)))
     val updatedParams1 = TensorHelpers.toMat(params)
     assert(
       updatedParams1.roundTo(10) == Mat(
         Vec(0.9999890000002, 0.9999890000001334)
       ).T.roundTo(10)
     )
-    opt.step(List(gradients))
+    opt.step(List(Some(gradients)))
     val updatedParams2 = TensorHelpers.toMat(params)
     assert(
       updatedParams2.roundTo(10) == Mat(

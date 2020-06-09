@@ -74,8 +74,6 @@ class LogisticSuite extends AnyFunSuite {
     }
     assert(lastAccuracy > 0.6)
     assert(lastLoss < 100d)
-  // println(data)
-  // val target = dat
 
   }
 }

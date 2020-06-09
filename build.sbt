@@ -90,11 +90,12 @@ lazy val core = project
     testOptions in Cuda += Tests.Argument("-n", "cuda")
   )
 
-lazy val example_cifer100 = project
+lazy val example_cifar100 = project
   .in(file("example-cifar100"))
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
+    skip in publish := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.0-RC2",
       "com.outr" %% "scribe" % "2.7.3"
@@ -105,6 +106,7 @@ lazy val example_cifer100 = project
 lazy val root = project
   .in(file("."))
   .settings(
-    publishArtifact := false
+    publishArtifact := false,
+    skip in publish := true
   )
-  .aggregate(core)
+  .aggregate(core, example_cifar100)

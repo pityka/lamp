@@ -2,7 +2,8 @@ package lamp.data
 import lamp.nn._
 import cats.effect._
 import aten.Tensor
-
+import lamp.syntax
+import lamp.util.NDArray
 object IOLoops {
 
   def epochs(

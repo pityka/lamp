@@ -3,7 +3,7 @@ package lamp.nn
 import aten.Tensor
 import aten.ATen
 import cats.implicits._
-
+import lamp.syntax
 object SGDW {
   def factory(
       learningRate: OptimizerHyperparameter,
@@ -25,21 +25,21 @@ case class SGDW(
     scheduler: Long => Double = _ => 1d,
     clip: Option[Double] = None
 ) extends Optimizer {
-  val velocity: List[Option[(Tensor, OptimizerHyperparameter)]] = momentum.map {
-    m =>
-      parameters.toList.map {
-        case (param, _) => (ATen.zeros_like(param, param.options), m)
-      }
-  }.sequence
+  val velocity: Seq[Option[(Tensor, OptimizerHyperparameter)]] =
+    parameters.toList.map {
+      case (param, _) =>
+        momentum.map { m => (ATen.zeros_like(param, param.options), m) }
+    }
 
   var stepCount = 0L
 
-  def step(gradients: Seq[Tensor]) = {
+  def step(gradients: Seq[Option[Tensor]]) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1L
     val scheduleFactor = scheduler(stepCount)
-    parameters.zip(gradients).zip(velocity).foreach {
-      case (((param, tag), gradients), None) =>
+
+    parameters.zip(gradients).zip(velocity).filter(_._1._2.isDefined).foreach {
+      case (((param, tag), Some(gradients)), None) =>
         val wd = weightDecay(tag)
         if (wd != 0d) {
           ATen.add_out(
@@ -57,7 +57,7 @@ case class SGDW(
           (-1) * learningRate(tag) * scheduleFactor
         )
 
-      case (((param, tag), gradients), Some((velocity, momentum))) =>
+      case (((param, tag), Some(gradients)), Some((velocity, momentum))) =>
         val m = momentum(tag)
 
         velocity.mul_(m)
@@ -84,6 +84,7 @@ case class SGDW(
           velocity,
           -1
         )
+      case _ => ???
     }
 
   }

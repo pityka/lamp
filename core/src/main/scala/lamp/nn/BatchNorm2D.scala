@@ -1,11 +1,11 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, BatchNorm => BN, param}
+import lamp.autograd.{Variable, BatchNorm2D => BN, param}
 import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
 
-case class BatchNorm(
+case class BatchNorm2D(
     weight: Variable,
     bias: Variable,
     runningMean: Tensor,
@@ -33,7 +33,7 @@ case class BatchNorm(
 
 }
 
-object BatchNorm {
+object BatchNorm2D {
   case object Weights extends LeafTag
   case object Bias extends LeafTag
   def apply(
@@ -42,7 +42,7 @@ object BatchNorm {
       training: Boolean = true,
       momentum: Double = 0.1,
       eps: Double = 1e-5
-  ): BatchNorm = BatchNorm(
+  ): BatchNorm2D = BatchNorm2D(
     weight = param(ATen.normal_3(0.0, 0.01, Array(features.toLong), tOpt)),
     bias = param(ATen.zeros(Array(features.toLong), tOpt)),
     runningMean = ATen.zeros(Array(features.toLong), tOpt),

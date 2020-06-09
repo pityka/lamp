@@ -61,6 +61,36 @@ package object lamp {
       inResource { ATen.mul_0(self, other) }
     def +(other: Tensor) =
       inResource { ATen.add_0(self, other, 1d) }
+
+    def normalized = inResource {
+      import autograd.const
+      val features = {
+        val s = shape.drop(1)
+        s.foldLeft(1L)(_ * _)
+      }
+      val weights = ATen.ones(Array(features), this.options)
+      val bias = ATen.zeros(Array(features), this.options)
+      val runningMean = ATen.clone(weights)
+      val runningVar = ATen.clone(weights)
+      val v = autograd
+        .BatchNorm(
+          const(self),
+          const(weights),
+          const(bias),
+          runningMean,
+          runningVar,
+          true,
+          1d,
+          1e-5
+        )
+        .value
+        .value
+      weights.release
+      bias.release
+      runningVar.release
+      runningMean.release
+      v
+    }
   }
 
   def inResource(f: => Tensor) = Resource.make(IO { f })(v => IO { v.release })

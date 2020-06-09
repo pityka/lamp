@@ -4,7 +4,7 @@ import aten.Tensor
 import aten.ATen
 
 trait Optimizer {
-  def step(gradients: Seq[Tensor]): Unit
+  def step(gradients: Seq[Option[Tensor]]): Unit
 }
 
 trait OptimizerHyperparameter { def apply(ptag: PTag): Double }

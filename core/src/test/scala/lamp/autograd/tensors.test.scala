@@ -6,6 +6,7 @@ import aten.ATen
 import aten.TensorOptions
 import lamp.nn.CudaTest
 import lamp.syntax
+import lamp.util.NDArray
 
 class TensorHelperSuite extends AnyFunSuite {
   test("to/from cuda", CudaTest) {
@@ -27,5 +28,24 @@ class TensorHelperSuite extends AnyFunSuite {
       m.toDoubleArray.toSeq == Seq(1d, 0d, 0d, 1d, 1d, 0d, 0d, 1d, 1d, 0d, 0d,
         1d)
     )
+  }
+  test("normalized") {
+    val nd2x3x3 =
+      NDArray((0 until 18).toArray.map(_.toDouble), List(2, 3, 3))
+    val t = NDArray.tensorFromNDArray(nd2x3x3)
+    val t2 = t.normalized.allocated.unsafeRunSync()._1
+    val n2 = NDArray.tensorToNDArray(t2)
+    assert(
+      n2.toVec.roundTo(4) == Vec(-1d, -1d, -1d, -1d, -1d, -1d, -1d, -1d, -1d,
+        1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d)
+    )
+
+  }
+  test("zero_") {
+    val t = ATen.eye_0(3, TensorOptions.dtypeDouble())
+    assert(t.toMat == mat.ident(3))
+    ATen.zero_(t)
+    import org.saddle.ops.BinOps._
+    assert(t.toMat == mat.ident(3) * 0d)
   }
 }

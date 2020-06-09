@@ -37,12 +37,12 @@ object Conv1D {
       inChannels: Long,
       outChannels: Long,
       kernelSize: Long,
+      tOpt: TensorOptions,
       bias: Boolean = true,
       stride: Long = 1,
       padding: Long = 0,
       dilation: Long = 1,
-      groups: Long = 1,
-      tOpt: TensorOptions = TensorOptions.dtypeDouble
+      groups: Long = 1
   ): Conv1D = {
     val weightVar = param(
       ATen.normal_3(

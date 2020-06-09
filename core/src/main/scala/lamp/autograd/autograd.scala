@@ -49,6 +49,8 @@ case class Variable(
     releaseWith: Seq[Tensor] = Nil
 ) {
 
+  override def toString = s"Var($shape,$value,$needsGrad,$leaf,$releaseWith)"
+
   def options = value.options
 
   var partialDerivative: Option[Tensor] = None

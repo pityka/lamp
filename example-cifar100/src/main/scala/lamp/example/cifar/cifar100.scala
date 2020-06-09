@@ -53,7 +53,18 @@ object Cifar {
       tmp.release()
       f
     }
-    // val first = ATen.select(fullBatch, 0, 1)
+    // {
+    //   val first = ATen.select(fullBatch, 0, 1)
+    //   val firstRed = ATen.select(first, 0, 1)
+    //   println(firstRed.toMat)
+    // }
+    // {
+    //   val normalized = fullBatch.normalized
+    //   val first = ATen.select(normalized, 0, 1)
+    //   val firstRed = ATen.select(first, 0, 1)
+    //   println(firstRed.toMat)
+    // }
+    // ???
     // println(tensors.map(_._1.toLong).apply(1))
     // AWTWindow.showImage(first)
     // ???
@@ -69,11 +80,12 @@ case class CliConfig(
     testData: String = "",
     labels: String = "",
     cuda: Boolean = false,
-    trainBatchSize: Int = 32,
-    testBatchSize: Int = 32,
-    epochs: Int = 10,
-    learningRate: Double = 0.01,
-    dropout: Double = 0.5
+    trainBatchSize: Int = 256,
+    testBatchSize: Int = 256,
+    epochs: Int = 1000,
+    learningRate: Double = 0.0001,
+    dropout: Double = 0.0,
+    network: String = "lenet"
 )
 
 object Train extends App {
@@ -101,12 +113,27 @@ object Train extends App {
       opt[Int]("batch-test").action((x, c) => c.copy(testBatchSize = x)),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
       opt[Double]("learning-rate").action((x, c) => c.copy(learningRate = x)),
-      opt[Double]("dropout").action((x, c) => c.copy(dropout = x))
+      opt[Double]("dropout").action((x, c) => c.copy(dropout = x)),
+      opt[String]("network").action((x, c) => c.copy(network = x))
     )
   }
 
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) =>
+      scribe.info(s"Config: $config")
+      val device = if (config.cuda) CudaDevice(0) else CPU
+      val model: SupervisedModel = {
+        val numClasses = 100
+        val classWeights = ATen.ones(Array(numClasses), device.options)
+        val net =
+          if (config.network == "lenet")
+            Cnn.lenet(numClasses, dropOut = config.dropout, device.options)
+          else Cnn.resnet(32, 32, numClasses, config.dropout, device.options)
+        scribe.info("Learnable parametes: " + net.learnableParameters)
+        scribe.info("parameters: " + net.parameters.mkString("\n"))
+        SupervisedModel(net, LossFunctions.NLL(numClasses, classWeights))
+      }
+
       val (trainTarget, trainFullbatch) =
         Cifar.loadImageFile(new File(config.trainData), 50000)
       val (testTarget, testFullbatch) =
@@ -122,8 +149,6 @@ object Train extends App {
       scribe.info(
         s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
       )
-
-      val device = if (config.cuda) CudaDevice(0) else CPU
 
       val trainEpochs = () =>
         BatchStream.minibatchesFromFull(
@@ -141,15 +166,6 @@ object Train extends App {
           testTarget,
           device
         )
-
-      val model: SupervisedModel = {
-        val numClasses = 100
-        val classWeights = ATen.ones(Array(numClasses), device.options)
-        val net =
-          Cnn.lenet(numClasses, dropOut = config.dropout, device.options)
-        scribe.info("Learnable parametes: " + net.learnableParameters)
-        SupervisedModel(net, LossFunctions.NLL(numClasses, classWeights))
-      }
 
       val trainingCallback = new TrainingCallback {
         def apply(
@@ -193,7 +209,7 @@ object Train extends App {
             TensorHelpers.toMatLong(validationTarget).toVec
           )((a, b) => if (a == b) 1d else 0d)
           scribe.info(
-            s"epoch: $epochCount, validation loss: $validationLoss, corrects: $corrects"
+            s"epoch: $epochCount, validation loss: $validationLoss, corrects: ${corrects.mean}"
           )
         }
       }

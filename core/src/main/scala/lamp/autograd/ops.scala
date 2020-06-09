@@ -936,10 +936,22 @@ case class BatchNorm(
 ) extends Op {
   val input_flattened = ATen.flatten(input.value, 1, input.shape.size - 1)
   val expectedShape = List(input_flattened.shape.last)
-  assert(expectedShape == weight.shape)
-  assert(expectedShape == bias.shape)
-  assert(expectedShape == runningMean.shape)
-  assert(expectedShape == runningVar.shape)
+  assert(
+    expectedShape == weight.shape,
+    s"Expected $expectedShape got weight shape ${weight.shape}"
+  )
+  assert(
+    expectedShape == bias.shape,
+    s"Expected $expectedShape got bias shape ${bias.shape}"
+  )
+  assert(
+    expectedShape == runningMean.shape,
+    s"Expected $expectedShape got runningMean shape ${runningMean.shape}"
+  )
+  assert(
+    expectedShape == runningVar.shape,
+    s"Expected $expectedShape got runningVar shape ${runningVar.shape}"
+  )
 
   val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
     input_flattened,
@@ -1014,6 +1026,110 @@ case class BatchNorm(
       ATen.add_out(out, out, tmp, 1d)
       tmp.release
       flattened_p.release
+    }
+  )
+}
+
+/** Batch Norm 2D
+  * 0-th dimension are samples. 1-th are features, everything else is averaged out.
+  */
+case class BatchNorm2D(
+    input: Variable,
+    weight: Variable,
+    bias: Variable,
+    runningMean: Tensor,
+    runningVar: Tensor,
+    training: Boolean,
+    momentum: Double,
+    eps: Double
+) extends Op {
+  val inputShape = input.shape
+  assert(inputShape.size >= 3, "Expected 3D or 4D tensor")
+  val expectedShape = List(inputShape(1))
+  assert(
+    expectedShape == weight.shape,
+    s"Expected $expectedShape got weight shape ${weight.shape}"
+  )
+  assert(
+    expectedShape == bias.shape,
+    s"Expected $expectedShape got bias shape ${bias.shape}"
+  )
+  assert(
+    expectedShape == runningMean.shape,
+    s"Expected $expectedShape got runningMean shape ${runningMean.shape}"
+  )
+  assert(
+    expectedShape == runningVar.shape,
+    s"Expected $expectedShape got runningVar shape ${runningVar.shape}"
+  )
+
+  val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
+    input.value,
+    weight.value,
+    bias.value,
+    runningMean,
+    runningVar,
+    training,
+    momentum,
+    eps
+  )
+  override val value: Variable =
+    Variable(
+      this,
+      output,
+      releaseWith = List(saveMean, saveInvstd)
+    )
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      val (gradInput, a, b) = ATen.native_batch_norm_backward(
+        p,
+        input.value,
+        weight.value,
+        runningMean,
+        runningVar,
+        saveMean,
+        saveInvstd,
+        training,
+        eps,
+        Array(true, true, true)
+      )
+      val gradInput_reshaped = ATen._unsafe_view(gradInput, out.shape.toArray)
+      ATen.add_out(out, out, gradInput_reshaped, 1d)
+      gradInput.release
+      a.release
+      b.release
+      gradInput_reshaped.release
+    },
+    weight.zipBackward { (p, out) =>
+      val (a, gradWeight, b) = ATen.native_batch_norm_backward(
+        p,
+        input.value,
+        weight.value,
+        runningMean,
+        runningVar,
+        saveMean,
+        saveInvstd,
+        training,
+        eps,
+        Array(true, true, true)
+      )
+      val grad_reshaped = ATen._unsafe_view(gradWeight, out.shape.toArray)
+      ATen.add_out(out, out, grad_reshaped, 1d)
+      gradWeight.release
+      grad_reshaped.release
+      a.release
+      b.release
+    },
+    bias.zipBackward { (p, out) =>
+      val tmp = ub(p, (out.shape ++ (1 to p.shape.size - 2).map(_ => 1L)))
+      val tmp_viewed = ATen._unsafe_view(
+        tmp,
+        out.shape.toArray
+      )
+      ATen.add_out(out, out, tmp_viewed, 1d)
+      tmp.release
+      tmp_viewed.release
     }
   )
 }

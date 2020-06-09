@@ -29,7 +29,7 @@ class NNSuite extends AnyFunSuite {
       val output = module.forward(d)
       val sum = output.sum
       val value = TensorHelpers.toMat(sum.value).raw(0)
-      val gradAuto = module.gradients(sum).map(TensorHelpers.toMat)
+      val gradAuto = module.gradients(sum).map(_.get).map(TensorHelpers.toMat)
       val gradNum = module.parameters.map {
         case (paramT, _) =>
           val oldparam = ATen.clone(paramT.value)
@@ -77,7 +77,8 @@ class NNSuite extends AnyFunSuite {
       val output = module.forward(d)
       val sum = output.sum
       val value = NDArray.tensorToNDArray(sum.value).data(0)
-      val gradAuto = module.gradients(sum).map(NDArray.tensorToNDArray)
+      val gradAuto =
+        module.gradients(sum).map(_.get).map(NDArray.tensorToNDArray)
       val gradNum = module.parameters.map {
         case (paramT, _) =>
           val oldparam = ATen.clone(paramT.value)
@@ -112,7 +113,7 @@ class NNSuite extends AnyFunSuite {
         case (a, b) =>
           assert(a.toVec.roundTo(4) == b.toVec.roundTo(4))
       }
-      assert(value == expectedValue)
+      assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
 
     }
 
@@ -123,7 +124,7 @@ class NNSuite extends AnyFunSuite {
     NDArray((0 until 18).toArray.map(_.toDouble), List(1, 2, 3, 3))
 
   test("linear") {
-    val linear = Linear(3, 1)
+    val linear = Linear(3, 1, TensorOptions.dtypeDouble())
     val output = linear.forward(const(TensorHelpers.fromMat(mat2x3)))
     val sum = output.sum
     assert(output.value.sizes.toList == List(2, 1))
@@ -140,15 +141,7 @@ class NNSuite extends AnyFunSuite {
       ),
     23d
   )
-  testGradientAndValue("Meanshift 0")(
-    mat2x3,
-    () =>
-      Meanshift(
-        size = List(3L),
-        dim = List(0)
-      ),
-    0d
-  )
+
   testGradientAndValue("WeightNormLinear 0")(
     mat2x3,
     () =>
@@ -199,23 +192,6 @@ class NNSuite extends AnyFunSuite {
       ),
     192.08796576929555
   )
-
-  test("mean shfit") {
-    val m = Meanshift(
-      size = List(3L),
-      dim = List(0)
-    )
-    assert(
-      m.forward(const(TensorHelpers.fromMat(mat2x3, false)))
-        .sum
-        .value
-        .toMat
-        .raw(0) == 0d
-    )
-    assert(m.runningMean.get.toMat.roundTo(4) == Mat(Vec(1.5, 3.5d, 5.5)).T)
-    assert(m.asEval.runningMean.get.toMat == Mat(Vec(1.5, 3.5d, 5.5)).T)
-
-  }
 
   testGradientAndValueND("Conv1D ", false)(
     nd1x2x3,
@@ -273,7 +249,17 @@ class NNSuite extends AnyFunSuite {
     nd1x2x3x3,
     () =>
       BatchNorm(
-        18
+        18,
+        TensorOptions.dtypeDouble()
+      ),
+    0d
+  )
+  testGradientAndValueND("BatchNorm2D ", false)(
+    nd1x2x3x3,
+    () =>
+      BatchNorm2D(
+        2,
+        TensorOptions.dtypeDouble()
       ),
     0d
   )
@@ -284,7 +270,7 @@ class NNSuite extends AnyFunSuite {
       else TensorOptions.dtypeDouble()
     val t = ATen.ones(Array(1, 2, 3), topt)
     val t2 = ATen.ones(Array(1, 2), topt)
-    gradientClippingInPlace(Seq(t, t2), 2.1)
+    gradientClippingInPlace(Seq(Some(t), Some(t2)), 2.1)
     assert(
       NDArray.tensorToNDArray(t).toVec.roundTo(4) == NDArray(
         Array(0.7424621202458749, 0.7424621202458749, 0.7424621202458749,
@@ -297,8 +283,8 @@ class NNSuite extends AnyFunSuite {
   test("load params") {
 
     val mod = Sequential(
-      Linear(in = 30, out = 3),
-      Linear(in = 3, out = 2),
+      Linear(in = 30, out = 3, TensorOptions.dtypeDouble()),
+      Linear(in = 3, out = 2, TensorOptions.dtypeDouble()),
       Fun(_.logSoftMax)
     )
 

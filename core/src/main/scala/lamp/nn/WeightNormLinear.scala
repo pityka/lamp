@@ -38,8 +38,8 @@ object WeightNormLinear {
   def apply(
       in: Int,
       out: Int,
-      bias: Boolean = true,
-      tOpt: TensorOptions = TensorOptions.dtypeDouble
+      tOpt: TensorOptions,
+      bias: Boolean = true
   ): WeightNormLinear =
     WeightNormLinear(
       weightsV = param(
