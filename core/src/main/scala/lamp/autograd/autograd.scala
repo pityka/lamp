@@ -5,6 +5,7 @@ import org.saddle.linalg._
 import aten.{Tensor, ATen}
 import java.{util => ju}
 import aten.TensorOptions
+import scala.collection.mutable
 
 /**
   * Params: the input and the function which calculates the partial derivative
@@ -62,11 +63,13 @@ case class Variable(
   val id = ju.UUID.randomUUID()
 
   def releaseAll(): Unit = {
+    val buffer = mutable.ArrayBuffer[Tensor]()
     wengert.filterNot(_.leaf).foreach { variable =>
-      variable.value.release
-      variable.releaseWith.foreach(_.release)
-      variable.partialDerivative.foreach(_.release)
+      buffer.append(variable.value)
+      variable.releaseWith.foreach(t => buffer.append(t))
+      variable.partialDerivative.foreach(t => buffer.append(t))
     }
+    Tensor.releaseAll(buffer.toArray)
   }
   def detached = copy(needsGrad = false)
   def zeroGrad() = {

@@ -76,7 +76,7 @@ lazy val core = project
   .settings(
     name := "lamp-autograd",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+29-2a666ed9",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+31-5cf26fc9",
       "io.github.pityka" %% "saddle-core" % "2.0.0-M25",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M25",
       "org.typelevel" %% "cats-core" % "2.1.1",
