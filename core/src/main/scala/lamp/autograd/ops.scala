@@ -590,7 +590,7 @@ case class Conv2D(
   val outChannels = weight.shape(0)
   assert(
     weight.shape(1) == inputChannels,
-    "Weight 2nd dimension must have size equal to input channels (2nd dim of input) "
+    s"Weight 2nd dimension must have size equal to input channels (2nd dim of input). Got weight: ${weight.shape}, input: ${input.shape} "
   )
   assert(
     bias.shape(0) == outChannels,

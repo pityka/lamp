@@ -22,6 +22,7 @@ import lamp.nn.LossFunctions
 import lamp.syntax
 import lamp.data.BufferedImageHelper
 import lamp.nn.SGDW
+import lamp.nn.LearningRateSchedule
 
 object Cifar {
   def loadImageFile(file: File, numImages: Int) = {
@@ -83,7 +84,7 @@ case class CliConfig(
     trainBatchSize: Int = 256,
     testBatchSize: Int = 256,
     epochs: Int = 1000,
-    learningRate: Double = 0.0001,
+    learningRate: Double = 0.001,
     dropout: Double = 0.0,
     network: String = "lenet"
 )
@@ -216,7 +217,8 @@ object Train extends App {
 
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
-        learningRate = simple(config.learningRate)
+        learningRate = simple(config.learningRate),
+        scheduler = LearningRateSchedule.cyclicSchedule(10d, 200L)
       )
 
       val trainedModel = IOLoops

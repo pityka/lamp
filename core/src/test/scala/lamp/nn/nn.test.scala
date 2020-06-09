@@ -299,6 +299,17 @@ class NNSuite extends AnyFunSuite {
 
   }
 
+  test("cyclic scheduler") {
+    val sch = LearningRateSchedule.cyclicSchedule(10d, 18L)
+    val rates = 0 to 40 map (i => sch(i.toLong))
+    assert(
+      rates == Vector(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 10.0,
+        9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0,
+        8.0, 9.0, 10.0, 10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 1.0, 2.0, 3.0,
+        4.0, 5.0)
+    )
+  }
+
 }
 
 case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {

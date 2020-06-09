@@ -27,21 +27,21 @@ object Cnn {
       dropOut: Double,
       tOpt: TensorOptions
   ) = Sequential(
-    residualBlock(3, 32, 16, tOpt),
-    residualBlock(32, 32, 16, tOpt),
+    residualBlock(3, 64, 64, tOpt),
+    residualBlock(64, 64, 32, tOpt),
     Fun(v =>
       MaxPool2D(v, kernelSize = 2, stride = 2, padding = 0, dilation = 1).value
     ),
-    residualBlock(32, 32, 16, tOpt),
+    residualBlock(64, 128, 64, tOpt),
     Fun(v =>
       MaxPool2D(v, kernelSize = 2, stride = 2, padding = 0, dilation = 1).value
     ),
-    residualBlock(32, 32, 16, tOpt),
+    residualBlock(128, 128, 64, tOpt),
     gap(
+      inChannels = 128,
       kernelSize = width / 4,
-      inChannels = 32,
       numClasses = numClasses,
-      tOpt
+      tOpt = tOpt
     )
   )
 
@@ -51,7 +51,7 @@ object Cnn {
       numClasses: Int,
       tOpt: TensorOptions
   ) = Sequential(
-    residualBlock(inChannels, numClasses, 16, tOpt),
+    residualBlock(inChannels, numClasses, inChannels, tOpt),
     Fun(v => AvgPool2D(v, kernelSize, stride = 1, padding = 0).value),
     Fun(_.flattenLastDimensions(3)),
     Fun(_.logSoftMax)
@@ -67,20 +67,9 @@ object Cnn {
       Conv2D(
         inChannels = inChannels,
         outChannels = internalChannels,
-        kernelSize = 1,
-        padding = 0,
-        stride = 1,
-        tOpt = tOpt
-      ),
-      BatchNorm2D(internalChannels, tOpt = tOpt),
-      Fun(_.gelu),
-      Conv2D(
-        inChannels = internalChannels,
-        outChannels = internalChannels,
         kernelSize = 3,
-        stride = 1,
         padding = 1,
-        groups = math.ceil(internalChannels / 512d).toLong,
+        stride = 1,
         tOpt = tOpt
       ),
       BatchNorm2D(internalChannels, tOpt = tOpt),
@@ -103,10 +92,8 @@ object Cnn {
         ),
         Fun(_.gelu)
       )
-    else mod
+    else Sequential(mod, Fun(_.gelu))
   }
-
-  def residual(v: Variable)(f: Variable => Variable): Variable = v + f(v)
 
   def lenet(
       numClasses: Int,
