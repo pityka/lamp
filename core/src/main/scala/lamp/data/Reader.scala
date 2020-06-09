@@ -10,6 +10,11 @@ import org.saddle.index.IndexIntRange
 import aten.Tensor
 import aten.TensorOptions
 import aten.ATen
+import cats.effect.IO
+import java.io.FileInputStream
+import cats.effect.Resource
+import lamp.nn.Module
+import java.io.File
 
 object Reader {
 
@@ -173,4 +178,26 @@ object Reader {
       array: Array[Byte]
   ): Either[String, Tensor] =
     readTensorFromChannel(new ByteChannel(ByteBuffer.wrap(array)))
+
+  def loadFromFile(module: Module, file: File) = {
+    val channel = Resource.make(IO {
+      val fis = new FileInputStream(file)
+      fis.getChannel
+    })(v => IO { v.close })
+    val oldTensors = module.parameters.map(_._1.value)
+    val tensors = channel
+      .use { channel =>
+        IO {
+          Reader.readTensorsFromChannel(
+            oldTensors.map(_ => ScalarTagDouble),
+            channel
+          )
+        }
+      }
+      .unsafeRunSync()
+      .right
+      .get
+    oldTensors.foreach(_.release)
+    module.load(tensors)
+  }
 }

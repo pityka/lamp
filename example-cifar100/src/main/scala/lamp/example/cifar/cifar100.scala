@@ -23,6 +23,10 @@ import lamp.syntax
 import lamp.data.BufferedImageHelper
 import lamp.nn.SGDW
 import lamp.nn.LearningRateSchedule
+import org.saddle.scalar.ScalarTagDouble
+import lamp.data.Writer
+import java.io.FileOutputStream
+import lamp.data.Reader
 
 object Cifar {
   def loadImageFile(file: File, numImages: Int) = {
@@ -86,7 +90,9 @@ case class CliConfig(
     epochs: Int = 1000,
     learningRate: Double = 0.001,
     dropout: Double = 0.0,
-    network: String = "lenet"
+    network: String = "lenet",
+    checkpointSave: Option[String] = None,
+    checkpointLoad: Option[String] = None
 )
 
 object Train extends App {
@@ -115,8 +121,15 @@ object Train extends App {
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
       opt[Double]("learning-rate").action((x, c) => c.copy(learningRate = x)),
       opt[Double]("dropout").action((x, c) => c.copy(dropout = x)),
-      opt[String]("network").action((x, c) => c.copy(network = x))
+      opt[String]("network").action((x, c) => c.copy(network = x)),
+      opt[String]("checkpoint-save").action((x, c) =>
+        c.copy(checkpointSave = Some(x))
+      ),
+      opt[String]("checkpoint-load").action((x, c) =>
+        c.copy(checkpointLoad = Some(x))
+      )
     )
+
   }
 
   OParser.parse(parser1, args, CliConfig()) match {
@@ -130,13 +143,21 @@ object Train extends App {
           if (config.network == "lenet")
             Cnn.lenet(numClasses, dropOut = config.dropout, device.options)
           else Cnn.resnet(32, 32, numClasses, config.dropout, device.options)
+
+        val loadedNet = config.checkpointLoad match {
+          case None => net
+          case Some(file) =>
+            config.checkpointSave.foreach { file =>
+              Reader.loadFromFile(net, new File(file))
+            }
+        }
         scribe.info("Learnable parametes: " + net.learnableParameters)
         scribe.info("parameters: " + net.parameters.mkString("\n"))
         SupervisedModel(net, LossFunctions.NLL(numClasses, classWeights))
       }
 
       val (trainTarget, trainFullbatch) =
-        Cifar.loadImageFile(new File(config.trainData), 50000)
+        Cifar.loadImageFile(new File(config.trainData), 500)
       val (testTarget, testFullbatch) =
         Cifar.loadImageFile(new File(config.testData), 10000)
       val textLabels =
@@ -175,17 +196,6 @@ object Train extends App {
             trainingOutput: Tensor,
             trainingTarget: Tensor
         ): Unit = {
-          // val prediction = {
-          //   val t = ATen.argmax(trainingOutput, 1, false)
-          //   val r = TensorHelpers
-          //     .toMatLong(t)
-          //     .toVec
-          //   t.release
-          //   r
-          // }
-          // val corrects = prediction.toSeq.zip(
-          //   TensorHelpers.toMatLong(trainingTarget).toVec.toSeq
-          // )
           scribe.info(
             s"train loss: ${trainingLoss} - batch count: $batchCount"
           )
@@ -212,6 +222,24 @@ object Train extends App {
           scribe.info(
             s"epoch: $epochCount, validation loss: $validationLoss, corrects: ${corrects.mean}"
           )
+
+          config.checkpointSave.foreach { file =>
+            val channel = Resource.make(IO {
+              val fis = new FileOutputStream(new File(file))
+              fis.getChannel
+            })(v => IO { v.close })
+            channel
+              .use { channel =>
+                IO {
+                  Writer.writeTensorsIntoChannel(
+                    model.module.parameters
+                      .map(v => (ScalarTagDouble, v._1.value)),
+                    channel
+                  )
+                }
+              }
+              .unsafeRunSync()
+          }
         }
       }
 
