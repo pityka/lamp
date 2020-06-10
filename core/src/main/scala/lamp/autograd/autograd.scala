@@ -109,11 +109,6 @@ case class Variable(
     computeGrad(incoming, partialDerivative.get)
   }
 
-  def stringify(printValue: Boolean = false) =
-    if (printValue)
-      s"$op == $value"
-    else s"$op"
-
   def t = Transpose(this).value
   def +(other: Variable) = Add(this, other).value
   def -(other: Variable) = Minus(this, other).value

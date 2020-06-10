@@ -1374,5 +1374,26 @@ class GradientSuite extends AnyFunSuite {
         bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
       )
   }
+  testGradientAndValueND("flatten ")(nd1x2x3x3, 153d) { (m, doBackprop, cuda) =>
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+
+    val output =
+      FlattenLastDimensions(
+        input,
+        3
+      ).value
+
+    assert(output.shape == List(1, 18))
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
+  }
 
 }

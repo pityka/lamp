@@ -13,7 +13,6 @@ import lamp.util.NDArray
 case class Constant(const: Tensor) extends Op {
   val params = Nil
   val value = Variable(this, const, leaf = true)
-  override def toString = s"CONST($const)"
 }
 case class Transpose(a: Variable) extends Op {
   val params = List(
@@ -24,7 +23,6 @@ case class Transpose(a: Variable) extends Op {
     }
   )
   val value = Variable(this, ATen.t(a.value))
-  override def toString = s"T(${a.stringify()})"
 }
 
 case class Add(a: Variable, b: Variable) extends Op {
@@ -42,7 +40,6 @@ case class Add(a: Variable, b: Variable) extends Op {
   )
   val value = Variable(this, ATen.add_0(a.value, b.value, 1d))
 
-  override def toString = s"(${a.stringify()} + ${b.stringify()})"
 }
 case class Minus(a: Variable, b: Variable) extends Op {
   val params = List(
@@ -59,7 +56,6 @@ case class Minus(a: Variable, b: Variable) extends Op {
   )
   val value = Variable(this, ATen.add_0(a.value, b.value, -1d))
 
-  override def toString = s"(${a.stringify()} - ${b.stringify()})"
 }
 
 case class Mult(a: Variable, b: Variable) extends Op {
@@ -78,7 +74,6 @@ case class Mult(a: Variable, b: Variable) extends Op {
 
   val value = Variable(this, ATen.mul_0(a.value, b.value))
 
-  override def toString = s"(${a.stringify()} * ${b.stringify()})"
 }
 case class Div(a: Variable, b: Variable) extends Op {
   val params = List(
@@ -102,7 +97,6 @@ case class Div(a: Variable, b: Variable) extends Op {
 
   val value = Variable(this, ATen.div_0(a.value, b.value))
 
-  override def toString = s"(${a.stringify()} / ${b.stringify()})"
 }
 
 case class Sum(a: Variable) extends Op {
@@ -110,21 +104,18 @@ case class Sum(a: Variable) extends Op {
 
   val value = Variable(this, ATen.sum_0(a.value))
 
-  override def toString = s"SUM(${a.stringify()})"
 }
 case class ColSum(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) })
 
   val value = Variable(this, ATen.sum_1(a.value, Array(1), true))
 
-  override def toString = s"COLSUM(${a.stringify()})"
 }
 case class RowSum(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) })
 
   val value = Variable(this, ATen.sum_1(a.value, Array(0), true))
 
-  override def toString = s"RowSUM(${a.stringify()})"
 }
 
 // http://cs231n.stanford.edu/handouts/derivatives.pdf
@@ -145,7 +136,6 @@ case class MatMul(a: Variable, b: Variable) extends Op {
 
   val value = Variable(this, ATen.mm(a.value, b.value))
 
-  override def toString = s"(${a.stringify()} dot ${b.stringify()})"
 }
 
 case class Exp(a: Variable) extends Op {
@@ -153,7 +143,6 @@ case class Exp(a: Variable) extends Op {
     a.zipBackward { (p, out) => ATen.addcmul_out(out, out, p, value.value, 1d) }
   )
   val value = Variable(this, ATen.exp(a.value))
-  override def toString = s"EXP(${a.stringify()})"
 }
 case class Log(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -162,7 +151,6 @@ case class Log(a: Variable) extends Op {
     tmp.release
   })
   val value = Variable(this, ATen.log(a.value))
-  override def toString = s"LOG(${a.stringify()})"
 }
 case class Sin(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -171,7 +159,6 @@ case class Sin(a: Variable) extends Op {
     tmp.release
   })
   val value = Variable(this, ATen.sin(a.value))
-  override def toString = s"SIN(${a.stringify()})"
 }
 case class Cos(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -180,7 +167,6 @@ case class Cos(a: Variable) extends Op {
     tmp.release
   })
   val value = Variable(this, ATen.cos(a.value))
-  override def toString = s"COS(${a.stringify()})"
 }
 case class Tan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -193,7 +179,6 @@ case class Tan(a: Variable) extends Op {
     one.release
   })
   val value = Variable(this, ATen.tan(a.value))
-  override def toString = s"TAN(${a.stringify()})"
 }
 case class Tanh(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -202,7 +187,6 @@ case class Tanh(a: Variable) extends Op {
     tmp1.release
   })
   val value = Variable(this, ATen.tanh(a.value))
-  override def toString = s"TANH(${a.stringify()})"
 }
 case class ArcTan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -216,7 +200,6 @@ case class ArcTan(a: Variable) extends Op {
     one.release
   })
   val value = Variable(this, ATen.atan(a.value))
-  override def toString = s"ATAN(${a.stringify()})"
 }
 case class PowConst(a: Variable, exponent: Double) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -225,7 +208,6 @@ case class PowConst(a: Variable, exponent: Double) extends Op {
     tmp1.release
   })
   val value = Variable(this, ATen.pow_0(a.value, exponent))
-  override def toString = s"POW(${a.stringify()},$exponent)"
 }
 case class Relu(a: Variable) extends Op {
   val params = List(
@@ -243,7 +225,6 @@ case class Relu(a: Variable) extends Op {
     }
   )
   val value = Variable(this, ATen.relu(a.value))
-  override def toString = s"RELU(${a.stringify()})"
 }
 
 case class LogSoftMaxRowWise(a: Variable) extends Op {
@@ -256,7 +237,6 @@ case class LogSoftMaxRowWise(a: Variable) extends Op {
     }
   )
   val value = Variable(this, ATen.log_softmax(a.value, 1))
-  override def toString = s"LOGSOFTMAX(${a.stringify()})"
 
 }
 case class Gelu(a: Variable) extends Op {
@@ -269,7 +249,6 @@ case class Gelu(a: Variable) extends Op {
     }
   )
   val value = Variable(this, ATen.gelu(a.value))
-  override def toString = s"GELU(${a.stringify()})"
 
 }
 
@@ -287,7 +266,6 @@ case class Mean(a: Variable, dim: List[Int]) extends Op {
   )
   val value =
     Variable(this, ATen.mean_1(a.value, dim.map(_.toLong).toArray, true))
-  override def toString = s"MEAN(${a.stringify()})"
 
 }
 case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
@@ -302,7 +280,6 @@ case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
   }
   val value =
     Variable(this, ATen.mul_0(a.value, mask), releaseWith = List(mask))
-  override def toString = s"DROPOUT(${a.stringify()})"
 
 }
 
@@ -353,7 +330,6 @@ case class WeightNorm(v: Variable, g: Variable, dim: Long) extends Op {
   ATen.div_out(w, w, norm)
 
   val value = Variable(this, w, releaseWith = List(norm))
-  override def toString = s"WeightNorm(${v.stringify()} ${g.stringify()})"
 
 }
 
@@ -412,7 +388,6 @@ case class NllLoss(
       value1,
       releaseWith = List(total_weight)
     )
-  override def toString = s"NLL(${input.stringify()})"
 
 }
 
@@ -426,7 +401,6 @@ case class SquaredFrobeniusMatrixNorm(a: Variable) extends Op {
       ATen.pow_out_0(fr, fr, 2d)
       fr
     })
-  override def toString = s"FROBENIUS(${a.stringify()})"
 }
 
 /** 1D convolution
