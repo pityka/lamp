@@ -147,9 +147,7 @@ object Train extends App {
         val loadedNet = config.checkpointLoad match {
           case None => net
           case Some(file) =>
-            config.checkpointSave.foreach { file =>
-              Reader.loadFromFile(net, new File(file))
-            }
+            Reader.loadFromFile(net, new File(file))
         }
         scribe.info("Learnable parametes: " + net.learnableParameters)
         scribe.info("parameters: " + net.parameters.mkString("\n"))
