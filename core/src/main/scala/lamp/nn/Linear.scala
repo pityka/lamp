@@ -11,7 +11,7 @@ case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
     val b = if (bias.isDefined) Some(param(parameters(1))) else None
     copy(weights = w, bias = b)
   }
-  override val parameters = List(
+  override val state = List(
     weights -> Linear.Weights
   ) ++ bias.toList.map(b => (b, Linear.Bias))
 

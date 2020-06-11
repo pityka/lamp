@@ -20,7 +20,7 @@ case class Conv1D(
     copy(weights = w, bias = b)
   }
 
-  override val parameters = List(
+  override val state = List(
     weights -> Conv1D.Weights,
     bias -> Conv1D.Bias
   )

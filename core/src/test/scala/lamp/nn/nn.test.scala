@@ -288,14 +288,14 @@ class NNSuite extends AnyFunSuite {
       Fun(_.logSoftMax)
     )
 
-    val parameters = mod.parameters.map(_._1.value)
+    val parameters = mod.state.map(_._1.value)
 
     val loaded = mod.load(parameters)
-    assert(loaded.parameters.map(_._1.value) == parameters)
+    assert(loaded.state.map(_._1.value) == parameters)
     val p2 = parameters.map { t => ATen.mul_1(t, 3d) }
     val loaded2 = mod.load(p2)
 
-    assert(loaded2.parameters.map(_._1.value) == p2)
+    assert(loaded2.state.map(_._1.value) == p2)
 
   }
 
@@ -322,7 +322,7 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
 
   override def load(parameters: Seq[Tensor]) = this
 
-  override def parameters: Seq[(Variable, PTag)] =
+  override def state: Seq[(Variable, PTag)] =
     List(w -> NoTag)
 
 }
@@ -342,8 +342,8 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
         .map(_._1.squaredFrobenius)
         .reduce(_ + _)
 
-  override def parameters: Seq[(Variable, PTag)] =
-    mod.parameters
+  override def state: Seq[(Variable, PTag)] =
+    mod.state
 
   override def load(parameters: Seq[Tensor]) = this
 
@@ -372,7 +372,7 @@ case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
         .map(_._1.squaredFrobenius)
         .reduce(_ + _)
 
-  override def parameters: Seq[(Variable, PTag)] =
-    mod.parameters
+  override def state: Seq[(Variable, PTag)] =
+    mod.state
 
 }

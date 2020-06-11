@@ -9,7 +9,7 @@ import lamp.syntax
 case class Residual(member: Module) extends Module {
   override def asEval: Module = copy(member.asEval)
   override def asTraining: Module = copy(member.asTraining)
-  override def parameters = member.parameters
+  override def state = member.state
   def forward(x: Variable) = x + member.forward(x)
 
   override def load(parameters: Seq[Tensor]) = Residual(member.load(parameters))
@@ -18,20 +18,20 @@ case class Residual(member: Module) extends Module {
 case class Sequential(members: Module*) extends Module {
   override def asEval: Module = Sequential(members.map(_.asEval): _*)
   override def asTraining: Module = Sequential(members.map(_.asTraining): _*)
-  override def parameters =
+  override def state =
     members.zipWithIndex.flatMap {
       case (member, idx) =>
-        member.parameters.map {
+        member.state.map {
           case (param, ptag) => (param, Sequential.Tag(ptag, idx))
         }
     }
   def forward(x: Variable) =
     members.foldLeft(x)((x, b) => b.forward(x))
 
-  override def load(parameters: Seq[Tensor]) = {
-    val (loadedMembers, _) = members.foldLeft((List[Module](), parameters)) {
+  override def load(tensors: Seq[Tensor]) = {
+    val (loadedMembers, _) = members.foldLeft((List[Module](), tensors)) {
       case ((acc, params), member) =>
-        val numParam = member.parameters.size
+        val numParam = member.state.size
         val loaded = member.load(params.take(numParam))
         (acc.:+(loaded), params.drop(numParam))
 
@@ -53,11 +53,17 @@ trait Module {
   def asEval: Module = this
   def asTraining: Module = this
   def forward(x: Variable): Variable
-  def parameters: Seq[(Variable, PTag)] = Nil
-  def gradients(loss: Variable): Seq[Option[Tensor]] = {
-    parameters.foreach {
-      case (param, tag) =>
-        param.zeroGrad()
+  def state: Seq[(Variable, PTag)] = Nil
+  final def parameters = state.filter(_._1.needsGrad)
+  final def gradients(
+      loss: Variable,
+      zeroGrad: Boolean = true
+  ): Seq[Option[Tensor]] = {
+    if (zeroGrad) {
+      parameters.foreach {
+        case (param, tag) =>
+          param.zeroGrad()
+      }
     }
     loss.backprop()
     val g = parameters.map { case (param, _) => param.partialDerivative }
@@ -65,7 +71,7 @@ trait Module {
     g
   }
   def load(parameters: Seq[Tensor]): Module = this
-  def learnableParameters =
+  final def learnableParameters =
     parameters.filter(_._1.needsGrad).map(_._1.value.numel()).sum
 }
 

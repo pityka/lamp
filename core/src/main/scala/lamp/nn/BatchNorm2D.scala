@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, BatchNorm2D => BN, param}
+import lamp.autograd.{Variable, BatchNorm2D => BN, param, const}
 import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
@@ -8,8 +8,8 @@ import aten.TensorOptions
 case class BatchNorm2D(
     weight: Variable,
     bias: Variable,
-    runningMean: Tensor,
-    runningVar: Tensor,
+    runningMean: Variable,
+    runningVar: Variable,
     training: Boolean,
     momentum: Double,
     eps: Double
@@ -20,16 +20,29 @@ case class BatchNorm2D(
   override def load(parameters: Seq[Tensor]) = {
     val w = param(parameters.head)
     val b = param(parameters(1))
-    copy(weight = w, bias = b)
+    val rm = const(parameters(2))
+    val rv = const(parameters(3))
+    copy(weight = w, bias = b, runningMean = rm, runningVar = rv)
   }
 
-  override val parameters = List(
+  override val state = List(
     weight -> BatchNorm.Weights,
-    bias -> BatchNorm.Bias
+    bias -> BatchNorm.Bias,
+    runningMean -> BatchNorm.RunningMean,
+    runningVar -> BatchNorm.RunningVar
   )
 
   override def forward(x: Variable): Variable =
-    BN(x, weight, bias, runningMean, runningVar, training, momentum, eps).value
+    BN(
+      x,
+      weight,
+      bias,
+      runningMean.value,
+      runningVar.value,
+      training,
+      momentum,
+      eps
+    ).value
 
 }
 
@@ -45,8 +58,8 @@ object BatchNorm2D {
   ): BatchNorm2D = BatchNorm2D(
     weight = param(ATen.normal_3(0.0, 0.01, Array(features.toLong), tOpt)),
     bias = param(ATen.zeros(Array(features.toLong), tOpt)),
-    runningMean = ATen.zeros(Array(features.toLong), tOpt),
-    runningVar = ATen.zeros(Array(features.toLong), tOpt),
+    runningMean = const(ATen.zeros(Array(features.toLong), tOpt)),
+    runningVar = const(ATen.zeros(Array(features.toLong), tOpt)),
     training = training,
     momentum = momentum,
     eps = eps

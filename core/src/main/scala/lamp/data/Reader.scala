@@ -184,7 +184,7 @@ object Reader {
       val fis = new FileInputStream(file)
       fis.getChannel
     })(v => IO { v.close })
-    val oldTensors = module.parameters.map(_._1.value)
+    val oldTensors = module.state.map(_._1.value)
     val tensors = channel
       .use { channel =>
         IO {

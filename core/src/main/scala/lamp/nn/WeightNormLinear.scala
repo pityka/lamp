@@ -18,7 +18,7 @@ case class WeightNormLinear(
     copy(weightsV = wV, weightsG = wG, bias = b)
   }
 
-  override val parameters = List(
+  override val state = List(
     weightsV -> WeightNormLinear.WeightsV,
     weightsG -> WeightNormLinear.WeightsG
   ) ++ bias.toList.map(b => (b, WeightNormLinear.Bias))

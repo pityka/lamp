@@ -230,7 +230,7 @@ object Train extends App {
               .use { channel =>
                 IO {
                   Writer.writeTensorsIntoChannel(
-                    model.module.parameters
+                    model.module.state
                       .map(v => (ScalarTagDouble, v._1.value)),
                     channel
                   )
