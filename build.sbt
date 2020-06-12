@@ -75,13 +75,29 @@ lazy val core = project
   .configs(Cuda)
   .settings(commonSettings: _*)
   .settings(
-    name := "lamp-autograd",
+    name := "lamp-core",
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "aten-scala-core" % "0.0.0+33-75d357c5",
       "io.github.pityka" %% "saddle-core" % "2.0.0-M25",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M25",
       "org.typelevel" %% "cats-core" % "2.1.1",
       "org.typelevel" %% "cats-effect" % "2.1.3",
+      "org.scalatest" %% "scalatest" % "3.1.2" % "test"
+    ),
+    inConfig(Cuda)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda"),
+    testOptions in Cuda -= Tests.Argument("-l", "cuda"),
+    testOptions in Cuda += Tests.Argument("-n", "cuda")
+  )
+
+lazy val data = project
+  .in(file("lamp-data"))
+  .configs(Cuda)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-data",
+    libraryDependencies ++= Seq(
+      "com.outr" %% "scribe" % "2.7.3",
       "com.lihaoyi" %% "ujson" % "1.1.0",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
@@ -90,6 +106,7 @@ lazy val core = project
     testOptions in Cuda -= Tests.Argument("-l", "cuda"),
     testOptions in Cuda += Tests.Argument("-n", "cuda")
   )
+  .dependsOn(core % "test->test;compile->compile")
 
 lazy val example_cifar100 = project
   .in(file("example-cifar100"))
@@ -102,7 +119,7 @@ lazy val example_cifar100 = project
       "com.outr" %% "scribe" % "2.7.3"
     )
   )
-  .dependsOn(core)
+  .dependsOn(core, data)
 lazy val example_timemachine = project
   .in(file("example-timemachine"))
   .settings(commonSettings: _*)
@@ -114,7 +131,7 @@ lazy val example_timemachine = project
       "com.outr" %% "scribe" % "2.7.3"
     )
   )
-  .dependsOn(core)
+  .dependsOn(core, data)
 
 lazy val root = project
   .in(file("."))
@@ -122,4 +139,4 @@ lazy val root = project
     publishArtifact := false,
     skip in publish := true
   )
-  .aggregate(core, example_cifar100)
+  .aggregate(core, data, example_cifar100)
