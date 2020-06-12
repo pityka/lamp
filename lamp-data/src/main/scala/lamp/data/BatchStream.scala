@@ -6,11 +6,23 @@ import org.saddle._
 import lamp.autograd.TensorHelpers
 import aten.ATen
 
-trait BatchStream {
+trait BatchStream { self =>
   def nextBatch: Resource[IO, Option[(Tensor, Tensor)]]
+
+  def map(f: (Tensor, Tensor) => (Tensor, Tensor)) = new BatchStream {
+    def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
+      self.nextBatch.map(_.map(f.tupled))
+  }
 }
 
 object BatchStream {
+  def oneHotFeatures(vocabularSize: Int): (Tensor, Tensor) => (Tensor, Tensor) = {
+    case (feature, target) =>
+      val oneHot = ATen.one_hot(feature, vocabularSize)
+      val double = ATen._cast_Double(oneHot, false)
+      oneHot.release
+      (double, target)
+  }
   def minibatchesFromFull(
       minibatchSize: Int,
       dropLast: Boolean,

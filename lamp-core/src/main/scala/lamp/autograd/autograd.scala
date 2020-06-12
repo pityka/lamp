@@ -74,7 +74,9 @@ case class Variable(
   }
   def preserved = copy(leaf = true)
   def releasable = copy(leaf = false)
-  def detached = copy(needsGrad = false)
+  def releaseWith(t: Tensor) = copy(releaseWith = releaseWith :+ t)
+  def needsNoGrad = copy(needsGrad = false)
+  def detached = const(value).copy(releaseWith = this.releaseWith)
   def zeroGrad() = {
     partialDerivative.foreach { t => ATen.zero_(t) }
   }
@@ -118,6 +120,7 @@ case class Variable(
   def +(other: Variable) = Add(this, other).value
   def -(other: Variable) = Minus(this, other).value
   def *(other: Variable) = Mult(this, other).value
+  def *(other: Double) = ConstMult(this, other).value
   def /(other: Variable) = Div(this, other).value
   def mm(other: Variable) = MatMul(this, other).value
   def relu = Relu(this).value
@@ -134,7 +137,7 @@ case class Variable(
   def tanh = Tanh(this).value
   def atan = ArcTan(this).value
   def pow(const: Double) = PowConst(this, const).value
-  def logSoftMax = LogSoftMaxRowWise(this).value
+  def logSoftMax(dim: Int) = LogSoftMax(this, dim).value
   def crossEntropy(other: Variable) = (const(-1)) * ((this.*(other)).rowSum)
   def nllLoss(
       target: Tensor,
@@ -145,7 +148,7 @@ case class Variable(
     NllLoss(this, target, weights, numClasses, reduction).value
   def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
   def mean(dim: List[Int]) = Mean(this, dim).value
-  def viewAs2D(size: Long) = ViewAs2D(this, size).value
+  def view(shape: List[Int]) = View(this, shape.map(_.toLong).toArray).value
   def flattenLastDimensions(dims: Int) = FlattenLastDimensions(this, dims).value
 
   def toMat = TensorHelpers.toMat(value)

@@ -13,7 +13,7 @@ class LogisticSuite extends AnyFunSuite {
   def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions) =
     Sequential(
       Linear(dim, k, tOpt = tOpt),
-      Fun(_.logSoftMax)
+      Fun(_.logSoftMax(dim = 1))
     )
 
   def test1(id: String)(fun: Boolean => Unit) = {

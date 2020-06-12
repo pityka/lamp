@@ -24,6 +24,16 @@ case class Transpose(a: Variable) extends Op {
   )
   val value = Variable(this, ATen.t(a.value))
 }
+case class View(a: Variable, shape: Array[Long]) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val selected = ATen._unsafe_view(p, out.sizes)
+      ATen.add_out(out, out, selected, 1d)
+      selected.release
+    }
+  )
+  val value = Variable(this, ATen._unsafe_view(a.value, shape))
+}
 case class Concatenate(a: Seq[Variable], dim: Long) extends Op {
   val params = a.zipWithIndex.toList.map {
     case (a, idx) =>
@@ -87,7 +97,18 @@ case class Minus(a: Variable, b: Variable) extends Op {
   val value = Variable(this, ATen.add_0(a.value, b.value, -1d))
 
 }
+case class ConstMult(a: Variable, b: Double) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val tmp = ATen.mul_1(p, b)
+      ATen.add_out(out, out, ub(tmp, a.sizes), 1d)
+      tmp.release
+    }
+  )
 
+  val value = Variable(this, ATen.mul_1(a.value, b))
+
+}
 case class Mult(a: Variable, b: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
@@ -257,16 +278,16 @@ case class Relu(a: Variable) extends Op {
   val value = Variable(this, ATen.relu(a.value))
 }
 
-case class LogSoftMaxRowWise(a: Variable) extends Op {
+case class LogSoftMax(a: Variable, dim: Int) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
-      val tmp = ATen._log_softmax_backward_data(p, value.value, 1, a.value)
+      val tmp = ATen._log_softmax_backward_data(p, value.value, dim, a.value)
       ATen.add_out(out, out, tmp, 1d)
       tmp.release
     }
   )
-  val value = Variable(this, ATen.log_softmax(a.value, 1))
+  val value = Variable(this, ATen.log_softmax(a.value, dim))
 
 }
 case class Gelu(a: Variable) extends Op {
@@ -878,30 +899,7 @@ case class AvgPool2D(
       )
     )
 }
-/* Flattens the last two dimensions
- */
-case class ViewAs2D(
-    input: Variable,
-    size: Long
-) extends Op {
 
-  assert(input.shape.size >= 2, "Input dimensions must be 4")
-
-  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
-    input.zipBackward { (p, out) =>
-      val tmp = ATen._unsafe_view(p, out.shape.toArray)
-      ATen.add_out(out, out, tmp, 1d)
-      tmp.release
-
-    }
-  )
-
-  val value =
-    Variable(
-      this,
-      ATen._unsafe_view(input.value, Array(-1, size))
-    )
-}
 case class FlattenLastDimensions(
     input: Variable,
     last: Int

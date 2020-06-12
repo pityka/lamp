@@ -284,10 +284,9 @@ class GradientSuite extends AnyFunSuite {
       x1.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
   }
-  testGradientAndValue("mult - left")(mat2x3, 182d) { (m, doBackprop, cuda) =>
+  testGradientAndValue("constmult")(mat2x3, 42d) { (m, doBackprop, cuda) =>
     val x1 = param(TensorHelpers.fromMat(m, cuda))
-    val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
-    val L = x1.*(x2).sum
+    val L = x1.*(2d).sum
     if (doBackprop) {
       L.backprop()
     }
@@ -544,7 +543,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("softmax")(mat2x3_2, -22.441910257332836) {
     (m, doBackprop, cuda) =>
       val x1 = param(TensorHelpers.fromMat(m, cuda))
-      val L = x1.logSoftMax.sum
+      val L = x1.logSoftMax(dim = 1).sum
       if (doBackprop) {
         L.backprop()
       }
@@ -595,7 +594,11 @@ class GradientSuite extends AnyFunSuite {
     val data = const(TensorHelpers.fromMat(mat3x2))
     val y = const(TensorHelpers.fromMat(mat.ident(3)))
     val L =
-      ((data.mm(w)).logSoftMax.crossEntropy(y).sum + w.squaredFrobenius)
+      ((data
+        .mm(w))
+        .logSoftMax(dim = 1)
+        .crossEntropy(y)
+        .sum + w.squaredFrobenius)
     if (doBackprop) {
       L.backprop()
     }
@@ -616,7 +619,7 @@ class GradientSuite extends AnyFunSuite {
     val L =
       ((data
         .mm(w))
-        .logSoftMax
+        .logSoftMax(dim = 1)
         .nllLoss(y.value, 3, classWeights, Sum) + w.squaredFrobenius)
     if (doBackprop) {
       L.backprop()
@@ -638,7 +641,7 @@ class GradientSuite extends AnyFunSuite {
     val L =
       ((data
         .mm(w))
-        .logSoftMax
+        .logSoftMax(dim = 1)
         .nllLoss(y.value, 3, classWeights, NoReduction)
         .sum + w.squaredFrobenius)
     if (doBackprop) {
@@ -986,22 +989,7 @@ class GradientSuite extends AnyFunSuite {
         input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
       )
   }
-  testGradientAndValueND("viewAs2D")(nd1x2x3x3, 153d) { (m, doBackprop, cuda) =>
-    val input =
-      param(NDArray.tensorFromNDArray(m, cuda))
 
-    val output =
-      ViewAs2D(input, 9).value
-
-    val L = output.sum
-    if (doBackprop) {
-      L.backprop()
-    }
-    (
-      TensorHelpers.toMat(L.value).raw(0),
-      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
-    )
-  }
   testGradientAndValue("batch norm 1d - wrt to input")(mat2x3, 0d) {
     (m, doBackprop, cuda) =>
       val input =
@@ -1459,6 +1447,23 @@ class GradientSuite extends AnyFunSuite {
       Concatenate(List(input, input), 1).value
 
     assert(output.shape == List(1, 4, 3))
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
+  }
+  testGradientAndValueND("view 1 ")(nd1x2x3, 21d) { (m, doBackprop, cuda) =>
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+
+    val output = input.view(List(1, 1, 2, 3))
+
+    assert(output.shape == List(1, 1, 2, 3))
 
     val L = output.sum
     if (doBackprop) {

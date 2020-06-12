@@ -7,7 +7,9 @@ import scala.collection.mutable
 import lamp.autograd.Concatenate
 import aten.TensorOptions
 
-/** Inputs of size (length * batch * vocab) */
+/** Inputs of size (sequence length * batch * vocab)
+  * Outputs of size (sequence length * batch * output dim)
+  */
 case class RNN(
     weightXh: Variable,
     weightHh: Variable,
@@ -20,6 +22,11 @@ case class RNN(
 ) extends Module {
   override def asEval: Module = copy(train = false)
   override def asTraining: Module = copy(train = true)
+
+  val inputSize = weightXh.shape.last
+  val hiddenSize = biasH.shape.last
+  val outputSize = biasQ.shape.last
+  val batchSize = hiddenState.shape.head
 
   override def load(tensors: Seq[Tensor]): Module = copy(
     weightXh = param(tensors(0)),
@@ -46,11 +53,12 @@ case class RNN(
       val xt = x.select(0, t)
       val newHidden =
         (xt.mm(weightXh) + h.releasable.mm(weightHh) + biasH).tanh.preserved
-      val output = newHidden.dropout(dropout, train).mm(weightHq) + biasQ
+      val output = (newHidden.dropout(dropout, train).mm(weightHq) + biasQ)
+        .view(List(1, batchSize.toInt, outputSize.toInt))
       outputs.append(output)
       newHidden
     }
-    hiddenState = newHidden
+    hiddenState = newHidden.detached
     Concatenate(outputs.toList, 0).value
 
   }
@@ -78,7 +86,7 @@ object RNN {
         ATen.normal_3(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(hiddenSize, in),
+          Array(in, hiddenSize),
           tOpt
         )
       ),
@@ -94,7 +102,7 @@ object RNN {
         ATen.normal_3(
           0d,
           math.sqrt(2d / (out + hiddenSize)),
-          Array(out, hiddenSize),
+          Array(hiddenSize, out),
           tOpt
         )
       ),
@@ -114,7 +122,7 @@ object RNN {
         ATen.normal_3(
           0d,
           math.sqrt(2d / (batchSize + hiddenSize)),
-          Array(hiddenSize, batchSize),
+          Array(batchSize, hiddenSize),
           tOpt
         )
       ),

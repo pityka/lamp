@@ -18,7 +18,7 @@ class MLPSuite extends AnyFunSuite {
       Fun(_.gelu),
       Dropout(0.2, true),
       Linear(64, k, tOpt = tOpt),
-      Fun(_.logSoftMax)
+      Fun(_.logSoftMax(dim = 1))
     )
 
   def test1(id: String)(fun: Boolean => Unit) = {
@@ -105,8 +105,6 @@ class MLPSuite extends AnyFunSuite {
         val correct = prediction.zipMap(
           TensorHelpers.toMatLong(validationTarget).toVec
         )((a, b) => if (a == b) 1d else 0d)
-        // println(correct)
-        // println("Validation loss: " + validationLoss + " " + correct.mean2)
       }
     }
 

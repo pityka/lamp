@@ -15,7 +15,7 @@ class IteratorLoopSuite extends AnyFunSuite {
   def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions) =
     Sequential(
       Linear(dim, k, tOpt = tOpt),
-      Fun(_.logSoftMax)
+      Fun(_.logSoftMax(dim = 1))
     )
 
   def test1(id: String)(fun: Boolean => Unit) = {
@@ -65,7 +65,6 @@ class IteratorLoopSuite extends AnyFunSuite {
         val correct = prediction.zipMap(
           TensorHelpers.toMatLong(validationTarget).toVec
         )((a, b) => if (a == b) 1d else 0d)
-        // println("Validation loss: " + validationLoss + " " + correct.mean2)
       }
     }
 

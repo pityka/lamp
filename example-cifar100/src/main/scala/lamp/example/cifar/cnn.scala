@@ -54,7 +54,7 @@ object Cnn {
     residualBlock(inChannels, numClasses, inChannels, tOpt),
     Fun(v => AvgPool2D(v, kernelSize, stride = 1, padding = 0).value),
     Fun(_.flattenLastDimensions(3)),
-    Fun(_.logSoftMax)
+    Fun(_.logSoftMax(dim = 1))
   )
 
   def residualBlock(
@@ -141,6 +141,6 @@ object Cnn {
       Fun(_.gelu),
       Dropout(dropOut, training = true),
       Linear(84, numClasses, tOpt = tOpt),
-      Fun(_.logSoftMax)
+      Fun(_.logSoftMax(dim = 1))
     )
 }

@@ -15,12 +15,24 @@ case class SupervisedModel(
       samples: Tensor,
       target: Tensor
   ): (Double, Tensor) = {
+
     val output = module.forward(const(samples))
     val loss = lossFunction(output, target)
     val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
     val outputCloned = ATen.clone(output.value)
     loss.releaseAll
     (lossAsDouble, outputCloned)
+  }
+  def lossAndGradients(
+      samples: Tensor,
+      target: Tensor
+  ): (Double, Seq[Option[Tensor]]) = {
+    val output = module.forward(const(samples))
+    val loss = lossFunction(output, target)
+    val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
+
+    val gradients = module.gradients(loss)
+    (lossAsDouble, gradients)
   }
   def lossAndGradientsAndOutput(
       samples: Tensor,

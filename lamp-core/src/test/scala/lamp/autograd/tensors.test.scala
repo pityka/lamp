@@ -48,4 +48,11 @@ class TensorHelperSuite extends AnyFunSuite {
     import org.saddle.ops.BinOps._
     assert(t.toMat == mat.ident(3) * 0d)
   }
+  test("one hot") {
+    val t =
+      TensorHelpers.fromLongMat(Mat(Vec(0L, 1L), Vec(1L, 1L), Vec(0L, 0L)).T)
+
+    val t2 = ATen.one_hot(t, 4)
+    assert(t2.shape == List(3, 2, 4))
+  }
 }

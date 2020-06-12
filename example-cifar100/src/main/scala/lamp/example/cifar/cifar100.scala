@@ -96,7 +96,6 @@ case class CliConfig(
 )
 
 object Train extends App {
-  println("START")
   scribe.info("Logger start")
   import scopt.OParser
   val builder = OParser.builder[CliConfig]
@@ -212,7 +211,7 @@ object Train extends App {
     case _ =>
     // arguments are bad, error message will have been displayed
   }
-  println("END")
+  scribe.info("END")
 }
 object AWTWindow {
   import java.awt.Graphics2D

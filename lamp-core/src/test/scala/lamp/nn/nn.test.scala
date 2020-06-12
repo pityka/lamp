@@ -280,6 +280,27 @@ class NNSuite extends AnyFunSuite {
       ),
     89.9999
   )
+  test("RNN shape and loss") {
+    val output = RNN(
+      weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+      weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+      weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
+      biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
+      biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+      hiddenState = param(ATen.ones(Array(3, 4), TensorOptions.dtypeDouble)),
+      dropout = 0d,
+      train = true
+    ).forward(const(NDArray.tensorFromNDArray(nd2x3x2))).value
+    assert(output.shape == List(2, 3, 3))
+    val target = TensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong))
+    val loss = LossFunctions
+      .SequenceNLL(
+        3,
+        ATen.ones(Array(3), TensorOptions.dtypeDouble())
+      )(const(output), target)
+      .value
+    assert(TensorHelpers.toMat(loss).raw(0) == -4.99999180501807)
+  }
 
   test1("gradient clipping") { cuda =>
     val topt =
@@ -302,7 +323,7 @@ class NNSuite extends AnyFunSuite {
     val mod = Sequential(
       Linear(in = 30, out = 3, TensorOptions.dtypeDouble()),
       Linear(in = 3, out = 2, TensorOptions.dtypeDouble()),
-      Fun(_.logSoftMax)
+      Fun(_.logSoftMax(dim = 1))
     )
 
     val parameters = mod.state.map(_._1.value)
@@ -335,7 +356,7 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
   val w = param(TensorHelpers.fromMat(mat2x3_2))
 
   def forward(x: Variable): Variable =
-    ((x.mm(w)).logSoftMax.crossEntropy(y).sum + w.squaredFrobenius)
+    ((x.mm(w)).logSoftMax(dim = 1).crossEntropy(y).sum + w.squaredFrobenius)
 
   override def load(parameters: Seq[Tensor]) = this
 
@@ -350,7 +371,7 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
       param(ATen.ones(Array(k, dim), y.options)),
       Some(param(ATen.ones(Array(1, k), y.options)))
     ),
-    Fun(_.logSoftMax)
+    Fun(_.logSoftMax(dim = 1))
   )
 
   def forward(x: Variable): Variable =
@@ -375,7 +396,7 @@ case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
       param(ATen.ones(Array(32, dim), y.options)),
       Some(param(ATen.ones(Array(1, 32), y.options)))
     ),
-    Fun(_.logSoftMax),
+    Fun(_.logSoftMax(dim = 1)),
     Fun(_.gelu),
     Linear(
       param(ATen.ones(Array(k, 32), y.options)),
