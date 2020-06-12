@@ -105,11 +105,6 @@ object Train extends App {
             Fun(_.logSoftMax(2))
           )
 
-        // val loadedNet = config.checkpointLoad match {
-        //   case None => net
-        //   case Some(file) =>
-        //     Reader.loadFromFile(net, new File(file))
-        // }
         scribe.info("Learnable parametes: " + net.learnableParameters)
         scribe.info("parameters: " + net.parameters.mkString("\n"))
         SupervisedModel(
@@ -142,7 +137,7 @@ object Train extends App {
           epochs = config.epochs,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
-          checkpointFile = config.checkpointSave.map(s => new File(s)),
+          checkpointFile = None, //config.checkpointSave.map(s => new File(s)),
           minimumCheckpointFile = None,
           checkpointFrequency = 10,
           logger = Some(scribe.Logger("training"))

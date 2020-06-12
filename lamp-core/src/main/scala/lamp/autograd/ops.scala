@@ -101,8 +101,10 @@ case class ConstMult(a: Variable, b: Double) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
       val tmp = ATen.mul_1(p, b)
-      ATen.add_out(out, out, ub(tmp, a.sizes), 1d)
+      val tmp2 = ub(tmp, a.sizes)
+      ATen.add_out(out, out, tmp2, 1d)
       tmp.release
+      tmp2.release
     }
   )
 
@@ -113,12 +115,16 @@ case class Mult(a: Variable, b: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
       val tmp = ATen.mul_0(p, b.value)
-      ATen.add_out(out, out, ub(tmp, a.sizes), 1d)
+      val tmp2 = ub(tmp, a.sizes)
+      ATen.add_out(out, out, tmp2, 1d)
+      tmp2.release
       tmp.release
     },
     b.zipBackward { (p, out) =>
       val tmp = ATen.mul_0(p, a.value)
-      ATen.add_out(out, out, ub(tmp, b.sizes), 1d)
+      val tmp2 = ub(tmp, b.sizes)
+      ATen.add_out(out, out, tmp2, 1d)
+      tmp2.release
       tmp.release
     }
   )
