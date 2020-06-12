@@ -187,60 +187,6 @@ object Train extends App {
           device
         )
 
-      val trainingCallback = new TrainingCallback {
-        def apply(
-            trainingLoss: Double,
-            batchCount: Int,
-            trainingOutput: Tensor,
-            trainingTarget: Tensor
-        ): Unit = {
-          scribe.info(
-            s"train loss: ${trainingLoss} - batch count: $batchCount"
-          )
-        }
-      }
-      val validationCallback = new ValidationCallback {
-        def apply(
-            validationOutput: Tensor,
-            validationTarget: Tensor,
-            validationLoss: Double,
-            epochCount: Long
-        ): Unit = {
-          val prediction = {
-            val t = ATen.argmax(validationOutput, 1, false)
-            val r = TensorHelpers
-              .toMatLong(t)
-              .toVec
-            t.release
-            r
-          }
-          val corrects = prediction.zipMap(
-            TensorHelpers.toMatLong(validationTarget).toVec
-          )((a, b) => if (a == b) 1d else 0d)
-          scribe.info(
-            s"epoch: $epochCount, validation loss: $validationLoss, corrects: ${corrects.mean}"
-          )
-
-          config.checkpointSave.foreach { file =>
-            val channel = Resource.make(IO {
-              val fis = new FileOutputStream(new File(file))
-              fis.getChannel
-            })(v => IO { v.close })
-            channel
-              .use { channel =>
-                IO {
-                  Writer.writeTensorsIntoChannel(
-                    model.module.state
-                      .map(v => (ScalarTagDouble, v._1.value)),
-                    channel
-                  )
-                }
-              }
-              .unsafeRunSync()
-          }
-        }
-      }
-
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
         learningRate = simple(config.learningRate),
@@ -254,8 +200,12 @@ object Train extends App {
           trainBatchesOverEpoch = trainEpochs,
           validationBatchesOverEpoch = testEpochs,
           epochs = config.epochs,
-          trainingCallback = trainingCallback,
-          validationCallback = validationCallback
+          trainingCallback = TrainingCallback.noop,
+          validationCallback = ValidationCallback.logAccuracy,
+          checkpointFile = config.checkpointSave.map(s => new File(s)),
+          minimumCheckpointFile = None,
+          checkpointFrequency = 10,
+          logger = Some(scribe.Logger("training"))
         )
         .unsafeRunSync()
 

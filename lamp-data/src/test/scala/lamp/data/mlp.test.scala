@@ -121,7 +121,10 @@ class MLPSuite extends AnyFunSuite {
       validationBatchesOverEpoch = makeValidationBatch,
       epochs = 10,
       trainingCallback = TrainingCallback.noop,
-      validationCallback = validationCallback
+      validationCallback = validationCallback,
+      checkpointFile = None,
+      checkpointFrequency = 1,
+      minimumCheckpointFile = None
     )
     val (loss, output) =
       trainedModel.unsafeRunSync().lossAndOutput(testDataTensor, testTarget)

@@ -59,7 +59,10 @@ class IOLoopSuite extends AnyFunSuite {
         () => BatchStream.fromFullBatch(x, target, device),
       epochs = 50,
       trainingCallback = TrainingCallback.noop,
-      validationCallback = ValidationCallback.noop
+      validationCallback = ValidationCallback.noop,
+      checkpointFile = None,
+      checkpointFrequency = 1,
+      minimumCheckpointFile = None
     )
 
     val (loss, output) = trainedModel.unsafeRunSync().lossAndOutput(x, target)
@@ -103,7 +106,10 @@ class IOLoopSuite extends AnyFunSuite {
         () => BatchStream.minibatchesFromFull(200, true, x, target, device),
       epochs = 50,
       trainingCallback = TrainingCallback.noop,
-      validationCallback = ValidationCallback.noop
+      validationCallback = ValidationCallback.noop,
+      checkpointFile = None,
+      checkpointFrequency = 1,
+      minimumCheckpointFile = None
     )
 
     val (loss, output) = trainedModel.unsafeRunSync().lossAndOutput(x, target)

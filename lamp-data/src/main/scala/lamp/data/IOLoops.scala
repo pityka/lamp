@@ -4,7 +4,28 @@ import cats.effect._
 import aten.Tensor
 import lamp.syntax
 import lamp.util.NDArray
+import java.io.FileOutputStream
+import java.io.File
+import org.saddle.scalar.ScalarTagDouble
+import scribe.Logger
 object IOLoops {
+
+  def writeCheckpoint(file: File, model: Module) = {
+    val channel = Resource.make(IO {
+      val fis = new FileOutputStream(file, false)
+      fis.getChannel
+    })(v => IO { v.close })
+    channel
+      .use { channel =>
+        IO {
+          Writer.writeTensorsIntoChannel(
+            model.state
+              .map(v => (ScalarTagDouble, v._1.value)),
+            channel
+          )
+        }
+      }
+  }
 
   def epochs(
       model: SupervisedModel,
@@ -13,71 +34,120 @@ object IOLoops {
       validationBatchesOverEpoch: () => BatchStream,
       epochs: Int,
       trainingCallback: TrainingCallback,
-      validationCallback: ValidationCallback
+      validationCallback: ValidationCallback,
+      checkpointFile: Option[File],
+      minimumCheckpointFile: Option[File],
+      checkpointFrequency: Int,
+      logger: Option[Logger] = None
   ): IO[SupervisedModel] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
-    def loop(epoch: Int, currentValidation: BatchStream): IO[SupervisedModel] =
+    def loop(
+        epoch: Int,
+        currentValidation: BatchStream,
+        minValidationLoss: Option[Double]
+    ): IO[SupervisedModel] =
       if (epoch >= epochs) IO.pure(modelWithOptimizer.model)
       else {
         for {
           _ <- oneEpoch(
             modelWithOptimizer,
             trainBatchesOverEpoch(),
-            trainingCallback
+            trainingCallback,
+            logger
           )
-          replaceValidation <- runValidation(
+          maybeValidationLoss <- runValidation(
             modelWithOptimizer.model,
             currentValidation.nextBatch,
             validationCallback,
-            epoch
+            epoch,
+            minValidationLoss,
+            checkpointFile,
+            minimumCheckpointFile,
+            checkpointFrequency,
+            logger
           )
+          replaceValidation = maybeValidationLoss.isEmpty
+          nextMinValidationLoss = if (maybeValidationLoss.isEmpty)
+            minValidationLoss
+          else if (minValidationLoss.isEmpty) maybeValidationLoss
+          else Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
           next <- loop(
             epoch + 1,
             if (replaceValidation) validationBatchesOverEpoch()
-            else currentValidation
+            else currentValidation,
+            nextMinValidationLoss
           )
         } yield next
       }
 
-    loop(0, validationBatchesOverEpoch())
+    loop(0, validationBatchesOverEpoch(), None)
   }
 
   def runValidation(
       model: SupervisedModel,
       validationBatch: Resource[IO, Option[(Tensor, Tensor)]],
       validationCallback: ValidationCallback,
-      epochCount: Int
-  ) = {
+      epochCount: Int,
+      minimumValidationLossSoFar: Option[Double],
+      checkpointFile: Option[File],
+      minimumCheckpointFile: Option[File],
+      checkpointFrequency: Int,
+      logger: Option[Logger]
+  ): IO[Option[Double]] = {
     validationBatch
       .use { option =>
-        IO {
-          option.map {
-            case (validationSample, validationTarget) =>
-              val (validationLoss, validationOutput) =
+        val io = option.map {
+          case (validationSample, validationTarget) =>
+            for {
+              evaluated <- IO {
                 model.asEval.lossAndOutput(
                   validationSample,
                   validationTarget
                 )
-              validationCallback(
-                validationOutput,
-                validationTarget,
-                validationLoss,
-                epochCount
-              )
+              }
+              (validationLoss, validationOutput) = evaluated
+              _ <- IO {
+                logger.foreach(
+                  _.info(
+                    s"Validation loss at epoch $epochCount: $validationLoss"
+                  )
+                )
+              }
+              _ <- IO {
+                validationCallback(
+                  validationOutput,
+                  validationTarget,
+                  validationLoss,
+                  epochCount
+                )
+              }
+              _ <- IO { validationOutput.release }
 
-              validationOutput.release
+              _ <- if (checkpointFile.isDefined && (epochCount % checkpointFrequency == 0))
+                writeCheckpoint(checkpointFile.get, model.module)
+              else IO.unit
+              _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
+                IO {
+                  scribe.info(
+                    s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $checkpointFile"
+                  )
+                }.flatMap(_ =>
+                  writeCheckpoint(minimumCheckpointFile.get, model.module)
+                )
+              else IO.unit
+            } yield validationLoss
 
-          }
         }
+        io.map(_.map(Some(_))).getOrElse(IO.pure(None))
       }
-      .map(_.isEmpty)
   }
 
   def oneEpoch(
       model: ModelWithOptimizer,
       trainBatches: BatchStream,
-      trainingCallback: TrainingCallback
+      trainingCallback: TrainingCallback,
+      logger: Option[Logger]
   ): IO[Unit] = {
 
     def loop(batchCount: Int): IO[Unit] = {
@@ -89,6 +159,9 @@ object IOLoops {
                 val (loss, gradients, output) =
                   model.model.lossAndGradientsAndOutput(sample, target)
                 trainingCallback(loss, batchCount, output, target)
+                logger.foreach(
+                  _.info(s"Training loss at batch $batchCount: $loss")
+                )
                 model.optimizer.step(gradients)
                 output.release
             }
