@@ -71,7 +71,7 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 
 lazy val core = project
-  .in(file("core"))
+  .in(file("lamp-core"))
   .configs(Cuda)
   .settings(commonSettings: _*)
   .settings(
