@@ -122,6 +122,8 @@ class NNSuite extends AnyFunSuite {
   val nd1x2x3 = NDArray(mat2x3.toArray, List(1, 2, 3))
   val nd1x2x3x3 =
     NDArray((0 until 18).toArray.map(_.toDouble), List(1, 2, 3, 3))
+  val nd2x3x2 =
+    NDArray((0 until 12).toArray.map(_.toDouble), List(2, 3, 2))
 
   test("linear") {
     val linear = Linear(3, 1, TensorOptions.dtypeDouble())
@@ -262,6 +264,21 @@ class NNSuite extends AnyFunSuite {
         TensorOptions.dtypeDouble()
       ),
     0d
+  )
+  testGradientAndValueND("RNN ", false)(
+    nd2x3x2,
+    () =>
+      RNN(
+        weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
+        biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
+        biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+        hiddenState = param(ATen.ones(Array(3, 4), TensorOptions.dtypeDouble)),
+        dropout = 0d,
+        train = true
+      ),
+    89.9999
   )
 
   test1("gradient clipping") { cuda =>

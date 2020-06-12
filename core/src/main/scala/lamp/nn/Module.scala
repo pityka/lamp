@@ -42,6 +42,7 @@ case class Sequential(members: Module*) extends Module {
 object Sequential {
   case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
     def leaf = t
+    def updateDuringOptimization: Boolean = t.updateDuringOptimization
   }
 }
 
@@ -54,7 +55,10 @@ trait Module {
   def asTraining: Module = this
   def forward(x: Variable): Variable
   def state: Seq[(Variable, PTag)] = Nil
-  final def parameters = state.filter(_._1.needsGrad)
+  final def parameters =
+    state.filter(v =>
+      v._1.needsGrad && v._1.leaf && v._2.updateDuringOptimization
+    )
   final def gradients(
       loss: Variable,
       zeroGrad: Boolean = true
@@ -66,7 +70,9 @@ trait Module {
       }
     }
     loss.backprop()
-    val g = parameters.map { case (param, _) => param.partialDerivative }
+    val g = parameters.map {
+      case (param, _) => param.partialDerivative
+    }
     loss.releaseAll
     g
   }
@@ -77,8 +83,14 @@ trait Module {
 
 trait PTag {
   def leaf: PTag
+  def updateDuringOptimization: Boolean
 }
 trait LeafTag extends PTag {
   def leaf: PTag = this
+  def updateDuringOptimization: Boolean = true
+}
+trait IntermediateStateTag extends PTag {
+  def leaf: PTag = this
+  def updateDuringOptimization: Boolean = false
 }
 case object NoTag extends LeafTag

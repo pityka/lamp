@@ -1395,5 +1395,79 @@ class GradientSuite extends AnyFunSuite {
       input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
     )
   }
+  testGradientAndValueND("select 0 0 ")(nd1x2x3x3, 153d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+
+      val output =
+        input.select(0, 0)
+
+      assert(output.shape == List(2, 3, 3))
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("select 2 1 ")(nd1x2x3x3, 51d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+
+      val output =
+        input.select(2, 1)
+
+      assert(output.shape == List(1, 2, 3))
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("cat 0 ")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+
+    val output =
+      Concatenate(List(input, input), 0).value
+
+    assert(output.shape == List(2, 2, 3))
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
+  }
+  testGradientAndValueND("cat 1 ")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+
+    val output =
+      Concatenate(List(input, input), 1).value
+
+    assert(output.shape == List(1, 4, 3))
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
+  }
 
 }

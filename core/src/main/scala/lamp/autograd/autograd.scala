@@ -50,7 +50,8 @@ case class Variable(
     releaseWith: Seq[Tensor] = Nil
 ) {
 
-  override def toString = s"Var($shape,$value,$needsGrad,$leaf,$releaseWith)"
+  override def toString =
+    s"Var(shape=$shape,value=$value,needsGrad=$needsGrad,leaf=$leaf,releaseWith=$releaseWith)"
 
   def options = value.options
 
@@ -71,6 +72,8 @@ case class Variable(
     }
     Tensor.releaseAll(buffer.toArray)
   }
+  def preserved = copy(leaf = true)
+  def releasable = copy(leaf = false)
   def detached = copy(needsGrad = false)
   def zeroGrad() = {
     partialDerivative.foreach { t => ATen.zero_(t) }
@@ -110,6 +113,8 @@ case class Variable(
   }
 
   def t = Transpose(this).value
+  def select(dim: Long, index: Long) =
+    Select(this, dim = dim, index = index).value
   def +(other: Variable) = Add(this, other).value
   def -(other: Variable) = Minus(this, other).value
   def *(other: Variable) = Mult(this, other).value

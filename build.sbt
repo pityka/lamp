@@ -77,7 +77,7 @@ lazy val core = project
   .settings(
     name := "lamp-autograd",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+31-5cf26fc9",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+33-75d357c5",
       "io.github.pityka" %% "saddle-core" % "2.0.0-M25",
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M25",
       "org.typelevel" %% "cats-core" % "2.1.1",
@@ -93,6 +93,18 @@ lazy val core = project
 
 lazy val example_cifar100 = project
   .in(file("example-cifar100"))
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    skip in publish := true,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.outr" %% "scribe" % "2.7.3"
+    )
+  )
+  .dependsOn(core)
+lazy val example_timemachine = project
+  .in(file("example-timemachine"))
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,

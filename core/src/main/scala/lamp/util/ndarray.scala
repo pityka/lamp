@@ -18,7 +18,10 @@ case class NDArray[@specialized(Long, Double, Float) T](
     shape: List[Int]
 ) {
 
-  assert(data.length == shape.reduce(_ * _))
+  assert(
+    data.length == shape.reduce(_ * _),
+    "Dimension does not match up with elements."
+  )
   def reshape(ns: List[Int]) = {
     assert(ns.reduce(_ * _) == shape.reduce(_ * _))
     copy(shape = ns)

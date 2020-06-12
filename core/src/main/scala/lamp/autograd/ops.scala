@@ -24,6 +24,36 @@ case class Transpose(a: Variable) extends Op {
   )
   val value = Variable(this, ATen.t(a.value))
 }
+case class Concatenate(a: Seq[Variable], dim: Long) extends Op {
+  val params = a.zipWithIndex.toList.map {
+    case (a, idx) =>
+      a.zipBackward { (p, out) =>
+        val selected = ATen.select(p, dim, idx.toLong)
+        ATen.add_out(out, out, selected, 1d)
+        selected.release
+      }
+  }
+  val value = Variable(this, ATen.cat(a.map(_.value).toArray, dim))
+}
+case class Select(a: Variable, dim: Long, index: Long) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val tmp = ATen.zeros(out.sizes, out.options())
+      val scalar = Tensor.scalarLong(index, out.options().toLong())
+      val pshape = p.shape
+      val reshape = pshape.take(dim.toInt) ::: (1L :: pshape.drop(dim.toInt))
+      val p2 = ATen._unsafe_view(p, reshape.toArray)
+      val tmp2 = ATen
+        .index_add(tmp, dim, scalar, p2)
+      ATen.add_out(out, out, tmp2, 1d)
+      tmp.release()
+      scalar.release
+      p2.release
+      tmp2.release()
+    }
+  )
+  val value = Variable(this, ATen.select(a.value, dim, index))
+}
 
 case class Add(a: Variable, b: Variable) extends Op {
   val params = List(
