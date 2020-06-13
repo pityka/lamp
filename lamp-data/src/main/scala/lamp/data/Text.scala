@@ -73,7 +73,7 @@ object Text {
 
   }
   def englishToIntegers(text: String) = {
-    val chars = text.toSeq
+    val chars = text.toLowerCase.toSeq
       .filterNot(c => c == '\n' || c == '\r')
       .groupBy(identity)
       .toSeq
@@ -82,7 +82,7 @@ object Text {
       }
       .sortBy(_._2)
       .reverse
-      .take(30)
+      .take(40)
       .map(_._1)
       .zipWithIndex
       .toMap

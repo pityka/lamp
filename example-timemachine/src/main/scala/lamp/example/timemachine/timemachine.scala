@@ -94,6 +94,7 @@ object Train extends App {
         s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
       )
 
+      val hiddenSize = 64
       val device = if (config.cuda) CudaDevice(0) else CPU
       val model: SupervisedModel[(Option[Variable], Unit)] = {
         val classWeights = ATen.ones(Array(vocabularSize), device.options)
@@ -101,7 +102,7 @@ object Train extends App {
           Seq2(
             RNN(
               in = vocabularSize,
-              hiddenSize = 64,
+              hiddenSize = hiddenSize,
               out = vocabularSize,
               dropout = config.dropout,
               tOpt = device.options
@@ -118,7 +119,7 @@ object Train extends App {
         )
       }
 
-      val lookAhead = 10
+      val lookAhead = 15
 
       val trainEpochs = () =>
         Text
@@ -155,7 +156,7 @@ object Train extends App {
           epochs = config.epochs,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
-          checkpointFile = None, //config.checkpointSave.map(s => new File(s)),
+          checkpointFile = config.checkpointSave.map(s => new File(s)),
           minimumCheckpointFile = None,
           checkpointFrequency = 10,
           logger = Some(scribe.Logger("training"))
@@ -168,7 +169,7 @@ object Train extends App {
         List(tokenized),
         device,
         trainedModel.module,
-        (Some(const(ATen.zeros(Array(1, 64), device.options))), ()),
+        (Some(const(ATen.zeros(Array(1, hiddenSize), device.options))), ()),
         vocabularSize,
         lookAhead
       )
