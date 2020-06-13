@@ -31,7 +31,11 @@ class MLPSuite extends AnyFunSuite {
     val testData = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source
-          .fromInputStream(getClass.getResourceAsStream("/mnist_test.csv"))
+          .fromInputStream(
+            new java.util.zip.GZIPInputStream(
+              getClass.getResourceAsStream("/mnist_test.csv.gz")
+            )
+          )
       )
       .right
       .get

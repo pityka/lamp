@@ -74,6 +74,7 @@ object Text {
   }
   def englishToIntegers(text: String) = {
     val chars = text.toSeq
+      .filterNot(c => c == '\n' || c == '\r')
       .groupBy(identity)
       .toSeq
       .map {

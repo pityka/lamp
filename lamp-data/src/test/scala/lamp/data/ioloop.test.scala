@@ -27,7 +27,11 @@ class IOLoopSuite extends AnyFunSuite {
     val data = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source
-          .fromInputStream(getClass.getResourceAsStream("/mnist_test.csv"))
+          .fromInputStream(
+            new java.util.zip.GZIPInputStream(
+              getClass.getResourceAsStream("/mnist_test.csv.gz")
+            )
+          )
       )
       .right
       .get
@@ -78,7 +82,11 @@ class IOLoopSuite extends AnyFunSuite {
     val data = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source
-          .fromInputStream(getClass.getResourceAsStream("/mnist_test.csv"))
+          .fromInputStream(
+            new java.util.zip.GZIPInputStream(
+              getClass.getResourceAsStream("/mnist_test.csv.gz")
+            )
+          )
       )
       .right
       .get
