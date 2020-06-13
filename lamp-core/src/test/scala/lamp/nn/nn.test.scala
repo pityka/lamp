@@ -11,6 +11,8 @@ import org.scalatest.Tag
 import lamp.syntax
 import lamp.util.NDArray
 import aten.Tensor
+import cats.effect.IO
+import cats.effect.concurrent.Ref
 
 object CudaTest extends Tag("cuda")
 
@@ -274,7 +276,11 @@ class NNSuite extends AnyFunSuite {
         weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
         biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
         biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        hiddenState = param(ATen.ones(Array(3, 4), TensorOptions.dtypeDouble)),
+        hiddenState = Ref
+          .of[IO, Variable](
+            param(ATen.ones(Array(3, 4), TensorOptions.dtypeDouble))
+          )
+          .unsafeRunSync(),
         dropout = 0d,
         train = true
       ),
@@ -287,7 +293,11 @@ class NNSuite extends AnyFunSuite {
       weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
       biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
       biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-      hiddenState = param(ATen.ones(Array(3, 4), TensorOptions.dtypeDouble)),
+      hiddenState = Ref
+        .of[IO, Variable](
+          param(ATen.ones(Array(3, 4), TensorOptions.dtypeDouble))
+        )
+        .unsafeRunSync(),
       dropout = 0d,
       train = true
     ).forward(const(NDArray.tensorFromNDArray(nd2x3x2))).value
