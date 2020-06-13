@@ -26,6 +26,8 @@ import lamp.nn.Seq2
 import lamp.nn.StatefulModule
 import lamp.autograd.Variable
 import lamp.autograd.const
+import lamp.nn.Seq3
+import lamp.nn.Seq4
 
 case class CliConfig(
     trainData: String = "",
@@ -33,7 +35,7 @@ case class CliConfig(
     cuda: Boolean = false,
     batchSize: Int = 256,
     epochs: Int = 1000,
-    learningRate: Double = 0.001,
+    learningRate: Double = 0.0001,
     dropout: Double = 0.0,
     checkpointSave: Option[String] = None,
     checkpointLoad: Option[String] = None
@@ -96,13 +98,27 @@ object Train extends App {
 
       val hiddenSize = 64
       val device = if (config.cuda) CudaDevice(0) else CPU
-      val model: SupervisedModel[(Option[Variable], Unit)] = {
+      val model = {
         val classWeights = ATen.ones(Array(vocabularSize), device.options)
-        val net: StatefulModule[(Option[Variable], Unit)] =
-          Seq2(
+        val net =
+          Seq4(
             RNN(
               in = vocabularSize,
               hiddenSize = hiddenSize,
+              out = 10,
+              dropout = config.dropout,
+              tOpt = device.options
+            ),
+            RNN(
+              in = 10,
+              hiddenSize = hiddenSize * 2,
+              out = 10,
+              dropout = config.dropout,
+              tOpt = device.options
+            ),
+            RNN(
+              in = 10,
+              hiddenSize = hiddenSize * 2,
               out = vocabularSize,
               dropout = config.dropout,
               tOpt = device.options
@@ -114,7 +130,7 @@ object Train extends App {
         scribe.info("parameters: " + net.parameters.mkString("\n"))
         SupervisedModel(
           net,
-          (None, ()),
+          (None, None, None, ()),
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
@@ -163,13 +179,19 @@ object Train extends App {
         )
         .unsafeRunSync()
 
-      val exampleText = "time"
-      val tokenized = Text.englishToIntegers(exampleText, vocab).map(_.toLong)
+      val exampleTexts = List("time", "good", "mach", "morn", "best")
+      val tokenized =
+        exampleTexts.map(t => Text.englishToIntegers(t, vocab).map(_.toLong))
       val predicted = Text.sequencePrediction(
-        List(tokenized),
+        tokenized,
         device,
         trainedModel.module,
-        (Some(const(ATen.zeros(Array(1, hiddenSize), device.options))), ()),
+        (
+          Some(const(ATen.zeros(Array(1, hiddenSize), device.options))),
+          Some(const(ATen.zeros(Array(1, hiddenSize * 2), device.options))),
+          Some(const(ATen.zeros(Array(1, hiddenSize * 2), device.options))),
+          ()
+        ),
         vocabularSize,
         lookAhead
       )
