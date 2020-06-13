@@ -110,7 +110,7 @@ object IOLoops {
                     _ <- IO {
                       logger.foreach(
                         _.info(
-                          s"Validation loss at epoch $epochCount: $validationLoss"
+                          s"Validation loss at epoch $epochCount: $validationLoss (exp: ${math.exp(validationLoss)})"
                         )
                       )
                     }
@@ -163,7 +163,9 @@ object IOLoops {
                     }
                     _ <- IO {
                       logger.foreach(
-                        _.info(s"Training loss at batch $batchCount: $loss")
+                        _.info(
+                          s"Training loss at batch $batchCount: $loss (exp: ${math.exp(loss)})"
+                        )
                       )
                     }
                     _ <- IO { model.optimizer.step(gradients) }

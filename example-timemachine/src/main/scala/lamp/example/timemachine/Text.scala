@@ -34,6 +34,37 @@ object Text {
     text.map(c => chars.get(c).getOrElse(unknown)).toVector
   }
 
+  def makePredictionBatch(
+      examples: Seq[Vector[Long]],
+      device: Device,
+      vocabularSize: Int
+  ) = {
+    Resource.make(IO {
+
+      val flattenedFeature =
+        TensorHelpers.fromLongVec(examples.flatMap(identity).toVec)
+      val viewedFeature = ATen._unsafe_view(
+        flattenedFeature,
+        Array(examples.size.toLong, examples.head.size.toLong)
+      )
+      val transposedFeatures = ATen.t(viewedFeature)
+      val movedFeature = device.to(transposedFeatures)
+      val oneHot = ATen.one_hot(movedFeature, vocabularSize)
+      val double = ATen._cast_Double(oneHot, false)
+      Tensor.releaseAll(
+        Array(
+          viewedFeature,
+          flattenedFeature,
+          transposedFeatures,
+          movedFeature,
+          oneHot
+        )
+      )
+
+      double
+    })(a => IO(a.release))
+  }
+
   /**
     * Yields tensors of shape (time step x batch size)
     */
