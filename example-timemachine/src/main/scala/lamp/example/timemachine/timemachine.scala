@@ -84,7 +84,7 @@ object Train extends App {
 
       val testText = Resource
         .make(IO {
-          scala.io.Source.fromFile(new File(config.trainData))
+          scala.io.Source.fromFile(new File(config.testData))
         })(s => IO { s.close })
         .use(s => IO(s.mkString))
         .unsafeRunSync()
