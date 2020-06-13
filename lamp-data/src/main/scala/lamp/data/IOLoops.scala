@@ -99,44 +99,44 @@ object IOLoops {
       .use { option =>
         val io = option.map {
           case (validationSample, validationTarget) =>
-            for {
-              evaluated <- IO {
-                model.asEval.lossAndOutput(
-                  validationSample,
-                  validationTarget
-                )
-              }
-              (validationLoss, validationOutput) = evaluated
-              _ <- IO {
-                logger.foreach(
-                  _.info(
-                    s"Validation loss at epoch $epochCount: $validationLoss"
-                  )
-                )
-              }
-              _ <- IO {
-                validationCallback(
-                  validationOutput,
-                  validationTarget,
-                  validationLoss,
-                  epochCount
-                )
-              }
-              _ <- IO { validationOutput.release }
+            model.asEval
+              .lossAndOutput(
+                validationSample,
+                validationTarget
+              )
+              .use {
+                case (validationLoss, validationOutput) =>
+                  for {
+                    _ <- IO {
+                      logger.foreach(
+                        _.info(
+                          s"Validation loss at epoch $epochCount: $validationLoss"
+                        )
+                      )
+                    }
+                    _ <- IO {
+                      validationCallback(
+                        validationOutput,
+                        validationTarget,
+                        validationLoss,
+                        epochCount
+                      )
+                    }
 
-              _ <- if (checkpointFile.isDefined && (epochCount % checkpointFrequency == 0))
-                writeCheckpoint(checkpointFile.get, model.module)
-              else IO.unit
-              _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
-                IO {
-                  scribe.info(
-                    s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $checkpointFile"
-                  )
-                }.flatMap(_ =>
-                  writeCheckpoint(minimumCheckpointFile.get, model.module)
-                )
-              else IO.unit
-            } yield validationLoss
+                    _ <- if (checkpointFile.isDefined && (epochCount % checkpointFrequency == 0))
+                      writeCheckpoint(checkpointFile.get, model.module)
+                    else IO.unit
+                    _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
+                      IO {
+                        scribe.info(
+                          s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $checkpointFile"
+                        )
+                      }.flatMap(_ =>
+                        writeCheckpoint(minimumCheckpointFile.get, model.module)
+                      )
+                    else IO.unit
+                  } yield validationLoss
+              }
 
         }
         io.map(_.map(Some(_))).getOrElse(IO.pure(None))
@@ -153,19 +153,25 @@ object IOLoops {
     def loop(batchCount: Int): IO[Unit] = {
       trainBatches.nextBatch
         .use { option =>
-          IO {
-            option.map {
-              case (sample, target) =>
-                val (loss, gradients, output) =
-                  model.model.lossAndGradientsAndOutput(sample, target)
-                trainingCallback(loss, batchCount, output, target)
-                logger.foreach(
-                  _.info(s"Training loss at batch $batchCount: $loss")
-                )
-                model.optimizer.step(gradients)
-                output.release
-            }
+          val io = option.map {
+            case (sample, target) =>
+              model.model.lossAndGradientsAndOutput(sample, target).use {
+                case (loss, gradients, output) =>
+                  for {
+                    _ <- IO {
+                      trainingCallback(loss, batchCount, output, target)
+                    }
+                    _ <- IO {
+                      logger.foreach(
+                        _.info(s"Training loss at batch $batchCount: $loss")
+                      )
+                    }
+                    _ <- IO { model.optimizer.step(gradients) }
+                  } yield ()
+
+              }
           }
+          io.map(_.map(Some(_))).getOrElse(IO.pure(None))
         }
         .flatMap {
           case None => IO.unit

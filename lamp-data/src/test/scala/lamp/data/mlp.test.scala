@@ -124,8 +124,10 @@ class MLPSuite extends AnyFunSuite {
       checkpointFrequency = 1,
       minimumCheckpointFile = None
     )
-    val (loss, output) =
-      trainedModel.unsafeRunSync().lossAndOutput(testDataTensor, testTarget)
+    val (loss, output) = trainedModel
+      .flatMap(_.lossAndOutput(testDataTensor, testTarget).allocated.map(_._1))
+      .unsafeRunSync
+
     assert(loss < 50)
 
   }

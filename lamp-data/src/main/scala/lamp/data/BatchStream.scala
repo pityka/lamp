@@ -9,19 +9,38 @@ import aten.ATen
 trait BatchStream { self =>
   def nextBatch: Resource[IO, Option[(Tensor, Tensor)]]
 
-  def map(f: (Tensor, Tensor) => (Tensor, Tensor)) = new BatchStream {
-    def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
-      self.nextBatch.map(_.map(f.tupled))
-  }
+  def map(f: (Tensor, Tensor) => Resource[IO, (Tensor, Tensor)]) =
+    new BatchStream {
+      def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
+        self.nextBatch.flatMap(maybe =>
+          maybe match {
+            case None => Resource.pure[IO, Option[(Tensor, Tensor)]](None)
+            case Some(pair) =>
+              f.tupled(pair).map(Some(_))
+          }
+        )
+    }
 }
 
 object BatchStream {
-  def oneHotFeatures(vocabularSize: Int): (Tensor, Tensor) => (Tensor, Tensor) = {
+
+  def oneHotFeatures(
+      vocabularSize: Int
+  ): (Tensor, Tensor) => Resource[IO, (Tensor, Tensor)] = {
     case (feature, target) =>
-      val oneHot = ATen.one_hot(feature, vocabularSize)
-      val double = ATen._cast_Double(oneHot, false)
-      oneHot.release
-      (double, target)
+      Resource.make(IO {
+        val oneHot = ATen.one_hot(feature, vocabularSize)
+        val double = ATen._cast_Double(oneHot, false)
+        oneHot.release
+        (double, target)
+
+      }) {
+        case (double, _) =>
+          IO {
+            double.release()
+          }
+
+      }
   }
   def minibatchesFromFull(
       minibatchSize: Int,
