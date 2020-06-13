@@ -55,4 +55,21 @@ class TensorHelperSuite extends AnyFunSuite {
     val t2 = ATen.one_hot(t, 4)
     assert(t2.shape == List(3, 2, 4))
   }
+  ignore("cat - memory leak") {
+    0 until 1000 foreach { _ =>
+      val t = TensorHelpers.fromMat(mat.ones(3000, 3000))
+      val t2 = TensorHelpers.fromMat(mat.ones(3000, 3000))
+      val t3 = TensorHelpers.fromMat(mat.ones(3000, 3000))
+      println(t3.weakUseCount())
+      println(t3.useCount())
+      val t4 =
+        ConcatenateAddNewDim(
+          List(const(t).releasable, const(t2).releasable, const(t3).releasable)
+        ).value
+      assert(t4.shape == List(3, 3000, 3000))
+
+      t4.releaseAll
+
+    }
+  }
 }

@@ -34,16 +34,36 @@ case class View(a: Variable, shape: Array[Long]) extends Op {
   )
   val value = Variable(this, ATen._unsafe_view(a.value, shape))
 }
-case class Concatenate(a: Seq[Variable], dim: Long) extends Op {
+
+/** Prepends a new dimension and concatenates the tensors along that axis
+  */
+case class ConcatenateAddNewDim(a: Seq[Variable]) extends Op {
   val params = a.zipWithIndex.toList.map {
     case (a, idx) =>
       a.zipBackward { (p, out) =>
-        val selected = ATen.select(p, dim, idx.toLong)
+        val selected = ATen.select(p, 0, idx.toLong)
         ATen.add_out(out, out, selected, 1d)
         selected.release
       }
   }
-  val value = Variable(this, ATen.cat(a.map(_.value).toArray, dim))
+  val shapes = a.map(_.shape)
+
+  assert(
+    shapes.distinct.size == 1,
+    "Concatenable tensors must have the same shape."
+  )
+  val shape = List(a.size.toLong) ++ shapes.head
+  val shape1 = List(1L) ++ shapes.head
+  val zeros = ATen.zeros(shape.toArray, a.head.options)
+  a.foldLeft(0) { (offset, v) =>
+    val viewed = ATen._unsafe_view(v.value, shape1.toArray)
+    val idx = Tensor.scalarLong(offset, a.head.options.toLong)
+    ATen._index_copy_(zeros, 0, idx, viewed)
+    idx.release
+    viewed.release
+    offset + 1
+  }
+  val value = Variable(this, zeros)
 }
 case class Select(a: Variable, dim: Long, index: Long) extends Op {
   val params = List(
