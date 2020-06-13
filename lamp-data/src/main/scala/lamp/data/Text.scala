@@ -1,15 +1,77 @@
-package lamp.example.timemachine
+package lamp.data
 
-import lamp.data.Device
 import cats.effect.Resource
 import cats.effect.IO
-import lamp.autograd.TensorHelpers
+import lamp.autograd.{TensorHelpers, const}
 import org.saddle._
 import aten.ATen
 import aten.Tensor
-import lamp.data.BatchStream
+import lamp.nn.Module
+import lamp.nn.StatefulModule
+import lamp.syntax
+import lamp.autograd.Variable
+import lamp.autograd.ConcatenateAddNewDim
 
 object Text {
+  def sequencePrediction[T](
+      batch: Seq[Vector[Long]],
+      device: Device,
+      module: StatefulModule[T],
+      init: T,
+      vocabularySize: Int,
+      steps: Int
+  ): Resource[IO, Variable] = {
+    val batchSize = batch.size
+    def loop(
+        lastOutput: Variable,
+        lastState: T,
+        n: Int,
+        buffer: Seq[Variable]
+    ): Seq[Variable] = {
+      if (n == 0) buffer
+      else {
+        val (output, state) =
+          module.forward1(lastOutput, lastState)
+        loop(
+          output,
+          state,
+          n - 1,
+          buffer :+ output
+        )
+      }
+    }
+    val batchAsOneHotEncodedTensor =
+      makePredictionBatch(batch, device, vocabularySize)
+    batchAsOneHotEncodedTensor.flatMap { batch =>
+      Resource.make(IO {
+        val (output, state0) = module.forward1(const(batch), init)
+        val outputTimesteps = output.shape(0)
+        val lastTimeStep1 =
+          output.select(0, outputTimesteps - 1)
+        val lastTimeStep =
+          lastTimeStep1.view((1L :: lastTimeStep1.shape).map(_.toInt))
+
+        val v = ConcatenateAddNewDim(
+          loop(lastTimeStep, state0, steps, Seq())
+        ).value.view(List(steps, batchSize, vocabularySize))
+
+        v
+
+      })(variable => IO { variable.releaseAll })
+    }
+  }
+
+  /** Convert back to text. Tensor shape: time x batch x dim
+    */
+  def convertToText(tensor: Tensor, vocab: Map[Int, Char]): Seq[String] = {
+
+    val t = ATen.argmax(tensor, 2, false)
+    val r = TensorHelpers.toMatLong(t).T
+    r.rows.map(v =>
+      v.toSeq.map(l => vocab.get(l.toInt).getOrElse('#')).mkString
+    )
+
+  }
   def englishToIntegers(text: String) = {
     val chars = text.toSeq
       .groupBy(identity)

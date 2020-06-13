@@ -67,6 +67,7 @@ class MLPSuite extends AnyFunSuite {
 
     val model = SupervisedModel(
       mlp(784, 10, device.options),
+      (),
       LossFunctions.NLL(10, classWeights)
     )
 

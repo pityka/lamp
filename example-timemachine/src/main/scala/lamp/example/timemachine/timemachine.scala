@@ -6,11 +6,10 @@ import lamp.nn.SupervisedModel
 import aten.ATen
 import lamp.nn.Module
 import lamp.nn.LossFunctions
-import lamp.data.Reader
+import lamp.data.{Reader, Text, IOLoops, Peek}
 import java.io.File
 import lamp.data.BatchStream
 import lamp.nn.AdamW
-import lamp.data.IOLoops
 import lamp.nn.LearningRateSchedule
 import lamp.nn.simple
 import lamp.nn.RNN
@@ -20,10 +19,13 @@ import lamp.data.TrainingCallback
 import lamp.data.ValidationCallback
 import lamp.nn.Sequential
 import lamp.nn.Fun
-import lamp.data.Peek
 import aten.Tensor
 import lamp.util.NDArray
 import lamp.syntax
+import lamp.nn.Seq2
+import lamp.nn.StatefulModule
+import lamp.autograd.Variable
+import lamp.autograd.const
 
 case class CliConfig(
     trainData: String = "",
@@ -93,15 +95,14 @@ object Train extends App {
       )
 
       val device = if (config.cuda) CudaDevice(0) else CPU
-      val model: SupervisedModel = {
+      val model: SupervisedModel[(Option[Variable], Unit)] = {
         val classWeights = ATen.ones(Array(vocabularSize), device.options)
-        val net: Module =
-          Sequential(
+        val net: StatefulModule[(Option[Variable], Unit)] =
+          Seq2(
             RNN(
               in = vocabularSize,
               hiddenSize = 64,
               out = vocabularSize,
-              batchSize = config.batchSize,
               dropout = config.dropout,
               tOpt = device.options
             ),
@@ -112,6 +113,7 @@ object Train extends App {
         scribe.info("parameters: " + net.parameters.mkString("\n"))
         SupervisedModel(
           net,
+          (None, ()),
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
@@ -160,43 +162,21 @@ object Train extends App {
         )
         .unsafeRunSync()
 
-      val exampleText = "time _______"
-      val tokenized = Text.englishToIntegers(exampleText, vocab)
-      val prediction =
-        Text.makePredictionBatch(
-          List(tokenized.map(_.toLong)),
-          device,
-          vocabularSize
-        )
-      val string = prediction
-        .use { prediction =>
-          IO {
-            println(prediction)
-            println(prediction.shape)
-            val output =
-              trainedModel.module
-                .forward(lamp.autograd.const(prediction))
-                .value
-                .select(1, 0)
-                .allocated
-                .unsafeRunSync()
-                ._1
-            println(output.shape)
-            val rvocab = vocab.map(_.swap)
-            val predictedString = {
-              val t = ATen.argmax(output, 1, false)
-              println(t.shape)
-              val r = NDArray.tensorToLongNDArray(t)
-              t.release
-              r.toVec.toSeq
-                .map(i => rvocab.get(i.toInt).getOrElse('#'))
-                .mkString
-            }
-            predictedString
-          }
-        }
+      val exampleText = "time"
+      val tokenized = Text.englishToIntegers(exampleText, vocab).map(_.toLong)
+      val predicted = Text.sequencePrediction(
+        List(tokenized),
+        device,
+        trainedModel.module,
+        (Some(const(ATen.zeros(Array(1, 64), device.options))), ()),
+        vocabularSize,
+        lookAhead
+      )
+      val rvocab = vocab.map(_.swap)
+      val text = predicted
+        .use { variable => IO { Text.convertToText(variable.value, rvocab) } }
         .unsafeRunSync()
-      println(string)
+      scribe.info(text.toString)
 
     case _ =>
     // arguments are bad, error message will have been displayed

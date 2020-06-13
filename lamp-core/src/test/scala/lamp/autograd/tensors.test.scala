@@ -64,7 +64,11 @@ class TensorHelperSuite extends AnyFunSuite {
       println(t3.useCount())
       val t4 =
         ConcatenateAddNewDim(
-          List(const(t).releasable, const(t2).releasable, const(t3).releasable)
+          List(
+            const(t).copy(leaf = false),
+            const(t2).copy(leaf = false),
+            const(t3).copy(leaf = false)
+          )
         ).value
       assert(t4.shape == List(3, 3000, 3000))
 

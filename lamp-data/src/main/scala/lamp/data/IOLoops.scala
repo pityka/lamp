@@ -10,7 +10,7 @@ import org.saddle.scalar.ScalarTagDouble
 import scribe.Logger
 object IOLoops {
 
-  def writeCheckpoint(file: File, model: Module) = {
+  def writeCheckpoint[T](file: File, model: StatefulModule[T]) = {
     val channel = Resource.make(IO {
       val fis = new FileOutputStream(file, false)
       fis.getChannel
@@ -27,8 +27,8 @@ object IOLoops {
       }
   }
 
-  def epochs(
-      model: SupervisedModel,
+  def epochs[ST](
+      model: SupervisedModel[ST],
       optimizerFactory: Seq[(Tensor, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream,
       validationBatchesOverEpoch: () => BatchStream,
@@ -39,14 +39,14 @@ object IOLoops {
       minimumCheckpointFile: Option[File],
       checkpointFrequency: Int,
       logger: Option[Logger] = None
-  ): IO[SupervisedModel] = {
+  ): IO[SupervisedModel[ST]] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
     def loop(
         epoch: Int,
         currentValidation: BatchStream,
         minValidationLoss: Option[Double]
-    ): IO[SupervisedModel] =
+    ): IO[SupervisedModel[ST]] =
       if (epoch >= epochs) IO.pure(modelWithOptimizer.model)
       else {
         for {
@@ -84,8 +84,8 @@ object IOLoops {
     loop(0, validationBatchesOverEpoch(), None)
   }
 
-  def runValidation(
-      model: SupervisedModel,
+  def runValidation[T](
+      model: SupervisedModel[T],
       validationBatch: Resource[IO, Option[(Tensor, Tensor)]],
       validationCallback: ValidationCallback,
       epochCount: Int,
@@ -143,8 +143,8 @@ object IOLoops {
       }
   }
 
-  def oneEpoch(
-      model: ModelWithOptimizer,
+  def oneEpoch[T](
+      model: ModelWithOptimizer[T],
       trainBatches: BatchStream,
       trainingCallback: TrainingCallback,
       logger: Option[Logger]
@@ -184,4 +184,5 @@ object IOLoops {
 
     loop(0)
   }
+
 }

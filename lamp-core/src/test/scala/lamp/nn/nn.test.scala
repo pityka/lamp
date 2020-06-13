@@ -69,14 +69,19 @@ class NNSuite extends AnyFunSuite {
       assert(value == expectedValue)
 
     }
-  def testGradientAndValueND(
+  def testGradientAndValueND[T](
       id: String,
+      st: T,
       cuda: Boolean = false
-  )(m: NDArray[Double], moduleF: () => Module, expectedValue: Double) =
+  )(
+      m: NDArray[Double],
+      moduleF: () => StatefulModule[T],
+      expectedValue: Double
+  ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
       val d = const(NDArray.tensorFromNDArray(m, cuda))
       val module = moduleF()
-      val output = module.forward(d)
+      val output = module.forward1(d, st)._1
       val sum = output.sum
       val value = NDArray.tensorToNDArray(sum.value).data(0)
       val gradAuto =
@@ -94,7 +99,7 @@ class NNSuite extends AnyFunSuite {
               p2,
               1d
             )
-            TensorHelpers.toMat(module.forward(d).sum.value).raw(0)
+            TensorHelpers.toMat(module.forward1(d, st)._1.sum.value).raw(0)
           }
           val eps = 1e-6
           val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
@@ -197,7 +202,7 @@ class NNSuite extends AnyFunSuite {
     192.08796576929555
   )
 
-  testGradientAndValueND("Conv1D ", false)(
+  testGradientAndValueND("Conv1D ", (), false)(
     nd1x2x3,
     () =>
       Conv1D(
@@ -210,7 +215,7 @@ class NNSuite extends AnyFunSuite {
       ),
     22d
   )
-  testGradientAndValueND("Conv1D/cuda ", true)(
+  testGradientAndValueND("Conv1D/cuda ", (), true)(
     nd1x2x3,
     () =>
       Conv1D(
@@ -223,7 +228,7 @@ class NNSuite extends AnyFunSuite {
       ),
     22d
   )
-  testGradientAndValueND("Conv2D ", false)(
+  testGradientAndValueND("Conv2D ", (), false)(
     nd1x2x3x3,
     () =>
       Conv2D(
@@ -236,7 +241,7 @@ class NNSuite extends AnyFunSuite {
       ),
     154d
   )
-  testGradientAndValueND("Conv2D/cuda ", true)(
+  testGradientAndValueND("Conv2D/cuda ", (), true)(
     nd1x2x3x3,
     () =>
       Conv2D(
@@ -249,7 +254,7 @@ class NNSuite extends AnyFunSuite {
       ),
     154d
   )
-  testGradientAndValueND("BatchNorm ", false)(
+  testGradientAndValueND("BatchNorm ", (), false)(
     nd1x2x3x3,
     () =>
       BatchNorm(
@@ -258,7 +263,7 @@ class NNSuite extends AnyFunSuite {
       ),
     0d
   )
-  testGradientAndValueND("BatchNorm2D ", false)(
+  testGradientAndValueND("BatchNorm2D ", (), false)(
     nd1x2x3x3,
     () =>
       BatchNorm2D(
@@ -267,7 +272,7 @@ class NNSuite extends AnyFunSuite {
       ),
     0d
   )
-  testGradientAndValueND("RNN ", false)(
+  testGradientAndValueND("RNN ", Option.empty[Variable], false)(
     nd2x3x2,
     () =>
       RNN(
@@ -276,15 +281,10 @@ class NNSuite extends AnyFunSuite {
         weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
         biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
         biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        hiddenState = Ref
-          .of[IO, Variable](
-            param(ATen.ones(Array(3, 4), TensorOptions.dtypeDouble))
-          )
-          .unsafeRunSync(),
         dropout = 0d,
         train = true
       ),
-    89.9999
+    89.5682
   )
   test("RNN shape and loss") {
     val output = RNN(
@@ -293,14 +293,9 @@ class NNSuite extends AnyFunSuite {
       weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
       biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
       biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-      hiddenState = Ref
-        .of[IO, Variable](
-          param(ATen.ones(Array(3, 4), TensorOptions.dtypeDouble))
-        )
-        .unsafeRunSync(),
       dropout = 0d,
       train = true
-    ).forward(const(NDArray.tensorFromNDArray(nd2x3x2))).value
+    ).forward1(const(NDArray.tensorFromNDArray(nd2x3x2)), None)._1.value
     assert(output.shape == List(2, 3, 3))
     val target = TensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong))
     val loss = LossFunctions
@@ -309,7 +304,7 @@ class NNSuite extends AnyFunSuite {
         ATen.ones(Array(3), TensorOptions.dtypeDouble())
       )(const(output), target)
       .value
-    assert(TensorHelpers.toMat(loss).raw(0) == -4.99999180501807)
+    assert(TensorHelpers.toMat(loss).raw(0) == -4.9760101917362025)
   }
 
   test1("gradient clipping") { cuda =>

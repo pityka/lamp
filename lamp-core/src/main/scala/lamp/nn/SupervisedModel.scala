@@ -6,9 +6,11 @@ import lamp.autograd.TensorHelpers
 import aten.ATen
 import cats.effect.Resource
 import cats.effect.IO
+import cats.data.State
 
-case class SupervisedModel(
-    module: Module,
+case class SupervisedModel[T](
+    module: StatefulModule[T],
+    initState: T,
     lossFunction: (Variable, Tensor) => Variable
 ) {
   def asEval = copy(module = module.asEval)
@@ -19,7 +21,7 @@ case class SupervisedModel(
   ): Resource[IO, (Double, Tensor)] = {
     val release = (_: Double, outputCloned: Tensor) => IO(outputCloned.release)
     Resource.make(IO {
-      val output = module.forward(const(samples))
+      val (output, _) = module.forward1(const(samples), initState)
       val loss = lossFunction(output, target)
       val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
       val outputCloned = ATen.clone(output.value)
@@ -31,7 +33,7 @@ case class SupervisedModel(
       samples: Tensor,
       target: Tensor
   ): (Double, Seq[Option[Tensor]]) = {
-    val output = module.forward(const(samples))
+    val (output, _) = module.forward1(const(samples), initState)
     val loss = lossFunction(output, target)
     val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
 
@@ -45,7 +47,7 @@ case class SupervisedModel(
     val release = (_: Double, _: Seq[Option[Tensor]], outputCloned: Tensor) =>
       IO(outputCloned.release)
     Resource.make(IO {
-      val output = module.forward(const(samples))
+      val (output, _) = module.forward1(const(samples), initState)
       val loss = lossFunction(output, target)
       val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
       val outputCloned = ATen.clone(output.value)
@@ -60,7 +62,7 @@ case class SupervisedModel(
     )
 }
 
-case class ModelWithOptimizer(
-    model: SupervisedModel,
+case class ModelWithOptimizer[St](
+    model: SupervisedModel[St],
     optimizer: Optimizer
 )

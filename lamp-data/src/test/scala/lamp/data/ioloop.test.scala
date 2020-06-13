@@ -41,8 +41,9 @@ class IOLoopSuite extends AnyFunSuite {
     )
     val classWeights = ATen.ones(Array(10), x.options())
 
-    val model = SupervisedModel(
+    val model = SupervisedModel[Unit](
       logisticRegression(data.numCols - 1, 10, device.options),
+      (),
       LossFunctions.NLL(10, classWeights)
     )
 
@@ -93,6 +94,7 @@ class IOLoopSuite extends AnyFunSuite {
 
     val model = SupervisedModel(
       logisticRegression(data.numCols - 1, 10, device.options),
+      (),
       LossFunctions.NLL(10, classWeights)
     )
 

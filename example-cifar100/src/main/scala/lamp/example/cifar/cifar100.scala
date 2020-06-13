@@ -135,7 +135,7 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
       val device = if (config.cuda) CudaDevice(0) else CPU
-      val model: SupervisedModel = {
+      val model: SupervisedModel[Unit] = {
         val numClasses = 100
         val classWeights = ATen.ones(Array(numClasses), device.options)
         val net =
@@ -143,14 +143,14 @@ object Train extends App {
             Cnn.lenet(numClasses, dropOut = config.dropout, device.options)
           else Cnn.resnet(32, 32, numClasses, config.dropout, device.options)
 
-        val loadedNet = config.checkpointLoad match {
-          case None => net
-          case Some(file) =>
-            Reader.loadFromFile(net, new File(file))
-        }
+        // val loadedNet = config.checkpointLoad match {
+        //   case None => net
+        //   case Some(file) =>
+        //     Reader.loadFromFile(net, new File(file))
+        // }
         scribe.info("Learnable parametes: " + net.learnableParameters)
         scribe.info("parameters: " + net.parameters.mkString("\n"))
-        SupervisedModel(net, LossFunctions.NLL(numClasses, classWeights))
+        SupervisedModel(net, (), LossFunctions.NLL(numClasses, classWeights))
       }
 
       val (trainTarget, trainFullbatch) =
