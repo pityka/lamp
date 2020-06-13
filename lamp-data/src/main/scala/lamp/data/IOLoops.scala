@@ -38,6 +38,7 @@ object IOLoops {
       checkpointFile: Option[File],
       minimumCheckpointFile: Option[File],
       checkpointFrequency: Int,
+      trainLogFrequency: Int = 10,
       logger: Option[Logger] = None
   ): IO[SupervisedModel[ST]] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
@@ -54,7 +55,8 @@ object IOLoops {
             modelWithOptimizer,
             trainBatchesOverEpoch(),
             trainingCallback,
-            logger
+            logger,
+            trainLogFrequency
           )
           maybeValidationLoss <- runValidation(
             modelWithOptimizer.model,
@@ -147,7 +149,8 @@ object IOLoops {
       model: ModelWithOptimizer[T],
       trainBatches: BatchStream,
       trainingCallback: TrainingCallback,
-      logger: Option[Logger]
+      logger: Option[Logger],
+      trainLogFrequency: Int
   ): IO[Unit] = {
 
     def loop(batchCount: Int): IO[Unit] = {
@@ -159,14 +162,18 @@ object IOLoops {
                 case (loss, gradients, output) =>
                   for {
                     _ <- IO {
-                      trainingCallback(loss, batchCount, output, target)
+                      if (batchCount % trainLogFrequency == 0) {
+                        trainingCallback(loss, batchCount, output, target)
+                      }
                     }
                     _ <- IO {
-                      logger.foreach(
-                        _.info(
-                          s"Training loss at batch $batchCount: $loss (exp: ${math.exp(loss)})"
+                      if (batchCount % trainLogFrequency == 0) {
+                        logger.foreach(
+                          _.info(
+                            s"Training loss at batch $batchCount: $loss (exp: ${math.exp(loss)})"
+                          )
                         )
-                      )
+                      }
                     }
                     _ <- IO { model.optimizer.step(gradients) }
                   } yield ()
