@@ -9,13 +9,17 @@ import aten.Tensor
 import lamp.nn.Module
 import lamp.nn.StatefulModule
 import lamp.syntax
+import lamp.Device
 import lamp.autograd.Variable
 import lamp.autograd.ConcatenateAddNewDim
+import lamp.FloatingPointPrecision
+import lamp.DoublePrecision
 
 object Text {
   def sequencePrediction[T](
       batch: Seq[Vector[Long]],
       device: Device,
+      precision: FloatingPointPrecision,
       module: StatefulModule[T],
       init: T,
       vocabularySize: Int,
@@ -41,7 +45,7 @@ object Text {
       }
     }
     val batchAsOneHotEncodedTensor =
-      makePredictionBatch(batch, device, vocabularySize)
+      makePredictionBatch(batch, device, vocabularySize, precision)
     batchAsOneHotEncodedTensor.flatMap { batch =>
       Resource.make(IO {
         val (output, state0) = module.forward1(const(batch), init)
@@ -100,7 +104,8 @@ object Text {
   def makePredictionBatch(
       examples: Seq[Vector[Long]],
       device: Device,
-      vocabularSize: Int
+      vocabularSize: Int,
+      precision: FloatingPointPrecision
   ) = {
     Resource.make(IO {
 
@@ -113,7 +118,9 @@ object Text {
       val transposedFeatures = ATen.t(viewedFeature)
       val movedFeature = device.to(transposedFeatures)
       val oneHot = ATen.one_hot(movedFeature, vocabularSize)
-      val double = ATen._cast_Double(oneHot, false)
+      val double =
+        if (precision == DoublePrecision) ATen._cast_Double(oneHot, false)
+        else ATen._cast_Float(oneHot, false)
       Tensor.releaseAll(
         Array(
           viewedFeature,
@@ -151,9 +158,10 @@ object Text {
         }
 
         val flattenedFeature =
-          TensorHelpers.fromLongVec(pairs.flatMap(_._1).toVec)
+          TensorHelpers
+            .fromLongVec(pairs.flatMap(_._1).toVec, device)
         val flattenedTarget =
-          TensorHelpers.fromLongVec(pairs.flatMap(_._2).toVec)
+          TensorHelpers.fromLongVec(pairs.flatMap(_._2).toVec, device)
         val viewedFeature = ATen._unsafe_view(
           flattenedFeature,
           Array(idx.size.toLong, timeSteps.toLong)
@@ -164,20 +172,17 @@ object Text {
         )
         val transposedFeatures = ATen.t(viewedFeature)
         val transposedTarget = ATen.t(viewedTarget)
-        val movedFeature = device.to(transposedFeatures)
-        val movedTarget = device.to(transposedTarget)
+
         Tensor.releaseAll(
           Array(
             viewedTarget,
             viewedFeature,
             flattenedTarget,
-            flattenedFeature,
-            transposedTarget,
-            transposedFeatures
+            flattenedFeature
           )
         )
 
-        Some((movedFeature, movedTarget)): Option[(Tensor, Tensor)]
+        Some((transposedFeatures, transposedTarget)): Option[(Tensor, Tensor)]
       }) {
         case None => IO.unit
         case Some((a, b)) =>

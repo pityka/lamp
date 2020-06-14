@@ -8,6 +8,9 @@ import lamp.autograd.{Variable, const, param, TensorHelpers}
 import lamp.nn._
 import aten.ATen
 import aten.TensorOptions
+import lamp.CudaDevice
+import lamp.CPU
+import lamp.DoublePrecision
 
 class IOLoopSuite extends AnyFunSuite {
 
@@ -46,7 +49,7 @@ class IOLoopSuite extends AnyFunSuite {
     val classWeights = ATen.ones(Array(10), x.options())
 
     val model = SupervisedModel[Unit](
-      logisticRegression(data.numCols - 1, 10, device.options),
+      logisticRegression(data.numCols - 1, 10, device.options(DoublePrecision)),
       (),
       LossFunctions.NLL(10, classWeights)
     )
@@ -101,7 +104,7 @@ class IOLoopSuite extends AnyFunSuite {
     val classWeights = ATen.ones(Array(10), x.options())
 
     val model = SupervisedModel(
-      logisticRegression(data.numCols - 1, 10, device.options),
+      logisticRegression(data.numCols - 1, 10, device.options(DoublePrecision)),
       (),
       LossFunctions.NLL(10, classWeights)
     )

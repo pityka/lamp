@@ -1,7 +1,7 @@
 package lamp.example.timemachine
 
-import lamp.data.CudaDevice
-import lamp.data.CPU
+import lamp.CudaDevice
+import lamp.CPU
 import lamp.nn.SupervisedModel
 import aten.ATen
 import lamp.nn.Module
@@ -28,11 +28,15 @@ import lamp.autograd.Variable
 import lamp.autograd.const
 import lamp.nn.Seq3
 import lamp.nn.Seq4
+import lamp.DoublePrecision
+import lamp.FloatingPointPrecision
+import lamp.SinglePrecision
 
 case class CliConfig(
     trainData: String = "",
     testData: String = "",
     cuda: Boolean = false,
+    singlePrecision: Boolean = false,
     batchSize: Int = 256,
     epochs: Int = 1000,
     learningRate: Double = 0.0001,
@@ -57,6 +61,7 @@ object Train extends App {
         .text("path to cifar100 binary test data")
         .required(),
       opt[Unit]("gpu").action((x, c) => c.copy(cuda = true)),
+      opt[Unit]("single").action((x, c) => c.copy(singlePrecision = true)),
       opt[Int]("batch").action((x, c) => c.copy(batchSize = x)),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
       opt[Double]("learning-rate").action((x, c) => c.copy(learningRate = x)),
@@ -98,8 +103,12 @@ object Train extends App {
 
       val hiddenSize = 64
       val device = if (config.cuda) CudaDevice(0) else CPU
+      val precision =
+        if (config.singlePrecision) SinglePrecision else DoublePrecision
+      val tensorOptions = device.options(precision)
       val model = {
-        val classWeights = ATen.ones(Array(vocabularSize), device.options)
+        val classWeights =
+          ATen.ones(Array(vocabularSize), tensorOptions)
         val net =
           Seq4(
             RNN(
@@ -107,21 +116,21 @@ object Train extends App {
               hiddenSize = hiddenSize,
               out = 10,
               dropout = config.dropout,
-              tOpt = device.options
+              tOpt = tensorOptions
             ),
             RNN(
               in = 10,
               hiddenSize = hiddenSize * 2,
               out = 10,
               dropout = config.dropout,
-              tOpt = device.options
+              tOpt = tensorOptions
             ),
             RNN(
               in = 10,
               hiddenSize = hiddenSize * 2,
               out = vocabularSize,
               dropout = config.dropout,
-              tOpt = device.options
+              tOpt = tensorOptions
             ),
             Fun(_.logSoftMax(2))
           )
@@ -145,7 +154,7 @@ object Train extends App {
             lookAhead,
             device
           )
-          .map(BatchStream.oneHotFeatures(vocabularSize))
+          .map(BatchStream.oneHotFeatures(vocabularSize, precision))
       val testEpochs = () =>
         Text
           .minibatchesFromText(
@@ -154,7 +163,7 @@ object Train extends App {
             lookAhead,
             device
           )
-          .map(BatchStream.oneHotFeatures(vocabularSize))
+          .map(BatchStream.oneHotFeatures(vocabularSize, precision))
 
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
@@ -185,11 +194,12 @@ object Train extends App {
       val predicted = Text.sequencePrediction(
         tokenized,
         device,
+        precision,
         trainedModel.module,
         (
-          Some(const(ATen.zeros(Array(1, hiddenSize), device.options))),
-          Some(const(ATen.zeros(Array(1, hiddenSize * 2), device.options))),
-          Some(const(ATen.zeros(Array(1, hiddenSize * 2), device.options))),
+          None,
+          None,
+          None,
           ()
         ),
         vocabularSize,

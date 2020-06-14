@@ -158,27 +158,27 @@ object IOLoops {
         .use { option =>
           val io = option.map {
             case (sample, target) =>
-              model.model.lossAndGradientsAndOutput(sample, target).use {
-                case (loss, gradients, output) =>
-                  for {
-                    _ <- IO {
-                      if (batchCount % trainLogFrequency == 0) {
-                        trainingCallback(loss, batchCount, output, target)
-                      }
-                    }
-                    _ <- IO {
-                      if (batchCount % trainLogFrequency == 0) {
-                        logger.foreach(
-                          _.info(
-                            s"Training loss at batch $batchCount: $loss (exp: ${math.exp(loss)})"
-                          )
-                        )
-                      }
-                    }
-                    _ <- IO { model.optimizer.step(gradients) }
-                  } yield ()
+              val (loss, gradients) =
+                model.model.lossAndGradients(sample, target)
 
-              }
+              for {
+                _ <- IO {
+                  if (batchCount % trainLogFrequency == 0) {
+                    trainingCallback(loss, batchCount)
+                  }
+                }
+                _ <- IO {
+                  if (batchCount % trainLogFrequency == 0) {
+                    logger.foreach(
+                      _.info(
+                        s"Training loss at batch $batchCount: $loss (exp: ${math.exp(loss)})"
+                      )
+                    )
+                  }
+                }
+                _ <- IO { model.optimizer.step(gradients) }
+              } yield ()
+
           }
           io.map(_.map(Some(_))).getOrElse(IO.pure(None))
         }

@@ -6,6 +6,7 @@ import org.saddle.order._
 import org.saddle.ops.BinOps._
 import lamp.autograd.{Variable, const, param, TensorHelpers}
 import lamp.nn._
+import lamp.{CPU, CudaDevice, DoublePrecision}
 import aten.ATen
 import aten.TensorOptions
 import aten.Tensor
@@ -67,10 +68,10 @@ class MLPSuite extends AnyFunSuite {
         cuda
       )
     )
-    val classWeights = ATen.ones(Array(10), device.options)
+    val classWeights = ATen.ones(Array(10), device.options(DoublePrecision))
 
     val model = SupervisedModel(
-      mlp(784, 10, device.options),
+      mlp(784, 10, device.options(DoublePrecision)),
       (),
       LossFunctions.NLL(10, classWeights)
     )

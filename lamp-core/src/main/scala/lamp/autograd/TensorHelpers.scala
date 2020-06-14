@@ -4,6 +4,11 @@ import aten.Tensor
 import org.saddle._
 import aten.ATen
 import aten.TensorOptions
+import lamp.CPU
+import lamp.FloatingPointPrecision
+import lamp.DoublePrecision
+import lamp.Device
+import lamp.CudaDevice
 
 object TensorHelpers {
   def unbroadcast(p: Tensor, desiredShape: List[Long]) = {
@@ -57,6 +62,26 @@ object TensorHelpers {
       Mat.apply(1, shape(0).toInt, arr)
     } else throw new RuntimeException("shape: " + shape.deep)
   }
+  def toFloatMat(t: Tensor) = {
+    assert(
+      t.options.scalarTypeByte == 6,
+      s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+    )
+    val shape = t.sizes()
+    if (shape.size == 2) {
+      val arr = Array.ofDim[Float]((shape(0) * shape(1)).toInt)
+      val data = t.copyToFloatArray(arr)
+      Mat.apply(shape(0).toInt, shape(1).toInt, arr)
+    } else if (shape.size == 0) {
+      val arr = Array.ofDim[Float](1)
+      val data = t.copyToFloatArray(arr)
+      Mat.apply(1, 1, arr)
+    } else if (shape.size == 1) {
+      val arr = Array.ofDim[Float](shape(0).toInt)
+      val data = t.copyToFloatArray(arr)
+      Mat.apply(1, shape(0).toInt, arr)
+    } else throw new RuntimeException("shape: " + shape.deep)
+  }
   def toMatLong(t: Tensor) = {
     assert(
       t.options.scalarTypeByte == 4,
@@ -77,7 +102,20 @@ object TensorHelpers {
       Mat.apply(1, shape(0).toInt, arr)
     } else ???
   }
-  def fromMatList(m: Seq[Mat[Double]], cuda: Boolean = false) = {
+  def fromMatList(
+      m: Seq[Mat[Double]],
+      cuda: Boolean = false
+  ): Tensor =
+    fromMatList(
+      m,
+      device = if (cuda) CudaDevice(0) else CPU,
+      precision = DoublePrecision
+    )
+  def fromMatList(
+      m: Seq[Mat[Double]],
+      device: Device,
+      precision: FloatingPointPrecision
+  ) = {
     assert(m.map(_.numRows).distinct.size == 1, "shapes must be homogeneous")
     assert(m.map(_.numCols).distinct.size == 1, "shapes must be homogeneous")
     val arr: Array[Double] = m.toArray.flatMap(_.toArray)
@@ -88,60 +126,90 @@ object TensorHelpers {
       TensorOptions.dtypeDouble
     )
     t.copyFromDoubleArray(arr)
-    if (cuda) {
-      val t2 = t.cuda
+    if (device != CPU || precision != DoublePrecision) {
+      val t2 = t.to(device.options(precision), true)
       t.release
       t2
     } else t
   }
-  def fromMat(m: Mat[Double], cuda: Boolean = false) = {
+  def fromMat(
+      m: Mat[Double],
+      cuda: Boolean = false
+  ): Tensor =
+    fromMat(
+      m,
+      precision = DoublePrecision,
+      device = if (cuda) CudaDevice(0) else CPU
+    )
+  def fromMat(
+      m: Mat[Double],
+      device: Device,
+      precision: FloatingPointPrecision
+  ) = {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.numRows.toLong, m.numCols.toLong),
       TensorOptions.dtypeDouble
     )
     t.copyFromDoubleArray(arr)
-    if (cuda) {
-      val t2 = t.cuda
+    if (device != CPU || precision != DoublePrecision) {
+      val t2 = t.to(device.options(precision), true)
       t.release
       t2
     } else t
   }
-  def fromLongMat(m: Mat[Long], cuda: Boolean = false) = {
+  def fromLongMat(m: Mat[Long], cuda: Boolean = false): Tensor =
+    fromLongMat(m, device = if (cuda) CudaDevice(0) else CPU)
+  def fromLongMat(m: Mat[Long], device: Device) = {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.numRows.toLong, m.numCols.toLong),
       TensorOptions.dtypeLong
     )
     t.copyFromLongArray(arr)
-    if (cuda) {
+    if (device != CPU) {
       val t2 = t.cuda
       t.release
       t2
     } else t
   }
-  def fromLongVec(m: Vec[Long], cuda: Boolean = false) = {
+  def fromLongVec(m: Vec[Long], cuda: Boolean = false): Tensor =
+    fromLongVec(m, device = if (cuda) CudaDevice(0) else CPU)
+  def fromLongVec(m: Vec[Long], device: Device) = {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.length.toLong),
       TensorOptions.dtypeLong
     )
     t.copyFromLongArray(arr)
-    if (cuda) {
+    if (device != CPU) {
       val t2 = t.cuda
       t.release
       t2
     } else t
   }
-  def fromVec(m: Vec[Double], cuda: Boolean = false) = {
+  def fromVec(
+      m: Vec[Double],
+      cuda: Boolean = false
+  ): Tensor =
+    fromVec(
+      m,
+      precision = DoublePrecision,
+      device = if (cuda) CudaDevice(0) else CPU
+    )
+  def fromVec(
+      m: Vec[Double],
+      device: Device,
+      precision: FloatingPointPrecision
+  ) = {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.length.toLong),
       TensorOptions.dtypeDouble
     )
     t.copyFromDoubleArray(arr)
-    if (cuda) {
-      val t2 = t.cuda
+    if (device != CPU || precision != DoublePrecision) {
+      val t2 = t.to(device.options(precision), true)
       t.release
       t2
     } else t

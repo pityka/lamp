@@ -8,8 +8,8 @@ import lamp.autograd.TensorHelpers
 import aten.ATen
 import cats.effect.Resource
 import cats.effect.IO
-import lamp.data.CudaDevice
-import lamp.data.CPU
+import lamp.CudaDevice
+import lamp.CPU
 import lamp.data.BatchStream
 import lamp.data.IOLoops
 import lamp.nn.SupervisedModel
@@ -27,9 +27,15 @@ import org.saddle.scalar.ScalarTagDouble
 import lamp.data.Writer
 import java.io.FileOutputStream
 import lamp.data.Reader
+import lamp.DoublePrecision
+import lamp.FloatingPointPrecision
 
 object Cifar {
-  def loadImageFile(file: File, numImages: Int) = {
+  def loadImageFile(
+      file: File,
+      numImages: Int,
+      precision: FloatingPointPrecision
+  ) = {
     val inputStream = new FileInputStream(file)
     val channel = inputStream.getChannel()
     val tensors = 0 until numImages map { _ =>
@@ -47,7 +53,11 @@ object Cifar {
       val red = Mat(vec.slice(0, 1024).copy).reshape(32, 32)
       val green = Mat(vec.slice(1024, 2 * 1024).copy).reshape(32, 32)
       val blue = Mat(vec.slice(2 * 1024, 3 * 1024).copy).reshape(32, 32)
-      val tensor = TensorHelpers.fromMatList(List(red, green, blue), false)
+      val tensor = TensorHelpers.fromMatList(
+        List(red, green, blue),
+        device = CPU,
+        precision = precision
+      )
       (label2, tensor)
     }
     val labels =
@@ -135,13 +145,15 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
       val device = if (config.cuda) CudaDevice(0) else CPU
+      val precision = DoublePrecision
+      val tensorOptions = device.options(precision)
       val model: SupervisedModel[Unit] = {
         val numClasses = 100
-        val classWeights = ATen.ones(Array(numClasses), device.options)
+        val classWeights = ATen.ones(Array(numClasses), tensorOptions)
         val net =
           if (config.network == "lenet")
-            Cnn.lenet(numClasses, dropOut = config.dropout, device.options)
-          else Cnn.resnet(32, 32, numClasses, config.dropout, device.options)
+            Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
+          else Cnn.resnet(32, 32, numClasses, config.dropout, tensorOptions)
 
         // val loadedNet = config.checkpointLoad match {
         //   case None => net
@@ -154,9 +166,9 @@ object Train extends App {
       }
 
       val (trainTarget, trainFullbatch) =
-        Cifar.loadImageFile(new File(config.trainData), 500)
+        Cifar.loadImageFile(new File(config.trainData), 50000, precision)
       val (testTarget, testFullbatch) =
-        Cifar.loadImageFile(new File(config.testData), 10000)
+        Cifar.loadImageFile(new File(config.testData), 10000, precision)
       val textLabels =
         Resource
           .fromAutoCloseable(IO {

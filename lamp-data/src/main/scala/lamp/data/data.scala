@@ -9,18 +9,14 @@ import lamp.nn._
 trait TrainingCallback {
   def apply(
       trainingLoss: Double,
-      batchCount: Int,
-      trainingOutput: Tensor,
-      trainingTarget: Tensor
+      batchCount: Int
   ): Unit
 }
 object TrainingCallback {
   val noop = new TrainingCallback {
     def apply(
         trainingLoss: Double,
-        batchCount: Int,
-        trainingOutput: Tensor,
-        trainingTarget: Tensor
+        batchCount: Int
     ) = ()
   }
 }
@@ -66,23 +62,4 @@ object ValidationCallback {
 
     }
   }
-}
-
-sealed trait Device {
-  def to(t: Tensor): Tensor
-  def options: TensorOptions
-}
-case object CPU extends Device {
-  def to(t: Tensor) = {
-    t.cpu
-  }
-  def options: TensorOptions = TensorOptions.d.cpu
-}
-case class CudaDevice(i: Int) extends Device {
-  assert(
-    i == 0,
-    "Multi gpu not implemented. Implement Tensor.to(TensorOptions)."
-  )
-  def to(t: Tensor): Tensor = t.cuda
-  def options: TensorOptions = TensorOptions.d.cuda_index(i)
 }

@@ -4,6 +4,7 @@ import cats.effect.{IO, Resource}
 import lamp.autograd.TensorHelpers
 import aten.Tensor
 import org.saddle.Vec
+import org.saddle.Mat
 
 package object lamp {
 
@@ -32,7 +33,16 @@ package object lamp {
       assert(success)
       arr
     }
-    def toMat = TensorHelpers.toMat(self)
+    def toMat: Mat[Double] = {
+      val opt = self.options
+      if (opt.isDouble())
+        TensorHelpers.toMat(self)
+      else if (opt.isFloat()) TensorHelpers.toFloatMat(self).map(_.toDouble)
+      else
+        throw new RuntimeException(
+          "Expected Double or Float tensor. got: " + opt.scalarTypeByte()
+        )
+    }
     def toMatLong = TensorHelpers.toMatLong(self)
 
     def copy = inResource(ATen.clone(self))

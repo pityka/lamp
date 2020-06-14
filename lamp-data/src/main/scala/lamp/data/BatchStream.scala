@@ -5,6 +5,9 @@ import aten.Tensor
 import org.saddle._
 import lamp.autograd.TensorHelpers
 import aten.ATen
+import lamp.Device
+import lamp.FloatingPointPrecision
+import lamp.DoublePrecision
 
 trait BatchStream { self =>
   def nextBatch: Resource[IO, Option[(Tensor, Tensor)]]
@@ -25,12 +28,15 @@ trait BatchStream { self =>
 object BatchStream {
 
   def oneHotFeatures(
-      vocabularSize: Int
+      vocabularSize: Int,
+      precision: FloatingPointPrecision
   ): (Tensor, Tensor) => Resource[IO, (Tensor, Tensor)] = {
     case (feature, target) =>
       Resource.make(IO {
         val oneHot = ATen.one_hot(feature, vocabularSize)
-        val double = ATen._cast_Double(oneHot, false)
+        val double =
+          if (precision == DoublePrecision) ATen._cast_Double(oneHot, false)
+          else ATen._cast_Float(oneHot, false)
         oneHot.release
         (double, target)
 

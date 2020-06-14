@@ -7,6 +7,7 @@ import aten.ATen
 import cats.effect.Resource
 import cats.effect.IO
 import cats.data.State
+import lamp.syntax
 
 case class SupervisedModel[T](
     module: StatefulModule[T],
@@ -23,7 +24,7 @@ case class SupervisedModel[T](
     Resource.make(IO {
       val (output, _) = module.forward1(const(samples), initState)
       val loss = lossFunction(output, target)
-      val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
+      val lossAsDouble = loss.value.toMat.raw(0)
       val outputCloned = ATen.clone(output.value)
       loss.releaseAll
       (lossAsDouble, outputCloned)
@@ -35,26 +36,12 @@ case class SupervisedModel[T](
   ): (Double, Seq[Option[Tensor]]) = {
     val (output, _) = module.forward1(const(samples), initState)
     val loss = lossFunction(output, target)
-    val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
+    val lossAsDouble = loss.value.toMat.raw(0)
 
     val gradients = module.gradients(loss)
     (lossAsDouble, gradients)
   }
-  def lossAndGradientsAndOutput(
-      samples: Tensor,
-      target: Tensor
-  ): Resource[IO, (Double, Seq[Option[Tensor]], Tensor)] = {
-    val release = (_: Double, _: Seq[Option[Tensor]], outputCloned: Tensor) =>
-      IO(outputCloned.release)
-    Resource.make(IO {
-      val (output, _) = module.forward1(const(samples), initState)
-      val loss = lossFunction(output, target)
-      val lossAsDouble = TensorHelpers.toMat(loss.value).raw(0)
-      val outputCloned = ATen.clone(output.value)
-      val gradients = module.gradients(loss)
-      (lossAsDouble, gradients, outputCloned)
-    })(release.tupled)
-  }
+
   def zipOptimizer(optimizerFactory: Seq[(Tensor, PTag)] => Optimizer) =
     ModelWithOptimizer(
       this,
