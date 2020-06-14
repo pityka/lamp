@@ -86,7 +86,6 @@ object Text {
       }
       .sortBy(_._2)
       .reverse
-      .take(40)
       .map(_._1)
       .zipWithIndex
       .toMap
