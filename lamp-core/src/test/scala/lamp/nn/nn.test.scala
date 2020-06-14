@@ -303,6 +303,7 @@ class NNSuite extends AnyFunSuite {
         3,
         ATen.ones(Array(3), TensorOptions.dtypeDouble())
       )(const(output), target)
+      ._1
       .value
     assert(TensorHelpers.toMat(loss).raw(0) == -4.9760101917362025)
   }

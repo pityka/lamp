@@ -38,14 +38,14 @@ object IOLoops {
       checkpointFile: Option[File],
       minimumCheckpointFile: Option[File],
       checkpointFrequency: Int,
-      trainLogFrequency: Int = 10,
+      logFrequency: Int = 10,
+      validationFrequency: Int = 1,
       logger: Option[Logger] = None
   ): IO[SupervisedModel[ST]] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
     def loop(
         epoch: Int,
-        currentValidation: BatchStream,
         minValidationLoss: Option[Double]
     ): IO[SupervisedModel[ST]] =
       if (epoch >= epochs) IO.pure(modelWithOptimizer.model)
@@ -56,93 +56,31 @@ object IOLoops {
             trainBatchesOverEpoch(),
             trainingCallback,
             logger,
-            trainLogFrequency
+            logFrequency
           )
-          maybeValidationLoss <- runValidation(
-            modelWithOptimizer.model,
-            currentValidation.nextBatch,
-            validationCallback,
-            epoch,
-            minValidationLoss,
-            checkpointFile,
-            minimumCheckpointFile,
-            checkpointFrequency,
-            logger
-          )
-          replaceValidation = maybeValidationLoss.isEmpty
+          maybeValidationLoss <- if (epoch % validationFrequency == 0)
+            validationOneEpoch(
+              model = modelWithOptimizer.model,
+              validationBatches = validationBatchesOverEpoch(),
+              validationCallback = validationCallback,
+              logger = logger,
+              validationLogFrequency = logFrequency,
+              epochCount = epoch
+            ).map(Some(_))
+          else IO.pure(None)
+
           nextMinValidationLoss = if (maybeValidationLoss.isEmpty)
             minValidationLoss
           else if (minValidationLoss.isEmpty) maybeValidationLoss
           else Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
           next <- loop(
             epoch + 1,
-            if (replaceValidation) validationBatchesOverEpoch()
-            else currentValidation,
             nextMinValidationLoss
           )
         } yield next
       }
 
-    loop(0, validationBatchesOverEpoch(), None)
-  }
-
-  def runValidation[T](
-      model: SupervisedModel[T],
-      validationBatch: Resource[IO, Option[(Tensor, Tensor)]],
-      validationCallback: ValidationCallback,
-      epochCount: Int,
-      minimumValidationLossSoFar: Option[Double],
-      checkpointFile: Option[File],
-      minimumCheckpointFile: Option[File],
-      checkpointFrequency: Int,
-      logger: Option[Logger]
-  ): IO[Option[Double]] = {
-    validationBatch
-      .use { option =>
-        val io = option.map {
-          case (validationSample, validationTarget) =>
-            model.asEval
-              .lossAndOutput(
-                validationSample,
-                validationTarget
-              )
-              .use {
-                case (validationLoss, validationOutput) =>
-                  for {
-                    _ <- IO {
-                      logger.foreach(
-                        _.info(
-                          s"Validation loss at epoch $epochCount: $validationLoss (exp: ${math.exp(validationLoss)})"
-                        )
-                      )
-                    }
-                    _ <- IO {
-                      validationCallback(
-                        validationOutput,
-                        validationTarget,
-                        validationLoss,
-                        epochCount
-                      )
-                    }
-
-                    _ <- if (checkpointFile.isDefined && (epochCount % checkpointFrequency == 0))
-                      writeCheckpoint(checkpointFile.get, model.module)
-                    else IO.unit
-                    _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
-                      IO {
-                        scribe.info(
-                          s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $checkpointFile"
-                        )
-                      }.flatMap(_ =>
-                        writeCheckpoint(minimumCheckpointFile.get, model.module)
-                      )
-                    else IO.unit
-                  } yield validationLoss
-              }
-
-        }
-        io.map(_.map(Some(_))).getOrElse(IO.pure(None))
-      }
+    loop(0, None)
   }
 
   def oneEpoch[T](
@@ -190,6 +128,80 @@ object IOLoops {
     }
 
     loop(0)
+  }
+  def validationOneEpoch[T](
+      model: SupervisedModel[T],
+      validationBatches: BatchStream,
+      validationCallback: ValidationCallback,
+      logger: Option[Logger],
+      validationLogFrequency: Int,
+      epochCount: Long
+  ): IO[Double] = {
+    def loop(
+        batchCount: Int,
+        totalLoss: Double,
+        totalExamples: Long
+    ): IO[(Double, Long)] = {
+      validationBatches.nextBatch
+        .use { option =>
+          val io = option.map {
+            case (validationSample, validationTarget) =>
+              model.asEval
+                .lossAndOutput(
+                  validationSample,
+                  validationTarget
+                )
+                .use {
+                  case (validationLoss, validationOutput, numExamples) =>
+                    for {
+                      _ <- IO {
+                        if (batchCount % validationLogFrequency == 0) {
+                          validationCallback(
+                            validationOutput,
+                            validationTarget,
+                            validationLoss,
+                            epochCount
+                          )
+                        }
+                      }
+                      _ <- IO {
+                        if (batchCount % validationLogFrequency == 0) {
+                          logger.foreach(
+                            _.info(
+                              s"Validation loss at batch $batchCount in epoch $epochCount: $validationLoss (exp: ${math
+                                .exp(validationLoss)})"
+                            )
+                          )
+                        }
+                      }
+                    } yield (validationLoss * numExamples, numExamples)
+                }
+          }
+          io.map(_.map(Some(_))).getOrElse(IO.pure(None))
+        }
+        .flatMap {
+          case None => IO.pure((totalLoss, totalExamples))
+          case Some((lossInBatch, examples)) =>
+            loop(
+              batchCount + 1,
+              totalLoss + lossInBatch,
+              totalExamples + examples
+            )
+        }
+
+    }
+
+    loop(0, 0d, 0L).flatMap {
+      case (totalLoss, totalExamples) =>
+        IO {
+          logger.foreach(
+            _.info(
+              s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${totalLoss / totalExamples}"
+            )
+          )
+          totalLoss / totalExamples
+        }
+    }
   }
 
 }

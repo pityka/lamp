@@ -73,7 +73,7 @@ class IOLoopSuite extends AnyFunSuite {
       minimumCheckpointFile = None
     )
 
-    val (loss, output) = trainedModel
+    val (loss, output, numExamples) = trainedModel
       .flatMap(_.lossAndOutput(x, target).allocated.map(_._1))
       .unsafeRunSync
 
@@ -128,7 +128,7 @@ class IOLoopSuite extends AnyFunSuite {
       minimumCheckpointFile = None
     )
 
-    val (loss, output) = trainedModel
+    val (loss, output, numExamples) = trainedModel
       .flatMap(_.lossAndOutput(x, target).allocated.map(_._1))
       .unsafeRunSync
     assert(loss < 900)

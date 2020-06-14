@@ -55,8 +55,7 @@ case class Sequential(
   }
 }
 object Sequential {
-  def apply(m: StatefulModule[Unit]*): Sequential =
-    Sequential.apply(m: _*)
+
   case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
     def leaf = t
     def updateDuringOptimization: Boolean = t.updateDuringOptimization
