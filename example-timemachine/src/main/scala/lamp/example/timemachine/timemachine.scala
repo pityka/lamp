@@ -98,8 +98,8 @@ object Train extends App {
         .use(s => IO(s.mkString))
         .unsafeRunSync()
 
-      val (vocab, trainTokenized) = Text.englishToIntegers(trainText)
-      val testTokenized = Text.englishToIntegers(testText, vocab)
+      val (vocab, trainTokenized) = Text.charsToIntegers(trainText)
+      val testTokenized = Text.charsToIntegers(testText, vocab)
       val vocabularSize = vocab.size + 1
       scribe.info(
         s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
@@ -193,9 +193,10 @@ object Train extends App {
         )
         .unsafeRunSync()
 
-      val exampleTexts = List("time", "good", "mach", "morn", "best")
+      val exampleTexts =
+        List("time", "good", "mach", "morn", "best", "then", "cand")
       val tokenized =
-        exampleTexts.map(t => Text.englishToIntegers(t, vocab).map(_.toLong))
+        exampleTexts.map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
       val predicted = Text.sequencePrediction(
         tokenized,
         device,

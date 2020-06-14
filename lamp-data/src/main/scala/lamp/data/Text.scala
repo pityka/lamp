@@ -76,7 +76,7 @@ object Text {
     )
 
   }
-  def englishToIntegers(text: String) = {
+  def charsToIntegers(text: String) = {
     val chars = text.toLowerCase.toSeq
       .filterNot(c => c == '\n' || c == '\r')
       .groupBy(identity)
@@ -94,7 +94,7 @@ object Text {
 
     (chars, text.map(c => chars.get(c).getOrElse(unknown)).toVector)
   }
-  def englishToIntegers(text: String, chars: Map[Char, Int]) = {
+  def charsToIntegers(text: String, chars: Map[Char, Int]) = {
 
     val unknown = chars.size
 
