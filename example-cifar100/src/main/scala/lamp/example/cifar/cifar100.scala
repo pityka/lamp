@@ -214,8 +214,8 @@ object Train extends App {
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.logAccuracy,
           checkpointFile = config.checkpointSave.map(s => new File(s)),
-          minimumCheckpointFile = None,
-          checkpointFrequency = 10,
+          minimumCheckpointFile =
+            config.checkpointSave.map(s => new File(s + ".min")),
           logger = Some(scribe.Logger("training"))
         )
         .unsafeRunSync()

@@ -186,8 +186,8 @@ object Train extends App {
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
           checkpointFile = config.checkpointSave.map(s => new File(s)),
-          minimumCheckpointFile = None,
-          checkpointFrequency = 10,
+          minimumCheckpointFile =
+            config.checkpointSave.map(s => new File(s + ".min")),
           logger = Some(scribe.Logger("training")),
           logFrequency = 10
         )

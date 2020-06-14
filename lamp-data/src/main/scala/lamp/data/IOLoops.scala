@@ -37,7 +37,6 @@ object IOLoops {
       validationCallback: ValidationCallback,
       checkpointFile: Option[File],
       minimumCheckpointFile: Option[File],
-      checkpointFrequency: Int,
       logFrequency: Int = 1,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None
@@ -65,7 +64,10 @@ object IOLoops {
               validationCallback = validationCallback,
               logger = logger,
               validationLogFrequency = logFrequency,
-              epochCount = epoch
+              epochCount = epoch,
+              checkpointFile = checkpointFile,
+              minimumCheckpointFile = minimumCheckpointFile,
+              minimumValidationLossSoFar = minValidationLoss
             ).map(Some(_))
           else IO.pure(None)
 
@@ -135,7 +137,10 @@ object IOLoops {
       validationCallback: ValidationCallback,
       logger: Option[Logger],
       validationLogFrequency: Int,
-      epochCount: Long
+      epochCount: Long,
+      checkpointFile: Option[File],
+      minimumCheckpointFile: Option[File],
+      minimumValidationLossSoFar: Option[Double]
   ): IO[Double] = {
     def loop(
         batchCount: Int,
@@ -193,14 +198,28 @@ object IOLoops {
 
     loop(0, 0d, 0L).flatMap {
       case (totalLoss, totalExamples) =>
-        IO {
-          logger.foreach(
-            _.info(
-              s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${totalLoss / totalExamples}"
+        val validationLoss = totalLoss / totalExamples
+        for {
+          _ <- IO {
+            logger.foreach(
+              _.info(
+                s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
+              )
             )
-          )
-          totalLoss / totalExamples
-        }
+          }
+          _ <- if (checkpointFile.isDefined)
+            writeCheckpoint(checkpointFile.get, model.module)
+          else IO.unit
+          _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
+            IO {
+              scribe.info(
+                s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $checkpointFile"
+              )
+            }.flatMap(_ =>
+              writeCheckpoint(minimumCheckpointFile.get, model.module)
+            )
+          else IO.unit
+        } yield totalLoss / totalExamples
     }
   }
 
