@@ -10,6 +10,7 @@ object LearningRateSchedule {
     val f = x / endX
     startY + (endY - startY) * f
   }
+  def noop = (_: Long) => 1d
   def cyclicSchedule(
       maxFactor: Double,
       periodLength: Long
