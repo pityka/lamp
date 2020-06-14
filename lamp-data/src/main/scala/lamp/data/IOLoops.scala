@@ -38,7 +38,7 @@ object IOLoops {
       checkpointFile: Option[File],
       minimumCheckpointFile: Option[File],
       checkpointFrequency: Int,
-      logFrequency: Int = 10,
+      logFrequency: Int = 1,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None
   ): IO[SupervisedModel[ST]] = {
@@ -168,7 +168,7 @@ object IOLoops {
                         if (batchCount % validationLogFrequency == 0) {
                           logger.foreach(
                             _.info(
-                              s"Validation loss at batch $batchCount in epoch $epochCount: $validationLoss (exp: ${math
+                              s"Validation loss at batch $batchCount in epoch $epochCount over $numExamples examples: $validationLoss (exp: ${math
                                 .exp(validationLoss)})"
                             )
                           )

@@ -37,7 +37,8 @@ case class CliConfig(
     testData: String = "",
     cuda: Boolean = false,
     singlePrecision: Boolean = false,
-    batchSize: Int = 256,
+    trainBatchSize: Int = 256,
+    validationBatchSize: Int = 256,
     epochs: Int = 1000,
     learningRate: Double = 0.0001,
     dropout: Double = 0.0,
@@ -62,7 +63,10 @@ object Train extends App {
         .required(),
       opt[Unit]("gpu").action((x, c) => c.copy(cuda = true)),
       opt[Unit]("single").action((x, c) => c.copy(singlePrecision = true)),
-      opt[Int]("batch").action((x, c) => c.copy(batchSize = x)),
+      opt[Int]("train-batch").action((x, c) => c.copy(trainBatchSize = x)),
+      opt[Int]("validation-batch").action((x, c) =>
+        c.copy(validationBatchSize = x)
+      ),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
       opt[Double]("learning-rate").action((x, c) => c.copy(learningRate = x)),
       opt[Double]("dropout").action((x, c) => c.copy(dropout = x)),
@@ -150,7 +154,7 @@ object Train extends App {
         Text
           .minibatchesFromText(
             trainTokenized,
-            config.batchSize,
+            config.trainBatchSize,
             lookAhead,
             device
           )
@@ -159,7 +163,7 @@ object Train extends App {
         Text
           .minibatchesFromText(
             testTokenized,
-            config.batchSize,
+            config.validationBatchSize,
             lookAhead,
             device
           )
@@ -184,7 +188,8 @@ object Train extends App {
           checkpointFile = config.checkpointSave.map(s => new File(s)),
           minimumCheckpointFile = None,
           checkpointFrequency = 10,
-          logger = Some(scribe.Logger("training"))
+          logger = Some(scribe.Logger("training")),
+          logFrequency = 10
         )
         .unsafeRunSync()
 
