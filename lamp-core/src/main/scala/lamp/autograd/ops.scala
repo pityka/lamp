@@ -101,6 +101,17 @@ case class Add(a: Variable, b: Variable) extends Op {
   val value = Variable(this, ATen.add_0(a.value, b.value, 1d))
 
 }
+case class ConstAdd(a: Variable, b: Double) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val p2 = ub(p, a.sizes)
+      ATen.add_out(out, out, p2, 1d)
+      p2.release()
+    }
+  )
+  val value = Variable(this, ATen.add_1(a.value, b, 1d))
+
+}
 case class Minus(a: Variable, b: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>

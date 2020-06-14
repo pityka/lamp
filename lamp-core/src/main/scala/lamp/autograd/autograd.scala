@@ -118,6 +118,7 @@ case class Variable(
   def select(dim: Long, index: Long) =
     Select(this, dim = dim, index = index).value
   def +(other: Variable) = Add(this, other).value
+  def +(other: Double) = ConstAdd(this, other).value
   def -(other: Variable) = Minus(this, other).value
   def *(other: Variable) = Mult(this, other).value
   def *(other: Double) = ConstMult(this, other).value

@@ -295,6 +295,17 @@ class GradientSuite extends AnyFunSuite {
       x1.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
   }
+  testGradientAndValue("constadd")(mat2x3, 33d) { (m, doBackprop, cuda) =>
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val L = x1.+(2d).sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
   testGradientAndValue("mult broadcasted - left")(mat1x1, 42d) {
     (m, doBackprop, cuda) =>
       val x1 = param(TensorHelpers.fromMat(m, cuda))
