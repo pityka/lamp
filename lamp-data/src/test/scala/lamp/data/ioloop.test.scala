@@ -69,7 +69,6 @@ class IOLoopSuite extends AnyFunSuite {
       trainingCallback = TrainingCallback.noop,
       validationCallback = ValidationCallback.noop,
       checkpointFile = None,
-      checkpointFrequency = 1,
       minimumCheckpointFile = None
     )
 
@@ -124,7 +123,6 @@ class IOLoopSuite extends AnyFunSuite {
       trainingCallback = TrainingCallback.noop,
       validationCallback = ValidationCallback.noop,
       checkpointFile = None,
-      checkpointFrequency = 1,
       minimumCheckpointFile = None
     )
 

@@ -127,7 +127,6 @@ class MLPSuite extends AnyFunSuite {
       trainingCallback = TrainingCallback.noop,
       validationCallback = validationCallback,
       checkpointFile = None,
-      checkpointFrequency = 1,
       minimumCheckpointFile = None
     )
     val (loss, output, numExamples) = trainedModel

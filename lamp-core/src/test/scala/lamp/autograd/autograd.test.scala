@@ -435,9 +435,20 @@ class GradientSuite extends AnyFunSuite {
       x1.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
   }
-  testGradientAndValue("gelu")(mat2x3_2, 16d) { (m, doBackprop, cuda) =>
+  testGradientAndValue("gelu")(mat2x3_2, 15.7917) { (m, doBackprop, cuda) =>
     val x1 = param(TensorHelpers.fromMat(m, cuda))
-    val L = x1.relu.sum
+    val L = x1.gelu.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
+  testGradientAndValue("sigmoid")(mat2x3_2, 4.1111) { (m, doBackprop, cuda) =>
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val L = x1.sigmoid.sum
     if (doBackprop) {
       L.backprop()
     }

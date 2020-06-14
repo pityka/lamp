@@ -328,6 +328,18 @@ case class Gelu(a: Variable) extends Op {
   val value = Variable(this, ATen.gelu(a.value))
 
 }
+case class Sigmoid(a: Variable) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val tmp = ATen.sigmoid_backward(p, value.value)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+    }
+  )
+  val value = Variable(this, ATen.sigmoid(a.value))
+
+}
 
 case class Mean(a: Variable, dim: List[Int]) extends Op {
 
