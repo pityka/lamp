@@ -139,4 +139,4 @@ lazy val root = project
     publishArtifact := false,
     skip in publish := true
   )
-  .aggregate(core, data, example_cifar100)
+  .aggregate(core, data, example_cifar100, example_timemachine)

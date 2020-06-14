@@ -19,46 +19,13 @@ case class Residual[T](member: StatefulModule[T]) extends StatefulModule[T] {
   override def load(parameters: Seq[Tensor]) = Residual(member.load(parameters))
 }
 
-case class Sequential[T](
-    members: StatefulModule[T]*
-) extends StatefulModule[Seq[T]] {
-  override def asEval: Sequential[T] =
-    Sequential(members.map(_.asEval): _*)
-  override def asTraining: Sequential[T] =
-    Sequential(members.map(_.asTraining): _*)
-  override def state =
-    members.zipWithIndex.flatMap {
-      case (member, idx) =>
-        member.state.map {
-          case (param, ptag) => (param, Sequential.Tag(ptag, idx))
-        }
-    }
-  def forward1(x: Variable, st: Seq[T]) =
-    (members.zip(st)).foldLeft((x, Seq[T]())) {
-      case ((x, acc), (m, stm)) =>
-        val (x1, st1) = m.forward1(x, stm)
-        (x1, acc :+ st1)
-    }
-
-  override def load(tensors: Seq[Tensor]) = {
-    val (loadedMembers, _) =
-      members.foldLeft((List[StatefulModule[T]](), tensors)) {
-        case ((acc, params), member) =>
-          val numParam = member.state.size
-          val loaded = member.load(params.take(numParam))
-          (acc.:+(loaded), params.drop(numParam))
-
-      }
-    Sequential(loadedMembers: _*)
-  }
-}
-case class Sequential1(
+case class Sequential(
     members: StatefulModule[Unit]*
 ) extends StatefulModule[Unit] {
-  override def asEval: Sequential1 =
-    Sequential1(members.map(_.asEval): _*)
-  override def asTraining: Sequential1 =
-    Sequential1(members.map(_.asTraining): _*)
+  override def asEval: Sequential =
+    Sequential(members.map(_.asEval): _*)
+  override def asTraining: Sequential =
+    Sequential(members.map(_.asTraining): _*)
   override def state =
     members.zipWithIndex.flatMap {
       case (member, idx) =>
@@ -84,12 +51,12 @@ case class Sequential1(
           (acc.:+(loaded), params.drop(numParam))
 
       }
-    Sequential1(loadedMembers: _*)
+    Sequential(loadedMembers: _*)
   }
 }
 object Sequential {
-  def apply(m: StatefulModule[Unit]*): Sequential1 =
-    Sequential1.apply(m: _*)
+  def apply(m: StatefulModule[Unit]*): Sequential =
+    Sequential.apply(m: _*)
   case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
     def leaf = t
     def updateDuringOptimization: Boolean = t.updateDuringOptimization
