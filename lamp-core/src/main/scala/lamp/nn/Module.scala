@@ -111,8 +111,4 @@ trait LeafTag extends PTag {
   def leaf: PTag = this
   def updateDuringOptimization: Boolean = true
 }
-trait IntermediateStateTag extends PTag {
-  def leaf: PTag = this
-  def updateDuringOptimization: Boolean = false
-}
 case object NoTag extends LeafTag

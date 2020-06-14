@@ -77,7 +77,6 @@ object RNN {
   case object WeightHq extends LeafTag
   case object BiasH extends LeafTag
   case object BiasQ extends LeafTag
-  case object State extends IntermediateStateTag
 
   def apply(
       in: Int,
