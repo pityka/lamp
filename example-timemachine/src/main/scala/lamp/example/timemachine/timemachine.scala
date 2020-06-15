@@ -139,11 +139,13 @@ object Train extends App {
           )
 
         val net = config.checkpointLoad
-          .map { load => Reader.loadFromFile(net1, new File(load)) }
+          .map { load =>
+            scribe.info(s"Loading parameters from file $load")
+            Reader.loadFromFile(net1, new File(load))
+          }
           .getOrElse(net1)
 
-        scribe.info("Learnable parametes: " + net.learnableParameters)
-        scribe.info("parameters: " + net.parameters.mkString("\n"))
+        scribe.info("Learnable parameters: " + net.learnableParameters)
         SupervisedModel(
           net,
           (None, None, ()),
@@ -233,7 +235,7 @@ object Train extends App {
               ()
             ),
             vocabularSize,
-            200,
+            lookAhead,
             rvocab
           )
           .use { variable =>
@@ -241,7 +243,10 @@ object Train extends App {
           }
           .unsafeRunSync()
 
-        scribe.info("\n\n" + text.mkString("\n"))
+        scribe.info(
+          s"Hallucinated text follows (from prefix '$prefix'): \n\n" + prefix + text
+            .mkString("\n")
+        )
       }
 
     case _ =>
