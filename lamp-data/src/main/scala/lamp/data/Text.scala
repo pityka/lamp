@@ -23,7 +23,8 @@ object Text {
       module: StatefulModule[T],
       init: T,
       vocabularySize: Int,
-      steps: Int
+      steps: Int,
+      vocab: Map[Int, Char]
   ): Resource[IO, Variable] = {
     val batchSize = batch.size
     def loop(

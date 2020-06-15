@@ -8,24 +8,8 @@ import java.io.FileOutputStream
 import java.io.File
 import org.saddle.scalar.ScalarTagDouble
 import scribe.Logger
+import Writer.writeCheckpoint
 object IOLoops {
-
-  def writeCheckpoint[T](file: File, model: StatefulModule[T]) = {
-    val channel = Resource.make(IO {
-      val fis = new FileOutputStream(file, false)
-      fis.getChannel
-    })(v => IO { v.close })
-    channel
-      .use { channel =>
-        IO {
-          Writer.writeTensorsIntoChannel(
-            model.state
-              .map(v => (ScalarTagDouble, v._1.value)),
-            channel
-          )
-        }
-      }
-  }
 
   def epochs[ST](
       model: SupervisedModel[ST],

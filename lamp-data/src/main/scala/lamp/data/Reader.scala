@@ -15,6 +15,8 @@ import java.io.FileInputStream
 import cats.effect.Resource
 import lamp.nn.Module
 import java.io.File
+import lamp.nn.StatefulModule
+import lamp.util.NDArray
 
 object Reader {
 
@@ -99,8 +101,10 @@ object Reader {
         val descriptor = ujson.read(header).obj
         val datatype = descriptor(KEY_datatype).str
         val version = descriptor("v").num.toInt
-        if (version != 1 || datatype != expectedDataType)
+        if (version != 1)
           Left("Data layout not supported")
+        else if (datatype != expectedDataType)
+          Left(s"Expected $expectedDataType got $datatype")
         else Right(descriptor)
       }
     }
@@ -157,7 +161,7 @@ object Reader {
       channel: ReadableByteChannel
   ): Either[String, Seq[Tensor]] =
     Reader.sequence(types.map {
-      case (st) =>
+      case st =>
         readTensorFromChannel(channel)(st)
     })
 
@@ -179,24 +183,33 @@ object Reader {
   ): Either[String, Tensor] =
     readTensorFromChannel(new ByteChannel(ByteBuffer.wrap(array)))
 
-  def loadFromFile(module: Module, file: File) = {
+  def scalarTypeToScalarTag(t: Byte) = t match {
+    case 4 => ScalarTagLong
+    case 6 => ScalarTagFloat
+    case 7 => ScalarTagDouble
+  }
+
+  def loadFromFile[T](module: StatefulModule[T], file: File) = {
     val channel = Resource.make(IO {
       val fis = new FileInputStream(file)
       fis.getChannel
     })(v => IO { v.close })
     val oldTensors = module.state.map(_._1.value)
-    val tensors = channel
+    val mayTensors = channel
       .use { channel =>
         IO {
           Reader.readTensorsFromChannel(
-            oldTensors.map(_ => ScalarTagDouble),
+            oldTensors
+              .map(t => scalarTypeToScalarTag(t.options.scalarTypeByte())),
             channel
           )
         }
       }
       .unsafeRunSync()
-      .right
-      .get
+    if (mayTensors.isLeft) {
+      scribe.error(s"Failed to read file $file: ${mayTensors}")
+    }
+    val tensors = mayTensors.right.get
     oldTensors.foreach(_.release)
     module.load(tensors)
   }

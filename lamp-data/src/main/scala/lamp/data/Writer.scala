@@ -5,6 +5,11 @@ import java.nio.ByteOrder
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 import aten.Tensor
+import java.io.File
+import lamp.nn.StatefulModule
+import cats.effect.IO
+import cats.effect.Resource
+import java.io.FileOutputStream
 
 /** Binary serialization for Tensor with primitive Double, Float, Long
   *
@@ -204,12 +209,34 @@ object Writer {
   }
 
   def writeTensorsIntoChannel(
-      tensors: Seq[(ScalarTag[_], Tensor)],
+      tensors: Seq[Tensor],
       channel: WritableByteChannel
   ): Either[String, Seq[Unit]] =
     Reader.sequence(tensors.map {
-      case (st, t) =>
+      case t =>
+        val st = t.scalarType() match {
+          case 4 => ScalarTagLong
+          case 6 => ScalarTagFloat
+          case 7 => ScalarTagDouble
+        }
         writeTensorIntoChannel(t, channel)(st)
     })
+
+  def writeCheckpoint[T](file: File, model: StatefulModule[T]) = {
+    val channel = Resource.make(IO {
+      val fis = new FileOutputStream(file, false)
+      fis.getChannel
+    })(v => IO { v.close })
+    channel
+      .use { channel =>
+        IO {
+          Writer.writeTensorsIntoChannel(
+            model.state
+              .map(v => v._1.value),
+            channel
+          )
+        }
+      }
+  }
 
 }
