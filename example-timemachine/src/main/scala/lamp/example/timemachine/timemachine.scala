@@ -31,6 +31,7 @@ import lamp.nn.Seq4
 import lamp.DoublePrecision
 import lamp.FloatingPointPrecision
 import lamp.SinglePrecision
+import lamp.nn.GRU
 
 case class CliConfig(
     trainData: String = "",
@@ -98,14 +99,17 @@ object Train extends App {
         .use(s => IO(s.mkString))
         .unsafeRunSync()
 
-      val (vocab, trainTokenized) = Text.charsToIntegers(trainText)
+      val (vocab, _) = Text.charsToIntegers(trainText + testText)
+      val trainTokenized = Text.charsToIntegers(trainText, vocab)
       val testTokenized = Text.charsToIntegers(testText, vocab)
-      val vocabularSize = vocab.size + 1
+      val vocabularSize = vocab.size
+      val rvocab = vocab.map(_.swap)
       scribe.info(
         s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
       )
 
       val hiddenSize = 64
+      val lookAhead = 5
       val device = if (config.cuda) CudaDevice(0) else CPU
       val precision =
         if (config.singlePrecision) SinglePrecision else DoublePrecision
@@ -113,25 +117,11 @@ object Train extends App {
       val model = {
         val classWeights =
           ATen.ones(Array(vocabularSize), tensorOptions)
-        val net =
-          Seq4(
-            RNN(
+        val net1 =
+          Seq2(
+            GRU(
               in = vocabularSize,
               hiddenSize = hiddenSize,
-              out = 10,
-              dropout = config.dropout,
-              tOpt = tensorOptions
-            ),
-            RNN(
-              in = 10,
-              hiddenSize = hiddenSize * 2,
-              out = 10,
-              dropout = config.dropout,
-              tOpt = tensorOptions
-            ),
-            RNN(
-              in = 10,
-              hiddenSize = hiddenSize * 2,
               out = vocabularSize,
               dropout = config.dropout,
               tOpt = tensorOptions
@@ -139,16 +129,18 @@ object Train extends App {
             Fun(_.logSoftMax(2))
           )
 
+        val net = config.checkpointLoad
+          .map { load => Reader.loadFromFile(net1, new File(load)) }
+          .getOrElse(net1)
+
         scribe.info("Learnable parametes: " + net.learnableParameters)
         scribe.info("parameters: " + net.parameters.mkString("\n"))
         SupervisedModel(
           net,
-          (None, None, None, ()),
+          (None, ()),
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
-
-      val lookAhead = 15
 
       val trainEpochs = () =>
         Text
@@ -176,6 +168,30 @@ object Train extends App {
         clip = Some(1d)
       )
 
+      val validationCallback = new ValidationCallback {
+
+        override def apply(
+            validationOutput: Tensor,
+            validationTarget: Tensor,
+            validationLoss: Double,
+            epochCount: Long
+        ): Unit = {
+          if (true) {
+            val targetString =
+              Text.convertIntegersToText(validationTarget, rvocab)
+            val outputString =
+              Text.convertLogitsToText(validationOutput, rvocab)
+            scribe.info(
+              (targetString zip outputString)
+                .map(x => "'" + x._1 + "'  -->  '" + x._2 + "'")
+                .mkString("\n")
+            )
+          }
+
+        }
+
+      }
+
       val trainedModel = IOLoops
         .epochs(
           model = model,
@@ -184,12 +200,13 @@ object Train extends App {
           validationBatchesOverEpoch = testEpochs,
           epochs = config.epochs,
           trainingCallback = TrainingCallback.noop,
-          validationCallback = ValidationCallback.noop,
+          validationCallback = validationCallback,
           checkpointFile = config.checkpointSave.map(s => new File(s)),
           minimumCheckpointFile =
             config.checkpointSave.map(s => new File(s + ".min")),
           logger = Some(scribe.Logger("training")),
-          logFrequency = 10
+          logFrequency = 10,
+          validationFrequency = 1
         )
         .unsafeRunSync()
 
@@ -204,16 +221,16 @@ object Train extends App {
         trainedModel.module,
         (
           None,
-          None,
-          None,
           ()
         ),
         vocabularSize,
         lookAhead
       )
-      val rvocab = vocab.map(_.swap)
+
       val text = predicted
-        .use { variable => IO { Text.convertToText(variable.value, rvocab) } }
+        .use { variable =>
+          IO { Text.convertLogitsToText(variable.value, rvocab) }
+        }
         .unsafeRunSync()
       scribe.info(text.toString)
 

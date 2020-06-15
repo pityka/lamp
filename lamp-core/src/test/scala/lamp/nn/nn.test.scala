@@ -286,6 +286,26 @@ class NNSuite extends AnyFunSuite {
       ),
     89.5682
   )
+  testGradientAndValueND("GRU ", Option.empty[Variable], false)(
+    nd2x3x2,
+    () =>
+      GRU(
+        weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXr = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXz = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHz = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHr = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
+        biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
+        biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasZ = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasR = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+        dropout = 0d,
+        train = true
+      ),
+    20.8184
+  )
   test("RNN shape and loss") {
     val output = RNN(
       weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),

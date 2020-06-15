@@ -67,18 +67,31 @@ object Text {
 
   /** Convert back to text. Tensor shape: time x batch x dim
     */
-  def convertToText(tensor: Tensor, vocab: Map[Int, Char]): Seq[String] = {
+  def convertLogitsToText(
+      tensor: Tensor,
+      vocab: Map[Int, Char]
+  ): Seq[String] = {
 
     val t = ATen.argmax(tensor, 2, false)
-    val r = TensorHelpers.toMatLong(t).T
-    r.rows.map(v =>
-      v.toSeq.map(l => vocab.get(l.toInt).getOrElse('#')).mkString
-    )
+    val r = convertIntegersToText(t, vocab)
+    t.release
+    r
+
+  }
+
+  /** Convert back to text. Tensor shape: time x batch x dim
+    */
+  def convertIntegersToText(
+      tensor: Tensor,
+      vocab: Map[Int, Char]
+  ): Seq[String] = {
+
+    val r = TensorHelpers.toMatLong(tensor).T
+    r.rows.map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
 
   }
   def charsToIntegers(text: String) = {
-    val chars = text.toLowerCase.toSeq
-      .filterNot(c => c == '\n' || c == '\r')
+    val chars = text.toSeq
       .groupBy(identity)
       .toSeq
       .map {
@@ -89,15 +102,12 @@ object Text {
       .map(_._1)
       .zipWithIndex
       .toMap
-    val unknown = chars.size
 
-    (chars, text.map(c => chars.get(c).getOrElse(unknown)).toVector)
+    (chars, text.map(c => chars(c)).toVector)
   }
   def charsToIntegers(text: String, chars: Map[Char, Int]) = {
 
-    val unknown = chars.size
-
-    text.map(c => chars.get(c).getOrElse(unknown)).toVector
+    text.map(c => chars(c)).toVector
   }
 
   def makePredictionBatch(
@@ -114,7 +124,7 @@ object Text {
         flattenedFeature,
         Array(examples.size.toLong, examples.head.size.toLong)
       )
-      val transposedFeatures = ATen.t(viewedFeature)
+      val transposedFeatures = viewedFeature.transpose(0, 1)
       val movedFeature = device.to(transposedFeatures)
       val oneHot = ATen.one_hot(movedFeature, vocabularSize)
       val double =
@@ -169,8 +179,9 @@ object Text {
           flattenedTarget,
           Array(idx.size.toLong, timeSteps.toLong)
         )
-        val transposedFeatures = ATen.t(viewedFeature)
-        val transposedTarget = ATen.t(viewedTarget)
+        val transposedFeatures =
+          viewedFeature.transpose(0, 1)
+        val transposedTarget = viewedTarget.transpose(0, 1)
 
         Tensor.releaseAll(
           Array(
@@ -201,6 +212,9 @@ object Text {
       .toList
       .dropRight(1)
 
+    scribe.info(
+      s"Total batches: ${idx.size}. Each $timeSteps token long and has $minibatchSize examples."
+    )
     assert(idx.forall(_.size == minibatchSize))
     new BatchStream {
       private var remaining = idx

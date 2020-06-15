@@ -32,7 +32,7 @@ class GradientSuite extends AnyFunSuite {
   val mat3x2 = mat2x3.T
   val t2x3 = TensorHelpers.fromMat(mat2x3)
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
-  val t3x2 = ATen.t(t2x3)
+  val t3x2 = t2x3.transpose(0, 1)
 
   def diff(m: Mat[Double])(f: Mat[Double] => Double): Mat[Double] = {
     val eps = 1e-6

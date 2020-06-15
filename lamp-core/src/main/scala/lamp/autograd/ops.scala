@@ -17,12 +17,12 @@ case class Constant(const: Tensor) extends Op {
 case class Transpose(a: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
-      val tmp = ATen.t(p)
+      val tmp = p.transpose(0L, 1L)
       ATen.add_out(out, out, tmp, 1d)
       tmp.release()
     }
   )
-  val value = Variable(this, ATen.t(a.value))
+  val value = Variable(this, a.value.transpose(0L, 1L))
 }
 case class View(a: Variable, shape: Array[Long]) extends Op {
   val params = List(
@@ -211,12 +211,12 @@ case class MatMul(a: Variable, b: Variable) extends Op {
   val params =
     List(
       a.zipBackward { (p, out) =>
-        val bt = ATen.t(b.value)
+        val bt = b.value.transpose(0L, 1L)
         ATen.addmm_out(out, out, p, bt, 1d, 1d)
         bt.release
       },
       b.zipBackward { (p, out) =>
-        val at = ATen.t(a.value)
+        val at = a.value.transpose(0L, 1L)
         ATen.addmm_out(out, out, at, p, 1d, 1d)
         at.release
       }
@@ -577,7 +577,7 @@ case class Conv1D(
           conv_1_sum,
           Array(inputChannels / groups, outChannels, conv_1.sizes.apply(2))
         )
-      val conv_1_sum_viewed_transposed = ATen.transpose(conv_1_sum_viewed, 0, 1)
+      val conv_1_sum_viewed_transposed = conv_1_sum_viewed.transpose(0, 1)
 
       val conv_1_sum_viewed_transposed_narrowed =
         ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
@@ -722,7 +722,7 @@ case class Conv2D(
             conv_1.sizes.apply(3)
           )
         )
-      val conv_1_sum_viewed_transposed = ATen.transpose(conv_1_sum_viewed, 0, 1)
+      val conv_1_sum_viewed_transposed = conv_1_sum_viewed.transpose(0, 1)
 
       val conv_1_sum_viewed_transposed_narrowed1 =
         ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)

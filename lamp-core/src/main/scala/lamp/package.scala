@@ -64,7 +64,7 @@ package object lamp {
     def addcmul(other1: Tensor, other2: Tensor, d: Double) =
       ATen.addcmul_out(self, self, other1, other2, d)
 
-    def t = inResource { ATen.t(self) }
+    def t = inResource { self.transpose(0L, 1L) }
     def *(d: Double) =
       inResource { ATen.mul_1(self, d) }
     def *(other: Tensor) =

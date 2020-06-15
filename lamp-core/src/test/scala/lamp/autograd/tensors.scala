@@ -55,6 +55,12 @@ class TensorHelperSuite extends AnyFunSuite {
     val t2 = ATen.one_hot(t, 4)
     assert(t2.shape == List(3, 2, 4))
   }
+  test("transpose") {
+    val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
+    val t2x3 = TensorHelpers.fromMat(mat2x3)
+    val t3x2 = t2x3.transpose(0, 1)
+    assert(t3x2.toMat == mat2x3.T)
+  }
   ignore("cat - memory leak") {
     0 until 1000 foreach { _ =>
       val t = TensorHelpers.fromMat(mat.ones(3000, 3000))
