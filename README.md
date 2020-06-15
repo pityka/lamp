@@ -15,12 +15,13 @@ Lamp implements generic automatic reverse mode differentiation (also known as au
 
 On top of that it provides a small set of components to build neural networks:
 
-- fully connected, 1D and 2D convolutional layers
+- fully connected, 1D and 2D convolutional, RNN and GRU layers
 - relu and gelu nonlinearities
 - batch normalization and weight normalization
 - dropout
 - SgdW and AdamW optimizers (see [here](https://arxiv.org/abs/1711.05101))
 - training loop and data loaders on top of cats-effect
+- checkpointing
 
 All gradient operations are tested for correctness with numeric differentiation.
 All of these tests are replicated to the GPU as well.
@@ -52,6 +53,10 @@ Cuda tests are run separately with `sbt cuda:test`. See `test_cuda.sh` in the so
 ## Running the cifar-100 example
 
 See `run_cifar.sh` in the source tree.
+
+## Running the text model example
+
+See `run_timemachine.sh` in the source tree.
 
 # License
 
