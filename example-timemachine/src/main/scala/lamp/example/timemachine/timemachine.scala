@@ -108,8 +108,8 @@ object Train extends App {
         s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
       )
 
-      val hiddenSize = 256
-      val lookAhead = 30
+      val hiddenSize = 1024
+      val lookAhead = 100
       val device = if (config.cuda) CudaDevice(0) else CPU
       val precision =
         if (config.singlePrecision) SinglePrecision else DoublePrecision
@@ -118,9 +118,16 @@ object Train extends App {
         val classWeights =
           ATen.ones(Array(vocabularSize), tensorOptions)
         val net1 =
-          Seq2(
-            GRU(
+          Seq3(
+            RNN(
               in = vocabularSize,
+              hiddenSize = 64,
+              out = 20,
+              dropout = 0d,
+              tOpt = tensorOptions
+            ),
+            GRU(
+              in = 20,
               hiddenSize = hiddenSize,
               out = vocabularSize,
               dropout = config.dropout,
@@ -137,7 +144,7 @@ object Train extends App {
         scribe.info("parameters: " + net.parameters.mkString("\n"))
         SupervisedModel(
           net,
-          (None, ()),
+          (None, None, ()),
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
@@ -176,7 +183,7 @@ object Train extends App {
             validationLoss: Double,
             epochCount: Long
         ): Unit = {
-          if (true) {
+          if (false) {
             val targetString =
               Text.convertIntegersToText(validationTarget, rvocab)
             val outputString =
@@ -210,25 +217,24 @@ object Train extends App {
         )
         .unsafeRunSync()
       scribe.info("Training done.")
-      val exampleTexts =
-        List("Queen", "King ", "Lord ")
 
-      val tokenized =
-        exampleTexts.map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
-      val predicted = Text.sequencePrediction(
-        tokenized,
-        device,
-        precision,
-        trainedModel.module,
-        (
-          None,
-          ()
-        ),
-        vocabularSize,
-        lookAhead
-      )
-
-      val text = predicted
+      val text = Text
+        .sequencePrediction(
+          List("Caius Marcius is").map(t =>
+            Text.charsToIntegers(t, vocab).map(_.toLong)
+          ),
+          device,
+          precision,
+          trainedModel.module,
+          (
+            None,
+            None,
+            ()
+          ),
+          vocabularSize,
+          200,
+          rvocab
+        )
         .use { variable =>
           IO { Text.convertLogitsToText(variable.value, rvocab) }
         }
