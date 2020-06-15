@@ -32,6 +32,9 @@ import lamp.DoublePrecision
 import lamp.FloatingPointPrecision
 import lamp.SinglePrecision
 import lamp.nn.GRU
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.Charset
+import scala.io.Codec
 
 case class CliConfig(
     trainData: String = "",
@@ -87,9 +90,17 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
 
+      val asciiSilentCharsetDecoder = Charset
+        .forName("UTF8")
+        .newDecoder()
+        .onMalformedInput(CodingErrorAction.REPLACE)
+        .onUnmappableCharacter(CodingErrorAction.REPLACE)
+
       val trainText = Resource
         .make(IO {
-          scala.io.Source.fromFile(new File(config.trainData))
+          scala.io.Source.fromFile(new File(config.trainData))(
+            Codec.apply(asciiSilentCharsetDecoder)
+          )
         })(s => IO { s.close })
         .use(s => IO(s.mkString))
         .unsafeRunSync()
