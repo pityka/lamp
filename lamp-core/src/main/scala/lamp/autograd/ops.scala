@@ -9,6 +9,9 @@ import aten.TensorOptions
 import TensorHelpers.{unbroadcast => ub}
 import lamp.syntax
 import lamp.util.NDArray
+import lamp.FloatingPointPrecision
+import lamp.DoublePrecision
+import lamp.SinglePrecision
 
 case class Constant(const: Tensor) extends Op {
   val params = Nil
@@ -83,6 +86,36 @@ case class Select(a: Variable, dim: Long, index: Long) extends Op {
     }
   )
   val value = Variable(this, ATen.select(a.value, dim, index))
+}
+case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      throw new RuntimeException("Argmax is not differentiable")
+    }
+  )
+  val value = Variable(this, ATen.argmax(a.value, dim, keepDim))
+}
+case class OneHot(a: Variable, numClasses: Int) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      throw new RuntimeException("OneHot is not differentiable")
+    }
+  )
+  val value = Variable(this, ATen.one_hot(a.value, numClasses))
+}
+case class CastToPrecision(a: Variable, precision: FloatingPointPrecision)
+    extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      throw new RuntimeException("Cast to Precision is not differentiable")
+    }
+  )
+  val value = Variable(this, {
+    precision match {
+      case DoublePrecision => ATen._cast_Double(a.value, false)
+      case SinglePrecision => ATen._cast_Float(a.value, false)
+    }
+  })
 }
 
 case class Add(a: Variable, b: Variable) extends Op {

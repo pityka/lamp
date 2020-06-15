@@ -6,6 +6,7 @@ import aten.{Tensor, ATen}
 import java.{util => ju}
 import aten.TensorOptions
 import scala.collection.mutable
+import lamp.FloatingPointPrecision
 
 /**
   * Params: the input and the function which calculates the partial derivative
@@ -117,6 +118,12 @@ case class Variable(
   def t = Transpose(this).value
   def select(dim: Long, index: Long) =
     Select(this, dim = dim, index = index).value
+  def argmax(dim: Long, keepDim: Boolean) =
+    ArgMax(this, dim = dim, keepDim = keepDim).value
+  def oneHot(numClasses: Int) =
+    OneHot(this, numClasses).value
+  def cast(precision: FloatingPointPrecision) =
+    CastToPrecision(this, precision).value
   def +(other: Variable) = Add(this, other).value
   def +(other: Double) = ConstAdd(this, other).value
   def -(other: Variable) = Minus(this, other).value

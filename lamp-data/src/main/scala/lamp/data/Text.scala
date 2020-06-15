@@ -36,11 +36,23 @@ object Text {
       else {
         val (output, state) =
           module.forward1(lastOutput, lastState)
+
+        val lastChar = if (output.shape(0) > 1) {
+          val lastTimeStep1 =
+            output.select(0, output.shape(0) - 1)
+
+          lastTimeStep1.view((1L :: lastTimeStep1.shape).map(_.toInt))
+
+        } else output
+
+        val nextInput =
+          lastChar.argmax(2, false).oneHot(vocabularySize).cast(precision)
+
         loop(
-          output,
+          nextInput,
           state,
           n - 1,
-          buffer :+ output
+          buffer :+ nextInput
         )
       }
     }
@@ -48,18 +60,10 @@ object Text {
       makePredictionBatch(batch, device, vocabularySize, precision)
     batchAsOneHotEncodedTensor.flatMap { batch =>
       Resource.make(IO {
-        val (output, state0) = module.forward1(const(batch), init)
-        val outputTimesteps = output.shape(0)
-        val lastTimeStep1 =
-          output.select(0, outputTimesteps - 1)
-        val lastTimeStep =
-          lastTimeStep1.view((1L :: lastTimeStep1.shape).map(_.toInt))
 
-        val v = ConcatenateAddNewDim(
-          loop(lastTimeStep, state0, steps, Seq())
+        ConcatenateAddNewDim(
+          loop(const(batch), init, steps, Seq())
         ).value.view(List(steps, batchSize, vocabularySize))
-
-        v
 
       })(variable => IO { variable.releaseAll })
     }

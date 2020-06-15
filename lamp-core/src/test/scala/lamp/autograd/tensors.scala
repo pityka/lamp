@@ -66,8 +66,6 @@ class TensorHelperSuite extends AnyFunSuite {
       val t = TensorHelpers.fromMat(mat.ones(3000, 3000))
       val t2 = TensorHelpers.fromMat(mat.ones(3000, 3000))
       val t3 = TensorHelpers.fromMat(mat.ones(3000, 3000))
-      println(t3.weakUseCount())
-      println(t3.useCount())
       val t4 =
         ConcatenateAddNewDim(
           List(

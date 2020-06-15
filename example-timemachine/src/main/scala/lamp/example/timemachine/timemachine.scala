@@ -108,8 +108,8 @@ object Train extends App {
         s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
       )
 
-      val hiddenSize = 64
-      val lookAhead = 5
+      val hiddenSize = 256
+      val lookAhead = 30
       val device = if (config.cuda) CudaDevice(0) else CPU
       val precision =
         if (config.singlePrecision) SinglePrecision else DoublePrecision
@@ -209,9 +209,10 @@ object Train extends App {
           validationFrequency = 1
         )
         .unsafeRunSync()
-
+      scribe.info("Training done.")
       val exampleTexts =
-        List("time", "good", "mach", "morn", "best", "then", "cand")
+        List("Queen", "King ", "Lord ")
+
       val tokenized =
         exampleTexts.map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
       val predicted = Text.sequencePrediction(
@@ -232,6 +233,7 @@ object Train extends App {
           IO { Text.convertLogitsToText(variable.value, rvocab) }
         }
         .unsafeRunSync()
+
       scribe.info(text.toString)
 
     case _ =>
