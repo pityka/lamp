@@ -44,7 +44,8 @@ case class CliConfig(
     learningRate: Double = 0.0001,
     dropout: Double = 0.0,
     checkpointSave: Option[String] = None,
-    checkpointLoad: Option[String] = None
+    checkpointLoad: Option[String] = None,
+    predictionPrefix: Option[String] = None
 )
 
 object Train extends App {
@@ -76,7 +77,8 @@ object Train extends App {
       ),
       opt[String]("checkpoint-load").action((x, c) =>
         c.copy(checkpointLoad = Some(x))
-      )
+      ),
+      opt[String]("prefix").action((x, c) => c.copy(predictionPrefix = Some(x)))
     )
 
   }
@@ -218,29 +220,29 @@ object Train extends App {
         .unsafeRunSync()
       scribe.info("Training done.")
 
-      val text = Text
-        .sequencePrediction(
-          List("Caius Marcius is").map(t =>
-            Text.charsToIntegers(t, vocab).map(_.toLong)
-          ),
-          device,
-          precision,
-          trainedModel.module,
-          (
-            None,
-            None,
-            ()
-          ),
-          vocabularSize,
-          200,
-          rvocab
-        )
-        .use { variable =>
-          IO { Text.convertLogitsToText(variable.value, rvocab) }
-        }
-        .unsafeRunSync()
+      config.predictionPrefix.foreach { prefix =>
+        val text = Text
+          .sequencePrediction(
+            List(prefix).map(t => Text.charsToIntegers(t, vocab).map(_.toLong)),
+            device,
+            precision,
+            trainedModel.module,
+            (
+              None,
+              None,
+              ()
+            ),
+            vocabularSize,
+            200,
+            rvocab
+          )
+          .use { variable =>
+            IO { Text.convertLogitsToText(variable.value, rvocab) }
+          }
+          .unsafeRunSync()
 
-      scribe.info(text.toString)
+        scribe.info("\n\n" + text.mkString("\n"))
+      }
 
     case _ =>
     // arguments are bad, error message will have been displayed
