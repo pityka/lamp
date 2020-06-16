@@ -18,12 +18,6 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - uses: actions/setup-node@v1
-    - uses: olafurpg/setup-gpg@v2
-    - uses: peaceiris/actions-hugo@v2.2.2
-      with: 
-        hugo-version: '0.59.1'
-        extended: true
     - name: Compile
       run: sbt -mem 3000 clean coverage test coverageAggregate
     - name: Codecov
@@ -33,9 +27,11 @@ jobs:
         token: ${{secrets.CODECOV_TOKEN}}
     - name: website
       run: |
+        curl https://github.com/gohugoio/hugo/releases/download/v0.59.1/hugo_extended_0.59.1_Linux-64bit.tar.gz | tar xf - 
+        
         sbt clean docs/mdoc docs/unidoc
         cd website
-        hugo
+        ../hugo_extended_0.59.1_Linux-64bit/hugo
         cd public
         touch .nojekyll
     - name: gh-pages-deploy
