@@ -1,0 +1,46 @@
+name: master
+
+on:
+  push:
+    branches: [master]
+    tags: ["*"]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: 'pityka/base-ubuntu-libtorch:3'
+      env: 
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      
+    
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/setup-node@v1
+    - uses: olafurpg/setup-gpg@v2
+    - uses: peaceiris/actions-hugo@v2.2.2
+      with: 
+        hugo-version: '0.59.1'
+        extended: true
+    - name: Compile
+      run: sbt -mem 3000 clean coverage test coverageAggregate
+    - name: Codecov
+      uses: codecov/codecov-action@v1.0.2
+      if: github.actor == 'pityka'
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+    - name: website
+      run: |
+        sbt clean docs/mdoc docs/unidoc
+        cd website
+        hugo
+        cd public
+        touch .nojekyll
+    - name: gh-pages-deploy
+      uses: peaceiris/actions-gh-pages@v2.5.0
+      env:
+        ACTIONS_DEPLOY_KEY: ${{ secrets.DEPLOY_KEY_PRIVATE }}
+        PUBLISH_BRANCH: gh-pages
+        PUBLISH_DIR: website/public

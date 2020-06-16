@@ -133,10 +133,25 @@ lazy val example_timemachine = project
   )
   .dependsOn(core, data)
 
+lazy val docs = project
+  .in(file("lamp-docs"))
+  .dependsOn(core, data)
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    moduleName := "lamp-docs",
+    mdocVariables := Map(
+      "VERSION" -> version.value
+    ),
+    target in (ScalaUnidoc, unidoc) := (baseDirectory in LocalRootProject).value / "website" / "static" / "api",
+    cleanFiles += (target in (ScalaUnidoc, unidoc)).value
+  )
+  .enablePlugins(MdocPlugin, ScalaUnidocPlugin)
+
 lazy val root = project
   .in(file("."))
   .settings(
     publishArtifact := false,
     skip in publish := true
   )
-  .aggregate(core, data, example_cifar100, example_timemachine)
+  .aggregate(core, data, docs, example_cifar100, example_timemachine)

@@ -4,3 +4,10 @@ target
 todo
 test_data
 checkpoint
+website/public/
+website/static/api
+_gen/
+saddle-binary/
+saddle-circe/
+saddle-core/
+spire-prng/
