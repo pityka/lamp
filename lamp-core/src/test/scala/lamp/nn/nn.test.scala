@@ -123,9 +123,64 @@ class NNSuite extends AnyFunSuite {
       assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
 
     }
+  def testGradientAndValueNDLong[T](
+      id: String,
+      st: T,
+      cuda: Boolean = false
+  )(
+      m: NDArray[Long],
+      moduleF: () => StatefulModule[T],
+      expectedValue: Double
+  ) =
+    test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+      val d = const(NDArray.tensorFromLongNDArray(m, cuda))
+      val module = moduleF()
+      val output = module.forward1(d, st)._1
+      val sum = output.sum
+      val value = NDArray.tensorToNDArray(sum.value).data(0)
+      val gradAuto =
+        module.gradients(sum).map(_.get).map(NDArray.tensorToNDArray)
+      val gradNum = module.parameters.map {
+        case (paramT, _) =>
+          val oldparam = ATen.clone(paramT.value)
+          val param = NDArray.tensorToNDArray(paramT.value)
+          def f(p: NDArray[Double]) = {
+            val p2 = NDArray.tensorFromNDArray(p, cuda)
+            ATen.zero_(paramT.value)
+            ATen.add_out(
+              paramT.value,
+              paramT.value,
+              p2,
+              1d
+            )
+            TensorHelpers.toMat(module.forward1(d, st)._1.sum.value).raw(0)
+          }
+          val eps = 1e-6
+          val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
+            case (_, idx) =>
+              val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
+              epsM.set(idx, eps)
+              val a = f(param + epsM)
+              val b = f(param - epsM)
+              val r = (a - b) / (2 * eps)
+              r
+          }
+          ATen.zero_(paramT.value)
+          ATen.add_out(paramT.value, paramT.value, oldparam, 1d)
+          r
+      }
+      assert(gradAuto.size == gradNum.size)
+      gradAuto.zip(gradNum).foreach {
+        case (a, b) =>
+          assert(a.toVec.roundTo(4) == b.toVec.roundTo(4))
+      }
+      assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
+
+    }
 
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
   val mat3x2 = mat2x3.T
+  val nd2x3L = NDArray(mat2x3.map(_ => 1L).toArray, List(2, 3))
   val nd1x2x3 = NDArray(mat2x3.toArray, List(1, 2, 3))
   val nd1x2x3x3 =
     NDArray((0 until 18).toArray.map(_.toDouble), List(1, 2, 3, 3))
@@ -263,14 +318,14 @@ class NNSuite extends AnyFunSuite {
       ),
     0d
   )
-  testGradientAndValueND("BatchNorm2D ", (), false)(
-    nd1x2x3x3,
+
+  testGradientAndValueNDLong("Embedding ", (), false)(
+    nd2x3L,
     () =>
-      BatchNorm2D(
-        2,
-        TensorOptions.dtypeDouble()
+      Embedding(
+        weights = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble))
       ),
-    0d
+    24d
   )
   testGradientAndValueND("RNN ", Option.empty[Variable], false)(
     nd2x3x2,

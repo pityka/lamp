@@ -1479,5 +1479,24 @@ class GradientSuite extends AnyFunSuite {
       input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
     )
   }
+  testGradientAndValue("embedding ")(mat2x3, 240d) { (m, doBackprop, cuda) =>
+    val weight =
+      param(TensorHelpers.fromMat(m, cuda))
+    val input =
+      param(TensorHelpers.fromLongMat(mat.ones(4, 5).map(_.toLong), cuda))
+
+    val output = Embedding(input, weight).value
+
+    assert(output.shape == List(4, 5, 3))
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      weight.partialDerivative.map(t => t.toMat)
+    )
+  }
 
 }

@@ -1217,3 +1217,27 @@ case class BatchNorm2D(
     }
   )
 }
+case class Embedding(
+    input: Variable,
+    weight: Variable
+) extends Op {
+
+  assert(input.shape.size >= 1, "Input dimensions must be at least 1")
+  assert(weight.shape.size == 2, "Weight must have 2 dimensions")
+
+  override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
+    weight.zipBackward { (p, out) =>
+      val tmp = ATen
+        .embedding_backward(p, input.value, weight.shape(0), 0L, false, false)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+
+    }
+  )
+
+  val value =
+    Variable(
+      this,
+      ATen.embedding(weight.value, input.value, 0L, false, false)
+    )
+}
