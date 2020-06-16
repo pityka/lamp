@@ -28,10 +28,10 @@ jobs:
     - name: website
       run: |
         curl -L https://github.com/gohugoio/hugo/releases/download/v0.59.1/hugo_extended_0.59.1_Linux-64bit.tar.gz | tar xzf - 
-        
+        chmod u+x hugo
         sbt clean docs/mdoc docs/unidoc
         cd website
-        ../hugo_extended_0.59.1_Linux-64bit/hugo
+        ../hugo
         cd public
         touch .nojekyll
     - name: gh-pages-deploy
