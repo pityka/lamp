@@ -219,7 +219,7 @@ object Train extends App {
           model = model,
           optimizerFactory = optimizer,
           trainBatchesOverEpoch = trainEpochs,
-          validationBatchesOverEpoch = testEpochs,
+          validationBatchesOverEpoch = Some(testEpochs),
           epochs = config.epochs,
           trainingCallback = TrainingCallback.noop,
           validationCallback = validationCallback,

@@ -122,7 +122,7 @@ class MLPSuite extends AnyFunSuite {
           weightDecay = simple(0.001d)
         ),
       trainBatchesOverEpoch = makeTrainingBatch,
-      validationBatchesOverEpoch = makeValidationBatch,
+      validationBatchesOverEpoch = Some(makeValidationBatch),
       epochs = 10,
       trainingCallback = TrainingCallback.noop,
       validationCallback = validationCallback,
@@ -132,8 +132,7 @@ class MLPSuite extends AnyFunSuite {
     val (loss, output, numExamples) = trainedModel
       .flatMap(_.lossAndOutput(testDataTensor, testTarget).allocated.map(_._1))
       .unsafeRunSync
-
-    assert(loss < 50)
+    assert(loss < 3)
 
   }
 }

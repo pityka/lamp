@@ -29,6 +29,7 @@ import java.io.FileOutputStream
 import lamp.data.Reader
 import lamp.DoublePrecision
 import lamp.FloatingPointPrecision
+import lamp.SinglePrecision
 
 object Cifar {
   def loadImageFile(
@@ -87,7 +88,8 @@ case class CliConfig(
     dropout: Double = 0.0,
     network: String = "lenet",
     checkpointSave: Option[String] = None,
-    checkpointLoad: Option[String] = None
+    checkpointLoad: Option[String] = None,
+    singlePrecision: Boolean = false
 )
 
 object Train extends App {
@@ -110,6 +112,7 @@ object Train extends App {
         .text("path to cifar100 fine label file")
         .required(),
       opt[Unit]("gpu").action((x, c) => c.copy(cuda = true)),
+      opt[Unit]("single").action((x, c) => c.copy(singlePrecision = true)),
       opt[Int]("batch-train").action((x, c) => c.copy(trainBatchSize = x)),
       opt[Int]("batch-test").action((x, c) => c.copy(testBatchSize = x)),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
@@ -130,7 +133,8 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
       val device = if (config.cuda) CudaDevice(0) else CPU
-      val precision = DoublePrecision
+      val precision =
+        if (config.singlePrecision) SinglePrecision else DoublePrecision
       val tensorOptions = device.options(precision)
       val model: SupervisedModel[Unit] = {
         val numClasses = 100
@@ -198,7 +202,7 @@ object Train extends App {
           model = model,
           optimizerFactory = optimizer,
           trainBatchesOverEpoch = trainEpochs,
-          validationBatchesOverEpoch = testEpochs,
+          validationBatchesOverEpoch = Some(testEpochs),
           epochs = config.epochs,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.logAccuracy,

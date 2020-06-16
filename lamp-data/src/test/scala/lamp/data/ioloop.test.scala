@@ -64,7 +64,7 @@ class IOLoopSuite extends AnyFunSuite {
       trainBatchesOverEpoch =
         () => BatchStream.fromFullBatch(x, target, device),
       validationBatchesOverEpoch =
-        () => BatchStream.fromFullBatch(x, target, device),
+        Some(() => BatchStream.fromFullBatch(x, target, device)),
       epochs = 50,
       trainingCallback = TrainingCallback.noop,
       validationCallback = ValidationCallback.noop,
@@ -117,8 +117,9 @@ class IOLoopSuite extends AnyFunSuite {
         ),
       trainBatchesOverEpoch =
         () => BatchStream.minibatchesFromFull(200, true, x, target, device),
-      validationBatchesOverEpoch =
-        () => BatchStream.minibatchesFromFull(200, true, x, target, device),
+      validationBatchesOverEpoch = Some(() =>
+        BatchStream.minibatchesFromFull(200, true, x, target, device)
+      ),
       epochs = 50,
       trainingCallback = TrainingCallback.noop,
       validationCallback = ValidationCallback.noop,

@@ -15,7 +15,7 @@ object IOLoops {
       model: SupervisedModel[ST],
       optimizerFactory: Seq[(Tensor, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream,
-      validationBatchesOverEpoch: () => BatchStream,
+      validationBatchesOverEpoch: Option[() => BatchStream],
       epochs: Int,
       trainingCallback: TrainingCallback,
       validationCallback: ValidationCallback,
@@ -41,15 +41,17 @@ object IOLoops {
             logger,
             logFrequency
           )
-          maybeValidationLoss <- if (epoch % validationFrequency == 0)
+          _ <- if (checkpointFile.isDefined)
+            writeCheckpoint(checkpointFile.get, model.module)
+          else IO.unit
+          maybeValidationLoss <- if (epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined)
             validationOneEpoch(
               model = modelWithOptimizer.model,
-              validationBatches = validationBatchesOverEpoch(),
+              validationBatches = validationBatchesOverEpoch.get(),
               validationCallback = validationCallback,
               logger = logger,
               validationLogFrequency = logFrequency,
               epochCount = epoch,
-              checkpointFile = checkpointFile,
               minimumCheckpointFile = minimumCheckpointFile,
               minimumValidationLossSoFar = minValidationLoss
             ).map(Some(_))
@@ -122,7 +124,6 @@ object IOLoops {
       logger: Option[Logger],
       validationLogFrequency: Int,
       epochCount: Long,
-      checkpointFile: Option[File],
       minimumCheckpointFile: Option[File],
       minimumValidationLossSoFar: Option[Double]
   ): IO[Double] = {
@@ -191,13 +192,11 @@ object IOLoops {
               )
             )
           }
-          _ <- if (checkpointFile.isDefined)
-            writeCheckpoint(checkpointFile.get, model.module)
-          else IO.unit
+
           _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
             IO {
               scribe.info(
-                s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $checkpointFile"
+                s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
               )
             }.flatMap(_ =>
               writeCheckpoint(minimumCheckpointFile.get, model.module)
