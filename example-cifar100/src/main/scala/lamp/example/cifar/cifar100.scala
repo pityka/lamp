@@ -68,21 +68,6 @@ object Cifar {
       tmp.release()
       f
     }
-    // {
-    //   val first = ATen.select(fullBatch, 0, 1)
-    //   val firstRed = ATen.select(first, 0, 1)
-    //   println(firstRed.toMat)
-    // }
-    // {
-    //   val normalized = fullBatch.normalized
-    //   val first = ATen.select(normalized, 0, 1)
-    //   val firstRed = ATen.select(first, 0, 1)
-    //   println(firstRed.toMat)
-    // }
-    // ???
-    // println(tensors.map(_._1.toLong).apply(1))
-    // AWTWindow.showImage(first)
-    // ???
 
     tensors.foreach(_._2.release())
     (labels, fullBatch)
@@ -155,14 +140,18 @@ object Train extends App {
             Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
           else Cnn.resnet(32, 32, numClasses, config.dropout, tensorOptions)
 
-        // val loadedNet = config.checkpointLoad match {
-        //   case None => net
-        //   case Some(file) =>
-        //     Reader.loadFromFile(net, new File(file))
-        // }
-        scribe.info("Learnable parametes: " + net.learnableParameters)
-        scribe.info("parameters: " + net.parameters.mkString("\n"))
-        SupervisedModel(net, (), LossFunctions.NLL(numClasses, classWeights))
+        val loadedNet = config.checkpointLoad match {
+          case None => net
+          case Some(file) =>
+            Reader.loadFromFile(net, new File(file), device)
+        }
+        scribe.info("Learnable parametes: " + loadedNet.learnableParameters)
+        scribe.info("parameters: " + loadedNet.parameters.mkString("\n"))
+        SupervisedModel(
+          loadedNet,
+          (),
+          LossFunctions.NLL(numClasses, classWeights)
+        )
       }
 
       val (trainTarget, trainFullbatch) =

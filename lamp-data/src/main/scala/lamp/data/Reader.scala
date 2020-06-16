@@ -17,6 +17,8 @@ import lamp.nn.Module
 import java.io.File
 import lamp.nn.StatefulModule
 import lamp.util.NDArray
+import lamp.Device
+import lamp.SinglePrecision
 
 object Reader {
 
@@ -112,7 +114,8 @@ object Reader {
   def readTensorDataFromChannel[T: ST](
       channel: ReadableByteChannel,
       shape: List[Int],
-      width: Int
+      width: Int,
+      device: Device
   ): Either[String, Tensor] = {
     val numel = if (shape.size == 0) 1 else shape.reduce(_ * _)
     val bb = ByteBuffer
@@ -123,10 +126,11 @@ object Reader {
       if (data.size != numel) {
         Left("Premature end of input")
       } else {
+        val dopt = device.options(SinglePrecision)
         val topt = implicitly[ST[T]] match {
-          case ScalarTagDouble => TensorOptions.dtypeDouble()
-          case ScalarTagFloat  => TensorOptions.dtypeFloat()
-          case ScalarTagLong   => TensorOptions.dtypeLong()
+          case ScalarTagDouble => dopt.toDouble
+          case ScalarTagFloat  => dopt.toFloat()
+          case ScalarTagLong   => dopt.toLong()
         }
         val t = ATen.zeros(shape.map(_.toLong).toArray, topt)
         implicitly[ST[T]] match {
@@ -140,7 +144,8 @@ object Reader {
   }
 
   def readTensorFromChannel[T: ST](
-      channel: ReadableByteChannel
+      channel: ReadableByteChannel,
+      device: Device
   ): Either[String, Tensor] = {
     readHeaderFromChannel[T](channel).right.flatMap { descriptor =>
       width[T].right.flatMap { width =>
@@ -149,8 +154,9 @@ object Reader {
             .get(KEY_shape)
             .map(_.arr.map(_.num.toInt).toList)
         shape match {
-          case None        => Left("No shape")
-          case Some(shape) => readTensorDataFromChannel(channel, shape, width)
+          case None => Left("No shape")
+          case Some(shape) =>
+            readTensorDataFromChannel(channel, shape, width, device)
         }
       }
     }
@@ -158,11 +164,12 @@ object Reader {
 
   def readTensorsFromChannel(
       types: Seq[(ScalarTag[_])],
-      channel: ReadableByteChannel
+      channel: ReadableByteChannel,
+      device: Device
   ): Either[String, Seq[Tensor]] =
     Reader.sequence(types.map {
       case st =>
-        readTensorFromChannel(channel)(st)
+        readTensorFromChannel(channel, device)(st)
     })
 
   class ByteChannel(src: ByteBuffer) extends ReadableByteChannel {
@@ -179,9 +186,10 @@ object Reader {
   }
 
   def readTensorFromArray[T: ST](
-      array: Array[Byte]
+      array: Array[Byte],
+      device: Device
   ): Either[String, Tensor] =
-    readTensorFromChannel(new ByteChannel(ByteBuffer.wrap(array)))
+    readTensorFromChannel(new ByteChannel(ByteBuffer.wrap(array)), device)
 
   def scalarTypeToScalarTag(t: Byte) = t match {
     case 4 => ScalarTagLong
@@ -189,7 +197,7 @@ object Reader {
     case 7 => ScalarTagDouble
   }
 
-  def loadFromFile[T](module: StatefulModule[T], file: File) = {
+  def loadFromFile[T](module: StatefulModule[T], file: File, device: Device) = {
     val channel = Resource.make(IO {
       val fis = new FileInputStream(file)
       fis.getChannel
@@ -201,7 +209,8 @@ object Reader {
           Reader.readTensorsFromChannel(
             oldTensors
               .map(t => scalarTypeToScalarTag(t.options.scalarTypeByte())),
-            channel
+            channel,
+            device
           )
         }
       }
