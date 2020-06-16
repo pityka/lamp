@@ -35,6 +35,7 @@ import lamp.nn.GRU
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.Charset
 import scala.io.Codec
+import lamp.nn.Embedding
 
 case class CliConfig(
     trainData: String = "",
@@ -132,11 +133,9 @@ object Train extends App {
           ATen.ones(Array(vocabularSize), tensorOptions)
         val net1 =
           Seq3(
-            RNN(
-              in = vocabularSize,
-              hiddenSize = 64,
-              out = 20,
-              dropout = 0d,
+            Embedding(
+              classes = vocabularSize,
+              dimensions = 20,
               tOpt = tensorOptions
             ),
             GRU(
@@ -159,7 +158,7 @@ object Train extends App {
         scribe.info("Learnable parameters: " + net.learnableParameters)
         SupervisedModel(
           net,
-          (None, None, ()),
+          ((), None, ()),
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
@@ -172,7 +171,6 @@ object Train extends App {
             lookAhead,
             device
           )
-          .map(BatchStream.oneHotFeatures(vocabularSize, precision))
       val testEpochs = () =>
         Text
           .minibatchesFromText(
@@ -181,7 +179,6 @@ object Train extends App {
             lookAhead,
             device
           )
-          .map(BatchStream.oneHotFeatures(vocabularSize, precision))
 
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
@@ -241,16 +238,14 @@ object Train extends App {
             precision,
             trainedModel.module,
             (
-              None,
+              (),
               None,
               ()
             ),
-            vocabularSize,
-            lookAhead,
-            rvocab
+            lookAhead
           )
           .use { variable =>
-            IO { Text.convertLogitsToText(variable.value, rvocab) }
+            IO { Text.convertIntegersToText(variable.value, rvocab) }
           }
           .unsafeRunSync()
 

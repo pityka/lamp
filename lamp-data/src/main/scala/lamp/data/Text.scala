@@ -22,9 +22,7 @@ object Text {
       precision: FloatingPointPrecision,
       module: StatefulModule[T],
       init: T,
-      vocabularySize: Int,
-      steps: Int,
-      vocab: Map[Int, Char]
+      steps: Int
   ): Resource[IO, Variable] = {
     val batchSize = batch.size
     def loop(
@@ -47,7 +45,7 @@ object Text {
         } else output
 
         val nextInput =
-          lastChar.argmax(2, false).oneHot(vocabularySize).cast(precision)
+          lastChar.argmax(2, false)
 
         loop(
           nextInput,
@@ -57,14 +55,13 @@ object Text {
         )
       }
     }
-    val batchAsOneHotEncodedTensor =
-      makePredictionBatch(batch, device, vocabularySize, precision)
-    batchAsOneHotEncodedTensor.flatMap { batch =>
+
+    makePredictionBatch(batch, device, precision).flatMap { batch =>
       Resource.make(IO {
 
         ConcatenateAddNewDim(
           loop(const(batch), init, steps, Seq())
-        ).value.view(List(steps, batchSize, vocabularySize))
+        ).value.view(List(steps, batchSize))
 
       })(variable => IO { variable.releaseAll })
     }
@@ -76,7 +73,6 @@ object Text {
       tensor: Tensor,
       vocab: Map[Int, Char]
   ): Seq[String] = {
-
     val t = ATen.argmax(tensor, 2, false)
     val r = convertIntegersToText(t, vocab)
     t.release
@@ -118,7 +114,6 @@ object Text {
   def makePredictionBatch(
       examples: Seq[Vector[Long]],
       device: Device,
-      vocabularSize: Int,
       precision: FloatingPointPrecision
   ) = {
     Resource.make(IO {
@@ -131,21 +126,16 @@ object Text {
       )
       val transposedFeatures = viewedFeature.transpose(0, 1)
       val movedFeature = device.to(transposedFeatures)
-      val oneHot = ATen.one_hot(movedFeature, vocabularSize)
-      val double =
-        if (precision == DoublePrecision) ATen._cast_Double(oneHot, false)
-        else ATen._cast_Float(oneHot, false)
+
       Tensor.releaseAll(
         Array(
           viewedFeature,
           flattenedFeature,
-          transposedFeatures,
-          movedFeature,
-          oneHot
+          transposedFeatures
         )
       )
 
-      double
+      movedFeature
     })(a => IO(a.release))
   }
 

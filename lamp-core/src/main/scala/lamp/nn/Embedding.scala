@@ -44,7 +44,7 @@ object Embedding {
         ATen.normal_3(
           0d,
           math.sqrt(2d / (classes + dimensions)),
-          Array(dimensions, classes),
+          Array(classes, dimensions),
           tOpt
         )
       )
