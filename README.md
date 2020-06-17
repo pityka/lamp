@@ -2,6 +2,8 @@
 
 [![codecov](https://codecov.io/gh/pityka/lamp/branch/master/graph/badge.svg)](https://codecov.io/gh/pityka/lamp)
 [![](https://github.com/pityka/lamp/workflows/CI/badge.svg)](https://github.com/pityka/lamp/actions?query=workflow%3ACI)
+[![doc](https://img.shields.io/badge/api-scaladoc-green)](https://pityka.github.io/lamp/api/lamp/index.html)
+[![doc](https://img.shields.io/badge/docs-green)](https://pityka.github.io/lamp)
 
 Lamp is a deep learning library for Scala with native CPU and GPU backend. 
 
