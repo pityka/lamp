@@ -100,6 +100,25 @@ class NNSuite extends AnyFunSuite {
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
       val d = const(NDArray.tensorFromNDArray(m, cuda))
       val module = moduleF()
+
+      {
+        val module1 = moduleF()
+        val state = module1.state
+        val modifiedState = state.map {
+          case (v, ptag) =>
+            ATen.mul_1(v.value, -1d)
+        }
+        val module2 = module1.load(modifiedState)
+        (module2.state zip modifiedState).foreach {
+          case ((st1, _), (st2)) =>
+            assert(
+              NDArray.tensorToNDArray(st1.value).toVec == NDArray
+                .tensorToNDArray(st2)
+                .toVec
+            )
+        }
+      }
+
       val output = module.forward1(d, st)._1
       val sum = output.sum
       val value = NDArray.tensorToNDArray(sum.value).data(0)
@@ -154,6 +173,25 @@ class NNSuite extends AnyFunSuite {
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
       val d = const(NDArray.tensorFromLongNDArray(m, cuda))
       val module = moduleF()
+
+      {
+        val module1 = moduleF()
+        val state = module1.state
+        val modifiedState = state.map {
+          case (v, ptag) =>
+            ATen.mul_1(v.value, -1d)
+        }
+        val module2 = module1.load(modifiedState)
+        (module2.state zip modifiedState).foreach {
+          case ((st1, _), (st2)) =>
+            assert(
+              NDArray.tensorToNDArray(st1.value).toVec == NDArray
+                .tensorToNDArray(st2)
+                .toVec
+            )
+        }
+      }
+
       val output = module.forward1(d, st)._1
       val sum = output.sum
       val value = NDArray.tensorToNDArray(sum.value).data(0)
