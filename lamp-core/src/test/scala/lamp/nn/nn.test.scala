@@ -375,6 +375,15 @@ class NNSuite extends AnyFunSuite {
       ),
     0d
   )
+  testGradientAndValueND("BatchNorm 2D", (), false)(
+    nd1x2x3x3,
+    () =>
+      BatchNorm2D(
+        2,
+        TensorOptions.dtypeDouble()
+      ),
+    0d
+  )
 
   testGradientAndValueNDLong("Embedding ", (), false)(
     nd2x3L,
