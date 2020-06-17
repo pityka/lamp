@@ -35,7 +35,7 @@ jobs:
         cd public
         touch .nojekyll
     - name: gh-pages-deploy
-      uses: peaceiris/actions-gh-pages@v3.0
+      uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         pubish_branch: gh-pages
