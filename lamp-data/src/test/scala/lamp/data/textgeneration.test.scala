@@ -17,12 +17,22 @@ import cats.effect.IO
 import scala.collection.mutable
 import java.io.File
 import cats.effect.Resource
+import java.nio.charset.CodingErrorAction
+import java.nio.charset.Charset
+import scala.io.Codec
 
 class TextGenerationSuite extends AnyFunSuite {
+  val asciiSilentCharsetDecoder = Charset
+    .forName("UTF8")
+    .newDecoder()
+    .onMalformedInput(CodingErrorAction.REPLACE)
+    .onUnmappableCharacter(CodingErrorAction.REPLACE)
   test("text learning") {
     val trainText =
       scala.io.Source
-        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))
+        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
+          Codec.apply(asciiSilentCharsetDecoder)
+        )
         .mkString
 
     val (vocab, _) = Text.charsToIntegers(trainText)
@@ -102,7 +112,9 @@ class TextGenerationSuite extends AnyFunSuite {
   test("text generation") {
     val trainText =
       scala.io.Source
-        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))
+        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
+          Codec.apply(asciiSilentCharsetDecoder)
+        )
         .mkString
 
     val (vocab, _) = Text.charsToIntegers(trainText)
