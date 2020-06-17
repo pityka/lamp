@@ -5,6 +5,7 @@ import lamp.autograd._
 import aten.ATen
 import aten.TensorOptions
 import lamp.nn._
+import scribe.Logger
 
 trait TrainingCallback {
   def apply(
@@ -38,7 +39,7 @@ object ValidationCallback {
         epochCount: Long
     ) = ()
   }
-  val logAccuracy = new ValidationCallback {
+  def logAccuracy(logger: Logger) = new ValidationCallback {
     def apply(
         validationOutput: Tensor,
         validationTarget: Tensor,
@@ -48,15 +49,15 @@ object ValidationCallback {
       val prediction = {
         val t = ATen.argmax(validationOutput, 1, false)
         val r = TensorHelpers
-          .toMatLong(t)
+          .toLongMat(t)
           .toVec
         t.release
         r
       }
       val corrects = prediction.zipMap(
-        TensorHelpers.toMatLong(validationTarget).toVec
+        TensorHelpers.toLongMat(validationTarget).toVec
       )((a, b) => if (a == b) 1d else 0d)
-      scribe.info(
+      logger.info(
         s"epoch: $epochCount, validation loss: $validationLoss, corrects: ${corrects.mean}"
       )
 

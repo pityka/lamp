@@ -61,7 +61,7 @@ class LogisticSuite extends AnyFunSuite {
       val output = model.forward(x)
       val prediction = {
         val argm = ATen.argmax(output.value, 1, false)
-        val r = TensorHelpers.toMatLong(argm).toVec
+        val r = TensorHelpers.toLongMat(argm).toVec
         argm.release
         r
       }

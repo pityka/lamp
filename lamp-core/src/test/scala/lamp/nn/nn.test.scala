@@ -28,6 +28,25 @@ class NNSuite extends AnyFunSuite {
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
       val d = const(TensorHelpers.fromMat(m, cuda))
       val module = moduleF()
+
+      {
+        val module1 = moduleF()
+        val state = module1.state
+        val modifiedState = state.map {
+          case (v, ptag) =>
+            ATen.mul_1(v.value, -1d)
+        }
+        val module2 = module1.load(modifiedState)
+        (module2.state zip modifiedState).foreach {
+          case ((st1, _), (st2)) =>
+            assert(
+              NDArray.tensorToNDArray(st1.value).toVec == NDArray
+                .tensorToNDArray(st2)
+                .toVec
+            )
+        }
+      }
+
       val output = module.forward(d)
       val sum = output.sum
       val value = TensorHelpers.toMat(sum.value).raw(0)
@@ -442,7 +461,7 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
   override def load(parameters: Seq[Tensor]) = this
 
   override def state: Seq[(Variable, PTag)] =
-    List(w -> NoTag)
+    Nil
 
 }
 case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
@@ -464,13 +483,13 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
   override def state: Seq[(Variable, PTag)] =
     mod.state
 
-  override def load(parameters: Seq[Tensor]) = this
+  override def load(parameters: Seq[Tensor]) = mod.load(parameters)
 
 }
 
 case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
 
-  override def load(parameters: Seq[Tensor]) = this
+  override def load(parameters: Seq[Tensor]) = mod.load(parameters)
 
   val mod = Sequential(
     Linear(

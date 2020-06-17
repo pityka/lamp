@@ -27,27 +27,6 @@ trait BatchStream { self =>
 
 object BatchStream {
 
-  def oneHotFeatures(
-      vocabularSize: Int,
-      precision: FloatingPointPrecision
-  ): (Tensor, Tensor) => Resource[IO, (Tensor, Tensor)] = {
-    case (feature, target) =>
-      Resource.make(IO {
-        val oneHot = ATen.one_hot(feature, vocabularSize)
-        val double =
-          if (precision == DoublePrecision) ATen._cast_Double(oneHot, false)
-          else ATen._cast_Float(oneHot, false)
-        oneHot.release
-        (double, target)
-
-      }) {
-        case (double, _) =>
-          IO {
-            double.release()
-          }
-
-      }
-  }
   def minibatchesFromFull(
       minibatchSize: Int,
       dropLast: Boolean,

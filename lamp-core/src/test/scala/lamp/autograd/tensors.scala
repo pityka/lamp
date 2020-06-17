@@ -14,6 +14,52 @@ class TensorHelperSuite extends AnyFunSuite {
     val m = TensorHelpers.toMat(eye)
     assert(m == mat.ident(3))
   }
+  test("to/from double") {
+    val eye = ATen.eye_1(3, 3, TensorOptions.d)
+    val m = TensorHelpers.toMat(eye)
+    assert(m == mat.ident(3))
+  }
+  test("to/from long") {
+    val eye = ATen.eye_1(3, 3, TensorOptions.l)
+    val m = TensorHelpers.toLongMat(eye)
+    assert(m == mat.ident(3).map(_.toLong))
+  }
+  test("to/from float") {
+    val eye = ATen.eye_1(3, 3, TensorOptions.f)
+    val m = TensorHelpers.toFloatMat(eye)
+    assert(m == mat.ident(3).map(_.toFloat))
+  }
+  test("to/from double scalar") {
+    val eye = ATen.scalar_tensor(1d, TensorOptions.d)
+    val m = TensorHelpers.toMat(eye)
+    assert(m == mat.ones(1, 1))
+  }
+  test("to/from float scalar") {
+    val eye = ATen.scalar_tensor(1d, TensorOptions.f)
+    val m = TensorHelpers.toFloatMat(eye)
+    assert(m == mat.ones(1, 1).map(_.toFloat))
+  }
+  test("to/from long scalar") {
+    val eye = ATen.scalar_tensor(1d, TensorOptions.l)
+    val m = TensorHelpers.toLongMat(eye)
+    assert(m == mat.ones(1, 1).map(_.toLong))
+  }
+  test("to/from double Vec") {
+    val eye = ATen.ones(Array(3L), TensorOptions.d)
+    val m = TensorHelpers.toMat(eye)
+    assert(m == mat.ones(1, 3))
+  }
+  test("to/from float Vec") {
+    val eye = ATen.ones(Array(3L), TensorOptions.f)
+    val m = TensorHelpers.toFloatMat(eye)
+    assert(m == mat.ones(1, 3).map(_.toFloat))
+  }
+  test("to/from long Vec") {
+    val eye = ATen.ones(Array(3L), TensorOptions.l)
+    val m = TensorHelpers.toLongMat(eye)
+    assert(m == mat.ones(1, 3).map(_.toLong))
+  }
+
   test("index") {
     val m = TensorHelpers.fromMat(mat.ident(3))
     val idx = ATen.squeeze_0(TensorHelpers.fromLongMat(Mat(Vec(1L))))

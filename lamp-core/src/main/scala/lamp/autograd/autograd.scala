@@ -7,6 +7,7 @@ import java.{util => ju}
 import aten.TensorOptions
 import scala.collection.mutable
 import lamp.FloatingPointPrecision
+import lamp.syntax
 
 /**
   * Params: the input and the function which calculates the partial derivative
@@ -160,8 +161,8 @@ case class Variable(
   def view(shape: List[Int]) = View(this, shape.map(_.toLong).toArray).value
   def flattenLastDimensions(dims: Int) = FlattenLastDimensions(this, dims).value
 
-  def toMat = TensorHelpers.toMat(value)
-  def toLongMat = TensorHelpers.toMatLong(value)
+  def toMat = value.toMat
+  def toLongMat = value.toLongMat
 }
 
 object Autograd {

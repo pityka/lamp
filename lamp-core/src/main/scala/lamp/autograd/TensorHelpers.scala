@@ -82,7 +82,7 @@ object TensorHelpers {
       Mat.apply(1, shape(0).toInt, arr)
     } else throw new RuntimeException("shape: " + shape.deep)
   }
-  def toMatLong(t: Tensor) = {
+  def toLongMat(t: Tensor) = {
     assert(
       t.options.scalarTypeByte == 4,
       s"Expected Long Tensor. Got scalartype: ${t.options.scalarTypeByte}"

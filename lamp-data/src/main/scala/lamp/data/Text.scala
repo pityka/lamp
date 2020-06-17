@@ -87,7 +87,7 @@ object Text {
       vocab: Map[Int, Char]
   ): Seq[String] = {
 
-    val r = TensorHelpers.toMatLong(tensor).T
+    val r = TensorHelpers.toLongMat(tensor).T
     r.rows.map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
 
   }

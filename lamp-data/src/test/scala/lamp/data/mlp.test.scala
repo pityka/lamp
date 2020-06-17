@@ -10,6 +10,7 @@ import lamp.{CPU, CudaDevice, DoublePrecision}
 import aten.ATen
 import aten.TensorOptions
 import aten.Tensor
+import scribe.Level
 
 class MLPSuite extends AnyFunSuite {
 
@@ -93,26 +94,13 @@ class MLPSuite extends AnyFunSuite {
         device
       )
 
-    val validationCallback = new ValidationCallback {
-      def apply(
-          validationOutput: Tensor,
-          validationTarget: Tensor,
-          validationLoss: Double,
-          epochCount: Long
-      ): Unit = {
-        val prediction = {
-          val t = ATen.argmax(validationOutput, 1, false)
-          val r = TensorHelpers
-            .toMatLong(t)
-            .toVec
-          t.release
-          r
-        }
-        val correct = prediction.zipMap(
-          TensorHelpers.toMatLong(validationTarget).toVec
-        )((a, b) => if (a == b) 1d else 0d)
-      }
-    }
+    val logger = scribe
+      .Logger("test")
+      .clearHandlers()
+      .clearModifiers()
+      .withMinimumLevel(Level.Error)
+    val validationCallback =
+      ValidationCallback.logAccuracy(logger)
 
     val trainedModel = IOLoops.epochs(
       model = model,
