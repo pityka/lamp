@@ -151,7 +151,11 @@ object Train extends App {
         val net = config.checkpointLoad
           .map { load =>
             scribe.info(s"Loading parameters from file $load")
-            Reader.loadFromFile(net1, new File(load), device)
+            Reader
+              .loadFromFile(net1, new File(load), device)
+              .unsafeRunSync()
+              .right
+              .get
           }
           .getOrElse(net1)
 

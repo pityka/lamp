@@ -202,24 +202,32 @@ object Reader {
       val fis = new FileInputStream(file)
       fis.getChannel
     })(v => IO { v.close })
+    loadFromChannel(module, channel, device)
+  }
+  def loadFromChannel[T](
+      module: StatefulModule[T],
+      channel: Resource[IO, ReadableByteChannel],
+      device: Device
+  ) = {
+
     val oldTensors = module.state.map(_._1.value)
-    val mayTensors = channel
+    channel
       .use { channel =>
         IO {
-          Reader.readTensorsFromChannel(
-            oldTensors
-              .map(t => scalarTypeToScalarTag(t.options.scalarTypeByte())),
-            channel,
-            device
-          )
+          Reader
+            .readTensorsFromChannel(
+              oldTensors
+                .map(t => scalarTypeToScalarTag(t.options.scalarTypeByte())),
+              channel,
+              device
+            )
+            .right
+            .map { tensors =>
+              oldTensors.foreach(_.release)
+              module.load(tensors)
+            }
         }
       }
-      .unsafeRunSync()
-    if (mayTensors.isLeft) {
-      scribe.error(s"Failed to read file $file: ${mayTensors}")
-    }
-    val tensors = mayTensors.right.get
-    oldTensors.foreach(_.release)
-    module.load(tensors)
+
   }
 }
