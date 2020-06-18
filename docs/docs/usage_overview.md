@@ -29,7 +29,8 @@ First get some tabular data into the JVM memory:
             new java.util.zip.GZIPInputStream(
               getClass.getResourceAsStream("/mnist_test.csv.gz")
             )
-          )
+          ),
+        maxLines = 100L
       )
       .right
       .get
@@ -40,7 +41,8 @@ First get some tabular data into the JVM memory:
             new java.util.zip.GZIPInputStream(
               getClass.getResourceAsStream("/mnist_train.csv.gz")
             )
-          )
+          ),
+        maxLines = 100L
       )
       .right
       .get
