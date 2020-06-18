@@ -2,7 +2,6 @@ package lamp.nn
 
 import org.saddle._
 import org.saddle.ops.BinOps._
-import org.saddle.linalg._
 import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
 import lamp.autograd._
