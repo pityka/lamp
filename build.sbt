@@ -79,7 +79,7 @@ lazy val core = project
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "aten-scala-core" % "0.0.0+36-7a376e99",
       "io.github.pityka" %% "saddle-core" % "2.0.0-M25",
-      "io.github.pityka" %% "saddle-linalg" % "2.0.0-M25",
+      // "io.github.pityka" %% "saddle-linalg" % "2.0.0-M25",
       "org.typelevel" %% "cats-core" % "2.1.1",
       "org.typelevel" %% "cats-effect" % "2.1.3",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
@@ -135,7 +135,7 @@ lazy val example_timemachine = project
 
 lazy val docs = project
   .in(file("lamp-docs"))
-  .dependsOn(core, data)
+  .dependsOn(core % "compile->test;compile->compile", data)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,

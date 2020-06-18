@@ -1,7 +1,5 @@
 package lamp.autograd
 import org.saddle._
-import org.saddle.ops.BinOps._
-import org.saddle.linalg._
 import aten.{Tensor, ATen}
 import java.{util => ju}
 import aten.TensorOptions
