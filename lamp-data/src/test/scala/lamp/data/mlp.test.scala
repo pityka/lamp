@@ -16,10 +16,7 @@ class MLPSuite extends AnyFunSuite {
 
   def mlp(dim: Int, k: Int, tOpt: TensorOptions) =
     Sequential(
-      Linear(dim, 64, tOpt = tOpt),
-      Fun(_.gelu),
-      Dropout(0.2, true),
-      Linear(64, k, tOpt = tOpt),
+      MLP(dim, k, List(64, 32), tOpt, dropout = 0.2),
       Fun(_.logSoftMax(dim = 1))
     )
 
@@ -76,6 +73,8 @@ class MLPSuite extends AnyFunSuite {
       (),
       LossFunctions.NLL(10, classWeights)
     )
+
+    assert(model.module.state.size == 18)
 
     val makeValidationBatch = () =>
       BatchStream.minibatchesFromFull(
