@@ -10,5 +10,23 @@
 	<atom:link href="https://pityka.github.io/lamp/docs/index.xml" rel="self" type="application/rss+xml" />
     
     
+    <item>
+      <title>Getting started</title>
+      <link>https://pityka.github.io/lamp/docs/getting_started/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://pityka.github.io/lamp/docs/getting_started/</guid>
+      <description>Lamp is experimental, and no artifacts are pubished to maven central.</description>
+    </item>
+    
+    <item>
+      <title>How to build and train a model</title>
+      <link>https://pityka.github.io/lamp/docs/usage_overview/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://pityka.github.io/lamp/docs/usage_overview/</guid>
+      <description>Overview Lamp&amp;rsquo;s design closely follows the design of pytorch.</description>
+    </item>
+    
   </channel>
 </rss>

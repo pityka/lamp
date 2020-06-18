@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>Getting started - Lamp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="icon" href="https://pityka.github.io/lamp/favicon.png">
+
+  
+  
+  <link rel="stylesheet" href="/lamp/css/style.min.ab49f0da65a9bb2e51b43f76fb24346d416717d3205cbd8e2e0bd70b9c811f6c.css">
+  
+
+  
+
+</head>
+
+<body class='page page-default-single'>
+  <div id="main-menu-mobile" class="main-menu-mobile">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+  <div class="wrapper">
+    <div class='header'>
+  <div class="container">
+    
+    
+    <div id="main-menu" class="main-menu">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+    <button id="toggle-main-menu-mobile" class="hamburger hamburger--slider" type="button">
+  <span class="hamburger-box">
+    <span class="hamburger-inner"></span>
+  </span>
+</button>
+  </div>
+</div>
+
+    <div class="container pt-2 pt-md-6 pb-3 pb-md-6">
+      <div class="row">
+        <div class="col-12 col-md-3 mb-3">
+          <div class="sidebar">
+            
+<div class="docs-menu">
+  <h4>Docs</h4>
+  <ul>
+    
+    <li class="active ">
+      <a href="https://pityka.github.io/lamp/docs/getting_started/">Getting started</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/usage_overview/">How to build and train a model</a>
+    </li>
+    
+  </ul>
+</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-9">
+          
+<h1 class="title">Getting started</h1>
+<div class="content anchor-link-enabled">
+  
+
+<p>Lamp is experimental, and no artifacts are pubished to maven central.</p>
+
+<h3 id="build-and-publish-into-local-repository">Build and publish into local repository</h3>
+
+<p>The aten-scala artifacts are published to Github Packages, which needs a github user token available either in a $GITHUB_TOKEN environmental variable, or in the git global configuration (<code>~/.gitconfig</code>):</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-gitconfig" data-lang="gitconfig">[github]
+  token = TOKEN_DATA</code></pre></div>
+<p>Publish into local repository with <code>sbt pubishLocal</code>.</p>
+
+<h3 id="dependencies">Dependencies</h3>
+
+<ul>
+<li><code>lamp-core</code> depends on <a href="https://github.com/pityka/saddle">saddle-core</a>, <a href="https://github.com/typelevel/cats-effect">cats-effect</a> and <a href="https://github.com/pityka/aten-scala">aten-scala</a></li>
+<li><code>lamp-data</code> in addition depends on <a href="https://github.com/outr/scribe">scribe</a> and <a href="https://github.com/lihaoyi/upickle">ujson</a></li>
+</ul>
+
+<p>Lamp depends on aten-scala is a JNI binding to libtorch. It has has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.5.0 shared libraries in its linker path.</p>
+
+<p>On mac it suffices to install torch with <code>brew install libtorch</code>.
+On linux, see the following <a href="https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile">Dockerfile</a>.</p>
+
+<h3 id="verify-installation">Verify installation</h3>
+
+<p>This will allocate an identity matrix of 32-bit floats in the main memory:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">aten<span style="color:#f92672">.</span><span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>eye_0<span style="color:#f92672">(</span><span style="color:#ae81ff">2L</span><span style="color:#f92672">,</span>aten<span style="color:#f92672">.</span><span style="color:#a6e22e">TensorOptions</span><span style="color:#f92672">.</span>dtypeFloat<span style="color:#f92672">)</span>
+<span style="color:#f92672">//</span> res0<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">140544134424352</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPUFloatType</span></code></pre></div>
+<p>The following will allocate an identity matrix of 32-bit floats in the GPU memory. It will throw an exception if GPU support is not available</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">aten<span style="color:#f92672">.</span><span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>eye_0<span style="color:#f92672">(</span><span style="color:#ae81ff">2L</span><span style="color:#f92672">,</span>aten<span style="color:#f92672">.</span><span style="color:#a6e22e">TensorOptions</span><span style="color:#f92672">.</span>dtypeFloat<span style="color:#f92672">.</span>cuda<span style="color:#f92672">)</span></code></pre></div>
+</div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/lamp/js/scripts.min.1237ff71925bb8625c97a9af8db4c54525258bedfd7c47493daaff723bea755e.js"></script>
+  
+
+  
+  
+  
+    
+  
+
+
+</body>
+
+</html>

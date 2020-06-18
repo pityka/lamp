@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>How to build and train a model - Lamp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="icon" href="https://pityka.github.io/lamp/favicon.png">
+
+  
+  
+  <link rel="stylesheet" href="/lamp/css/style.min.ab49f0da65a9bb2e51b43f76fb24346d416717d3205cbd8e2e0bd70b9c811f6c.css">
+  
+
+  
+
+</head>
+
+<body class='page page-default-single'>
+  <div id="main-menu-mobile" class="main-menu-mobile">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+  <div class="wrapper">
+    <div class='header'>
+  <div class="container">
+    
+    
+    <div id="main-menu" class="main-menu">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+    <button id="toggle-main-menu-mobile" class="hamburger hamburger--slider" type="button">
+  <span class="hamburger-box">
+    <span class="hamburger-inner"></span>
+  </span>
+</button>
+  </div>
+</div>
+
+    <div class="container pt-2 pt-md-6 pb-3 pb-md-6">
+      <div class="row">
+        <div class="col-12 col-md-3 mb-3">
+          <div class="sidebar">
+            
+<div class="docs-menu">
+  <h4>Docs</h4>
+  <ul>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/getting_started/">Getting started</a>
+    </li>
+    
+    <li class="active ">
+      <a href="https://pityka.github.io/lamp/docs/usage_overview/">How to build and train a model</a>
+    </li>
+    
+  </ul>
+</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-9">
+          
+<h1 class="title">How to build and train a model</h1>
+<div class="content anchor-link-enabled">
+  
+
+<h1 id="overview">Overview</h1>
+
+<p>Lamp&rsquo;s design closely follows the design of pytorch. It is organized into the following components:
+1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the <code>aten</code> package.
+2. An algorithm to compute partial derivatives of complex functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package <code>lamp.autograd</code>.
+3. A set of building blocks to build neural networks in the package <code>lamp.nn</code>.
+4. Training loop and utilities to work with image and text data in <code>lamp.data</code>.</p>
+
+<h1 id="building-a-classifier">Building a classifier</h1>
+
+<p>This document shows how to build and train a simple model. The following code is taken from the test suite.</p>
+
+<p>We will use tabular data to build a multiclass classifier.</p>
+
+<h2 id="get-some-data">Get some data</h2>
+
+<p>First get some tabular data into the JVM memory:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> testData <span style="color:#66d9ef">=</span> org<span style="color:#f92672">.</span>saddle<span style="color:#f92672">.</span>csv<span style="color:#f92672">.</span><span style="color:#a6e22e">CsvParser</span>
+      <span style="color:#f92672">.</span>parseSourceWithHeader<span style="color:#f92672">[</span><span style="color:#66d9ef">Double</span><span style="color:#f92672">](</span>
+        scala<span style="color:#f92672">.</span>io<span style="color:#f92672">.</span><span style="color:#a6e22e">Source</span>
+          <span style="color:#f92672">.</span>fromInputStream<span style="color:#f92672">(</span>
+            <span style="color:#66d9ef">new</span> java<span style="color:#f92672">.</span>util<span style="color:#f92672">.</span>zip<span style="color:#f92672">.</span><span style="color:#a6e22e">GZIPInputStream</span><span style="color:#f92672">(</span>
+              getClass<span style="color:#f92672">.</span>getResourceAsStream<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;/mnist_test.csv.gz&#34;</span><span style="color:#f92672">)</span>
+            <span style="color:#f92672">)</span>
+          <span style="color:#f92672">),</span>
+        maxLines <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">100L</span>
+      <span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>right
+      <span style="color:#f92672">.</span>get
+<span style="color:#75715e">// testData: org.saddle.Frame[Int, String, Double] = [99 x 785]
+</span><span style="color:#75715e">//        label    1x1    1x2    1x3    1x4       28x24  28x25  28x26  28x27  28x28 
+</span><span style="color:#75715e">//       ------ ------ ------ ------ ------  ... ------ ------ ------ ------ ------ 
+</span><span style="color:#75715e">//  0 -&gt; 7.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">//  1 -&gt; 2.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">//  2 -&gt; 1.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">//  3 -&gt; 0.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">//  4 -&gt; 4.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// ...
+</span><span style="color:#75715e">// 94 -&gt; 1.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 95 -&gt; 4.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 96 -&gt; 1.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 97 -&gt; 7.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 98 -&gt; 6.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> trainData <span style="color:#66d9ef">=</span> org<span style="color:#f92672">.</span>saddle<span style="color:#f92672">.</span>csv<span style="color:#f92672">.</span><span style="color:#a6e22e">CsvParser</span>
+      <span style="color:#f92672">.</span>parseSourceWithHeader<span style="color:#f92672">[</span><span style="color:#66d9ef">Double</span><span style="color:#f92672">](</span>
+        scala<span style="color:#f92672">.</span>io<span style="color:#f92672">.</span><span style="color:#a6e22e">Source</span>
+          <span style="color:#f92672">.</span>fromInputStream<span style="color:#f92672">(</span>
+            <span style="color:#66d9ef">new</span> java<span style="color:#f92672">.</span>util<span style="color:#f92672">.</span>zip<span style="color:#f92672">.</span><span style="color:#a6e22e">GZIPInputStream</span><span style="color:#f92672">(</span>
+              getClass<span style="color:#f92672">.</span>getResourceAsStream<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;/mnist_train.csv.gz&#34;</span><span style="color:#f92672">)</span>
+            <span style="color:#f92672">)</span>
+          <span style="color:#f92672">),</span>
+        maxLines <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">100L</span>
+      <span style="color:#f92672">)</span>
+      <span style="color:#f92672">.</span>right
+      <span style="color:#f92672">.</span>get
+<span style="color:#75715e">// trainData: org.saddle.Frame[Int, String, Double] = [99 x 785]
+</span><span style="color:#75715e">//        label    1x1    1x2    1x3    1x4       28x24  28x25  28x26  28x27  28x28 
+</span><span style="color:#75715e">//       ------ ------ ------ ------ ------  ... ------ ------ ------ ------ ------ 
+</span><span style="color:#75715e">//  0 -&gt; 5.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">//  1 -&gt; 0.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">//  2 -&gt; 4.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">//  3 -&gt; 1.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">//  4 -&gt; 9.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// ...
+</span><span style="color:#75715e">// 94 -&gt; 8.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 95 -&gt; 0.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 96 -&gt; 7.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 97 -&gt; 8.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e">// 98 -&gt; 3.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
+</span><span style="color:#75715e"></span><span style="color:#f92672">//</span></code></pre></div>
+<p>Copy those data <code>aten.Tensor</code>s of respective shape and type. Note that we specify device so it will end up on the desired device.
+The feature matrix is copied into a 2D floating point tensor and the target vector is holding the class labels is copied into a 1D integer (long) tensor.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp._
+    <span style="color:#66d9ef">import</span> lamp.autograd._
+    <span style="color:#66d9ef">import</span> aten.ATen
+    <span style="color:#66d9ef">import</span> org.saddle.Mat
+    <span style="color:#66d9ef">val</span> device <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">CPU</span>
+<span style="color:#75715e">// device: CPU.type = CPU
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> precision <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SinglePrecision</span>
+<span style="color:#75715e">// precision: SinglePrecision.type = SinglePrecision
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testDataTensor <span style="color:#66d9ef">=</span>
+      <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span> precision<span style="color:#f92672">)</span>
+<span style="color:#75715e">// testDataTensor: aten.Tensor = Tensor at 140544137121936; CPUFloatType
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testTarget <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>squeeze_0<span style="color:#f92672">(</span>
+      <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
+        <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>firstCol<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toVec<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toLong<span style="color:#f92672">)),</span>
+        device
+      <span style="color:#f92672">)</span>
+    <span style="color:#f92672">)</span>
+<span style="color:#75715e">// testTarget: aten.Tensor = Tensor at 140544137360272; CPULongType
+</span><span style="color:#75715e"></span>
+    <span style="color:#66d9ef">val</span> trainDataTensor <span style="color:#66d9ef">=</span>
+      <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span>precision<span style="color:#f92672">)</span>
+<span style="color:#75715e">// trainDataTensor: aten.Tensor = Tensor at 140544137371600; CPUFloatType
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> trainTarget <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>squeeze_0<span style="color:#f92672">(</span>
+      <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
+        <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>firstCol<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toVec<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toLong<span style="color:#f92672">)),</span>
+        device
+      <span style="color:#f92672">)</span>
+    <span style="color:#f92672">)</span>
+<span style="color:#f92672">//</span> trainTarget<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">140544137804480</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPULongType</span></code></pre></div>
+<h2 id="specify-the-model">Specify the model</h2>
+
+<p>Here we use the predefined modules in <code>lamp.nn</code>.</p>
+
+<p>In particular <code>lamp.nn.MLP</code> will create a multilayer
+fully connected feed forward neural network. We have to specify the input dimension - in our case 784,
+the output dimension - in our case 10, and the sizes of the hidden layers.
+We also have to give it an <code>aten.TensorOptions</code> which holds information of what kind of tensor it should allocate for the parameters - what type (float/double/long) and on which device (cpu/cuda).</p>
+
+<p>Then we compose that function with a softmax, and provide a suitable loss function.</p>
+
+<p>Loss functions in lamp are of the type <code>(lamp.autograd.Variable, aten.Tensor) =&gt; lamp.autograd.Variable</code>. The first <code>Variable</code> argument is the output of the model, the second <code>Tensor</code> argument is the target. It returns a new <code>Variable</code> which is the loss. An autograd <code>Variable</code> holds a tensor and has the ability to compute partial derivatives. The training loop will take the loss and compute the partial derivative of all learnable parameters.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.nn._
+<span style="color:#66d9ef">val</span> tensorOptions <span style="color:#66d9ef">=</span> device<span style="color:#f92672">.</span>options<span style="color:#f92672">(</span><span style="color:#a6e22e">SinglePrecision</span><span style="color:#f92672">)</span>
+<span style="color:#75715e">// tensorOptions: aten.TensorOptions = aten.TensorOptions@27244a88
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classWeights <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">Array</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">)</span>
+<span style="color:#75715e">// classWeights: aten.Tensor = Tensor at 140544137805232; CPUFloatType
+</span><span style="color:#75715e"></span>
+<span style="color:#66d9ef">val</span> model <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SupervisedModel</span><span style="color:#f92672">(</span>
+  <span style="color:#a6e22e">Sequential</span><span style="color:#f92672">(</span>
+      <span style="color:#a6e22e">MLP</span><span style="color:#f92672">(</span>in <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">784</span><span style="color:#f92672">,</span> out <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">10</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">List</span><span style="color:#f92672">(</span><span style="color:#ae81ff">64</span><span style="color:#f92672">,</span> <span style="color:#ae81ff">32</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">,</span> dropout <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">0.2</span><span style="color:#f92672">),</span>
+      <span style="color:#a6e22e">Fun</span><span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>logSoftMax<span style="color:#f92672">(</span>dim <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">))</span>
+    <span style="color:#f92672">),</span>
+  <span style="color:#f92672">(),</span>
+  <span style="color:#a6e22e">LossFunctions</span><span style="color:#f92672">.</span><span style="color:#a6e22e">NLL</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">,</span> classWeights<span style="color:#f92672">)</span>
+<span style="color:#f92672">)</span>
+<span style="color:#75715e">// model: SupervisedModel[Unit] = SupervisedModel(
+</span><span style="color:#75715e">//   Sequential(
+</span><span style="color:#75715e">//     WrappedArray(
+</span><span style="color:#75715e">//       Sequential(
+</span><span style="color:#75715e">//         List(
+</span><span style="color:#75715e">//           Linear(
+</span><span style="color:#75715e">//             Variable(
+</span><span style="color:#75715e">//               Constant(Tensor at 140544137869440; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140544137869440; CPUFloatType,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               List()
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             Some(
+</span><span style="color:#75715e">//               Variable(
+</span><span style="color:#75715e">//                 Constant(Tensor at 140544137890464; CPUFloatType),
+</span><span style="color:#75715e">//                 Tensor at 140544137890464; CPUFloatType,
+</span><span style="color:#75715e">//                 true,
+</span><span style="color:#75715e">//                 true,
+</span><span style="color:#75715e">//                 List()
+</span><span style="color:#75715e">//               )
+</span><span style="color:#75715e">//             )
+</span><span style="color:#75715e">//           ),
+</span><span style="color:#75715e">//           BatchNorm(
+</span><span style="color:#75715e">//             Variable(
+</span><span style="color:#75715e">//               Constant(Tensor at 140544137400080; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140544137400080; CPUFloatType,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               List()
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             Variable(
+</span><span style="color:#75715e">//               Constant(Tensor at 140544137376160; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140544137376160; CPUFloatType,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               List()
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             Variable(
+</span><span style="color:#75715e">//               Constant(Tensor at 140544137377728; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140544137377728; CPUFloatType,
+</span><span style="color:#75715e">//               false,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               List()
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             Variable(
+</span><span style="color:#75715e">//               Constant(Tensor at 140544137381472; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140544137381472; CPUFloatType,
+</span><span style="color:#75715e">//               false,
+</span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">...</span></code></pre></div>
+<h2 id="create-mini-batches">Create mini-batches</h2>
+
+<p>The predefined training loop in <code>lamp.data.IOLoops</code> needs a stream of batches, where batch holds a subset of the training data.
+In particular the trainig loop expects a type of <code>Unit =&gt; lamp.data.BatchStream</code>
+where the BatchStream represent a stream of batches over the full set of training data.
+This factory function will then be called in each epoch.</p>
+
+<p>Lamp provides a helper which chops up the full batch of data - which we created earlier -
+into appropriately sized mini-batches.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.data._
+<span style="color:#66d9ef">val</span> makeTrainingBatch <span style="color:#66d9ef">=</span> <span style="color:#f92672">()</span> <span style="color:#66d9ef">=&gt;</span>
+      <span style="color:#a6e22e">BatchStream</span><span style="color:#f92672">.</span>minibatchesFromFull<span style="color:#f92672">(</span>
+        minibatchSize <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">200</span><span style="color:#f92672">,</span>
+        dropLast <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">true</span><span style="color:#f92672">,</span>
+        features <span style="color:#66d9ef">=</span> trainDataTensor<span style="color:#f92672">,</span>
+        target <span style="color:#66d9ef">=</span>trainTarget<span style="color:#f92672">,</span>
+        device <span style="color:#66d9ef">=</span> device
+      <span style="color:#f92672">)</span>
+<span style="color:#f92672">//</span> makeTrainingBatch<span style="color:#66d9ef">:</span> <span style="color:#f92672">()</span> <span style="color:#f92672">=&gt;</span> <span style="color:#a6e22e">AnyRef</span> <span style="color:#66d9ef">with</span> <span style="color:#a6e22e">BatchStream</span> <span style="color:#66d9ef">=</span> <span style="color:#f92672">&lt;</span>function0<span style="color:#f92672">&gt;</span></code></pre></div>
+<h2 id="create-and-run-the-training-loop">Create and run the training loop</h2>
+
+<p>With this we have everything to assemble the training loop:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> cats.effect.IO
+<span style="color:#66d9ef">val</span> trainedModelIO <span style="color:#66d9ef">:</span> <span style="color:#66d9ef">IO</span><span style="color:#f92672">[</span><span style="color:#66d9ef">SupervisedModel</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Unit</span><span style="color:#f92672">]]</span> <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">IOLoops</span><span style="color:#f92672">.</span>epochs<span style="color:#f92672">(</span>
+      model <span style="color:#66d9ef">=</span> model<span style="color:#f92672">,</span>
+      optimizerFactory <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SGDW</span>
+        <span style="color:#f92672">.</span>factory<span style="color:#f92672">(</span>
+          learningRate <span style="color:#66d9ef">=</span> simple<span style="color:#f92672">(</span><span style="color:#ae81ff">0.0001</span><span style="color:#f92672">),</span>
+          weightDecay <span style="color:#66d9ef">=</span> simple<span style="color:#f92672">(</span><span style="color:#ae81ff">0.001d</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">),</span>
+      trainBatchesOverEpoch <span style="color:#66d9ef">=</span> makeTrainingBatch<span style="color:#f92672">,</span>
+      validationBatchesOverEpoch <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">None</span><span style="color:#f92672">,</span>
+      epochs <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">1</span>
+    <span style="color:#f92672">)</span>
+<span style="color:#75715e">// trainedModelIO: IO[SupervisedModel[Unit]] = Bind(
+</span><span style="color:#75715e">//   Bind(
+</span><span style="color:#75715e">//     Async(
+</span><span style="color:#75715e">//       cats.effect.internals.IOBracket$$$Lambda$1684/1649633410@76d220eb,
+</span><span style="color:#75715e">//       false
+</span><span style="color:#75715e">//     ),
+</span><span style="color:#75715e">//     lamp.data.IOLoops$$$Lambda$1685/1390374159@276eafad
+</span><span style="color:#75715e">//   ),
+</span><span style="color:#75715e">//   lamp.data.IOLoops$$$Lambda$1686/1560142500@29dcad7e
+</span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">)</span></code></pre></div>
+<p>Lamp provides two optimizers: SgdW and AdamW.</p>
+
+<p>The <code>IOLoop.epochs</code> method returns an <code>IO</code> which will run into the trained model once executed:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> trainedModel <span style="color:#66d9ef">=</span> trainedModelIO<span style="color:#f92672">.</span>unsafeRunSync<span style="color:#f92672">.</span>module
+<span style="color:#75715e">// trainedModel: StatefulModule[Unit] = Sequential(
+</span><span style="color:#75715e">//   ArrayBuffer(
+</span><span style="color:#75715e">//     Sequential(
+</span><span style="color:#75715e">//       List(
+</span><span style="color:#75715e">//         Linear(
+</span><span style="color:#75715e">//           Variable(
+</span><span style="color:#75715e">//             Constant(Tensor at 140544137869440; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140544137869440; CPUFloatType,
+</span><span style="color:#75715e">//             true,
+</span><span style="color:#75715e">//             true,
+</span><span style="color:#75715e">//             List()
+</span><span style="color:#75715e">//           ),
+</span><span style="color:#75715e">//           Some(
+</span><span style="color:#75715e">//             Variable(
+</span><span style="color:#75715e">//               Constant(Tensor at 140544137890464; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140544137890464; CPUFloatType,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               true,
+</span><span style="color:#75715e">//               List()
+</span><span style="color:#75715e">//             )
+</span><span style="color:#75715e">//           )
+</span><span style="color:#75715e">//         ),
+</span><span style="color:#75715e">//         BatchNorm(
+</span><span style="color:#75715e">//           Variable(
+</span><span style="color:#75715e">//             Constant(Tensor at 140544137400080; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140544137400080; CPUFloatType,
+</span><span style="color:#75715e">//             true,
+</span><span style="color:#75715e">//             true,
+</span><span style="color:#75715e">//             List()
+</span><span style="color:#75715e">//           ),
+</span><span style="color:#75715e">//           Variable(
+</span><span style="color:#75715e">//             Constant(Tensor at 140544137376160; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140544137376160; CPUFloatType,
+</span><span style="color:#75715e">//             true,
+</span><span style="color:#75715e">//             true,
+</span><span style="color:#75715e">//             List()
+</span><span style="color:#75715e">//           ),
+</span><span style="color:#75715e">//           Variable(
+</span><span style="color:#75715e">//             Constant(Tensor at 140544137377728; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140544137377728; CPUFloatType,
+</span><span style="color:#75715e">//             false,
+</span><span style="color:#75715e">//             true,
+</span><span style="color:#75715e">//             List()
+</span><span style="color:#75715e">//           ),
+</span><span style="color:#75715e">//           Variable(
+</span><span style="color:#75715e">//             Constant(Tensor at 140544137381472; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140544137381472; CPUFloatType,
+</span><span style="color:#75715e">//             false,
+</span><span style="color:#75715e">//             true,
+</span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">...</span></code></pre></div>
+<p>The trained model we can use for prediction:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> bogusData <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">Array</span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span><span style="color:#f92672">,</span><span style="color:#ae81ff">784</span><span style="color:#f92672">),</span>tensorOptions<span style="color:#f92672">)</span>
+<span style="color:#75715e">// bogusData: aten.Tensor = Tensor at 140544139301104; CPUFloatType
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classProbabilities <span style="color:#66d9ef">=</span> trainedModel<span style="color:#f92672">.</span>forward1<span style="color:#f92672">(</span>const<span style="color:#f92672">(</span>bogusData<span style="color:#f92672">),()).</span>_1<span style="color:#f92672">.</span>toMat<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>math<span style="color:#f92672">.</span>exp<span style="color:#f92672">)</span>
+<span style="color:#75715e">// classProbabilities: Mat[Double] = [1 x 10]
+</span><span style="color:#75715e">// 0.1000 0.1000 0.1000 0.1000  ... 0.1000 0.1000 0.1000 0.1000 
+</span><span style="color:#75715e">// 
+</span><span style="color:#75715e"></span>println<span style="color:#f92672">(</span>classProbabilities<span style="color:#f92672">)</span>
+<span style="color:#75715e">// [1 x 10]
+</span><span style="color:#75715e">// 0.1000 0.1000 0.1000 0.1000  ... 0.1000 0.1000 0.1000 0.1000 
+</span><span style="color:#75715e"></span><span style="color:#f92672">//</span></code></pre></div>
+</div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/lamp/js/scripts.min.1237ff71925bb8625c97a9af8db4c54525258bedfd7c47493daaff723bea755e.js"></script>
+  
+
+  
+  
+  
+    
+  
+
+
+</body>
+
+</html>
