@@ -57,9 +57,7 @@ class TextGenerationSuite extends AnyFunSuite {
           ),
           RNN(
             in = 10,
-            hiddenSize = hiddenSize,
-            out = vocabularSize,
-            dropout = 0d,
+            hiddenSize = vocabularSize,
             tOpt = tensorOptions
           ),
           Fun(_.logSoftMax(2))
@@ -136,9 +134,7 @@ class TextGenerationSuite extends AnyFunSuite {
         ),
         RNN(
           in = 10,
-          hiddenSize = hiddenSize,
-          out = vocabularSize,
-          dropout = 0d,
+          hiddenSize = vocabularSize,
           tOpt = tensorOptions
         ),
         Fun(_.logSoftMax(2))

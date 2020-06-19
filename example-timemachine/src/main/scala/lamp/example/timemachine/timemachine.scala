@@ -36,6 +36,8 @@ import java.nio.charset.CodingErrorAction
 import java.nio.charset.Charset
 import scala.io.Codec
 import lamp.nn.Embedding
+import lamp.nn.SeqLinear
+import lamp.nn.Seq5
 
 case class CliConfig(
     trainData: String = "",
@@ -132,7 +134,7 @@ object Train extends App {
         val classWeights =
           ATen.ones(Array(vocabularSize), tensorOptions)
         val net1 =
-          Seq3(
+          Seq5(
             Embedding(
               classes = vocabularSize,
               dimensions = 20,
@@ -141,8 +143,12 @@ object Train extends App {
             GRU(
               in = 20,
               hiddenSize = hiddenSize,
+              tOpt = tensorOptions
+            ),
+            Fun(_.relu),
+            SeqLinear.apply(
+              in = hiddenSize,
               out = vocabularSize,
-              dropout = config.dropout,
               tOpt = tensorOptions
             ),
             Fun(_.logSoftMax(2))
@@ -162,7 +168,7 @@ object Train extends App {
         scribe.info("Learnable parameters: " + net.learnableParameters)
         SupervisedModel(
           net,
-          ((), None, ()),
+          ((), None, (), (), ()),
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
@@ -241,11 +247,7 @@ object Train extends App {
             device,
             precision,
             trainedModel.module,
-            (
-              (),
-              None,
-              ()
-            ),
+            ((), None, (), (), ()),
             lookAhead
           )
           .use { variable =>

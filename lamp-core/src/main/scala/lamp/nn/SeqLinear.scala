@@ -13,31 +13,27 @@ import cats.effect.IO
   * Outputs of size (sequence length * batch * output dim)
   * Applies a linear function to each time step
   */
-case class LinearSeq(
+case class SeqLinear(
     weight: Variable,
-    bias: Variable,
-    dropout: Double,
-    train: Boolean
+    bias: Variable
 ) extends Module {
-  override def asEval: LinearSeq = copy(train = false)
-  override def asTraining: LinearSeq = copy(train = true)
 
-  override def load(tensors: Seq[Tensor]): LinearSeq = copy(
+  override def load(tensors: Seq[Tensor]): SeqLinear = copy(
     weight = param(tensors(0)),
     bias = param(tensors(1))
   )
 
   override def state: Seq[(Variable, PTag)] =
     List(
-      (weight, LinearSeq.Weight),
-      (bias, LinearSeq.Bias)
+      (weight, SeqLinear.Weight),
+      (bias, SeqLinear.Bias)
     )
 
   override def forward(x: Variable) = {
     val timesteps = x.shape.head
     val outputs = (0 until timesteps.toInt).map { t =>
       val xt = x.select(0, t)
-      (xt.mm(weight) + bias).relu.dropout(dropout, train)
+      (xt.mm(weight) + bias)
     }
     ConcatenateAddNewDim(outputs).value
 
@@ -45,17 +41,16 @@ case class LinearSeq(
 
 }
 
-object LinearSeq {
+object SeqLinear {
   case object Weight extends LeafTag
   case object Bias extends LeafTag
 
   def apply(
       in: Int,
       out: Int,
-      dropout: Double,
       tOpt: TensorOptions
-  ): LinearSeq =
-    LinearSeq(
+  ): SeqLinear =
+    SeqLinear(
       weight = param(
         ATen.normal_3(
           0d,
@@ -69,9 +64,7 @@ object LinearSeq {
           Array(1, out),
           tOpt
         )
-      ),
-      dropout = dropout,
-      train = true
+      )
     )
 
 }

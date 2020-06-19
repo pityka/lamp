@@ -15,51 +15,40 @@ import cats.effect.IO
 case class GRU(
     weightXh: Variable,
     weightHh: Variable,
-    weightHq: Variable,
     weightXr: Variable,
     weightXz: Variable,
     weightHr: Variable,
     weightHz: Variable,
     biasR: Variable,
     biasZ: Variable,
-    biasQ: Variable,
-    biasH: Variable,
-    dropout: Double,
-    train: Boolean
+    biasH: Variable
 ) extends StatefulModule[Option[Variable]] {
-  override def asEval: GRU = copy(train = false)
-  override def asTraining: GRU = copy(train = true)
 
   val inputSize = weightXh.shape.last
   val hiddenSize = biasH.shape.last
-  val outputSize = biasQ.shape.last
 
   override def load(tensors: Seq[Tensor]): GRU = copy(
     weightXh = param(tensors(0)),
     weightHh = param(tensors(1)),
-    weightHq = param(tensors(2)),
-    weightXr = param(tensors(3)),
-    weightXz = param(tensors(4)),
-    weightHr = param(tensors(5)),
-    weightHz = param(tensors(6)),
-    biasR = param(tensors(7)),
-    biasZ = param(tensors(8)),
-    biasQ = param(tensors(9)),
-    biasH = param(tensors(10))
+    weightXr = param(tensors(2)),
+    weightXz = param(tensors(3)),
+    weightHr = param(tensors(4)),
+    weightHz = param(tensors(5)),
+    biasR = param(tensors(6)),
+    biasZ = param(tensors(7)),
+    biasH = param(tensors(8))
   )
 
   override def state: Seq[(Variable, PTag)] =
     List(
       (weightXh, GRU.WeightXh),
       (weightHh, GRU.WeightHh),
-      (weightHq, GRU.WeightHq),
       (weightXr, GRU.WeightXr),
       (weightXz, GRU.WeightXz),
       (weightHr, GRU.WeightHr),
       (weightHz, GRU.WeightHz),
       (biasR, GRU.BiasR),
       (biasZ, GRU.BiasZ),
-      (biasQ, GRU.BiasQ),
       (biasH, GRU.BiasH)
     )
 
@@ -81,10 +70,7 @@ case class GRU(
 
         val newHidden = z * h + ((z.*(-1)).+(1d)).*(hcap)
 
-        val output =
-          (newHidden.dropout(dropout, train).mm(weightHq) + biasQ)
-
-        outputs.append(output)
+        outputs.append(newHidden)
         newHidden
       }
     (ConcatenateAddNewDim(outputs).value, Some(lastHidden))
@@ -96,7 +82,6 @@ case class GRU(
 object GRU {
   case object WeightXh extends LeafTag
   case object WeightHh extends LeafTag
-  case object WeightHq extends LeafTag
   case object WeightHr extends LeafTag
   case object WeightHz extends LeafTag
   case object WeightXr extends LeafTag
@@ -104,13 +89,10 @@ object GRU {
   case object BiasR extends LeafTag
   case object BiasZ extends LeafTag
   case object BiasH extends LeafTag
-  case object BiasQ extends LeafTag
 
   def apply(
       in: Int,
       hiddenSize: Int,
-      out: Int,
-      dropout: Double,
       tOpt: TensorOptions
   ): GRU =
     GRU(
@@ -162,20 +144,6 @@ object GRU {
           tOpt
         )
       ),
-      weightHq = param(
-        ATen.normal_3(
-          0d,
-          math.sqrt(2d / (out + hiddenSize)),
-          Array(hiddenSize, out),
-          tOpt
-        )
-      ),
-      biasQ = param(
-        ATen.zeros(
-          Array(1, out),
-          tOpt
-        )
-      ),
       biasH = param(
         ATen.zeros(
           Array(1, hiddenSize),
@@ -193,9 +161,7 @@ object GRU {
           Array(1, hiddenSize),
           tOpt
         )
-      ),
-      dropout = dropout,
-      train = true
+      )
     )
 
 }

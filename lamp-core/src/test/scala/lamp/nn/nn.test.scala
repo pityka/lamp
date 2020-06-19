@@ -398,22 +398,16 @@ class NNSuite extends AnyFunSuite {
       RNN(
         weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
         weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
-        biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
-        biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        dropout = 0d,
-        train = true
+        biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
       ),
-    89.5682
+    23.8561
   )
-  testGradientAndValueND("LinearSeq ", (), false)(
+  testGradientAndValueND("SeqLinear ", (), false)(
     nd2x3x2,
     () =>
-      LinearSeq(
+      SeqLinear(
         weight = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        bias = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        dropout = 0d,
-        train = true
+        bias = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
       ),
     288d
   )
@@ -427,36 +421,28 @@ class NNSuite extends AnyFunSuite {
         weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
         weightHz = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
         weightHr = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
-        biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
         biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
         biasZ = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        biasR = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        dropout = 0d,
-        train = true
+        biasR = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
       ),
-    20.8184
+    0.9395
   )
   test("RNN shape and loss") {
     val output = RNN(
       weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
       weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-      weightHq = param(ATen.ones(Array(4, 3), TensorOptions.dtypeDouble)),
-      biasQ = param(ATen.ones(Array(3), TensorOptions.dtypeDouble)),
-      biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-      dropout = 0d,
-      train = true
+      biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
     ).forward1(const(NDArray.tensorFromNDArray(nd2x3x2)), None)._1.value
-    assert(output.shape == List(2, 3, 3))
+    assert(output.shape == List(2, 3, 4))
     val target = TensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong))
     val loss = LossFunctions
       .SequenceNLL(
-        3,
-        ATen.ones(Array(3), TensorOptions.dtypeDouble())
+        4,
+        ATen.ones(Array(4), TensorOptions.dtypeDouble())
       )(const(output), target)
       ._1
       .value
-    assert(TensorHelpers.toMat(loss).raw(0) == -4.9760101917362025)
+    assert(TensorHelpers.toMat(loss).raw(0) == -0.9940025479340507)
   }
 
   test1("gradient clipping") { cuda =>
