@@ -406,6 +406,17 @@ class NNSuite extends AnyFunSuite {
       ),
     89.5682
   )
+  testGradientAndValueND("LinearSeq ", (), false)(
+    nd2x3x2,
+    () =>
+      LinearSeq(
+        weight = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        bias = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+        dropout = 0d,
+        train = true
+      ),
+    288d
+  )
   testGradientAndValueND("GRU ", Option.empty[Variable], false)(
     nd2x3x2,
     () =>
