@@ -139,8 +139,12 @@
                         <a href="Fun.html" title="">Fun</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="GRU$.html" title=""></a>
-                        <a class="class" href="GRU.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)"></a>
-                        <a href="GRU.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)">GRU</a>
+                        <a class="class" href="GRU.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)"></a>
+                        <a href="GRU.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)">GRU</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="LSTM$.html" title=""></a>
+                        <a class="class" href="LSTM.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)"></a>
+                        <a href="LSTM.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)">LSTM</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="trait" href="LeafTag.html" title=""></a>
@@ -191,8 +195,8 @@
                         <a href="PTag.html" title="">PTag</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="" title=""></a>
-                        <a class="class" href="RNN.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)"></a>
-                        <a href="RNN.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)">RNN</a>
+                        <a class="class" href="RNN.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)"></a>
+                        <a href="RNN.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)">RNN</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Residual.html" title=""></a>
@@ -213,6 +217,14 @@
                         <span class="separator"></span>
                         <a class="class" href="Seq4.html" title=""></a>
                         <a href="Seq4.html" title="">Seq4</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="Seq5.html" title=""></a>
+                        <a href="Seq5.html" title="">Seq5</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="SeqLinear$.html" title=""></a>
+                        <a class="class" href="SeqLinear.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * output dim) Applies a linear function to each time step"></a>
+                        <a href="SeqLinear.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * output dim) Applies a linear function to each time step">SeqLinear</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Sequential$.html" title=""></a>
                         <a class="class" href="Sequential.html" title=""></a>
@@ -369,9 +381,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.nn.RNN#apply" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="apply(in:Int,hiddenSize:Int,out:Int,dropout:Double,tOpt:aten.TensorOptions):lamp.nn.RNN"></a><a id="apply(Int,Int,Int,Double,TensorOptions):RNN"></a>
+      <a id="apply(in:Int,hiddenSize:Int,tOpt:aten.TensorOptions):lamp.nn.RNN"></a><a id="apply(Int,Int,TensorOptions):RNN"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/RNN$.html#apply(in:Int,hiddenSize:Int,out:Int,dropout:Double,tOpt:aten.TensorOptions):lamp.nn.RNN" title="Permalink">
+      <a href="../../lamp/nn/RNN$.html#apply(in:Int,hiddenSize:Int,tOpt:aten.TensorOptions):lamp.nn.RNN" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -380,7 +392,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">apply</span><span class="params">(<span name="in">in: <span class="extype" name="scala.Int">Int</span></span>, <span name="hiddenSize">hiddenSize: <span class="extype" name="scala.Int">Int</span></span>, <span name="out">out: <span class="extype" name="scala.Int">Int</span></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="tOpt">tOpt: <span class="extype" name="aten.TensorOptions">TensorOptions</span></span>)</span><span class="result">: <a href="RNN.html" class="extype" name="lamp.nn.RNN">RNN</a></span>
+        <span class="name">apply</span><span class="params">(<span name="in">in: <span class="extype" name="scala.Int">Int</span></span>, <span name="hiddenSize">hiddenSize: <span class="extype" name="scala.Int">Int</span></span>, <span name="tOpt">tOpt: <span class="extype" name="aten.TensorOptions">TensorOptions</span></span>)</span><span class="result">: <a href="RNN.html" class="extype" name="lamp.nn.RNN">RNN</a></span>
       </span>
       
       
@@ -702,22 +714,6 @@
       </span>
       
       
-    </li><li name="lamp.nn.RNN.BiasQ" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="BiasQ"></a><a id="BiasQ:BiasQ"></a>
-      <span class="permalink">
-      <a href="../../lamp/nn/RNN$$BiasQ$.html" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">object</span>
-      </span>
-      <span class="symbol">
-        <a title="" href="RNN$$BiasQ$.html"><span class="name">BiasQ</span></a><span class="result"> extends <a href="LeafTag.html" class="extype" name="lamp.nn.LeafTag">LeafTag</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
-      </span>
-      
-      
     </li><li name="lamp.nn.RNN.WeightHh" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="WeightHh"></a><a id="WeightHh:WeightHh"></a>
       <span class="permalink">
@@ -731,22 +727,6 @@
       </span>
       <span class="symbol">
         <a title="" href="RNN$$WeightHh$.html"><span class="name">WeightHh</span></a><span class="result"> extends <a href="LeafTag.html" class="extype" name="lamp.nn.LeafTag">LeafTag</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
-      </span>
-      
-      
-    </li><li name="lamp.nn.RNN.WeightHq" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="WeightHq"></a><a id="WeightHq:WeightHq"></a>
-      <span class="permalink">
-      <a href="../../lamp/nn/RNN$$WeightHq$.html" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">object</span>
-      </span>
-      <span class="symbol">
-        <a title="" href="RNN$$WeightHq$.html"><span class="name">WeightHq</span></a><span class="result"> extends <a href="LeafTag.html" class="extype" name="lamp.nn.LeafTag">LeafTag</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       

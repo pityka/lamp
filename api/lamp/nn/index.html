@@ -187,8 +187,12 @@
                         <a href="Fun.html" title="">Fun</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="GRU$.html" title=""></a>
-                        <a class="class" href="GRU.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)"></a>
-                        <a href="GRU.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)">GRU</a>
+                        <a class="class" href="GRU.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)"></a>
+                        <a href="GRU.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)">GRU</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="LSTM$.html" title=""></a>
+                        <a class="class" href="LSTM.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)"></a>
+                        <a href="LSTM.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)">LSTM</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="trait" href="LeafTag.html" title=""></a>
@@ -239,8 +243,8 @@
                         <a href="PTag.html" title="">PTag</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="RNN$.html" title=""></a>
-                        <a class="class" href="RNN.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)"></a>
-                        <a href="RNN.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)">RNN</a>
+                        <a class="class" href="RNN.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)"></a>
+                        <a href="RNN.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)">RNN</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Residual.html" title=""></a>
@@ -261,6 +265,14 @@
                         <span class="separator"></span>
                         <a class="class" href="Seq4.html" title=""></a>
                         <a href="Seq4.html" title="">Seq4</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="Seq5.html" title=""></a>
+                        <a href="Seq5.html" title="">Seq5</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="SeqLinear$.html" title=""></a>
+                        <a class="class" href="SeqLinear.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * output dim) Applies a linear function to each time step"></a>
+                        <a href="SeqLinear.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * output dim) Applies a linear function to each time step">SeqLinear</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Sequential$.html" title=""></a>
                         <a class="class" href="Sequential.html" title=""></a>
@@ -542,7 +554,25 @@ n is the size of the batch.</p><p>Input is a long tensor with values in [0,C-1].
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)" href="GRU.html"><span class="name">GRU</span></a><span class="params">(<span name="weightXh">weightXh: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHh">weightHh: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHq">weightHq: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightXr">weightXr: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightXz">weightXz: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHr">weightHr: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHz">weightHz: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasR">biasR: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasZ">biasZ: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasQ">biasQ: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasH">biasH: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Option">Option</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)" href="GRU.html"><span class="name">GRU</span></a><span class="params">(<span name="weightXh">weightXh: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHh">weightHh: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightXr">weightXr: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightXz">weightXz: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHr">weightHr: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHz">weightHz: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasR">biasR: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasZ">biasZ: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasH">biasH: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Option">Option</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Inputs of size (sequence length * batch * in dim)
+Outputs of size (sequence length * batch * hidden dim)
+</p>
+    </li><li name="lamp.nn.LSTM" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="LSTMextendsStatefulModule[Option[(lamp.autograd.Variable,lamp.autograd.Variable)]]withProductwithSerializable"></a><a id="LSTM:LSTM"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/LSTM.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)" href="LSTM.html"><span class="name">LSTM</span></a><span class="params">(<span name="weightXi">weightXi: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightXf">weightXf: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightXo">weightXo: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHi">weightHi: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHf">weightHf: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHo">weightHo: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightXc">weightXc: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHc">weightHc: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasI">biasI: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasF">biasF: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasO">biasO: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasC">biasC: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Option">Option</span>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>)]] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       <p class="shortcomment cmt">Inputs of size (sequence length * batch * vocab)
@@ -688,11 +718,11 @@ Outputs of size (sequence length * batch * output dim)
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)" href="RNN.html"><span class="name">RNN</span></a><span class="params">(<span name="weightXh">weightXh: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHh">weightHh: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHq">weightHq: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasQ">biasQ: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasH">biasH: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Option">Option</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)" href="RNN.html"><span class="name">RNN</span></a><span class="params">(<span name="weightXh">weightXh: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weightHh">weightHh: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="biasH">biasH: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Option">Option</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
-      <p class="shortcomment cmt">Inputs of size (sequence length * batch * vocab)
-Outputs of size (sequence length * batch * output dim)
+      <p class="shortcomment cmt">Inputs of size (sequence length * batch * in dim)
+Outputs of size (sequence length * batch * hidden dim)
 </p>
     </li><li name="lamp.nn.Residual" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="Residual[T]extendsStatefulModule[T]withProductwithSerializable"></a><a id="Residual[T]:Residual[T]"></a>
@@ -774,6 +804,41 @@ Outputs of size (sequence length * batch * output dim)
       </span>
       
       
+    </li><li name="lamp.nn.Seq5" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Seq5[T1,T2,T3,T4,T5]extendsStatefulModule[(T1,T2,T3,T4,T5)]withProductwithSerializable"></a><a id="Seq5[T1,T2,T3,T4,T5]:Seq5[T1,T2,T3,T4,T5]"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/Seq5.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Seq5.html"><span class="name">Seq5</span></a><span class="tparams">[<span name="T1">T1</span>, <span name="T2">T2</span>, <span name="T3">T3</span>, <span name="T4">T4</span>, <span name="T5">T5</span>]</span><span class="params">(<span name="m1">m1: <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="lamp.nn.Seq5.T1">T1</span>]</span>, <span name="m2">m2: <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="lamp.nn.Seq5.T2">T2</span>]</span>, <span name="m3">m3: <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="lamp.nn.Seq5.T3">T3</span>]</span>, <span name="m4">m4: <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="lamp.nn.Seq5.T4">T4</span>]</span>, <span name="m5">m5: <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="lamp.nn.Seq5.T5">T5</span>]</span>)</span><span class="result"> extends <a href="StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[(<span class="extype" name="lamp.nn.Seq5.T1">T1</span>, <span class="extype" name="lamp.nn.Seq5.T2">T2</span>, <span class="extype" name="lamp.nn.Seq5.T3">T3</span>, <span class="extype" name="lamp.nn.Seq5.T4">T4</span>, <span class="extype" name="lamp.nn.Seq5.T5">T5</span>)] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.SeqLinear" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="SeqLinearextendsModulewithProductwithSerializable"></a><a id="SeqLinear:SeqLinear"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/SeqLinear.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * output dim) Applies a linear function to each time step" href="SeqLinear.html"><span class="name">SeqLinear</span></a><span class="params">(<span name="weight">weight: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Module.html" class="extype" name="lamp.nn.Module">Module</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Inputs of size (sequence length * batch * in dim)
+Outputs of size (sequence length * batch * output dim)
+Applies a linear function to each time step
+</p>
     </li><li name="lamp.nn.Sequential" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="SequentialextendsStatefulModule[Unit]withProductwithSerializable"></a><a id="Sequential:Sequential"></a>
       <span class="permalink">
@@ -1006,6 +1071,22 @@ Outputs of size (sequence length * batch * output dim)
       </span>
       
       
+    </li><li name="lamp.nn.LSTM" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="LSTM"></a><a id="LSTM:LSTM"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/LSTM$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="LSTM$.html"><span class="name">LSTM</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.LearningRateSchedule" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="LearningRateSchedule"></a><a id="LearningRateSchedule:LearningRateSchedule"></a>
       <span class="permalink">
@@ -1117,6 +1198,22 @@ Outputs of size (sequence length * batch * output dim)
       </span>
       <span class="symbol">
         <a title="" href="SGDW$.html"><span class="name">SGDW</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.SeqLinear" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="SeqLinear"></a><a id="SeqLinear:SeqLinear"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/SeqLinear$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="SeqLinear$.html"><span class="name">SeqLinear</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
