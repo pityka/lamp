@@ -338,6 +338,7 @@ case class Relu(a: Variable) extends Op {
         ATen.zeros(Array(1), a.value.options)
       val tmp = ATen.where_0(pred, zeros, ones)
       ATen.addcmul_out(out, out, p, tmp, 1d)
+      pred.release
       tmp.release
       ones.release
       zeros.release
