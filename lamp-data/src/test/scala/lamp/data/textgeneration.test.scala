@@ -101,6 +101,7 @@ class TextGenerationSuite extends AnyFunSuite {
 
         },
         epochs = 1
+        // checkpointFile = Some(new java.io.File("checkpoint.test"))
       )
       .unsafeRunSync()
 
@@ -166,6 +167,6 @@ class TextGenerationSuite extends AnyFunSuite {
       }
       .unsafeRunSync()
 
-    assert(text == Vector(" t al"))
+    assert(text == Vector("%%üç@"))
   }
 }
