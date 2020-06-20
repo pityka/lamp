@@ -427,6 +427,25 @@ class NNSuite extends AnyFunSuite {
       ),
     0.9395
   )
+  testGradientAndValueND("LSTM ", Option.empty[(Variable, Variable)], false)(
+    nd2x3x2,
+    () =>
+      LSTM(
+        weightXi = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXo = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXf = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXc = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightHi = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHo = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHf = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHc = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        biasI = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasO = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasF = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasC = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
+      ),
+    20.0321
+  )
   test("RNN shape and loss") {
     val output = RNN(
       weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),

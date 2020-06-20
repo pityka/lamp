@@ -9,8 +9,8 @@ import aten.TensorOptions
 import cats.effect.concurrent.Ref
 import cats.effect.IO
 
-/** Inputs of size (sequence length * batch * vocab)
-  * Outputs of size (sequence length * batch * output dim)
+/** Inputs of size (sequence length * batch * in dim)
+  * Outputs of size (sequence length * batch * hidden dim)
   */
 case class RNN(
     weightXh: Variable,

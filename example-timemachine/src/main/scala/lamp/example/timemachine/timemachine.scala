@@ -38,6 +38,7 @@ import scala.io.Codec
 import lamp.nn.Embedding
 import lamp.nn.SeqLinear
 import lamp.nn.Seq5
+import lamp.nn.LSTM
 
 case class CliConfig(
     trainData: String = "",
@@ -140,7 +141,7 @@ object Train extends App {
               dimensions = 20,
               tOpt = tensorOptions
             ),
-            GRU(
+            LSTM(
               in = 20,
               hiddenSize = hiddenSize,
               tOpt = tensorOptions
