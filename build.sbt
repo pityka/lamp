@@ -69,10 +69,12 @@ lazy val commonSettings = Seq(
 )
 
 lazy val Cuda = config("cuda").extend(Test)
+lazy val AllTest = config("alltest").extend(Test)
 
 lazy val core = project
   .in(file("lamp-core"))
   .configs(Cuda)
+  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-core",
@@ -84,14 +86,16 @@ lazy val core = project
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda"),
-    testOptions in Cuda -= Tests.Argument("-l", "cuda"),
-    testOptions in Cuda += Tests.Argument("-n", "cuda")
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := Nil,
+    testOptions in AllTest := Nil
   )
 
 lazy val data = project
   .in(file("lamp-data"))
   .configs(Cuda)
+  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-data",
@@ -101,9 +105,10 @@ lazy val data = project
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda"),
-    testOptions in Cuda -= Tests.Argument("-l", "cuda"),
-    testOptions in Cuda += Tests.Argument("-n", "cuda")
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := Nil,
+    testOptions in AllTest := Nil
   )
   .dependsOn(core % "test->test;compile->compile")
 

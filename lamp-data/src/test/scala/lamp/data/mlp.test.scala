@@ -21,7 +21,7 @@ class MLPSuite extends AnyFunSuite {
     )
 
   def test1(id: String)(fun: Boolean => Unit) = {
-    test(id) { fun(false) }
+    test(id, SlowTest) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }
   }
 

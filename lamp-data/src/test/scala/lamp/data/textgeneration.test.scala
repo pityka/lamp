@@ -20,6 +20,11 @@ import cats.effect.Resource
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.Charset
 import scala.io.Codec
+import lamp.nn.SlowTest
+import lamp.nn.LSTM
+import lamp.nn.SeqLinear
+import lamp.nn.Seq4
+import lamp.nn.Seq5
 
 class TextGenerationSuite extends AnyFunSuite {
   val asciiSilentCharsetDecoder = Charset
@@ -27,6 +32,88 @@ class TextGenerationSuite extends AnyFunSuite {
     .newDecoder()
     .onMalformedInput(CodingErrorAction.REPLACE)
     .onUnmappableCharacter(CodingErrorAction.REPLACE)
+  test("text learning - slow - LSTM", SlowTest) {
+    val trainText =
+      scala.io.Source
+        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
+          Codec.apply(asciiSilentCharsetDecoder)
+        )
+        .mkString
+
+    val (vocab, _) = Text.charsToIntegers(trainText)
+    val trainTokenized = Text.charsToIntegers(trainText, vocab)
+    val vocabularSize = vocab.size
+    val rvocab = vocab.map(_.swap)
+
+    val hiddenSize = 8
+    val lookAhead = 5
+    val device = CPU
+    val precision = SinglePrecision
+    val tensorOptions = device.options(precision)
+    val model = {
+      val classWeights =
+        ATen.ones(Array(vocabularSize), tensorOptions)
+      val net =
+        Seq5(
+          Embedding(
+            classes = vocabularSize,
+            dimensions = 10,
+            tOpt = tensorOptions
+          ),
+          LSTM(
+            in = 10,
+            hiddenSize = 256,
+            tOpt = tensorOptions
+          ),
+          Fun(_.relu),
+          SeqLinear(in = 256, out = vocabularSize, tOpt = tensorOptions),
+          Fun(_.logSoftMax(2))
+        )
+
+      SupervisedModel(
+        net,
+        ((), None, (), (), ()),
+        LossFunctions.SequenceNLL(vocabularSize, classWeights)
+      )
+    }
+
+    val trainEpochs = () =>
+      Text
+        .minibatchesFromText(
+          trainTokenized,
+          64,
+          lookAhead,
+          device
+        )
+
+    val optimizer = AdamW.factory(
+      weightDecay = simple(0.00),
+      learningRate = simple(0.1),
+      scheduler = LearningRateSchedule.noop,
+      clip = Some(1d)
+    )
+
+    val buffer = mutable.ArrayBuffer[Double]()
+    val trainedModel = IOLoops
+      .epochs(
+        model = model,
+        optimizerFactory = optimizer,
+        trainBatchesOverEpoch = trainEpochs,
+        validationBatchesOverEpoch = None,
+        trainingCallback = new TrainingCallback {
+
+          override def apply(trainingLoss: Double, batchCount: Int): Unit = {
+            buffer.append(trainingLoss)
+          }
+
+        },
+        epochs = 10
+      )
+      .unsafeRunSync()
+
+    assert(buffer.last < 3d)
+
+  }
   test("text learning") {
     val trainText =
       scala.io.Source

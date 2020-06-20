@@ -14,6 +14,7 @@ import cats.effect.IO
 import cats.effect.concurrent.Ref
 
 object CudaTest extends Tag("cuda")
+object SlowTest extends Tag("slow")
 
 class NNSuite extends AnyFunSuite {
   def test1(id: String)(fun: Boolean => Unit) = {
