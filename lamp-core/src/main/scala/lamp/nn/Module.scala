@@ -6,19 +6,6 @@ import aten.ATen
 import aten.TensorOptions
 import lamp.syntax
 
-case class Residual[T](member: StatefulModule[T]) extends StatefulModule[T] {
-  override def asEval: Residual[T] = copy(member.asEval)
-  override def asTraining: Residual[T] = copy(member.asTraining)
-  override def state = member.state
-  def forward1(x: Variable, st: T) = {
-    val (x1, st1) = member.forward1(x, st)
-    val ret = x + x1
-    (ret, st1)
-  }
-
-  override def load(parameters: Seq[Tensor]) = Residual(member.load(parameters))
-}
-
 case class Sequential(
     members: StatefulModule[Unit]*
 ) extends StatefulModule[Unit] {

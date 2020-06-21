@@ -81,9 +81,9 @@ case class CliConfig(
     testData: String = "",
     labels: String = "",
     cuda: Boolean = false,
-    trainBatchSize: Int = 256,
-    testBatchSize: Int = 256,
-    epochs: Int = 1000,
+    trainBatchSize: Int = 32,
+    testBatchSize: Int = 32,
+    epochs: Int = 10,
     learningRate: Double = 0.001,
     dropout: Double = 0.0,
     network: String = "lenet",
@@ -142,7 +142,7 @@ object Train extends App {
         val net =
           if (config.network == "lenet")
             Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
-          else Cnn.resnet(32, 32, numClasses, config.dropout, tensorOptions)
+          else Cnn.resnet(32, numClasses, config.dropout, tensorOptions)
 
         val loadedNet = config.checkpointLoad match {
           case None => net
@@ -198,7 +198,7 @@ object Train extends App {
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
         learningRate = simple(config.learningRate),
-        scheduler = LearningRateSchedule.cyclicSchedule(10d, 200L)
+        scheduler = LearningRateSchedule.noop
       )
 
       val trainedModel = IOLoops
