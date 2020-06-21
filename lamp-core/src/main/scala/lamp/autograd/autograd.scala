@@ -121,6 +121,7 @@ case class Variable(
     ArgMax(this, dim = dim, keepDim = keepDim).value
   def oneHot(numClasses: Int) =
     OneHot(this, numClasses).value
+  def assign(other: Variable) = Assign(this, other).value
   def cast(precision: FloatingPointPrecision) =
     CastToPrecision(this, precision).value
   def +(other: Variable) = Add(this, other).value

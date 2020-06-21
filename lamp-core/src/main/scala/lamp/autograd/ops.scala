@@ -93,6 +93,14 @@ case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
   )
   val value = Variable(this, ATen.argmax(a.value, dim, keepDim))
 }
+case class Assign(a: Variable, b: Variable) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      throw new RuntimeException("Argmax is not differentiable")
+    }
+  )
+  val value = Variable(this, b.value)
+}
 case class OneHot(a: Variable, numClasses: Int) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>

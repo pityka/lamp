@@ -66,6 +66,90 @@ object Text {
       })(variable => IO { variable.releaseAll })
     }
   }
+  def sequencePredictionBeam[T](
+      prefix: Vector[Long],
+      device: Device,
+      precision: FloatingPointPrecision,
+      module: StatefulModule[T],
+      init: T,
+      steps: Int
+  ): Resource[IO, Seq[(Variable, Double)]] = {
+    val batchSize = 1
+    val k = 3
+    def loop(
+        n: Int,
+        buffers: Seq[(Seq[(Variable, T)], Double)]
+    ): Seq[(Seq[Variable], Double)] = {
+      if (n == 0) {
+        buffers.map(b => (b._1.map(_._1), b._2))
+      } else {
+        val candidates = buffers.flatMap {
+          case (sequence, logProb0) =>
+            val (lastOutput, lastState) = sequence.last
+
+            val (output, state) =
+              module.forward1(lastOutput, lastState)
+
+            val lastChar = if (output.shape(0) > 1) {
+              val lastTimeStep1 =
+                output.select(0, output.shape(0) - 1)
+
+              lastTimeStep1.view((1L :: lastTimeStep1.shape).map(_.toInt))
+
+            } else output
+
+            (0 until lastChar.shape(2).toInt).map { i =>
+              val selected = lastChar.select(2L, i.toLong)
+              val tmp = Tensor.scalarLong(i.toLong, selected.options.toLong)
+              val index = ATen._unsafe_view(tmp, Array(1L, 1L))
+              tmp.release
+              val logProb = selected.toMat.raw(0)
+              (
+                sequence,
+                selected.assign(const(index).releasable),
+                logProb + logProb0,
+                state,
+                i
+              )
+            }
+
+        }
+
+        val (chosen, rejected) = candidates.sortBy(_._3).reverse.splitAt(k)
+        rejected.foreach(_._2.value.release)
+        val newBuffers = chosen.map {
+          case (sequence, selected, logProb, state, i) =>
+            (sequence :+ ((selected, state)), logProb)
+        }
+
+        loop(
+          n - 1,
+          newBuffers
+        )
+      }
+    }
+
+    makePredictionBatch(Vector(prefix), device, precision).flatMap { batch =>
+      Resource.make(IO {
+
+        loop(steps, Seq(Seq((const(batch), init)) -> 0d)).sortBy(_._2).map {
+          case (seq, logProb) =>
+            val catted = ConcatenateAddNewDim(
+              seq.map(v => v.select(0, v.shape(0) - 1))
+            ).value.view(List(seq.size))
+
+            (catted, logProb)
+        }
+
+      })(variables =>
+        IO {
+          ConcatenateAddNewDim(
+            variables.map(_._1)
+          ).value.releaseAll
+        }
+      )
+    }
+  }
 
   /** Convert back to text. Tensor shape: time x batch x dim
     */

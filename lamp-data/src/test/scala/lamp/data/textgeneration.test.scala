@@ -114,7 +114,7 @@ class TextGenerationSuite extends AnyFunSuite {
     assert(buffer.last < 3d)
 
   }
-  test("text learning") {
+  test("text learning", SlowTest) {
     val trainText =
       scala.io.Source
         .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
@@ -127,8 +127,8 @@ class TextGenerationSuite extends AnyFunSuite {
     val vocabularSize = vocab.size
     val rvocab = vocab.map(_.swap)
 
-    val hiddenSize = 8
-    val lookAhead = 5
+    val hiddenSize = 1024
+    val lookAhead = 10
     val device = CPU
     val precision = SinglePrecision
     val tensorOptions = device.options(precision)
@@ -136,7 +136,7 @@ class TextGenerationSuite extends AnyFunSuite {
       val classWeights =
         ATen.ones(Array(vocabularSize), tensorOptions)
       val net =
-        Seq3(
+        Seq5(
           Embedding(
             classes = vocabularSize,
             dimensions = 10,
@@ -144,15 +144,17 @@ class TextGenerationSuite extends AnyFunSuite {
           ),
           RNN(
             in = 10,
-            hiddenSize = vocabularSize,
+            hiddenSize = hiddenSize,
             tOpt = tensorOptions
           ),
+          Fun(_.relu),
+          SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions),
           Fun(_.logSoftMax(2))
         )
 
       SupervisedModel(
         net,
-        ((), None, ()),
+        ((), None, (), (), ()),
         LossFunctions.SequenceNLL(vocabularSize, classWeights)
       )
     }
@@ -168,7 +170,7 @@ class TextGenerationSuite extends AnyFunSuite {
 
     val optimizer = AdamW.factory(
       weightDecay = simple(0.00),
-      learningRate = simple(0.1),
+      learningRate = simple(0.0001),
       scheduler = LearningRateSchedule.noop,
       clip = Some(1d)
     )
@@ -188,7 +190,8 @@ class TextGenerationSuite extends AnyFunSuite {
 
         },
         epochs = 1
-        // checkpointFile = Some(new java.io.File("checkpoint.test"))
+        // checkpointFile = Some(new java.io.File("checkpoint.test")),
+        // logger = Some(scribe.Logger("training"))
       )
       .unsafeRunSync()
 
@@ -207,14 +210,14 @@ class TextGenerationSuite extends AnyFunSuite {
     val vocabularSize = vocab.size
     val rvocab = vocab.map(_.swap)
 
-    val hiddenSize = 64
-    val lookAhead = 5
+    val hiddenSize = 1024
+    val lookAhead = 10
     val device = CPU
     val precision = SinglePrecision
     val tensorOptions = device.options(precision)
 
     val net =
-      Seq3(
+      Seq5(
         Embedding(
           classes = vocabularSize,
           dimensions = 10,
@@ -222,9 +225,11 @@ class TextGenerationSuite extends AnyFunSuite {
         ),
         RNN(
           in = 10,
-          hiddenSize = vocabularSize,
+          hiddenSize = hiddenSize,
           tOpt = tensorOptions
         ),
+        Fun(_.relu),
+        SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions),
         Fun(_.logSoftMax(2))
       )
 
@@ -245,6 +250,8 @@ class TextGenerationSuite extends AnyFunSuite {
         (
           (),
           None,
+          (),
+          (),
           ()
         ),
         lookAhead
@@ -254,6 +261,75 @@ class TextGenerationSuite extends AnyFunSuite {
       }
       .unsafeRunSync()
 
-    assert(text == Vector("%%üç@"))
+    assert(text == Vector(" the the t"))
+  }
+  test("text generation - beam") {
+    val trainText =
+      scala.io.Source
+        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
+          Codec.apply(asciiSilentCharsetDecoder)
+        )
+        .mkString
+
+    val (vocab, _) = Text.charsToIntegers(trainText)
+    val vocabularSize = vocab.size
+    val rvocab = vocab.map(_.swap)
+
+    val hiddenSize = 1024
+    val lookAhead = 10
+    val device = CPU
+    val precision = SinglePrecision
+    val tensorOptions = device.options(precision)
+
+    val net =
+      Seq5(
+        Embedding(
+          classes = vocabularSize,
+          dimensions = 10,
+          tOpt = tensorOptions
+        ),
+        RNN(
+          in = 10,
+          hiddenSize = hiddenSize,
+          tOpt = tensorOptions
+        ),
+        Fun(_.relu),
+        SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions),
+        Fun(_.logSoftMax(2))
+      )
+
+    val channel = Resource.make(IO {
+      val is = getClass.getResourceAsStream("/checkpoint.test")
+      java.nio.channels.Channels.newChannel(is)
+    })(v => IO { v.close })
+    val trainedModel =
+      Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
+    val text = Text
+      .sequencePredictionBeam(
+        List("time machine")
+          .map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
+          .head,
+        device,
+        precision,
+        trainedModel,
+        (
+          (),
+          None,
+          (),
+          (),
+          ()
+        ),
+        lookAhead
+      )
+      .use { variables =>
+        IO {
+          variables.map(v =>
+            (Text.convertIntegersToText(v._1.value, rvocab).mkString, v._2)
+          )
+        }
+      }
+      .unsafeRunSync()
+
+    assert(text.map(_._1) == Seq("e the the t", "ed and and ", "ed and the "))
   }
 }
