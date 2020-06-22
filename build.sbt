@@ -137,6 +137,19 @@ lazy val example_timemachine = project
   )
   .dependsOn(core, data)
 
+lazy val example_translation = project
+  .in(file("example-translation"))
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    skip in publish := true,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.outr" %% "scribe" % "2.7.3"
+    )
+  )
+  .dependsOn(core, data)
+
 lazy val docs = project
   .in(file("lamp-docs"))
   .dependsOn(core % "compile->test;compile->compile", data)

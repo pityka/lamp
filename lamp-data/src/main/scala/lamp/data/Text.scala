@@ -14,6 +14,7 @@ import lamp.autograd.Variable
 import lamp.autograd.ConcatenateAddNewDim
 import lamp.FloatingPointPrecision
 import lamp.DoublePrecision
+import cats.effect.ContextShift
 
 object Text {
   def sequencePrediction[T](
@@ -287,6 +288,102 @@ object Text {
     val numSamples = (dropped.size - 1) / timeSteps
     val idx = array
       .shuffle(array.range(0, numSamples * timeSteps, timeSteps))
+      .grouped(minibatchSize)
+      .toList
+      .dropRight(1)
+
+    scribe.info(
+      s"Total batches: ${idx.size}. Each $timeSteps token long and has $minibatchSize examples."
+    )
+    assert(idx.forall(_.size == minibatchSize))
+    new BatchStream {
+      private var remaining = idx
+      def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
+        remaining match {
+          case Nil => emptyResource
+          case x :: tail =>
+            val r = makeNonEmptyBatch(x)
+            remaining = tail
+            r
+        }
+    }
+
+  }
+
+  /**
+    * Yields tensors of shape (time step x batch size)
+    */
+  def minibatchesFromLines(
+      text: IndexedSeq[(Vector[Long], Vector[Long])],
+      minibatchSize: Int,
+      timeSteps: Int,
+      pad: Int,
+      device: Device
+  ) = {
+    def makeNonEmptyBatch(idx: Array[Int]) = {
+      Resource.make {
+        val io = IO {
+          val pairs = idx.map { i =>
+            val segmentFeature =
+              text(i)._1
+                .take(timeSteps)
+                .padTo(timeSteps, pad.toLong)
+            val segmentTarget =
+              text(i)._2
+                .take(timeSteps)
+                .padTo(timeSteps, pad.toLong)
+            assert(segmentFeature.length == segmentTarget.length)
+            assert(segmentFeature.length == timeSteps)
+
+            (
+              segmentFeature,
+              segmentTarget
+            )
+
+          }
+
+          val flattenedFeature =
+            TensorHelpers
+              .fromLongVec(pairs.flatMap(_._1).toVec, device)
+          val flattenedTarget =
+            TensorHelpers.fromLongVec(pairs.flatMap(_._2).toVec, device)
+          val viewedFeature = ATen._unsafe_view(
+            flattenedFeature,
+            Array(idx.size.toLong, timeSteps.toLong)
+          )
+          val viewedTarget = ATen._unsafe_view(
+            flattenedTarget,
+            Array(idx.size.toLong, timeSteps.toLong)
+          )
+          val transposedFeatures =
+            viewedFeature.transpose(0, 1)
+          val transposedTarget = viewedTarget.transpose(0, 1)
+
+          Tensor.releaseAll(
+            Array(
+              viewedTarget,
+              viewedFeature,
+              flattenedTarget,
+              flattenedFeature
+            )
+          )
+
+          Some((transposedFeatures, transposedTarget)): Option[(Tensor, Tensor)]
+        }
+        io
+      } {
+        case None => IO.unit
+        case Some((a, b)) =>
+          IO {
+            a.release
+            b.release
+          }
+      }
+    }
+    val emptyResource = Resource.pure[IO, Option[(Tensor, Tensor)]](None)
+
+    val idx = array
+      .shuffle(array.range(0, text.size))
       .grouped(minibatchSize)
       .toList
       .dropRight(1)

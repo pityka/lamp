@@ -97,7 +97,7 @@ object IOLoops {
                   if (batchCount % trainLogFrequency == 0) {
                     logger.foreach(
                       _.info(
-                        s"Training loss at batch $batchCount: $loss (exp: ${math.exp(loss)})"
+                        s"Training loss after batch $batchCount: $loss (exp: ${math.exp(loss)})"
                       )
                     )
                   }
@@ -158,7 +158,7 @@ object IOLoops {
                         if (batchCount % validationLogFrequency == 0) {
                           logger.foreach(
                             _.info(
-                              s"Validation loss at batch $batchCount in epoch $epochCount over $numExamples examples: $validationLoss (exp: ${math
+                              s"Validation loss after batch $batchCount in epoch $epochCount over $numExamples examples: $validationLoss (exp: ${math
                                 .exp(validationLoss)})"
                             )
                           )
