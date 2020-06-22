@@ -19,10 +19,11 @@ object LossFunctions {
   case class NLL(
       numClasses: Int,
       classWeights: Tensor,
-      reduction: Reduction = Mean
+      reduction: Reduction = Mean,
+      ignore: Long = -100L
   ) extends LossFunction {
     def apply(out: Variable, target: Tensor) = {
-      val v = out.nllLoss(target, numClasses, classWeights, reduction)
+      val v = out.nllLoss(target, numClasses, classWeights, reduction, ignore)
       (v, out.shape(0))
     }
   }
@@ -34,7 +35,8 @@ object LossFunctions {
     */
   case class SequenceNLL(
       numClasses: Int,
-      classWeights: Tensor
+      classWeights: Tensor,
+      ignore: Long = -100L
   ) extends LossFunction {
     def apply(out: Variable, target: Tensor) = {
       val timeSteps = out.shape(0)
@@ -43,7 +45,13 @@ object LossFunctions {
         val t1 = ATen.select(target, 0, t)
         val v = out
           .select(0, t)
-          .nllLoss(t1, numClasses, classWeights, reduction = Sum)
+          .nllLoss(
+            t1,
+            numClasses,
+            classWeights,
+            reduction = Sum,
+            ignore = ignore
+          )
         v.releaseWith(t1)
       }
       val v = lossesAtTimeSteps.reduce(_ + _) * (1d / (timeSteps * batches))

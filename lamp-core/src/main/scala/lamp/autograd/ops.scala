@@ -491,7 +491,8 @@ case class NllLoss(
     target: Tensor,
     weights: Tensor,
     numClasses: Int,
-    reduction: Reduction
+    reduction: Reduction,
+    ignore: Long
 ) extends Op {
   assert(
     input.sizes.size == 2,
@@ -511,7 +512,7 @@ case class NllLoss(
           target,
           weights,
           reduction.asLong,
-          -100,
+          ignore,
           total_weight
         )
       ATen.add_out(out, out, tmp, 1d)
@@ -520,7 +521,13 @@ case class NllLoss(
     }
   )
   val (value1, total_weight) =
-    ATen.nll_loss_forward(input.value, target, weights, reduction.asLong, -100)
+    ATen.nll_loss_forward(
+      input.value,
+      target,
+      weights,
+      reduction.asLong,
+      ignore
+    )
 
   val value =
     Variable(

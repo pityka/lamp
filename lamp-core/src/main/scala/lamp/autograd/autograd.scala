@@ -152,9 +152,10 @@ case class Variable(
       target: Tensor,
       numClasses: Int,
       weights: Tensor,
-      reduction: Reduction = Mean
+      reduction: Reduction = Mean,
+      ignore: Long = -100L
   ) =
-    NllLoss(this, target, weights, numClasses, reduction).value
+    NllLoss(this, target, weights, numClasses, reduction, ignore).value
   def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
   def mean(dim: List[Int]) = Mean(this, dim).value
   def view(shape: List[Int]) = View(this, shape.map(_.toLong).toArray).value
