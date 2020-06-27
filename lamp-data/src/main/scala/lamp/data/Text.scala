@@ -137,7 +137,6 @@ object Text {
           .reverse
           .map {
             case (seq, logProb) =>
-              println(logProb)
               val catted = ConcatenateAddNewDim(
                 seq.map(v => v.select(0, v.shape(0) - 1))
               ).value.view(List(seq.size))
