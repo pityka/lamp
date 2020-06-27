@@ -18,11 +18,6 @@ case class SeqLinear(
     bias: Variable
 ) extends Module {
 
-  override def load(tensors: Seq[Tensor]): SeqLinear = copy(
-    weight = param(tensors(0)),
-    bias = param(tensors(1))
-  )
-
   override def state: Seq[(Variable, PTag)] =
     List(
       (weight, SeqLinear.Weight),
@@ -42,6 +37,13 @@ case class SeqLinear(
 }
 
 object SeqLinear {
+  implicit val trainingMode = TrainingMode.identity[SeqLinear]
+  implicit val load = Load.make[SeqLinear] { m => tensors =>
+    m.copy(
+      weight = param(tensors(0)),
+      bias = param(tensors(1))
+    )
+  }
   case object Weight extends LeafTag
   case object Bias extends LeafTag
 

@@ -6,10 +6,11 @@ import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 import aten.Tensor
 import java.io.File
-import lamp.nn.StatefulModule
 import cats.effect.IO
 import cats.effect.Resource
 import java.io.FileOutputStream
+import lamp.nn.Module
+import lamp.nn.GenericModule
 
 /** Binary serialization for Tensor with primitive Double, Float, Long
   *
@@ -222,7 +223,7 @@ object Writer {
         writeTensorIntoChannel(t, channel)(st)
     })
 
-  def writeCheckpoint[T](file: File, model: StatefulModule[T]) = {
+  def writeCheckpoint[A, B](file: File, model: GenericModule[A, B]) = {
     val channel = Resource.make(IO {
       val fis = new FileOutputStream(file, false)
       fis.getChannel

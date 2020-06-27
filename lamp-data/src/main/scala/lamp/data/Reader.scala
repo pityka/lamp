@@ -15,10 +15,11 @@ import java.io.FileInputStream
 import cats.effect.Resource
 import lamp.nn.Module
 import java.io.File
-import lamp.nn.StatefulModule
 import lamp.util.NDArray
 import lamp.Device
 import lamp.SinglePrecision
+import lamp.nn.GenericModule
+import lamp.nn.Load
 
 object Reader {
 
@@ -197,15 +198,19 @@ object Reader {
     case 7 => ScalarTagDouble
   }
 
-  def loadFromFile[T](module: StatefulModule[T], file: File, device: Device) = {
+  def loadFromFile[A, B, M <: GenericModule[A, B]: Load](
+      module: M with GenericModule[A, B],
+      file: File,
+      device: Device
+  ) = {
     val channel = Resource.make(IO {
       val fis = new FileInputStream(file)
       fis.getChannel
     })(v => IO { v.close })
     loadFromChannel(module, channel, device)
   }
-  def loadFromChannel[T](
-      module: StatefulModule[T],
+  def loadFromChannel[A, B, M <: GenericModule[A, B]: Load](
+      module: M with GenericModule[A, B],
       channel: Resource[IO, ReadableByteChannel],
       device: Device
   ) = {

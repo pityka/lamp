@@ -21,10 +21,10 @@ class NNSuite extends AnyFunSuite {
     test(id) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }
   }
-  def testGradientAndValue(
+  def testGradientAndValue[M <: Module: Load](
       id: String,
       cuda: Boolean = false
-  )(m: Mat[Double], moduleF: () => Module, expectedValue: Double) =
+  )(m: Mat[Double], moduleF: () => M with Module, expectedValue: Double) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
       val d = const(TensorHelpers.fromMat(m, cuda))
       val module = moduleF()
@@ -88,13 +88,13 @@ class NNSuite extends AnyFunSuite {
       assert(value == expectedValue)
 
     }
-  def testGradientAndValueND[T](
+  def testGradientAndValueND[T, M <: StatefulModule[Variable, Variable, T]: Load](
       id: String,
       st: T,
       cuda: Boolean = false
   )(
       m: NDArray[Double],
-      moduleF: () => StatefulModule[T],
+      moduleF: () => M with StatefulModule[Variable, Variable, T],
       expectedValue: Double
   ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
@@ -119,7 +119,7 @@ class NNSuite extends AnyFunSuite {
         }
       }
 
-      val output = module.forward1(d, st)._1
+      val output = module.forward((d, st))._1
       val sum = output.sum
       val value = NDArray.tensorToNDArray(sum.value).data(0)
       val gradAuto =
@@ -137,7 +137,7 @@ class NNSuite extends AnyFunSuite {
               p2,
               1d
             )
-            TensorHelpers.toMat(module.forward1(d, st)._1.sum.value).raw(0)
+            TensorHelpers.toMat(module.forward((d, st))._1.sum.value).raw(0)
           }
           val eps = 1e-6
           val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
@@ -161,13 +161,13 @@ class NNSuite extends AnyFunSuite {
       assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
 
     }
-  def testGradientAndValueNDLong[T](
+  def testGradientAndValueNDLong[T, M <: StatefulModule[Variable, Variable, T]: Load](
       id: String,
       st: T,
       cuda: Boolean = false
   )(
       m: NDArray[Long],
-      moduleF: () => StatefulModule[T],
+      moduleF: () => M with StatefulModule[Variable, Variable, T],
       expectedValue: Double
   ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
@@ -192,7 +192,7 @@ class NNSuite extends AnyFunSuite {
         }
       }
 
-      val output = module.forward1(d, st)._1
+      val output = module.forward((d, st))._1
       val sum = output.sum
       val value = NDArray.tensorToNDArray(sum.value).data(0)
       val gradAuto =
@@ -210,7 +210,7 @@ class NNSuite extends AnyFunSuite {
               p2,
               1d
             )
-            TensorHelpers.toMat(module.forward1(d, st)._1.sum.value).raw(0)
+            TensorHelpers.toMat(module.forward((d, st))._1.sum.value).raw(0)
           }
           val eps = 1e-6
           val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
@@ -324,7 +324,7 @@ class NNSuite extends AnyFunSuite {
         padding = 0,
         dilation = 1,
         groups = 1
-      ),
+      ).lift,
     22d
   )
   testGradientAndValueND("Conv1D/cuda ", (), true)(
@@ -337,7 +337,7 @@ class NNSuite extends AnyFunSuite {
         padding = 0,
         dilation = 1,
         groups = 1
-      ),
+      ).lift,
     22d
   )
   testGradientAndValueND("Conv2D ", (), false)(
@@ -350,7 +350,7 @@ class NNSuite extends AnyFunSuite {
         padding = 0,
         dilation = 1,
         groups = 1
-      ),
+      ).lift,
     154d
   )
   testGradientAndValueND("Conv2D/cuda ", (), true)(
@@ -363,7 +363,7 @@ class NNSuite extends AnyFunSuite {
         padding = 0,
         dilation = 1,
         groups = 1
-      ),
+      ).lift,
     154d
   )
   testGradientAndValueND("BatchNorm ", (), false)(
@@ -372,7 +372,7 @@ class NNSuite extends AnyFunSuite {
       BatchNorm(
         18,
         TensorOptions.dtypeDouble()
-      ),
+      ).lift,
     0d
   )
   testGradientAndValueND("BatchNorm 2D", (), false)(
@@ -381,7 +381,7 @@ class NNSuite extends AnyFunSuite {
       BatchNorm2D(
         2,
         TensorOptions.dtypeDouble()
-      ),
+      ).lift,
     0d
   )
 
@@ -390,7 +390,7 @@ class NNSuite extends AnyFunSuite {
     () =>
       Embedding(
         weights = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble))
-      ),
+      ).lift,
     24d
   )
   testGradientAndValueND("RNN ", Option.empty[Variable], false)(
@@ -409,7 +409,7 @@ class NNSuite extends AnyFunSuite {
       SeqLinear(
         weight = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
         bias = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
-      ),
+      ).lift,
     288d
   )
   testGradientAndValueND("GRU ", Option.empty[Variable], false)(
@@ -483,7 +483,7 @@ class NNSuite extends AnyFunSuite {
 
   test("load params") {
 
-    val mod = Sequential(
+    val mod = sequence(
       Linear(in = 30, out = 3, TensorOptions.dtypeDouble()),
       Linear(in = 3, out = 2, TensorOptions.dtypeDouble()),
       Fun(_.logSoftMax(dim = 1))
@@ -521,15 +521,17 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
   def forward(x: Variable): Variable =
     ((x.mm(w)).logSoftMax(dim = 1).crossEntropy(y).sum + w.squaredFrobenius)
 
-  override def load(parameters: Seq[Tensor]) = this
-
   override def state: Seq[(Variable, PTag)] =
     Nil
 
 }
+object LogisticRegression1 {
+  implicit val load: Load[LogisticRegression1] =
+    Load.identity[LogisticRegression1]
+}
 case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
 
-  val mod = Sequential(
+  val mod = sequence(
     Linear(
       param(ATen.ones(Array(k, dim), y.options)),
       Some(param(ATen.ones(Array(1, k), y.options)))
@@ -544,15 +546,15 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
         .reduce(_ + _)
 
   override def state: Seq[(Variable, PTag)] =
-    mod.state
+    Nil
 
-  override def load(parameters: Seq[Tensor]) = mod.load(parameters)
-
+}
+object LogisticRegression2 {
+  implicit val load: Load[LogisticRegression2] =
+    Load.identity[LogisticRegression2]
 }
 
 case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
-
-  override def load(parameters: Seq[Tensor]) = mod.load(parameters)
 
   val mod = Sequential(
     Linear(
@@ -574,6 +576,9 @@ case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
         .reduce(_ + _)
 
   override def state: Seq[(Variable, PTag)] =
-    mod.state
+    Nil
 
+}
+object Mlp1 {
+  implicit val load: Load[Mlp1] = Load.identity[Mlp1]
 }

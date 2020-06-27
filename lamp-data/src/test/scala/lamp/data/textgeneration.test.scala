@@ -25,6 +25,8 @@ import lamp.nn.LSTM
 import lamp.nn.SeqLinear
 import lamp.nn.Seq4
 import lamp.nn.Seq5
+import lamp.nn.StatefulSeq5
+import lamp.nn.statefulSequence
 
 class TextGenerationSuite extends AnyFunSuite {
   val asciiSilentCharsetDecoder = Charset
@@ -54,25 +56,24 @@ class TextGenerationSuite extends AnyFunSuite {
       val classWeights =
         ATen.ones(Array(vocabularSize), tensorOptions)
       val net =
-        Seq5(
+        statefulSequence(
           Embedding(
             classes = vocabularSize,
             dimensions = 10,
             tOpt = tensorOptions
-          ),
+          ).lift,
           LSTM(
             in = 10,
             hiddenSize = 256,
             tOpt = tensorOptions
           ),
-          Fun(_.relu),
-          SeqLinear(in = 256, out = vocabularSize, tOpt = tensorOptions),
-          Fun(_.logSoftMax(2))
-        )
+          Fun(_.relu).lift,
+          SeqLinear(in = 256, out = vocabularSize, tOpt = tensorOptions).lift,
+          Fun(_.logSoftMax(2)).lift
+        ).unlift
 
       SupervisedModel(
         net,
-        ((), None, (), (), ()),
         LossFunctions.SequenceNLL(vocabularSize, classWeights)
       )
     }
@@ -136,25 +137,24 @@ class TextGenerationSuite extends AnyFunSuite {
       val classWeights =
         ATen.ones(Array(vocabularSize), tensorOptions)
       val net =
-        Seq5(
+        statefulSequence(
           Embedding(
             classes = vocabularSize,
             dimensions = 10,
             tOpt = tensorOptions
-          ),
+          ).lift,
           RNN(
             in = 10,
             hiddenSize = hiddenSize,
             tOpt = tensorOptions
           ),
-          Fun(_.relu),
-          SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions),
-          Fun(_.logSoftMax(2))
-        )
+          Fun(_.relu).lift,
+          SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
+          Fun(_.logSoftMax(2)).lift
+        ).unlift
 
       SupervisedModel(
         net,
-        ((), None, (), (), ()),
         LossFunctions.SequenceNLL(vocabularSize, classWeights)
       )
     }
@@ -217,20 +217,20 @@ class TextGenerationSuite extends AnyFunSuite {
     val tensorOptions = device.options(precision)
 
     val net =
-      Seq5(
+      statefulSequence(
         Embedding(
           classes = vocabularSize,
           dimensions = 10,
           tOpt = tensorOptions
-        ),
+        ).lift,
         RNN(
           in = 10,
           hiddenSize = hiddenSize,
           tOpt = tensorOptions
         ),
-        Fun(_.relu),
-        SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions),
-        Fun(_.logSoftMax(2))
+        Fun(_.relu).lift,
+        SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
+        Fun(_.logSoftMax(2)).lift
       )
 
     val channel = Resource.make(IO {
@@ -247,13 +247,6 @@ class TextGenerationSuite extends AnyFunSuite {
         device,
         precision,
         trainedModel,
-        (
-          (),
-          None,
-          (),
-          (),
-          ()
-        ),
         lookAhead
       )
       .use { variable =>
@@ -282,20 +275,20 @@ class TextGenerationSuite extends AnyFunSuite {
     val tensorOptions = device.options(precision)
 
     val net =
-      Seq5(
+      statefulSequence(
         Embedding(
           classes = vocabularSize,
           dimensions = 10,
           tOpt = tensorOptions
-        ),
+        ).lift,
         RNN(
           in = 10,
           hiddenSize = hiddenSize,
           tOpt = tensorOptions
         ),
-        Fun(_.relu),
-        SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions),
-        Fun(_.logSoftMax(2))
+        Fun(_.relu).lift,
+        SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
+        Fun(_.logSoftMax(2)).lift
       )
 
     val channel = Resource.make(IO {

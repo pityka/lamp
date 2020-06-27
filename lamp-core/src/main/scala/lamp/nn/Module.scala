@@ -6,13 +6,9 @@ import aten.ATen
 import aten.TensorOptions
 import lamp.syntax
 
-case class Sequential(
-    members: StatefulModule[Unit]*
-) extends StatefulModule[Unit] {
-  override def asEval: Sequential =
-    Sequential(members.map(_.asEval): _*)
-  override def asTraining: Sequential =
-    Sequential(members.map(_.asTraining): _*)
+case class Sequential[A, M <: GenericModule[A, A]](
+    members: M with GenericModule[A, A]*
+) extends GenericModule[A, A] {
   override def state =
     members.zipWithIndex.flatMap {
       case (member, idx) =>
@@ -20,28 +16,33 @@ case class Sequential(
           case (param, ptag) => (param, Sequential.Tag(ptag, idx))
         }
     }
-  def forward1(x: Variable, st: Unit) =
-    (members.foldLeft(x) {
+  def forward(x: A) =
+    members.foldLeft(x) {
       case (x, m) =>
-        val (x1, _) = m.forward1(x, ())
-        x1
-    }, ())
+        m.forward(x)
+    }
 
-  def forward(x: Variable) = forward1(x, ())._1
-
-  override def load(tensors: Seq[Tensor]) = {
-    val (loadedMembers, _) =
-      members.foldLeft((List[StatefulModule[Unit]](), tensors)) {
-        case ((acc, params), member) =>
-          val numParam = member.state.size
-          val loaded = member.load(params.take(numParam))
-          (acc.:+(loaded), params.drop(numParam))
-
-      }
-    Sequential(loadedMembers: _*)
-  }
 }
 object Sequential {
+
+  implicit def trainingMode[A, M <: GenericModule[A, A]: TrainingMode] =
+    TrainingMode.make[Sequential[A, M]](
+      module => Sequential(module.members.map(_.asEval): _*),
+      module => Sequential(module.members.map(_.asTraining): _*)
+    )
+
+  implicit def load[A, M <: GenericModule[A, A]: Load] =
+    Load.make[Sequential[A, M]] { module => tensors =>
+      val (loadedMembers, _) =
+        module.members.foldLeft((List[M](), tensors)) {
+          case ((acc, params), member) =>
+            val numParam = member.state.size
+            val loaded = member.load(params.take(numParam))
+            (acc.:+(loaded), params.drop(numParam))
+
+        }
+      Sequential(loadedMembers: _*)
+    }
 
   case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
     def leaf = t
@@ -50,20 +51,70 @@ object Sequential {
 }
 
 case class Fun(fun: Variable => Variable) extends Module {
+  def state = Nil
   def forward(x: Variable): Variable = fun(x)
 }
-
-trait Module extends StatefulModule[Unit] {
-  def forward(x: Variable): Variable
-  override def forward1(x: Variable, state: Unit): (Variable, Unit) =
-    (forward(x), ())
+object Fun {
+  implicit val trainingMode = TrainingMode.identity[Fun]
+  implicit val load = Load.identity[Fun]
 }
 
-trait StatefulModule[S] {
-  def asEval: StatefulModule[S] = this
-  def asTraining: StatefulModule[S] = this
-  def forward1(x: Variable, state: S): (Variable, S)
-  def state: Seq[(Variable, PTag)] = Nil
+case class LiftedModule[M <: Module](mod: M with Module)
+    extends StatefulModule[Variable, Variable, Unit] {
+  def state = mod.state
+  def forward(x: (Variable, Unit)) = (mod.forward(x._1), ())
+}
+object LiftedModule {
+  implicit def trainingMode[
+      M <: Module: TrainingMode
+  ] =
+    TrainingMode.make[LiftedModule[M]](
+      m => m.copy(mod = m.mod.asEval),
+      m => m.copy(mod = m.mod.asTraining)
+    )
+  implicit def load[
+      M <: Module: Load
+  ] =
+    Load.make[LiftedModule[M]](m =>
+      tensors => m.copy(mod = m.mod.load(tensors))
+    )
+  implicit def initState[M <: Module] =
+    InitState.make[LiftedModule[M], Unit](_ => ())
+}
+
+case class UnliftedModule[A, B, C, M <: StatefulModule[A, B, C]](
+    statefulModule: M with StatefulModule[A, B, C]
+)(implicit init: InitState[M, C])
+    extends GenericModule[A, B] {
+  def state = statefulModule.state
+  def forward(x: A) = statefulModule.forward((x, statefulModule.initState))._1
+}
+object UnliftedModule {
+  implicit def trainingMode[A, B, C, M <: StatefulModule[A, B, C]](
+      implicit t: TrainingMode[M],
+      is: InitState[M, C]
+  ) =
+    TrainingMode.make[UnliftedModule[A, B, C, M]](
+      m => UnliftedModule[A, B, C, M](m.statefulModule.asEval),
+      m => UnliftedModule[A, B, C, M](m.statefulModule.asTraining)
+    )
+  implicit def load[A, B, C, M <: StatefulModule[A, B, C]: Load](
+      implicit is: InitState[M, C]
+  ) =
+    Load.make[UnliftedModule[A, B, C, M]](m =>
+      tensors => UnliftedModule[A, B, C, M](m.statefulModule.load(tensors))
+    )
+  implicit def initState[A, B, C, M <: StatefulModule[A, B, C]](
+      implicit is: InitState[M, C]
+  ) =
+    InitState.make[UnliftedModule[A, B, C, M], Unit](m =>
+      is.initState(m.statefulModule)
+    )
+}
+trait GenericModule[A, B] extends (A => B) {
+  def apply(a: A): B = forward(a)
+  def forward(x: A): B
+  def state: Seq[(Variable, PTag)]
   final def parameters =
     state.filter(v =>
       v._1.needsGrad && v._1.leaf && v._2.updateDuringOptimization
@@ -85,7 +136,6 @@ trait StatefulModule[S] {
     loss.releaseAll
     g
   }
-  def load(parameters: Seq[Tensor]): StatefulModule[S] = this
   final def learnableParameters =
     parameters.filter(_._1.needsGrad).map(_._1.value.numel()).sum
 }
@@ -99,3 +149,35 @@ trait LeafTag extends PTag {
   def updateDuringOptimization: Boolean = true
 }
 case object NoTag extends LeafTag
+
+trait TrainingMode[M] {
+  def asEval(m: M): M
+  def asTraining(m: M): M
+
+}
+
+object TrainingMode {
+  def make[M](asEval1: M => M, asTraining1: M => M) = new TrainingMode[M] {
+    def asEval(m: M) = asEval1(m)
+    def asTraining(m: M) = asTraining1(m)
+  }
+  def identity[M] =
+    TrainingMode.make(scala.Predef.identity[M], scala.Predef.identity[M])
+}
+trait Load[M] {
+  def load(m: M, tensors: Seq[Tensor]): M
+}
+object Load {
+  def identity[M]: Load[M] = Load.make[M](fun => _ => fun)
+  def make[M](f: M => Seq[Tensor] => M) = new Load[M] {
+    def load(m: M, tensors: Seq[Tensor]): M = f(m)(tensors)
+  }
+}
+trait InitState[M, C] {
+  def initState(m: M): C
+}
+object InitState {
+  def make[M, C](f: M => C) = new InitState[M, C] {
+    def initState(m: M) = f(m)
+  }
+}

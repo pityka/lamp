@@ -136,13 +136,13 @@ object Train extends App {
       val precision =
         if (config.singlePrecision) SinglePrecision else DoublePrecision
       val tensorOptions = device.options(precision)
-      val model: SupervisedModel[Unit] = {
+      val model = {
         val numClasses = 100
         val classWeights = ATen.ones(Array(numClasses), tensorOptions)
         val net =
-          if (config.network == "lenet")
-            Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
-          else Cnn.resnet(32, numClasses, config.dropout, tensorOptions)
+          // if (config.network == "lenet")
+          //   Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
+          Cnn.resnet(32, numClasses, config.dropout, tensorOptions)
 
         val loadedNet = config.checkpointLoad match {
           case None => net
@@ -157,7 +157,6 @@ object Train extends App {
         scribe.info("parameters: " + loadedNet.parameters.mkString("\n"))
         SupervisedModel(
           loadedNet,
-          (),
           LossFunctions.NLL(numClasses, classWeights)
         )
       }

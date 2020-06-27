@@ -25,23 +25,8 @@ case class LSTM(
     biasF: Variable,
     biasO: Variable,
     biasC: Variable
-) extends StatefulModule[Option[(Variable, Variable)]] {
-
+) extends StatefulModule[Variable, Variable, Option[(Variable, Variable)]] {
   val hiddenSize = biasI.shape.last
-  override def load(tensors: Seq[Tensor]): LSTM = copy(
-    weightXi = param(tensors(0)),
-    weightXf = param(tensors(1)),
-    weightXo = param(tensors(2)),
-    weightHi = param(tensors(3)),
-    weightHf = param(tensors(4)),
-    weightHo = param(tensors(5)),
-    weightXc = param(tensors(6)),
-    weightHc = param(tensors(7)),
-    biasI = param(tensors(8)),
-    biasF = param(tensors(9)),
-    biasO = param(tensors(10)),
-    biasC = param(tensors(11))
-  )
 
   override def state: Seq[(Variable, PTag)] =
     List(
@@ -69,7 +54,9 @@ case class LSTM(
     )
   }
 
-  override def forward1(x: Variable, state: Option[(Variable, Variable)]) = {
+  def forward(a: (Variable, Option[(Variable, Variable)])) =
+    forward1(a._1, a._2)
+  private def forward1(x: Variable, state: Option[(Variable, Variable)]) = {
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
     val outputs = mutable.ArrayBuffer[Variable]()
@@ -100,6 +87,25 @@ case class LSTM(
 }
 
 object LSTM {
+  implicit val trainingMode = TrainingMode.identity[LSTM]
+  implicit val is =
+    InitState.make[LSTM, Option[(Variable, Variable)]](_ => None)
+  implicit val load = Load.make[LSTM] { m => tensors =>
+    m.copy(
+      weightXi = param(tensors(0)),
+      weightXf = param(tensors(1)),
+      weightXo = param(tensors(2)),
+      weightHi = param(tensors(3)),
+      weightHf = param(tensors(4)),
+      weightHo = param(tensors(5)),
+      weightXc = param(tensors(6)),
+      weightHc = param(tensors(7)),
+      biasI = param(tensors(8)),
+      biasF = param(tensors(9)),
+      biasO = param(tensors(10)),
+      biasC = param(tensors(11))
+    )
+  }
   case object WeightXi extends LeafTag
   case object WeightXf extends LeafTag
   case object WeightXo extends LeafTag

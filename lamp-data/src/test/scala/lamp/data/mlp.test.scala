@@ -15,7 +15,7 @@ import scribe.Level
 class MLPSuite extends AnyFunSuite {
 
   def mlp(dim: Int, k: Int, tOpt: TensorOptions) =
-    Sequential(
+    sequence(
       MLP(dim, k, List(64, 32), tOpt, dropout = 0.2),
       Fun(_.logSoftMax(dim = 1))
     )
@@ -70,7 +70,6 @@ class MLPSuite extends AnyFunSuite {
 
     val model = SupervisedModel(
       mlp(784, 10, device.options(DoublePrecision)),
-      (),
       LossFunctions.NLL(10, classWeights)
     )
 
@@ -117,7 +116,9 @@ class MLPSuite extends AnyFunSuite {
       minimumCheckpointFile = None
     )
     val (loss, output, numExamples) = trainedModel
-      .flatMap(_.lossAndOutput(testDataTensor, testTarget).allocated.map(_._1))
+      .flatMap(
+        _.lossAndOutput(const(testDataTensor), testTarget).allocated.map(_._1)
+      )
       .unsafeRunSync
     assert(loss < 3)
 

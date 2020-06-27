@@ -3,21 +3,22 @@ package lamp.data
 import cats.effect._
 import aten.Tensor
 import org.saddle._
-import lamp.autograd.TensorHelpers
+import lamp.autograd.{TensorHelpers, const}
 import aten.ATen
 import lamp.Device
 import lamp.FloatingPointPrecision
 import lamp.DoublePrecision
+import lamp.autograd.Variable
 
-trait BatchStream { self =>
-  def nextBatch: Resource[IO, Option[(Tensor, Tensor)]]
+trait BatchStream[I] { self =>
+  def nextBatch: Resource[IO, Option[(I, Tensor)]]
 
-  def map(f: (Tensor, Tensor) => Resource[IO, (Tensor, Tensor)]) =
-    new BatchStream {
-      def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
+  def map[I2](f: (I, Tensor) => Resource[IO, (I2, Tensor)]) =
+    new BatchStream[I2] {
+      def nextBatch: Resource[IO, Option[(I2, Tensor)]] =
         self.nextBatch.flatMap(maybe =>
           maybe match {
-            case None => Resource.pure[IO, Option[(Tensor, Tensor)]](None)
+            case None => Resource.pure[IO, Option[(I2, Tensor)]](None)
             case Some(pair) =>
               f.tupled(pair).map(Some(_))
           }
@@ -44,17 +45,16 @@ object BatchStream {
         xcl.release
         tcl.release
         idxT.release
-        Some((d1, d2)): Option[(Tensor, Tensor)]
+        Some((const(d1).releasable, d2)): Option[(Variable, Tensor)]
       }) {
         case None => IO.unit
-        case Some((a, b)) =>
+        case Some((_, b)) =>
           IO {
-            a.release
             b.release
           }
       }
     }
-    val emptyResource = Resource.pure[IO, Option[(Tensor, Tensor)]](None)
+    val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
 
     val idx = {
       val t = array
@@ -65,9 +65,9 @@ object BatchStream {
       else t
     }
 
-    new BatchStream {
+    new BatchStream[Variable] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
+      def nextBatch: Resource[IO, Option[(Variable, Tensor)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>
@@ -83,19 +83,18 @@ object BatchStream {
     val resource = Resource.make(IO {
       val xcl = device.to(features)
       val tcl = device.to(targets)
-      Some((xcl, tcl)): Option[(Tensor, Tensor)]
+      Some((const(xcl).releasable, tcl)): Option[(Variable, Tensor)]
     }) {
       case None => IO.unit
-      case Some((a, b)) =>
+      case Some((_, b)) =>
         IO {
-          a.release
           b.release
         }
     }
-    val emptyResource = Resource.pure[IO, Option[(Tensor, Tensor)]](None)
-    new BatchStream {
+    val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
+    new BatchStream[Variable] {
       private var pulled = false
-      def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
+      def nextBatch: Resource[IO, Option[(Variable, Tensor)]] =
         if (!pulled) {
           pulled = true
           resource

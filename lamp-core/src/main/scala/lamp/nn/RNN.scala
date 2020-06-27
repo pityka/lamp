@@ -16,16 +16,9 @@ case class RNN(
     weightXh: Variable,
     weightHh: Variable,
     biasH: Variable
-) extends StatefulModule[Option[Variable]] {
-
+) extends StatefulModule[Variable, Variable, Option[Variable]] {
   val inputSize = weightXh.shape.last
   val hiddenSize = biasH.shape.last
-
-  override def load(tensors: Seq[Tensor]): RNN = copy(
-    weightXh = param(tensors(0)),
-    weightHh = param(tensors(1)),
-    biasH = param(tensors(2))
-  )
 
   override def state: Seq[(Variable, PTag)] =
     List(
@@ -38,7 +31,8 @@ case class RNN(
     param(ATen.zeros(Array(batchSize, hiddenSize), weightHh.options)).releasable
   }
 
-  override def forward1(x: Variable, state: Option[Variable]) = {
+  def forward(a: (Variable, Option[Variable])) = forward1(a._1, a._2)
+  def forward1(x: Variable, state: Option[Variable]) = {
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
     val outputs = mutable.ArrayBuffer[Variable]()
@@ -58,6 +52,15 @@ case class RNN(
 }
 
 object RNN {
+  implicit val trainingMode = TrainingMode.identity[RNN]
+  implicit val is = InitState.make[RNN, Option[Variable]](_ => None)
+  implicit val load = Load.make[RNN] { m => tensors =>
+    m.copy(
+      weightXh = param(tensors(0)),
+      weightHh = param(tensors(1)),
+      biasH = param(tensors(2))
+    )
+  }
   case object WeightXh extends LeafTag
   case object WeightHh extends LeafTag
   case object BiasH extends LeafTag

@@ -14,12 +14,6 @@ case class Conv1D(
     groups: Long
 ) extends Module {
 
-  override def load(parameters: Seq[Tensor]) = {
-    val w = param(parameters.head)
-    val b = param(parameters(1))
-    copy(weights = w, bias = b)
-  }
-
   override val state = List(
     weights -> Conv1D.Weights,
     bias -> Conv1D.Bias
@@ -31,6 +25,14 @@ case class Conv1D(
 }
 
 object Conv1D {
+  implicit val trainingMode = TrainingMode.identity[Conv1D]
+  implicit val load = Load.make[Conv1D](m =>
+    parameters => {
+      val w = param(parameters.head)
+      val b = param(parameters(1))
+      m.copy(weights = w, bias = b)
+    }
+  )
   case object Weights extends LeafTag
   case object Bias extends LeafTag
   def apply(

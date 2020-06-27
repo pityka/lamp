@@ -14,16 +14,6 @@ case class BatchNorm2D(
     momentum: Double,
     eps: Double
 ) extends Module {
-  override def asTraining = copy(training = true)
-  override def asEval = copy(training = false)
-
-  override def load(parameters: Seq[Tensor]) = {
-    val w = param(parameters.head)
-    val b = param(parameters(1))
-    val rm = const(parameters(2))
-    val rv = const(parameters(3))
-    copy(weight = w, bias = b, runningMean = rm, runningVar = rv)
-  }
 
   override val state = List(
     weight -> BatchNorm.Weights,
@@ -47,6 +37,19 @@ case class BatchNorm2D(
 }
 
 object BatchNorm2D {
+  implicit val trainingMode = TrainingMode.make[BatchNorm2D](
+    asEval1 = m => m.copy(training = false),
+    asTraining1 = m => m.copy(training = true)
+  )
+  implicit val load = Load.make[BatchNorm2D](m =>
+    parameters => {
+      val w = param(parameters.head)
+      val b = param(parameters(1))
+      val rm = const(parameters(2))
+      val rv = const(parameters(3))
+      m.copy(weight = w, bias = b, runningMean = rm, runningVar = rv)
+    }
+  )
   case object Weights extends LeafTag
   case object Bias extends LeafTag
   def apply(

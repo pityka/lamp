@@ -9,21 +9,20 @@ import cats.effect.IO
 import cats.data.State
 import lamp.syntax
 
-case class SupervisedModel[T](
-    module: StatefulModule[T],
-    initState: T,
+case class SupervisedModel[I, M <: GenericModule[I, Variable]](
+    module: M with GenericModule[I, Variable],
     lossFunction: LossFunction
-) {
+)(implicit tm: TrainingMode[M]) {
   def asEval = copy(module = module.asEval)
   def asTraining = copy(module = module.asTraining)
   def lossAndOutput(
-      samples: Tensor,
+      samples: I,
       target: Tensor
   ): Resource[IO, (Double, Tensor, Long)] = {
     val release = (_: Double, outputCloned: Tensor, _: Long) =>
       IO(outputCloned.release)
     Resource.make(IO {
-      val (output, _) = module.forward1(const(samples), initState)
+      val output = module.forward(samples)
       val (loss, examples) = lossFunction(output, target)
       val lossAsDouble = loss.value.toMat.raw(0)
       val outputCloned = ATen.clone(output.value)
@@ -32,10 +31,10 @@ case class SupervisedModel[T](
     })(release.tupled)
   }
   def lossAndGradients(
-      samples: Tensor,
+      samples: I,
       target: Tensor
   ): (Double, Seq[Option[Tensor]]) = {
-    val (output, _) = module.forward1(const(samples), initState)
+    val output = module.forward(samples)
     val (loss, _) = lossFunction(output, target)
     val lossAsDouble = loss.value.toMat.raw(0)
 
@@ -50,7 +49,7 @@ case class SupervisedModel[T](
     )
 }
 
-case class ModelWithOptimizer[St](
-    model: SupervisedModel[St],
+case class ModelWithOptimizer[I, M <: GenericModule[I, Variable]](
+    model: SupervisedModel[I, M],
     optimizer: Optimizer
 )

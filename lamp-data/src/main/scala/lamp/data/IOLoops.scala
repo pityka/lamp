@@ -9,13 +9,14 @@ import java.io.File
 import org.saddle.scalar.ScalarTagDouble
 import scribe.Logger
 import Writer.writeCheckpoint
+import lamp.autograd.Variable
 object IOLoops {
 
-  def epochs[ST](
-      model: SupervisedModel[ST],
+  def epochs[I, M <: GenericModule[I, Variable]](
+      model: SupervisedModel[I, M],
       optimizerFactory: Seq[(Tensor, PTag)] => Optimizer,
-      trainBatchesOverEpoch: () => BatchStream,
-      validationBatchesOverEpoch: Option[() => BatchStream],
+      trainBatchesOverEpoch: () => BatchStream[I],
+      validationBatchesOverEpoch: Option[() => BatchStream[I]],
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
@@ -24,13 +25,13 @@ object IOLoops {
       logFrequency: Int = 1,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None
-  ): IO[SupervisedModel[ST]] = {
+  ): IO[SupervisedModel[I, M]] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
     def loop(
         epoch: Int,
         minValidationLoss: Option[Double]
-    ): IO[SupervisedModel[ST]] =
+    ): IO[SupervisedModel[I, M]] =
       if (epoch >= epochs) IO.pure(modelWithOptimizer.model)
       else {
         for {
@@ -71,9 +72,9 @@ object IOLoops {
     loop(0, None)
   }
 
-  def oneEpoch[T](
-      model: ModelWithOptimizer[T],
-      trainBatches: BatchStream,
+  def oneEpoch[I, M <: GenericModule[I, Variable]](
+      model: ModelWithOptimizer[I, M],
+      trainBatches: BatchStream[I],
       trainingCallback: TrainingCallback,
       logger: Option[Logger],
       trainLogFrequency: Int
@@ -117,9 +118,9 @@ object IOLoops {
 
     loop(0)
   }
-  def validationOneEpoch[T](
-      model: SupervisedModel[T],
-      validationBatches: BatchStream,
+  def validationOneEpoch[I, M <: GenericModule[I, Variable]](
+      model: SupervisedModel[I, M],
+      validationBatches: BatchStream[I],
       validationCallback: ValidationCallback,
       logger: Option[Logger],
       validationLogFrequency: Int,

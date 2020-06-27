@@ -39,6 +39,8 @@ import lamp.nn.Embedding
 import lamp.nn.SeqLinear
 import lamp.nn.Seq5
 import lamp.nn.LSTM
+import lamp.nn.StatefulSeq5
+import lamp.nn.statefulSequence
 
 case class CliConfig(
     trainData: String = "",
@@ -135,25 +137,27 @@ object Train extends App {
         val classWeights =
           ATen.ones(Array(vocabularSize), tensorOptions)
         val net1 =
-          Seq5(
+          statefulSequence(
             Embedding(
               classes = vocabularSize,
               dimensions = 20,
               tOpt = tensorOptions
-            ),
+            ).lift,
             LSTM(
               in = 20,
               hiddenSize = hiddenSize,
               tOpt = tensorOptions
             ),
-            Fun(_.relu),
-            SeqLinear.apply(
-              in = hiddenSize,
-              out = vocabularSize,
-              tOpt = tensorOptions
-            ),
-            Fun(_.logSoftMax(2))
-          )
+            Fun(_.relu).lift,
+            SeqLinear
+              .apply(
+                in = hiddenSize,
+                out = vocabularSize,
+                tOpt = tensorOptions
+              )
+              .lift,
+            Fun(_.logSoftMax(2)).lift
+          ).unlift
 
         val net = config.checkpointLoad
           .map { load =>
@@ -169,7 +173,6 @@ object Train extends App {
         scribe.info("Learnable parameters: " + net.learnableParameters)
         SupervisedModel(
           net,
-          ((), None, (), (), ()),
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
@@ -247,8 +250,7 @@ object Train extends App {
             List(prefix).map(t => Text.charsToIntegers(t, vocab).map(_.toLong)),
             device,
             precision,
-            trainedModel.module,
-            ((), None, (), (), ()),
+            trainedModel.module.statefulModule,
             lookAhead
           )
           .use { variable =>

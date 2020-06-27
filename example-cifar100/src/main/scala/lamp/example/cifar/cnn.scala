@@ -11,7 +11,7 @@ import lamp.autograd.AvgPool2D
 import org.saddle.RankTie.Avg
 
 case class Peek(label: String) extends Module {
-
+  def state = Nil
   def forward(x: Variable): Variable = {
     scribe.info(s"PEEK - $label - ${x.shape}")
     x
@@ -19,40 +19,43 @@ case class Peek(label: String) extends Module {
 
 }
 
-case class Residual(
-    right: StatefulModule[Unit],
-    left: Option[StatefulModule[Unit]]
+case class Residual[M1 <: Module, M2 <: Module](
+    right: M1 with Module,
+    left: Option[M2 with Module]
 ) extends Module {
-  override def asEval: Residual = copy(right.asEval, left.map(_.asEval))
-  override def asTraining: Residual =
-    copy(right.asTraining, left.map(_.asTraining))
+  // override def asEval: Residual = copy(right.asEval, left.map(_.asEval))
+  // override def asTraining: Residual =
+  // copy(right.asTraining, left.map(_.asTraining))
   override def state = right.state ++ left.toList.flatMap(_.state)
   def forward(x: Variable) = {
-    val r = right.forward1(x, ())._1
-    val l = left.map(_.forward1(x, ())._1).getOrElse(x)
+    val r = right.forward(x)
+    val l = left.map(_.forward(x)).getOrElse(x)
     (r + l)
   }
 
-  override def load(parameters: Seq[Tensor]) =
-    Residual(
-      right.load(parameters.take(right.state.size)),
-      left.map(l =>
-        l.load(parameters.drop(right.state.size).take(l.state.size))
-      )
-    )
 }
 
 object Residual {
-  def apply(
+  implicit def trainingMode[M1 <: Module: Load, M2 <: Module: Load] =
+    TrainingMode.identity[Residual[M1, M2]]
+  implicit def load[M1 <: Module: Load, M2 <: Module: Load] =
+    Load.make[Residual[M1, M2]](m =>
+      t =>
+        Residual(
+          m.right.load(t.take(m.right.state.size)),
+          m.left.map(l => l.load(t.drop(m.right.state.size).take(l.state.size)))
+        )
+    )
+  def make(
       inChannels: Int,
       outChannels: Int,
       tOpt: TensorOptions,
       dropout: Double,
       stride: Int
-  ): Sequential =
-    Sequential(
+  ) =
+    sequence(
       Residual(
-        right = Sequential(
+        right = Seq6(
           Conv2D(
             inChannels = inChannels,
             outChannels = outChannels,
@@ -78,7 +81,7 @@ object Residual {
           if (inChannels == outChannels && stride == 1) None
           else
             Some(
-              Sequential(
+              Seq2(
                 Conv2D(
                   inChannels = inChannels,
                   outChannels = outChannels,
@@ -105,7 +108,7 @@ object Cnn {
       dropout: Double,
       tOpt: TensorOptions
   ) =
-    Sequential(
+    sequence(
       Conv2D(
         inChannels = 3,
         outChannels = 6,
@@ -113,33 +116,35 @@ object Cnn {
         padding = 2,
         tOpt = tOpt
       ),
-      Residual(
-        inChannels = 6,
-        outChannels = 6,
-        tOpt = tOpt,
-        dropout = dropout,
-        stride = 2
-      ),
-      Residual(
-        inChannels = 6,
-        outChannels = 16,
-        tOpt = tOpt,
-        dropout = dropout,
-        stride = 2
-      ),
-      Residual(
-        inChannels = 16,
-        outChannels = 128,
-        tOpt = tOpt,
-        dropout = dropout,
-        stride = 1
-      ),
-      Residual(
-        inChannels = 128,
-        outChannels = numClasses,
-        tOpt = tOpt,
-        dropout = dropout,
-        stride = 1
+      sequence(
+        Residual.make(
+          inChannels = 6,
+          outChannels = 6,
+          tOpt = tOpt,
+          dropout = dropout,
+          stride = 2
+        ),
+        Residual.make(
+          inChannels = 6,
+          outChannels = 16,
+          tOpt = tOpt,
+          dropout = dropout,
+          stride = 2
+        ),
+        Residual.make(
+          inChannels = 16,
+          outChannels = 128,
+          tOpt = tOpt,
+          dropout = dropout,
+          stride = 1
+        ),
+        Residual.make(
+          inChannels = 128,
+          outChannels = numClasses,
+          tOpt = tOpt,
+          dropout = dropout,
+          stride = 1
+        )
       ),
       Fun(AvgPool2D(_, kernelSize = 8, padding = 0, stride = 1).value),
       Fun(_.flattenLastDimensions(3)),

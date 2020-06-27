@@ -15,7 +15,7 @@ import lamp.DoublePrecision
 class IOLoopSuite extends AnyFunSuite {
 
   def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions) =
-    Sequential(
+    Seq2(
       Linear(dim, k, tOpt = tOpt),
       Fun(_.logSoftMax(dim = 1))
     )
@@ -48,9 +48,8 @@ class IOLoopSuite extends AnyFunSuite {
     )
     val classWeights = ATen.ones(Array(10), x.options())
 
-    val model = SupervisedModel[Unit](
+    val model = SupervisedModel(
       logisticRegression(data.numCols - 1, 10, device.options(DoublePrecision)),
-      (),
       LossFunctions.NLL(10, classWeights)
     )
 
@@ -73,7 +72,7 @@ class IOLoopSuite extends AnyFunSuite {
     )
 
     val (loss, output, numExamples) = trainedModel
-      .flatMap(_.lossAndOutput(x, target).allocated.map(_._1))
+      .flatMap(_.lossAndOutput(const(x), target).allocated.map(_._1))
       .unsafeRunSync
 
     assert(loss < 900)
@@ -104,7 +103,6 @@ class IOLoopSuite extends AnyFunSuite {
 
     val model = SupervisedModel(
       logisticRegression(data.numCols - 1, 10, device.options(DoublePrecision)),
-      (),
       LossFunctions.NLL(10, classWeights)
     )
 
@@ -128,7 +126,7 @@ class IOLoopSuite extends AnyFunSuite {
     )
 
     val (loss, output, numExamples) = trainedModel
-      .flatMap(_.lossAndOutput(x, target).allocated.map(_._1))
+      .flatMap(_.lossAndOutput(const(x), target).allocated.map(_._1))
       .unsafeRunSync
     assert(loss < 900)
 

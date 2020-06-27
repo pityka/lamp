@@ -11,13 +11,6 @@ case class WeightNormLinear(
     bias: Option[Variable]
 ) extends Module {
 
-  override def load(parameters: Seq[Tensor]) = {
-    val wV = param(parameters.head)
-    val wG = param(parameters(1))
-    val b = if (bias.isDefined) Some(param(parameters(2))) else None
-    copy(weightsV = wV, weightsG = wG, bias = b)
-  }
-
   override val state = List(
     weightsV -> WeightNormLinear.WeightsV,
     weightsG -> WeightNormLinear.WeightsG
@@ -32,6 +25,13 @@ case class WeightNormLinear(
 }
 
 object WeightNormLinear {
+  implicit val trainingMode = TrainingMode.identity[WeightNormLinear]
+  implicit val load = Load.make[WeightNormLinear] { m => parameters =>
+    val wV = param(parameters.head)
+    val wG = param(parameters(1))
+    val b = if (m.bias.isDefined) Some(param(parameters(2))) else None
+    m.copy(weightsV = wV, weightsG = wG, bias = b)
+  }
   case object WeightsV extends LeafTag
   case object WeightsG extends LeafTag
   case object Bias extends LeafTag

@@ -19,10 +19,6 @@ import aten.Tensor
   * Input is a long tensor with values in [0,C-1].
   */
 case class Embedding(weights: Variable) extends Module {
-  override def load(parameters: Seq[Tensor]) = {
-    val w = param(parameters.head)
-    copy(weights = w)
-  }
   override val state = List(
     weights -> Embedding.Weights
   )
@@ -33,6 +29,11 @@ case class Embedding(weights: Variable) extends Module {
 }
 
 object Embedding {
+  implicit val trainingMode = TrainingMode.identity[Embedding]
+  implicit val load = Load.make[Embedding] { m => parameters =>
+    val w = param(parameters.head)
+    m.copy(weights = w)
+  }
   case object Weights extends LeafTag
   def apply(
       classes: Int,

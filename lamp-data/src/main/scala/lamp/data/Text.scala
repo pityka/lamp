@@ -7,7 +7,6 @@ import org.saddle._
 import aten.ATen
 import aten.Tensor
 import lamp.nn.Module
-import lamp.nn.StatefulModule
 import lamp.syntax
 import lamp.Device
 import lamp.autograd.Variable
@@ -15,16 +14,18 @@ import lamp.autograd.ConcatenateAddNewDim
 import lamp.FloatingPointPrecision
 import lamp.DoublePrecision
 import cats.effect.ContextShift
+import lamp.nn.StatefulModule
+import lamp.nn.GenericModule
+import lamp.nn.InitState
 
 object Text {
-  def sequencePrediction[T](
+  def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
       batch: Seq[Vector[Long]],
       device: Device,
       precision: FloatingPointPrecision,
-      module: StatefulModule[T],
-      init: T,
+      module: M with StatefulModule[Variable, Variable, T],
       steps: Int
-  ): Resource[IO, Variable] = {
+  )(implicit is: InitState[M, T]): Resource[IO, Variable] = {
     val batchSize = batch.size
     def loop(
         lastOutput: Variable,
@@ -35,7 +36,7 @@ object Text {
       if (n == 0) buffer
       else {
         val (output, state) =
-          module.forward1(lastOutput, lastState)
+          module.forward((lastOutput, lastState))
 
         val lastChar = if (output.shape(0) > 1) {
           val lastTimeStep1 =
@@ -61,7 +62,7 @@ object Text {
       Resource.make(IO {
 
         ConcatenateAddNewDim(
-          loop(const(batch), init, steps, Seq())
+          loop(const(batch), module.initState, steps, Seq())
         ).value.view(List(steps, batchSize))
 
       })(variable => IO { variable.releaseAll })
@@ -71,7 +72,7 @@ object Text {
       prefix: Vector[Long],
       device: Device,
       precision: FloatingPointPrecision,
-      module: StatefulModule[T],
+      module: StatefulModule[Variable, Variable, T],
       init: T,
       steps: Int
   ): Resource[IO, Seq[(Variable, Double)]] = {
@@ -89,7 +90,7 @@ object Text {
             val (lastOutput, lastState) = sequence.last
 
             val (output, state) =
-              module.forward1(lastOutput, lastState)
+              module.forward((lastOutput, lastState))
 
             val lastChar = if (output.shape(0) > 1) {
               val lastTimeStep1 =
@@ -272,17 +273,18 @@ object Text {
           )
         )
 
-        Some((transposedFeatures, transposedTarget)): Option[(Tensor, Tensor)]
+        Some((const(transposedFeatures).releasable, transposedTarget)): Option[
+          (Variable, Tensor)
+        ]
       }) {
         case None => IO.unit
-        case Some((a, b)) =>
+        case Some((_, b)) =>
           IO {
-            a.release
             b.release
           }
       }
     }
-    val emptyResource = Resource.pure[IO, Option[(Tensor, Tensor)]](None)
+    val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
 
     val dropped = text.drop(scala.util.Random.nextInt(timeSteps))
     val numSamples = (dropped.size - 1) / timeSteps
@@ -296,9 +298,9 @@ object Text {
       s"Total batches: ${idx.size}. Each $timeSteps token long and has $minibatchSize examples."
     )
     assert(idx.forall(_.size == minibatchSize))
-    new BatchStream {
+    new BatchStream[Variable] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
+      def nextBatch: Resource[IO, Option[(Variable, Tensor)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>
@@ -368,19 +370,20 @@ object Text {
             )
           )
 
-          Some((transposedFeatures, transposedTarget)): Option[(Tensor, Tensor)]
+          Some((const(transposedFeatures).releasable, transposedTarget)): Option[
+            (Variable, Tensor)
+          ]
         }
         io
       } {
         case None => IO.unit
-        case Some((a, b)) =>
+        case Some((_, b)) =>
           IO {
-            a.release
             b.release
           }
       }
     }
-    val emptyResource = Resource.pure[IO, Option[(Tensor, Tensor)]](None)
+    val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
 
     val idx = array
       .shuffle(array.range(0, text.size))
@@ -392,9 +395,9 @@ object Text {
       s"Total batches: ${idx.size}. Each $timeSteps token long and has $minibatchSize examples."
     )
     assert(idx.forall(_.size == minibatchSize))
-    new BatchStream {
+    new BatchStream[Variable] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[(Tensor, Tensor)]] =
+      def nextBatch: Resource[IO, Option[(Variable, Tensor)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>

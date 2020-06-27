@@ -22,12 +22,12 @@ object MLP {
       hidden: Seq[Int],
       tOpt: TensorOptions,
       dropout: Double = 0d
-  ): Sequential =
+  ) =
     Sequential(
-      (List(in) ++ hidden ++ List(out)).sliding(2).toList.flatMap { group =>
+      (List(in) ++ hidden ++ List(out)).sliding(2).toList.map { group =>
         val in = group(0)
         val out = group(1)
-        List(
+        sequence(
           Linear(in = in, out = out, tOpt = tOpt, bias = true),
           BatchNorm(out, tOpt = tOpt),
           Fun(_.gelu),

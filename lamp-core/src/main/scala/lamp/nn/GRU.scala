@@ -22,22 +22,10 @@ case class GRU(
     biasR: Variable,
     biasZ: Variable,
     biasH: Variable
-) extends StatefulModule[Option[Variable]] {
+) extends StatefulModule[Variable, Variable, Option[Variable]] {
 
   val inputSize = weightXh.shape.last
   val hiddenSize = biasH.shape.last
-
-  override def load(tensors: Seq[Tensor]): GRU = copy(
-    weightXh = param(tensors(0)),
-    weightHh = param(tensors(1)),
-    weightXr = param(tensors(2)),
-    weightXz = param(tensors(3)),
-    weightHr = param(tensors(4)),
-    weightHz = param(tensors(5)),
-    biasR = param(tensors(6)),
-    biasZ = param(tensors(7)),
-    biasH = param(tensors(8))
-  )
 
   override def state: Seq[(Variable, PTag)] =
     List(
@@ -55,8 +43,9 @@ case class GRU(
   private def initHidden(batchSize: Long) = {
     param(ATen.zeros(Array(batchSize, hiddenSize), weightHh.options)).releasable
   }
-
-  override def forward1(x: Variable, state: Option[Variable]) = {
+  def initState = None
+  def forward(a: (Variable, Option[Variable])) = forward1(a._1, a._2)
+  private def forward1(x: Variable, state: Option[Variable]) = {
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
     val outputs = mutable.ArrayBuffer[Variable]()
@@ -80,6 +69,21 @@ case class GRU(
 }
 
 object GRU {
+  implicit val trainingMode = TrainingMode.identity[GRU]
+  implicit val is = InitState.make[GRU, Option[Variable]](_ => None)
+  implicit val load = Load.make[GRU] { m => tensors =>
+    m.copy(
+      weightXh = param(tensors(0)),
+      weightHh = param(tensors(1)),
+      weightXr = param(tensors(2)),
+      weightXz = param(tensors(3)),
+      weightHr = param(tensors(4)),
+      weightHz = param(tensors(5)),
+      biasR = param(tensors(6)),
+      biasZ = param(tensors(7)),
+      biasH = param(tensors(8))
+    )
+  }
   case object WeightXh extends LeafTag
   case object WeightHh extends LeafTag
   case object WeightHr extends LeafTag

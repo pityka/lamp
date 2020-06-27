@@ -6,11 +6,7 @@ import lamp.autograd.TensorHelpers
 import aten.Tensor
 
 case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
-  override def load(parameters: Seq[Tensor]) = {
-    val w = param(parameters.head)
-    val b = if (bias.isDefined) Some(param(parameters(1))) else None
-    copy(weights = w, bias = b)
-  }
+
   override val state = List(
     weights -> Linear.Weights
   ) ++ bias.toList.map(b => (b, Linear.Bias))
@@ -23,6 +19,12 @@ case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
 }
 
 object Linear {
+  implicit val trainingMode = TrainingMode.identity[Linear]
+  implicit val load = Load.make[Linear] { m => parameters =>
+    val w = param(parameters.head)
+    val b = if (m.bias.isDefined) Some(param(parameters(1))) else None
+    m.copy(weights = w, bias = b)
+  }
   case object Weights extends LeafTag
   case object Bias extends LeafTag
   def apply(

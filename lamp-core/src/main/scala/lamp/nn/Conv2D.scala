@@ -14,12 +14,6 @@ case class Conv2D(
     groups: Long
 ) extends Module {
 
-  override def load(parameters: Seq[Tensor]) = {
-    val w = param(parameters.head)
-    val b = if (bias.needsGrad) param(parameters(1)) else const(parameters(1))
-    copy(weights = w, bias = b)
-  }
-
   override val state = List(
     weights -> Conv2D.Weights,
     bias -> Conv2D.Bias
@@ -31,6 +25,15 @@ case class Conv2D(
 }
 
 object Conv2D {
+  implicit val trainingMode = TrainingMode.identity[Conv2D]
+  implicit val load = Load.make[Conv2D](m =>
+    parameters => {
+      val w = param(parameters.head)
+      val b =
+        if (m.bias.needsGrad) param(parameters(1)) else const(parameters(1))
+      m.copy(weights = w, bias = b)
+    }
+  )
   case object Weights extends LeafTag
   case object Bias extends LeafTag
   def apply(
