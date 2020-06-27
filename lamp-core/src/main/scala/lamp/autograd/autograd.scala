@@ -70,7 +70,7 @@ case class Variable(
       variable.releaseWith.foreach(t => buffer.append(t))
       variable.partialDerivative.foreach(t => buffer.append(t))
     }
-    Tensor.releaseAll(buffer.toArray)
+    Tensor.releaseAll(buffer.distinct.toArray)
   }
   def preserved = copy(leaf = true)
   def releasable = copy(leaf = false)
@@ -121,7 +121,8 @@ case class Variable(
     ArgMax(this, dim = dim, keepDim = keepDim).value
   def oneHot(numClasses: Int) =
     OneHot(this, numClasses).value
-  def assign(other: Variable) = Assign(this, other).value
+  def assign(other: Variable) = Assign(abandon = this, keep = other).value
+  def attach(other: Variable) = Assign(keep = this, abandon = other).value
   def cast(precision: FloatingPointPrecision) =
     CastToPrecision(this, precision).value
   def +(other: Variable) = Add(this, other).value

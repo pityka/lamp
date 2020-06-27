@@ -40,6 +40,8 @@ import lamp.nn.SeqLinear
 import lamp.nn.Seq5
 import lamp.nn.LSTM
 import lamp.nn.statefulSequence
+import lamp.nn.Seq2Seq
+import lamp.nn.GenericModule
 
 case class CliConfig(
     trainData: String = "",
@@ -57,10 +59,9 @@ case class CliConfig(
 )
 
 object Translation {
-  def pad(
+  def prepare(
       line: String,
       pad: Char,
-      sep: Char,
       endOfSentence: Char,
       startOfSentence: Char
   ) = {
@@ -68,16 +69,11 @@ object Translation {
     assert(spl.size == 2)
     val source = spl(0)
     val target = spl(1)
-    // val max = math.max(source.size, target.size)
     val source1 =
       (startOfSentence + source + endOfSentence)
     val target1 =
       (startOfSentence + target + endOfSentence)
-    val trainSequence = source1 + sep + target1
-    val targetSequence = source1.drop(1).map(_ => pad) + sep + target1 + pad
-    // println(trainSequence)
-    // println(targetSequence)
-    (trainSequence, targetSequence)
+    (source1, target1)
   }
 }
 
@@ -152,10 +148,9 @@ object Train extends App {
         .getLines
         .toVector
         .map { line =>
-          val (feature, target) = Translation.pad(
+          val (feature, target) = Translation.prepare(
             line,
             pad = '#',
-            sep = '|',
             endOfSentence = '*',
             startOfSentence = '='
           )
@@ -179,10 +174,9 @@ object Train extends App {
         .getLines
         .toVector
         .map { line =>
-          val (feature, target) = Translation.pad(
+          val (feature, target) = Translation.prepare(
             line,
             pad = '#',
-            sep = '|',
             endOfSentence = '*',
             startOfSentence = '='
           )
@@ -216,39 +210,56 @@ object Train extends App {
       val model = {
         val classWeights =
           ATen.ones(Array(vocabularSize), tensorOptions)
-        val net1 =
-          statefulSequence(
-            Embedding(
-              classes = vocabularSize,
-              dimensions = 20,
-              tOpt = tensorOptions
-            ).lift,
-            LSTM(
-              in = 20,
-              hiddenSize = hiddenSize,
-              tOpt = tensorOptions
-            ),
-            Fun(_.relu).lift,
-            SeqLinear
-              .apply(
-                in = hiddenSize,
-                out = vocabularSize,
-                tOpt = tensorOptions
-              )
-              .lift,
-            Fun(_.logSoftMax(2)).lift
-          ).unlift
 
-        val net = config.checkpointLoad
-          .map { load =>
-            scribe.info(s"Loading parameters from file $load")
-            Reader
-              .loadFromFile(net1, new File(load), device)
-              .unsafeRunSync()
-              .right
-              .get
-          }
-          .getOrElse(net1)
+        val encoder = statefulSequence(
+          Embedding(
+            classes = vocabularSize,
+            dimensions = 20,
+            tOpt = tensorOptions
+          ).lift,
+          LSTM(
+            in = 20,
+            hiddenSize = hiddenSize,
+            tOpt = tensorOptions
+          )
+        )
+        val decoder = statefulSequence(
+          Embedding(
+            classes = vocabularSize,
+            dimensions = 20,
+            tOpt = tensorOptions
+          ).lift,
+          LSTM(
+            in = 20,
+            hiddenSize = hiddenSize,
+            tOpt = tensorOptions
+          ),
+          Fun(_.relu).lift,
+          SeqLinear
+            .apply(
+              in = hiddenSize,
+              out = vocabularSize,
+              tOpt = tensorOptions
+            )
+            .lift,
+          Fun(_.logSoftMax(2)).lift
+        )
+        val net1 =
+          Seq2Seq(encoder.mapState {
+            case (_, lstmState) => ((), lstmState, (), (), ())
+          }, decoder).unlift
+
+        val net =
+          config.checkpointLoad
+            .map { load =>
+              scribe.info(s"Loading parameters from file $load")
+              Reader
+                .loadFromFile(net1, new File(load), device)
+                .unsafeRunSync()
+                .right
+                .get
+            }
+            .getOrElse(net1)
 
         scribe.info("Learnable parameters: " + net.learnableParameters)
         SupervisedModel(
@@ -260,7 +271,7 @@ object Train extends App {
 
       val trainEpochs = () =>
         Text
-          .minibatchesFromLines(
+          .minibatchesForSeq2Seq(
             trainTokenized,
             config.trainBatchSize,
             lookAhead,
@@ -269,7 +280,7 @@ object Train extends App {
           )
       val testEpochs = () =>
         Text
-          .minibatchesFromLines(
+          .minibatchesForSeq2Seq(
             testTokenized,
             config.validationBatchSize,
             lookAhead,
@@ -329,15 +340,37 @@ object Train extends App {
 
       config.query.foreach { prefix =>
         val text = Text
-          .sequencePrediction(
+          .makePredictionBatch(
             List(prefix).map(t => Text.charsToIntegers(t, vocab).map(_.toLong)),
             device,
-            precision,
-            trainedModel.module.statefulModule,
-            lookAhead
+            precision
           )
-          .use { variable =>
-            IO { Text.convertIntegersToText(variable.value, rvocab) }
+          .use { warmupBatch =>
+            val enc = trainedModel.module.statefulModule.encoder
+
+            val (encOut, encState) =
+              enc.forward(const(warmupBatch) -> enc.initState)
+
+            val dec =
+              trainedModel.module.statefulModule.decoder.withInit(encState)
+
+            Text
+              .sequencePrediction(
+                List("=")
+                  .map(t => Text.charsToIntegers(t, vocab).map(_.toLong)),
+                device,
+                precision,
+                dec,
+                lookAhead
+              )
+              .use { variable =>
+                IO {
+                  Text.convertIntegersToText(
+                    variable.attach(encOut).value,
+                    rvocab
+                  )
+                }
+              }
           }
           .unsafeRunSync()
 

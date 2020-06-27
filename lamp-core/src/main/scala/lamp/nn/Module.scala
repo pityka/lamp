@@ -82,38 +82,38 @@ object LiftedModule {
     InitState.make[LiftedModule[M], Unit](_ => ())
 }
 
-case class UnliftedModule[A, B, C, M <: StatefulModule[A, B, C]](
-    statefulModule: M with StatefulModule[A, B, C]
+case class UnliftedModule[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
+    statefulModule: M with StatefulModule2[A, B, C, D]
 )(implicit init: InitState[M, C])
     extends GenericModule[A, B] {
   def state = statefulModule.state
   def forward(x: A) = statefulModule.forward((x, statefulModule.initState))._1
 }
 object UnliftedModule {
-  implicit def trainingMode[A, B, C, M <: StatefulModule[A, B, C]](
+  implicit def trainingMode[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
       implicit t: TrainingMode[M],
       is: InitState[M, C]
   ) =
-    TrainingMode.make[UnliftedModule[A, B, C, M]](
-      m => UnliftedModule[A, B, C, M](m.statefulModule.asEval),
-      m => UnliftedModule[A, B, C, M](m.statefulModule.asTraining)
+    TrainingMode.make[UnliftedModule[A, B, C, D, M]](
+      m => UnliftedModule[A, B, C, D, M](m.statefulModule.asEval),
+      m => UnliftedModule[A, B, C, D, M](m.statefulModule.asTraining)
     )
-  implicit def load[A, B, C, M <: StatefulModule[A, B, C]: Load](
+  implicit def load[A, B, C, D, M <: StatefulModule2[A, B, C, D]: Load](
       implicit is: InitState[M, C]
   ) =
-    Load.make[UnliftedModule[A, B, C, M]](m =>
-      tensors => UnliftedModule[A, B, C, M](m.statefulModule.load(tensors))
+    Load.make[UnliftedModule[A, B, C, D, M]](m =>
+      tensors => UnliftedModule[A, B, C, D, M](m.statefulModule.load(tensors))
     )
-  implicit def initState[A, B, C, M <: StatefulModule[A, B, C]](
+  implicit def initState[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
       implicit is: InitState[M, C]
   ) =
-    InitState.make[UnliftedModule[A, B, C, M], Unit](m =>
+    InitState.make[UnliftedModule[A, B, C, D, M], Unit](m =>
       is.initState(m.statefulModule)
     )
 }
 trait GenericModule[A, B] extends (A => B) {
-  def apply(a: A): B = forward(a)
   def forward(x: A): B
+  def apply(a: A): B = forward(a)
   def state: Seq[(Variable, PTag)]
   final def parameters =
     state.filter(v =>
@@ -180,4 +180,35 @@ object InitState {
   def make[M, C](f: M => C) = new InitState[M, C] {
     def initState(m: M) = f(m)
   }
+}
+
+case class MappedState[A, B, C, D, M <: StatefulModule[A, B, C]](
+    statefulModule: M with StatefulModule[A, B, C],
+    map: C => D
+) extends StatefulModule2[A, B, C, D] {
+  def state = statefulModule.state
+  def forward(x: (A, C)) = {
+    val (b, c) = statefulModule.forward(x)
+    (b, map(c))
+  }
+}
+object MappedState {
+  implicit def trainingMode[A, B, C, D, M <: StatefulModule[A, B, C]](
+      implicit t: TrainingMode[M]
+  ) =
+    TrainingMode.make[MappedState[A, B, C, D, M]](
+      m => MappedState[A, B, C, D, M](m.statefulModule.asEval, m.map),
+      m => MappedState[A, B, C, D, M](m.statefulModule.asTraining, m.map)
+    )
+  implicit def load[A, B, C, D, M <: StatefulModule[A, B, C]: Load] =
+    Load.make[MappedState[A, B, C, D, M]](m =>
+      tensors =>
+        MappedState[A, B, C, D, M](m.statefulModule.load(tensors), m.map)
+    )
+  implicit def initState[A, B, C, D, M <: StatefulModule[A, B, C]](
+      implicit is: InitState[M, C]
+  ) =
+    InitState.make[MappedState[A, B, C, D, M], C](m =>
+      is.initState(m.statefulModule)
+    )
 }

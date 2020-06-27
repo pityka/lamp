@@ -314,64 +314,92 @@ object Text {
 
   /**
     * Yields tensors of shape (time step x batch size)
+    * @param text pairs of (source,destination) units
     */
-  def minibatchesFromLines(
+  def minibatchesForSeq2Seq(
       text: IndexedSeq[(Vector[Long], Vector[Long])],
       minibatchSize: Int,
       timeSteps: Int,
       pad: Int,
       device: Device
-  ) = {
+  ): BatchStream[(Variable, Variable)] = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make {
         val io = IO {
           val pairs = idx.map { i =>
-            val segmentFeature =
+            val segmentSource =
               text(i)._1
+                .take(timeSteps)
+                .padTo(timeSteps, pad.toLong)
+            val segmentDestination =
+              text(i)._2
                 .take(timeSteps)
                 .padTo(timeSteps, pad.toLong)
             val segmentTarget =
               text(i)._2
+                .drop(1)
                 .take(timeSteps)
                 .padTo(timeSteps, pad.toLong)
-            assert(segmentFeature.length == segmentTarget.length)
-            assert(segmentFeature.length == timeSteps)
+            assert(segmentSource.length == segmentTarget.length)
+            assert(segmentSource.length == segmentTarget.length)
+            assert(segmentSource.length == segmentDestination.length)
+            assert(segmentSource.length == timeSteps)
 
             (
-              segmentFeature,
+              segmentSource,
+              segmentDestination,
               segmentTarget
             )
 
           }
 
-          val flattenedFeature =
+          val flattenedSource =
             TensorHelpers
               .fromLongVec(pairs.flatMap(_._1).toVec, device)
-          val flattenedTarget =
-            TensorHelpers.fromLongVec(pairs.flatMap(_._2).toVec, device)
-          val viewedFeature = ATen._unsafe_view(
-            flattenedFeature,
+          val viewedSource = ATen._unsafe_view(
+            flattenedSource,
             Array(idx.size.toLong, timeSteps.toLong)
           )
+          val transposedSource =
+            viewedSource.transpose(0, 1)
+          val flattenedDest =
+            TensorHelpers
+              .fromLongVec(pairs.flatMap(_._2).toVec, device)
+          val viewedDest = ATen._unsafe_view(
+            flattenedDest,
+            Array(idx.size.toLong, timeSteps.toLong)
+          )
+          val transposedDest =
+            viewedDest.transpose(0, 1)
+          val flattenedTarget =
+            TensorHelpers.fromLongVec(pairs.flatMap(_._3).toVec, device)
           val viewedTarget = ATen._unsafe_view(
             flattenedTarget,
             Array(idx.size.toLong, timeSteps.toLong)
           )
-          val transposedFeatures =
-            viewedFeature.transpose(0, 1)
           val transposedTarget = viewedTarget.transpose(0, 1)
 
           Tensor.releaseAll(
             Array(
               viewedTarget,
-              viewedFeature,
+              viewedSource,
+              viewedDest,
               flattenedTarget,
-              flattenedFeature
+              flattenedSource,
+              flattenedDest
             )
           )
 
-          Some((const(transposedFeatures).releasable, transposedTarget)): Option[
-            (Variable, Tensor)
+          Some(
+            (
+              (
+                const(transposedSource).releasable,
+                const(transposedDest).releasable
+              ),
+              transposedTarget
+            )
+          ): Option[
+            ((Variable, Variable), Tensor)
           ]
         }
         io
@@ -383,7 +411,8 @@ object Text {
           }
       }
     }
-    val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
+    val emptyResource =
+      Resource.pure[IO, Option[((Variable, Variable), Tensor)]](None)
 
     val idx = array
       .shuffle(array.range(0, text.size))
@@ -395,9 +424,9 @@ object Text {
       s"Total batches: ${idx.size}. Each $timeSteps token long and has $minibatchSize examples."
     )
     assert(idx.forall(_.size == minibatchSize))
-    new BatchStream[Variable] {
+    new BatchStream[(Variable, Variable)] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[(Variable, Tensor)]] =
+      def nextBatch: Resource[IO, Option[((Variable, Variable), Tensor)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>

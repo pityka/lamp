@@ -183,6 +183,30 @@ class GradientSuite extends AnyFunSuite {
       x1.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
   }
+  testGradientAndValue("assign - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
+    val L = x2.assign(x1).sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
+  testGradientAndValue("assign - left")(mat2x3, 42d) { (m, doBackprop, cuda) =>
+    val x2 = param(TensorHelpers.fromMat(m, cuda))
+    val x1 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
+    val L = x2.assign(x1).sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x2.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
   testGradientAndValue("add broadcasted - left")(Mat(Vec(1d)), 48d) {
     (m, doBackprop, cuda) =>
       val x1 = param(TensorHelpers.fromMat(m, cuda))
@@ -527,6 +551,7 @@ class GradientSuite extends AnyFunSuite {
         x1.partialDerivative.map(t => TensorHelpers.toMat(t))
       )
   }
+
   testGradientAndValue("atan")(mat2x3_2, 3.02402707945215) {
     (m, doBackprop, cuda) =>
       val x1 = param(TensorHelpers.fromMat(m, cuda))

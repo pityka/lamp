@@ -93,13 +93,13 @@ case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
   )
   val value = Variable(this, ATen.argmax(a.value, dim, keepDim))
 }
-case class Assign(a: Variable, b: Variable) extends Op {
+
+case class Assign(abandon: Variable, keep: Variable) extends Op {
   val params = List(
-    a.zipBackward { (p, out) =>
-      throw new RuntimeException("Argmax is not differentiable")
-    }
+    abandon.zipBackward { (p, out) => () },
+    keep.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) }
   )
-  val value = Variable(this, b.value)
+  val value = Variable(this, keep.value)
 }
 case class OneHot(a: Variable, numClasses: Int) extends Op {
   val params = List(
@@ -1279,7 +1279,8 @@ case class Embedding(
       ATen.add_out(out, out, tmp, 1d)
       tmp.release
 
-    }
+    },
+    input.zipBackward { (p, out) => () }
   )
 
   val value =

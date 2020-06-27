@@ -8,6 +8,7 @@ import cats.effect.IO
 package object nn {
   type Module = GenericModule[Variable, Variable]
   type StatefulModule[A, B, C] = GenericModule[(A, C), (B, C)]
+  type StatefulModule2[A, B, C, D] = GenericModule[(A, C), (B, D)]
   implicit def funToModule(fun: Variable => Variable) = Fun(fun)
 
   implicit class TrainingModeSyntax[M: TrainingMode](m: M) {
@@ -25,12 +26,22 @@ package object nn {
   implicit class ToLift[M <: Module](mod: M with Module) {
     def lift = LiftedModule(mod)
   }
-  implicit class ToUnlift[A, B, C, M <: StatefulModule[A, B, C]](
-      mod: M with StatefulModule[A, B, C]
+  implicit class ToUnlift[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
+      mod: M with StatefulModule2[A, B, C, D]
   )(
       implicit is: InitState[M, C]
   ) {
-    def unlift = UnliftedModule[A, B, C, M](mod)(is)
+    def unlift = UnliftedModule(mod)(is)
+  }
+  implicit class ToMappedState[A, B, C, M <: StatefulModule[A, B, C]](
+      mod: M with StatefulModule[A, B, C]
+  ) {
+    def mapState[D](f: C => D) = MappedState[A, B, C, D, M](mod, f)
+  }
+  implicit class ToWithInit[A, B, C, M <: StatefulModule[A, B, C]](
+      mod: M with StatefulModule[A, B, C]
+  ) {
+    def withInit(c: C) = WithInit[A, B, C, M](mod, c)
   }
 
   def gradientClippingInPlace(
