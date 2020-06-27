@@ -305,13 +305,6 @@ class TextGenerationSuite extends AnyFunSuite {
         device,
         precision,
         trainedModel,
-        (
-          (),
-          None,
-          (),
-          (),
-          ()
-        ),
         lookAhead
       )
       .use { variables =>
