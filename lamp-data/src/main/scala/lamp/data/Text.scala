@@ -68,14 +68,13 @@ object Text {
       })(variable => IO { variable.releaseAll })
     }
   }
-  def sequencePredictionBeam[T](
+  def sequencePredictionBeam[T, M <: StatefulModule[Variable, Variable, T]](
       prefix: Vector[Long],
       device: Device,
       precision: FloatingPointPrecision,
-      module: StatefulModule[Variable, Variable, T],
-      init: T,
+      module: M with StatefulModule[Variable, Variable, T],
       steps: Int
-  ): Resource[IO, Seq[(Variable, Double)]] = {
+  )(implicit is: InitState[M, T]): Resource[IO, Seq[(Variable, Double)]] = {
     val batchSize = 1
     val k = 3
     def loop(
@@ -134,14 +133,16 @@ object Text {
     makePredictionBatch(Vector(prefix), device, precision).flatMap { batch =>
       Resource.make(IO {
 
-        loop(steps, Seq(Seq((const(batch), init)) -> 0d)).sortBy(_._2).map {
-          case (seq, logProb) =>
-            val catted = ConcatenateAddNewDim(
-              seq.map(v => v.select(0, v.shape(0) - 1))
-            ).value.view(List(seq.size))
+        loop(steps, Seq(Seq((const(batch), module.initState)) -> 0d))
+          .sortBy(_._2)
+          .map {
+            case (seq, logProb) =>
+              val catted = ConcatenateAddNewDim(
+                seq.map(v => v.select(0, v.shape(0) - 1))
+              ).value.view(List(seq.size))
 
-            (catted, logProb)
-        }
+              (catted, logProb)
+          }
 
       })(variables =>
         IO {

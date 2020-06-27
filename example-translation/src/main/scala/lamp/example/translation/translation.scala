@@ -42,10 +42,11 @@ import lamp.nn.LSTM
 import lamp.nn.statefulSequence
 import lamp.nn.Seq2Seq
 import lamp.nn.GenericModule
+import java.nio.charset.StandardCharsets
 
 case class CliConfig(
     trainData: String = "",
-    testData: String = "",
+    testData: Option[String] = None,
     cuda: Boolean = false,
     singlePrecision: Boolean = false,
     trainBatchSize: Int = 256,
@@ -86,12 +87,11 @@ object Train extends App {
     OParser.sequence(
       opt[String]("train-data")
         .action((x, c) => c.copy(trainData = x))
-        .text("path to cifar100 binary train data")
+        .text("path to train data ")
         .required(),
       opt[String]("test-data")
-        .action((x, c) => c.copy(testData = x))
-        .text("path to cifar100 binary test data")
-        .required(),
+        .action((x, c) => c.copy(testData = Some(x)))
+        .text("path to validation data"),
       opt[Unit]("gpu").action((x, c) => c.copy(cuda = true)),
       opt[Unit]("single").action((x, c) => c.copy(singlePrecision = true)),
       opt[Int]("train-batch").action((x, c) => c.copy(trainBatchSize = x)),
@@ -116,8 +116,7 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
 
-      val asciiSilentCharsetDecoder = Charset
-        .forName("UTF8")
+      val charsetDecoder = StandardCharsets.UTF_8
         .newDecoder()
         .onMalformedInput(CodingErrorAction.REPLACE)
         .onUnmappableCharacter(CodingErrorAction.REPLACE)
@@ -125,22 +124,24 @@ object Train extends App {
       val trainText = Resource
         .make(IO {
           scala.io.Source.fromFile(new File(config.trainData))(
-            Codec.apply(asciiSilentCharsetDecoder)
+            Codec.apply(charsetDecoder)
           )
         })(s => IO { s.close })
         .use(s => IO(s.mkString))
         .unsafeRunSync()
 
-      val testText = Resource
-        .make(IO {
-          scala.io.Source.fromFile(new File(config.testData))(
-            Codec.apply(asciiSilentCharsetDecoder)
-          )
-        })(s => IO { s.close })
-        .use(s => IO(s.mkString))
-        .unsafeRunSync()
+      val testText = config.testData.map { t =>
+        Resource
+          .make(IO {
+            scala.io.Source.fromFile(new File(t))(
+              Codec.apply(charsetDecoder)
+            )
+          })(s => IO { s.close })
+          .use(s => IO(s.mkString))
+          .unsafeRunSync()
+      }
 
-      val (vocab1, _) = Text.charsToIntegers(trainText + testText)
+      val (vocab1, _) = Text.charsToIntegers(trainText + testText.getOrElse(""))
       val vocab =
         vocab1 + ('#' -> vocab1.size, '|' -> (vocab1.size + 1), '*' -> (vocab1.size + 2), '=' -> (vocab1.size + 3))
       val trainTokenized = scala.io.Source
@@ -169,32 +170,34 @@ object Train extends App {
               .map(_.toLong)
           )
         }
-      val testTokenized = scala.io.Source
-        .fromString(testText)
-        .getLines
-        .toVector
-        .map { line =>
-          val (feature, target) = Translation.prepare(
-            line,
-            pad = '#',
-            endOfSentence = '*',
-            startOfSentence = '='
-          )
-          (
-            Text
-              .charsToIntegers(
-                feature,
-                vocab
-              )
-              .map(_.toLong),
-            Text
-              .charsToIntegers(
-                target,
-                vocab
-              )
-              .map(_.toLong)
-          )
-        }
+      val testTokenized = testText.map { t =>
+        scala.io.Source
+          .fromString(t)
+          .getLines
+          .toVector
+          .map { line =>
+            val (feature, target) = Translation.prepare(
+              line,
+              pad = '#',
+              endOfSentence = '*',
+              startOfSentence = '='
+            )
+            (
+              Text
+                .charsToIntegers(
+                  feature,
+                  vocab
+                )
+                .map(_.toLong),
+              Text
+                .charsToIntegers(
+                  target,
+                  vocab
+                )
+                .map(_.toLong)
+            )
+          }
+      }
       val vocabularSize = vocab.size
       val rvocab = vocab.map(_.swap)
       scribe.info(
@@ -278,15 +281,16 @@ object Train extends App {
             vocab('#'),
             device
           )
-      val testEpochs = () =>
+      val testEpochs = testTokenized.map { t => () =>
         Text
           .minibatchesForSeq2Seq(
-            testTokenized,
+            t,
             config.validationBatchSize,
             lookAhead,
             vocab('#'),
             device
           )
+      }
 
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
@@ -324,7 +328,7 @@ object Train extends App {
           model = model,
           optimizerFactory = optimizer,
           trainBatchesOverEpoch = trainEpochs,
-          validationBatchesOverEpoch = Some(testEpochs),
+          validationBatchesOverEpoch = testEpochs,
           epochs = config.epochs,
           trainingCallback = TrainingCallback.noop,
           validationCallback = validationCallback,
@@ -355,9 +359,8 @@ object Train extends App {
               trainedModel.module.statefulModule.decoder.withInit(encState)
 
             Text
-              .sequencePrediction(
-                List("=")
-                  .map(t => Text.charsToIntegers(t, vocab).map(_.toLong)),
+              .sequencePredictionBeam(
+                Text.charsToIntegers("=", vocab).map(_.toLong),
                 device,
                 precision,
                 dec,
@@ -366,17 +369,17 @@ object Train extends App {
               .use { variable =>
                 IO {
                   Text.convertIntegersToText(
-                    variable.attach(encOut).value,
+                    variable.head._1.attach(encOut).value,
                     rvocab
                   )
                 }
               }
           }
           .unsafeRunSync()
+          .mkString
 
         scribe.info(
-          s"Hallucinated text follows (from prefix '$prefix'): \n\n" + prefix + text
-            .mkString("\n")
+          s"Answer to query text follows (from prefix '$prefix'): \n\n" + text
         )
       }
 
