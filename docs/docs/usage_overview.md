@@ -95,11 +95,10 @@ val tensorOptions = device.options(SinglePrecision)
 val classWeights = ATen.ones(Array(10), tensorOptions)
 
 val model = SupervisedModel(
-  Sequential(
+  sequence(
       MLP(in = 784, out = 10, List(64, 32), tensorOptions, dropout = 0.2),
       Fun(_.logSoftMax(dim = 1))
     ),
-  (),
   LossFunctions.NLL(10, classWeights)
 )
 ```
@@ -131,7 +130,7 @@ With this we have everything to assemble the training loop:
 
 ```scala mdoc
 import cats.effect.IO
-val trainedModelIO : IO[SupervisedModel[Unit]] = IOLoops.epochs(
+val trainedModelIO = IOLoops.epochs(
       model = model,
       optimizerFactory = SGDW
         .factory(
@@ -155,6 +154,6 @@ val trainedModel = trainedModelIO.unsafeRunSync.module
 The trained model we can use for prediction:
 ```scala mdoc
 val bogusData = ATen.ones(Array(1,784),tensorOptions)
-val classProbabilities = trainedModel.forward1(const(bogusData),())._1.toMat.map(math.exp)
+val classProbabilities = trainedModel.forward(const(bogusData)).toMat.map(math.exp)
 println(classProbabilities)
 ```
