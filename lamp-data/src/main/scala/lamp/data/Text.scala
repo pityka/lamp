@@ -115,7 +115,6 @@ object Text {
             }
 
         }
-
         val (chosen, rejected) = candidates.sortBy(_._3).reverse.splitAt(k)
         rejected.foreach(_._2.value.release)
         val newBuffers = chosen.map {
@@ -135,8 +134,10 @@ object Text {
 
         loop(steps, Seq(Seq((const(batch), module.initState)) -> 0d))
           .sortBy(_._2)
+          .reverse
           .map {
             case (seq, logProb) =>
+              println(logProb)
               val catted = ConcatenateAddNewDim(
                 seq.map(v => v.select(0, v.shape(0) - 1))
               ).value.view(List(seq.size))
