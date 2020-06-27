@@ -328,7 +328,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">NllLoss</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="weights">weights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">NllLoss</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="weights">weights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -384,9 +384,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.autograd.NllLoss#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(input:lamp.autograd.Variable,target:aten.Tensor,weights:aten.Tensor,numClasses:Int,reduction:lamp.autograd.Reduction):lamp.autograd.NllLoss"></a><a id="&lt;init&gt;:NllLoss"></a>
+      <a id="&lt;init&gt;(input:lamp.autograd.Variable,target:aten.Tensor,weights:aten.Tensor,numClasses:Int,reduction:lamp.autograd.Reduction,ignore:Long):lamp.autograd.NllLoss"></a><a id="&lt;init&gt;:NllLoss"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/NllLoss.html#&lt;init&gt;(input:lamp.autograd.Variable,target:aten.Tensor,weights:aten.Tensor,numClasses:Int,reduction:lamp.autograd.Reduction):lamp.autograd.NllLoss" title="Permalink">
+      <a href="../../lamp/autograd/NllLoss.html#&lt;init&gt;(input:lamp.autograd.Variable,target:aten.Tensor,weights:aten.Tensor,numClasses:Int,reduction:lamp.autograd.Reduction,ignore:Long):lamp.autograd.NllLoss" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -395,7 +395,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">NllLoss</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="weights">weights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>)</span>
+        <span class="name">NllLoss</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="weights">weights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span></span>)</span>
       </span>
       
       
@@ -554,6 +554,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.autograd.NllLoss#ignore" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ignore:Long"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/NllLoss.html#ignore:Long" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ignore</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+      </span>
+      
+      
     </li><li name="lamp.autograd.NllLoss#input" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="input:lamp.autograd.Variable"></a><a id="input:Variable"></a>
       <span class="permalink">

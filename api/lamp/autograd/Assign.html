@@ -328,7 +328,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Assign</span><span class="params">(<span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Assign</span><span class="params">(<span name="abandon">abandon: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="keep">keep: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -384,9 +384,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.autograd.Assign#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(a:lamp.autograd.Variable,b:lamp.autograd.Variable):lamp.autograd.Assign"></a><a id="&lt;init&gt;:Assign"></a>
+      <a id="&lt;init&gt;(abandon:lamp.autograd.Variable,keep:lamp.autograd.Variable):lamp.autograd.Assign"></a><a id="&lt;init&gt;:Assign"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Assign.html#&lt;init&gt;(a:lamp.autograd.Variable,b:lamp.autograd.Variable):lamp.autograd.Assign" title="Permalink">
+      <a href="../../lamp/autograd/Assign.html#&lt;init&gt;(abandon:lamp.autograd.Variable,keep:lamp.autograd.Variable):lamp.autograd.Assign" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -395,7 +395,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Assign</span><span class="params">(<span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span>
+        <span class="name">Assign</span><span class="params">(<span name="abandon">abandon: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="keep">keep: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span>
       </span>
       
       
@@ -457,10 +457,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
-    </li><li name="lamp.autograd.Assign#a" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="a:lamp.autograd.Variable"></a><a id="a:Variable"></a>
+    </li><li name="lamp.autograd.Assign#abandon" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="abandon:lamp.autograd.Variable"></a><a id="abandon:Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Assign.html#a:lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Assign.html#abandon:lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -469,7 +469,7 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">a</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">abandon</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
@@ -489,22 +489,6 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.autograd.Assign#b" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="b:lamp.autograd.Variable"></a><a id="b:Variable"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Assign.html#b:lamp.autograd.Variable" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">b</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#clone" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a><a id="clone():AnyRef"></a>
       <span class="permalink">
@@ -602,6 +586,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="lamp.autograd.Assign#keep" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="keep:lamp.autograd.Variable"></a><a id="keep:Variable"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Assign.html#keep:lamp.autograd.Variable" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">keep</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">

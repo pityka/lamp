@@ -170,7 +170,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Residual</span><span class="params">(<span name="right">right: <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Unit">Unit</span>]</span>, <span name="left">left: <span class="extype" name="scala.Option">Option</span>[<a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Unit">Unit</span>]]</span>)</span><span class="result"> extends <a href="../../nn/Module.html" class="extype" name="lamp.nn.Module">Module</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Residual</span><span class="tparams">[<span name="M1">M1 &lt;: <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="M2">M2 &lt;: <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>]</span><span class="params">(<span name="right">right: <span class="extype" name="lamp.example.cifar.Residual.M1">M1</span> with <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="left">left: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="lamp.example.cifar.Residual.M2">M2</span> with <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a>]</span>)</span><span class="result"> extends <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -179,7 +179,7 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../nn/Module.html" class="extype" name="lamp.nn.Module">Module</a>, <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Unit">Unit</span>], <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>], (<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>) ⇒ <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -205,7 +205,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.example.cifar.Residual"><span>Residual</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.nn.Module"><span>Module</span></li><li class="in" name="lamp.nn.StatefulModule"><span>StatefulModule</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.example.cifar.Residual"><span>Residual</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.nn.GenericModule"><span>GenericModule</span></li><li class="in" name="scala.Function1"><span>Function1</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -226,9 +226,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.example.cifar.Residual#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(right:lamp.nn.StatefulModule[Unit],left:Option[lamp.nn.StatefulModule[Unit]]):lamp.example.cifar.Residual"></a><a id="&lt;init&gt;:Residual"></a>
+      <a id="&lt;init&gt;(right:M1withlamp.nn.Module,left:Option[M2withlamp.nn.Module]):lamp.example.cifar.Residual[M1,M2]"></a><a id="&lt;init&gt;:Residual[M1,M2]"></a>
       <span class="permalink">
-      <a href="../../../lamp/example/cifar/Residual.html#&lt;init&gt;(right:lamp.nn.StatefulModule[Unit],left:Option[lamp.nn.StatefulModule[Unit]]):lamp.example.cifar.Residual" title="Permalink">
+      <a href="../../../lamp/example/cifar/Residual.html#&lt;init&gt;(right:M1withlamp.nn.Module,left:Option[M2withlamp.nn.Module]):lamp.example.cifar.Residual[M1,M2]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -237,7 +237,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Residual</span><span class="params">(<span name="right">right: <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Unit">Unit</span>]</span>, <span name="left">left: <span class="extype" name="scala.Option">Option</span>[<a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Unit">Unit</span>]]</span>)</span>
+        <span class="name">Residual</span><span class="params">(<span name="right">right: <span class="extype" name="lamp.example.cifar.Residual.M1">M1</span> with <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="left">left: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="lamp.example.cifar.Residual.M2">M2</span> with <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a>]</span>)</span>
       </span>
       
       
@@ -299,10 +299,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
-    </li><li name="lamp.example.cifar.Residual#asEval" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="asEval:lamp.example.cifar.Residual"></a><a id="asEval:Residual"></a>
+    </li><li name="scala.Function1#andThen" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="andThen[A](g:R=&gt;A):T1=&gt;A"></a><a id="andThen[A]((Variable)⇒A):(Variable)⇒A"></a>
       <span class="permalink">
-      <a href="../../../lamp/example/cifar/Residual.html#asEval:lamp.example.cifar.Residual" title="Permalink">
+      <a href="../../../lamp/example/cifar/Residual.html#andThen[A](g:R=&gt;A):T1=&gt;A" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -311,10 +311,29 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">asEval</span><span class="result">: <a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a></span>
+        <span class="name">andThen</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="g">g: (<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>) ⇒ <span class="extype" name="scala.Function1.andThen.A">A</span></span>)</span><span class="result">: (<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>) ⇒ <span class="extype" name="scala.Function1.andThen.A">A</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a> → <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Function1</dd><dt>Annotations</dt><dd>
+                <span class="name">@unspecialized</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li name="lamp.nn.GenericModule#apply" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="apply(a:A):B"></a><a id="apply(Variable):Variable"></a>
+      <span class="permalink">
+      <a href="../../../lamp/example/cifar/Residual.html#apply(a:A):B" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">apply</span><span class="params">(<span name="a">a: <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result">: <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a> → Function1</dd></dl></div>
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
@@ -331,22 +350,6 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.example.cifar.Residual#asTraining" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="asTraining:lamp.example.cifar.Residual"></a><a id="asTraining:Residual"></a>
-      <span class="permalink">
-      <a href="../../../lamp/example/cifar/Residual.html#asTraining:lamp.example.cifar.Residual" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">asTraining</span><span class="result">: <a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a></span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a> → <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a></dd></dl></div>
     </li><li name="scala.AnyRef#clone" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a><a id="clone():AnyRef"></a>
       <span class="permalink">
@@ -369,6 +372,25 @@
     </span>)</span>
               
                 <span class="name">@native</span><span class="args">()</span>
+              
+        </dd></dl></div>
+    </li><li name="scala.Function1#compose" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="compose[A](g:A=&gt;T1):A=&gt;R"></a><a id="compose[A]((A)⇒Variable):(A)⇒Variable"></a>
+      <span class="permalink">
+      <a href="../../../lamp/example/cifar/Residual.html#compose[A](g:A=&gt;T1):A=&gt;R" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">compose</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="g">g: (<span class="extype" name="scala.Function1.compose.A">A</span>) ⇒ <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result">: (<span class="extype" name="scala.Function1.compose.A">A</span>) ⇒ <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Function1</dd><dt>Annotations</dt><dd>
+                <span class="name">@unspecialized</span><span class="args">()</span>
               
         </dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
@@ -424,23 +446,7 @@
         <span class="name">forward</span><span class="params">(<span name="x">x: <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result">: <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a> → <a href="../../nn/Module.html" class="extype" name="lamp.nn.Module">Module</a></dd></dl></div>
-    </li><li name="lamp.nn.Module#forward1" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="forward1(x:lamp.autograd.Variable,state:Unit):(lamp.autograd.Variable,Unit)"></a><a id="forward1(Variable,Unit):(Variable,Unit)"></a>
-      <span class="permalink">
-      <a href="../../../lamp/example/cifar/Residual.html#forward1(x:lamp.autograd.Variable,state:Unit):(lamp.autograd.Variable,Unit)" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">forward1</span><span class="params">(<span name="x">x: <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="state">state: <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: (<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="scala.Unit">Unit</span>)</span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../nn/Module.html" class="extype" name="lamp.nn.Module">Module</a> → <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a> → <a href="../../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
@@ -460,7 +466,7 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.nn.StatefulModule#gradients" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="lamp.nn.GenericModule#gradients" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="gradients(loss:lamp.autograd.Variable,zeroGrad:Boolean):Seq[Option[aten.Tensor]]"></a><a id="gradients(Variable,Boolean):Seq[Option[Tensor]]"></a>
       <span class="permalink">
       <a href="../../../lamp/example/cifar/Residual.html#gradients(loss:lamp.autograd.Variable,zeroGrad:Boolean):Seq[Option[aten.Tensor]]" title="Permalink">
@@ -475,7 +481,7 @@
         <span class="name">gradients</span><span class="params">(<span name="loss">loss: <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="zeroGrad">zeroGrad: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result">: <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="scala.Option">Option</span>[<span class="extype" name="aten.Tensor">Tensor</span>]]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
@@ -492,7 +498,7 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.nn.StatefulModule#learnableParameters" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="lamp.nn.GenericModule#learnableParameters" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="learnableParameters:Long"></a>
       <span class="permalink">
       <a href="../../../lamp/example/cifar/Residual.html#learnableParameters:Long" title="Permalink">
@@ -507,11 +513,11 @@
         <span class="name">learnableParameters</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="lamp.example.cifar.Residual#left" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="left:Option[lamp.nn.StatefulModule[Unit]]"></a><a id="left:Option[StatefulModule[Unit]]"></a>
+      <a id="left:Option[M2withlamp.nn.Module]"></a><a id="left:Option[M2withModule]"></a>
       <span class="permalink">
-      <a href="../../../lamp/example/cifar/Residual.html#left:Option[lamp.nn.StatefulModule[Unit]]" title="Permalink">
+      <a href="../../../lamp/example/cifar/Residual.html#left:Option[M2withlamp.nn.Module]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -520,26 +526,10 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">left</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Unit">Unit</span>]]</span>
+        <span class="name">left</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="lamp.example.cifar.Residual.M2">M2</span> with <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a>]</span>
       </span>
       
       
-    </li><li name="lamp.example.cifar.Residual#load" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="load(parameters:Seq[aten.Tensor]):lamp.example.cifar.Residual"></a><a id="load(Seq[Tensor]):Residual"></a>
-      <span class="permalink">
-      <a href="../../../lamp/example/cifar/Residual.html#load(parameters:Seq[aten.Tensor]):lamp.example.cifar.Residual" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">load</span><span class="params">(<span name="parameters">parameters: <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="aten.Tensor">Tensor</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a></span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a> → <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a></dd></dl></div>
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -594,7 +584,7 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.nn.StatefulModule#parameters" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="lamp.nn.GenericModule#parameters" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="parameters:Seq[(lamp.autograd.Variable,lamp.nn.PTag)]"></a><a id="parameters:Seq[(Variable,PTag)]"></a>
       <span class="permalink">
       <a href="../../../lamp/example/cifar/Residual.html#parameters:Seq[(lamp.autograd.Variable,lamp.nn.PTag)]" title="Permalink">
@@ -609,11 +599,11 @@
         <span class="name">parameters</span><span class="result">: <span class="extype" name="scala.collection.Seq">Seq</span>[(<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../../nn/PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="lamp.example.cifar.Residual#right" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="right:lamp.nn.StatefulModule[Unit]"></a><a id="right:StatefulModule[Unit]"></a>
+      <a id="right:M1withlamp.nn.Module"></a><a id="right:M1withModule"></a>
       <span class="permalink">
-      <a href="../../../lamp/example/cifar/Residual.html#right:lamp.nn.StatefulModule[Unit]" title="Permalink">
+      <a href="../../../lamp/example/cifar/Residual.html#right:M1withlamp.nn.Module" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -622,7 +612,7 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">right</span><span class="result">: <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Unit">Unit</span>]</span>
+        <span class="name">right</span><span class="result">: <span class="extype" name="lamp.example.cifar.Residual.M1">M1</span> with <a href="../../nn/index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>
       </span>
       
       
@@ -641,7 +631,7 @@
         <span class="name">state</span><span class="result">: <span class="extype" name="scala.Seq">Seq</span>[(<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../../nn/PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a> → <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.example.cifar.Residual">Residual</a> → <a href="../../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a><a id="synchronized[T0](⇒T0):T0"></a>
       <span class="permalink">
@@ -658,6 +648,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="scala.Function1#toString" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="toString():String"></a>
+      <span class="permalink">
+      <a href="../../../lamp/example/cifar/Residual.html#toString():String" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">toString</span><span class="params">()</span><span class="result">: <span class="extype" name="java.lang.String">String</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Function1 → AnyRef → Any</dd></dl></div>
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <span class="permalink">
@@ -744,10 +750,10 @@
               <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
             </div><div class="parent" name="scala.Equals">
               <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
-            </div><div class="parent" name="lamp.nn.Module">
-              <h3>Inherited from <a href="../../nn/Module.html" class="extype" name="lamp.nn.Module">Module</a></h3>
-            </div><div class="parent" name="lamp.nn.StatefulModule">
-              <h3>Inherited from <a href="../../nn/StatefulModule.html" class="extype" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="scala.Unit">Unit</span>]</h3>
+            </div><div class="parent" name="lamp.nn.GenericModule">
+              <h3>Inherited from <a href="../../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</h3>
+            </div><div class="parent" name="scala.Function1">
+              <h3>Inherited from (<a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>) ⇒ <a href="../../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
             </div><div class="parent" name="scala.Any">

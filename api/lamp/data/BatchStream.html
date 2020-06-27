@@ -162,12 +162,12 @@
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <span class="name">BatchStream</span><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+        <span class="name">BatchStream</span><span class="tparams">[<span name="I">I</span>]</span><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
       </span>
       </h4>
 
       
-          <div id="comment" class="fullcommenttop"><dl class="attributes block"> <dt>Self Type</dt><dd><a href="" class="extype" name="lamp.data.BatchStream">BatchStream</a></dd></dl><div class="toggleContainer block">
+          <div id="comment" class="fullcommenttop"><dl class="attributes block"> <dt>Self Type</dt><dd><a href="" class="extype" name="lamp.data.BatchStream">BatchStream</a>[<span class="extype" name="lamp.data.BatchStream.I">I</span>]</dd></dl><div class="toggleContainer block">
           <span class="toggle">
             Linear Supertypes
           </span>
@@ -222,9 +222,9 @@
         <div class="values members">
               <h3>Abstract Value Members</h3>
               <ol><li name="lamp.data.BatchStream#nextBatch" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
-      <a id="nextBatch:cats.effect.Resource[cats.effect.IO,Option[(aten.Tensor,aten.Tensor)]]"></a><a id="nextBatch:Resource[IO,Option[(Tensor,Tensor)]]"></a>
+      <a id="nextBatch:cats.effect.Resource[cats.effect.IO,Option[(I,aten.Tensor)]]"></a><a id="nextBatch:Resource[IO,Option[(I,Tensor)]]"></a>
       <span class="permalink">
-      <a href="../../lamp/data/BatchStream.html#nextBatch:cats.effect.Resource[cats.effect.IO,Option[(aten.Tensor,aten.Tensor)]]" title="Permalink">
+      <a href="../../lamp/data/BatchStream.html#nextBatch:cats.effect.Resource[cats.effect.IO,Option[(I,aten.Tensor)]]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -233,7 +233,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">nextBatch</span><span class="result">: <span class="extype" name="cats.effect.Resource">Resource</span>[<span class="extype" name="cats.effect.IO">IO</span>, <span class="extype" name="scala.Option">Option</span>[(<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>)]]</span>
+        <span class="name">nextBatch</span><span class="result">: <span class="extype" name="cats.effect.Resource">Resource</span>[<span class="extype" name="cats.effect.IO">IO</span>, <span class="extype" name="scala.Option">Option</span>[(<span class="extype" name="lamp.data.BatchStream.I">I</span>, <span class="extype" name="aten.Tensor">Tensor</span>)]]</span>
       </span>
       
       
@@ -440,9 +440,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
     </li><li name="lamp.data.BatchStream#map" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="map(f:(aten.Tensor,aten.Tensor)=&gt;cats.effect.Resource[cats.effect.IO,(aten.Tensor,aten.Tensor)]):lamp.data.BatchStream"></a><a id="map((Tensor,Tensor)⇒Resource[IO,(Tensor,Tensor)]):BatchStream"></a>
+      <a id="map[I2](f:(I,aten.Tensor)=&gt;cats.effect.Resource[cats.effect.IO,(I2,aten.Tensor)]):lamp.data.BatchStream[I2]"></a><a id="map[I2]((I,Tensor)⇒Resource[IO,(I2,Tensor)]):BatchStream[I2]"></a>
       <span class="permalink">
-      <a href="../../lamp/data/BatchStream.html#map(f:(aten.Tensor,aten.Tensor)=&gt;cats.effect.Resource[cats.effect.IO,(aten.Tensor,aten.Tensor)]):lamp.data.BatchStream" title="Permalink">
+      <a href="../../lamp/data/BatchStream.html#map[I2](f:(I,aten.Tensor)=&gt;cats.effect.Resource[cats.effect.IO,(I2,aten.Tensor)]):lamp.data.BatchStream[I2]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -451,7 +451,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">map</span><span class="params">(<span name="f">f: (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="cats.effect.Resource">Resource</span>[<span class="extype" name="cats.effect.IO">IO</span>, (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>)]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.data.BatchStream">BatchStream</a></span>
+        <span class="name">map</span><span class="tparams">[<span name="I2">I2</span>]</span><span class="params">(<span name="f">f: (<span class="extype" name="lamp.data.BatchStream.I">I</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="cats.effect.Resource">Resource</span>[<span class="extype" name="cats.effect.IO">IO</span>, (<span class="extype" name="lamp.data.BatchStream.map.I2">I2</span>, <span class="extype" name="aten.Tensor">Tensor</span>)]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.data.BatchStream">BatchStream</a>[<span class="extype" name="lamp.data.BatchStream.map.I2">I2</span>]</span>
       </span>
       
       

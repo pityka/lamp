@@ -148,7 +148,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">NLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="reduction">reduction: <a href="../autograd/Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="../index.html">Mean</a></span></span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">NLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="reduction">reduction: <a href="../autograd/Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="../index.html">Mean</a></span></span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -204,9 +204,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.LossFunctions.NLL#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor,reduction:lamp.autograd.Reduction):lamp.nn.LossFunctions.NLL"></a><a id="&lt;init&gt;:NLL"></a>
+      <a id="&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor,reduction:lamp.autograd.Reduction,ignore:Long):lamp.nn.LossFunctions.NLL"></a><a id="&lt;init&gt;:NLL"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/LossFunctions$$NLL.html#&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor,reduction:lamp.autograd.Reduction):lamp.nn.LossFunctions.NLL" title="Permalink">
+      <a href="../../lamp/nn/LossFunctions$$NLL.html#&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor,reduction:lamp.autograd.Reduction,ignore:Long):lamp.nn.LossFunctions.NLL" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -215,7 +215,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">NLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="reduction">reduction: <a href="../autograd/Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="../index.html">Mean</a></span></span></span>)</span>
+        <span class="name">NLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="reduction">reduction: <a href="../autograd/Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="../index.html">Mean</a></span></span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span>
       </span>
       
       
@@ -408,6 +408,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.nn.LossFunctions.NLL#ignore" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ignore:Long"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/LossFunctions$$NLL.html#ignore:Long" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ignore</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+      </span>
+      
+      
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">

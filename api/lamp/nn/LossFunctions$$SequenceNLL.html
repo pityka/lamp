@@ -148,7 +148,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">SequenceNLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">SequenceNLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -207,9 +207,9 @@ The returned loss is averaged over the batch and the time steps
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.LossFunctions.SequenceNLL#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor):lamp.nn.LossFunctions.SequenceNLL"></a><a id="&lt;init&gt;:SequenceNLL"></a>
+      <a id="&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor,ignore:Long):lamp.nn.LossFunctions.SequenceNLL"></a><a id="&lt;init&gt;:SequenceNLL"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor):lamp.nn.LossFunctions.SequenceNLL" title="Permalink">
+      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor,ignore:Long):lamp.nn.LossFunctions.SequenceNLL" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -218,7 +218,7 @@ The returned loss is averaged over the batch and the time steps
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">SequenceNLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span>
+        <span class="name">SequenceNLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span>
       </span>
       
       
@@ -411,6 +411,22 @@ The returned loss is averaged over the batch and the time steps
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.nn.LossFunctions.SequenceNLL#ignore" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ignore:Long"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#ignore:Long" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ignore</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+      </span>
+      
+      
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
