@@ -182,6 +182,10 @@
                         <a class="class" href="Embedding.html" title="Learnable mapping from classes to dense vectors."></a>
                         <a href="Embedding.html" title="Learnable mapping from classes to dense vectors.">Embedding</a>
                       </li><li class="current-entities indented2">
+                        <a class="object" href="FreeRunningRNN$.html" title=""></a>
+                        <a class="class" href="FreeRunningRNN.html" title="Wraps a (sequence x batch) long -&gt; (sequence x batch x dim) double stateful module and runs in it greedy (argmax) generation mode over timeSteps steps."></a>
+                        <a href="FreeRunningRNN.html" title="Wraps a (sequence x batch) long -&gt; (sequence x batch x dim) double stateful module and runs in it greedy (argmax) generation mode over timeSteps steps.">FreeRunningRNN</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="Fun$.html" title=""></a>
                         <a class="class" href="Fun.html" title=""></a>
                         <a href="Fun.html" title="">Fun</a>
@@ -606,6 +610,23 @@ L is never computed directly.
 C is the number of classes.
 n is the size of the batch.</p><p>Input is a long tensor with values in [0,C-1].
 </p></div></div>
+    </li><li name="lamp.nn.FreeRunningRNN" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="FreeRunningRNN[T,M&lt;:lamp.nn.StatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T]]extendsStatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T]withProductwithSerializable"></a><a id="FreeRunningRNN[T,M&lt;:StatefulModule[Variable,Variable,T]]:FreeRunningRNN[T,M]"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/FreeRunningRNN.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="Wraps a (sequence x batch) long -&gt; (sequence x batch x dim) double stateful module and runs in it greedy (argmax) generation mode over timeSteps steps." href="FreeRunningRNN.html"><span class="name">FreeRunningRNN</span></a><span class="tparams">[<span name="T">T</span>, <span name="M">M &lt;: <a href="#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>]</span>]</span><span class="params">(<span name="module">module: <span class="extype" name="lamp.nn.FreeRunningRNN.M">M</span> with <a href="#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>]</span>, <span name="timeSteps">timeSteps: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Wraps a (sequence x batch) long -&gt; (sequence x batch x dim) double stateful module
+and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps.</p>
     </li><li name="lamp.nn.Fun" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="FunextendsModulewithProductwithSerializable"></a><a id="Fun:Fun"></a>
       <span class="permalink">
@@ -1484,6 +1505,22 @@ Applies a linear function to each time step
       </span>
       <span class="symbol">
         <a title="" href="Embedding$.html"><span class="name">Embedding</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.FreeRunningRNN" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="FreeRunningRNN"></a><a id="FreeRunningRNN:FreeRunningRNN"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/FreeRunningRNN$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="FreeRunningRNN$.html"><span class="name">FreeRunningRNN</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
