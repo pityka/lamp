@@ -279,6 +279,7 @@ object Train extends App {
             config.trainBatchSize,
             lookAhead,
             vocab('#'),
+            vocab('*'),
             device
           )
       val testEpochs = testTokenized.map { t => () =>
@@ -288,6 +289,7 @@ object Train extends App {
             config.validationBatchSize,
             lookAhead,
             vocab('#'),
+            vocab('*'),
             device
           )
       }

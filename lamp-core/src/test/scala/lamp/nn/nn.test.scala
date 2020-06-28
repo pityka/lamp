@@ -403,6 +403,29 @@ class NNSuite extends AnyFunSuite {
       ),
     23.8561
   )
+  testGradientAndValueNDLong(
+    "FreeRunning ",
+    ((), Option.empty[Variable]),
+    false
+  )(
+    nd2x3L,
+    () => {
+      val rnn = statefulSequence(
+        Embedding
+          .apply(weights =
+            param(ATen.ones(Array(7, 4), TensorOptions.dtypeDouble))
+          )
+          .lift,
+        RNN(
+          weightXh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+          weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+          biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
+        )
+      )
+      FreeRunningRNN(rnn, 3)
+    },
+    36d
+  )
   testGradientAndValueND("SeqLinear ", (), false)(
     nd2x3x2,
     () =>

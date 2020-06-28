@@ -17,6 +17,7 @@ import cats.effect.ContextShift
 import lamp.nn.StatefulModule
 import lamp.nn.GenericModule
 import lamp.nn.InitState
+import lamp.nn.FreeRunningRNN
 
 object Text {
   def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
@@ -26,44 +27,14 @@ object Text {
       module: M with StatefulModule[Variable, Variable, T],
       steps: Int
   )(implicit is: InitState[M, T]): Resource[IO, Variable] = {
-    val batchSize = batch.size
-    def loop(
-        lastOutput: Variable,
-        lastState: T,
-        n: Int,
-        buffer: Seq[Variable]
-    ): Seq[Variable] = {
-      if (n == 0) buffer
-      else {
-        val (output, state) =
-          module.forward((lastOutput, lastState))
-
-        val lastChar = if (output.shape(0) > 1) {
-          val lastTimeStep1 =
-            output.select(0, output.shape(0) - 1)
-
-          lastTimeStep1.view((1L :: lastTimeStep1.shape).map(_.toInt))
-
-        } else output
-
-        val nextInput =
-          lastChar.argmax(2, false)
-
-        loop(
-          nextInput,
-          state,
-          n - 1,
-          buffer :+ nextInput
-        )
-      }
-    }
 
     makePredictionBatch(batch, device, precision).flatMap { batch =>
       Resource.make(IO {
 
-        ConcatenateAddNewDim(
-          loop(const(batch), module.initState, steps, Seq())
-        ).value.view(List(steps, batchSize))
+        FreeRunningRNN(module, steps)
+          .forward((const(batch), module.initState))
+          ._1
+          .argmax(2, false)
 
       })(variable => IO { variable.releaseAll })
     }
@@ -321,7 +292,8 @@ object Text {
       text: IndexedSeq[(Vector[Long], Vector[Long])],
       minibatchSize: Int,
       timeSteps: Int,
-      pad: Int,
+      pad: Long,
+      endOfSequence: Long,
       device: Device
   ): BatchStream[(Variable, Variable)] = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
@@ -340,6 +312,7 @@ object Text {
               text(i)._2
                 .drop(1)
                 .take(timeSteps)
+                .:+(endOfSequence)
                 .padTo(timeSteps, pad.toLong)
             assert(segmentSource.length == segmentTarget.length)
             assert(segmentSource.length == segmentTarget.length)
