@@ -368,15 +368,18 @@ object Train extends App {
               )
               .use { variable =>
                 IO {
-                  Text.convertIntegersToText(
-                    variable.head._1.attach(encOut).value,
-                    rvocab
-                  )
+                  variable.map(_._1).map { v =>
+                    Text
+                      .convertIntegersToText(
+                        v.value,
+                        rvocab
+                      )
+                      .mkString
+                  }
                 }
               }
           }
           .unsafeRunSync()
-          .mkString
 
         scribe.info(
           s"Answer to query text follows (from prefix '$prefix'): \n\n" + text

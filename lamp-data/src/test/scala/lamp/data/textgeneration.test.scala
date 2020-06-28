@@ -316,6 +316,8 @@ class TextGenerationSuite extends AnyFunSuite {
       }
       .unsafeRunSync()
 
-    assert(text.map(_._1) == Seq("e the the t", "ed and and ", "ed and the "))
+    assert(
+      text.map(_._1) == Seq("e the the t", "ed and and ", "ed and the ").reverse
+    )
   }
 }
