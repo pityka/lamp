@@ -305,7 +305,9 @@ class TextGenerationSuite extends AnyFunSuite {
         device,
         precision,
         trainedModel,
-        lookAhead
+        lookAhead,
+        0,
+        1
       )
       .use { variables =>
         IO {
@@ -317,7 +319,7 @@ class TextGenerationSuite extends AnyFunSuite {
       .unsafeRunSync()
 
     assert(
-      text.map(_._1) == Seq("e the the t", "ed and and ", "ed and the ").reverse
+      text.map(_._1) == List("e theeeeeee", "ed and thee", "ed and and ")
     )
   }
 }

@@ -366,7 +366,9 @@ object Train extends App {
                 device,
                 precision,
                 dec,
-                lookAhead
+                lookAhead,
+                vocab('='),
+                vocab('*')
               )
               .use { variable =>
                 IO {

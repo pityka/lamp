@@ -44,45 +44,58 @@ object Text {
       device: Device,
       precision: FloatingPointPrecision,
       module: M with StatefulModule[Variable, Variable, T],
-      steps: Int
+      steps: Int,
+      startSequence: Int,
+      endOfSequence: Int
   )(implicit is: InitState[M, T]): Resource[IO, Seq[(Variable, Double)]] = {
     val batchSize = 1
     val k = 3
     def loop(
         n: Int,
-        buffers: Seq[(Seq[(Variable, T)], Double)]
+        buffers: Seq[(Seq[(Variable, T, Int)], Double)]
     ): Seq[(Seq[Variable], Double)] = {
       if (n == 0) {
         buffers.map(b => (b._1.map(_._1), b._2))
       } else {
         val candidates = buffers.flatMap {
           case (sequence, logProb0) =>
-            val (lastOutput, lastState) = sequence.last
-
-            val (output, state) =
-              module.forward((lastOutput, lastState))
-
-            val lastChar = if (output.shape(0) > 1) {
-              val lastTimeStep1 =
-                output.select(0, output.shape(0) - 1)
-
-              lastTimeStep1.view((1L :: lastTimeStep1.shape).map(_.toInt))
-
-            } else output
-
-            (0 until lastChar.shape(2).toInt).map { i =>
-              val selected = lastChar.select(2L, i.toLong)
-              val tmp = Tensor.scalarLong(i.toLong, selected.options.toLong)
-              val index = ATen._unsafe_view(tmp, Array(1L, 1L))
-              tmp.release
-              val logProb = selected.toMat.raw(0)
-              (
-                sequence,
-                selected.assign(const(index).releasable),
-                logProb + logProb0,
-                state,
-                i
+            val (lastOutput, lastState, lastToken) = sequence.last
+            if (lastToken == endOfSequence) {
+              List(
+                (
+                  sequence,
+                  lastOutput,
+                  logProb0,
+                  lastState,
+                  lastToken
+                )
               )
+            } else {
+              val (output, state) =
+                module.forward((lastOutput, lastState))
+
+              val lastChar = if (output.shape(0) > 1) {
+                val lastTimeStep1 =
+                  output.select(0, output.shape(0) - 1)
+
+                lastTimeStep1.view((1L :: lastTimeStep1.shape).map(_.toInt))
+
+              } else output
+
+              (0 until lastChar.shape(2).toInt).map { i =>
+                val selected = lastChar.select(2L, i.toLong)
+                val tmp = Tensor.scalarLong(i.toLong, selected.options.toLong)
+                val index = ATen._unsafe_view(tmp, Array(1L, 1L))
+                tmp.release
+                val logProb = selected.toMat.raw(0)
+                (
+                  sequence,
+                  selected.assign(const(index).releasable),
+                  logProb + logProb0,
+                  state,
+                  i
+                )
+              }
             }
 
         }
@@ -90,7 +103,7 @@ object Text {
         rejected.foreach(_._2.value.release)
         val newBuffers = chosen.map {
           case (sequence, selected, logProb, state, i) =>
-            (sequence :+ ((selected, state)), logProb)
+            (sequence :+ ((selected, state, i)), logProb)
         }
 
         loop(
@@ -103,8 +116,10 @@ object Text {
     makePredictionBatch(Vector(prefix), device, precision).flatMap { batch =>
       Resource.make(IO {
 
-        loop(steps, Seq(Seq((const(batch), module.initState)) -> 0d))
-          .sortBy(_._2)
+        loop(
+          steps,
+          Seq(Seq((const(batch), module.initState, startSequence)) -> 0d)
+        ).sortBy(_._2)
           .reverse
           .map {
             case (seq, logProb) =>
