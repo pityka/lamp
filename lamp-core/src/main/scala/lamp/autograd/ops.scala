@@ -250,14 +250,10 @@ case class MatMul(a: Variable, b: Variable) extends Op {
   val params =
     List(
       a.zipBackward { (p, out) =>
-        val bt = b.value.transpose(0L, 1L)
-        ATen.addmm_out(out, out, p, bt, 1d, 1d)
-        bt.release
+        Tensor.addmm_out_transposed2(out, out, p, b.value, 1d, 1d)
       },
       b.zipBackward { (p, out) =>
-        val at = a.value.transpose(0L, 1L)
-        ATen.addmm_out(out, out, at, p, 1d, 1d)
-        at.release
+        Tensor.addmm_out_transposed1(out, out, a.value, p, 1d, 1d)
       }
     )
 

@@ -79,7 +79,7 @@ lazy val core = project
   .settings(
     name := "lamp-core",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+42-e9ac78ee",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+44-96cef3b1",
       "io.github.pityka" %% "saddle-core" % "2.0.0-M25",
       "org.typelevel" %% "cats-core" % "2.1.1",
       "org.typelevel" %% "cats-effect" % "2.1.3",
