@@ -17,7 +17,7 @@ Lamp implements generic automatic reverse mode differentiation (also known as au
 
 On top of that it provides a small set of components to build neural networks:
 
-- fully connected, 1D and 2D convolutional, RNN and GRU layers
+- fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM layers
 - various nonlinearities
 - batch normalization and weight normalization
 - dropout
@@ -50,7 +50,7 @@ The aten-scala artifacts are public, nevertheless Github still requires authenti
 
 `sbt test`
 
-Cuda tests are run separately with `sbt cuda:test`. See `test_cuda.sh` in the source tree about how to run this in a remote docker context.
+Cuda tests are run separately with `sbt cuda:test`. See `test_cuda.sh` in the source tree about how to run this in a remote docker context. Some additional tests are run from `test_slow.sh`.
 
 ## Running the cifar-100 example
 
@@ -59,6 +59,10 @@ See `run_cifar.sh` in the source tree.
 ## Running the text model example
 
 See `run_timemachine.sh` in the source tree.
+
+## Running the machine translation example
+
+See `run_translation.sh` in the source tree.
 
 # License
 
