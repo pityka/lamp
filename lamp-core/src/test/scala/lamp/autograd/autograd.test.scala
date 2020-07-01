@@ -12,17 +12,20 @@ import lamp.util.NDArray
 
 class GradientSuite extends AnyFunSuite {
 
+  val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
+    4d, 5d, 6d)
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
   val ndx1 = NDArray(Array(1d), List(1))
   val ndx2 = NDArray(Array(1d, 1d), List(2))
   val ndx3 = NDArray(Array(1d, 2d, 3d), List(3))
   val ndx6 = NDArray(Array(1d, 2d, 3d, 4d, 5d, 6d), List(6))
   val ndx18 = NDArray(
-    Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d,
-      6d),
+    ar18,
     List(18)
   )
   val nd1x2x3 = NDArray(mat2x3.toArray, List(1, 2, 3))
+  val nd3x2x3 = NDArray(ar18, List(3, 2, 3))
+  val nd3x3x2 = NDArray(ar18, List(3, 3, 2))
   val nd1x2x3x3 =
     NDArray((0 until 18).toArray.map(_.toDouble), List(1, 2, 3, 3))
   val nd1x2x2 = NDArray(mat.ones(2, 2).toArray, List(1, 2, 2))
@@ -1127,6 +1130,38 @@ class GradientSuite extends AnyFunSuite {
       (
         TensorHelpers.toMat(L.value).raw(0),
         bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("bmm - wrt left")(nd3x2x3, 489d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+      val other = param(NDArray.tensorFromNDArray(nd3x3x2, cuda))
+      val output = input.bmm(other)
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+      )
+  }
+  testGradientAndValueND("bmm - wrt right")(nd3x3x2, 489d) {
+    (m, doBackprop, cuda) =>
+      val input =
+        param(NDArray.tensorFromNDArray(m, cuda))
+      val other = param(NDArray.tensorFromNDArray(nd3x2x3, cuda))
+      val output = other.bmm(input)
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
       )
   }
   testGradientAndValueND("batch norm 2d - wrt to input")(nd1x2x3, 6d) {

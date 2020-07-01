@@ -260,6 +260,24 @@ case class MatMul(a: Variable, b: Variable) extends Op {
   val value = Variable(this, ATen.mm(a.value, b.value))
 
 }
+case class BatchedMatMul(a: Variable, b: Variable) extends Op {
+  val params =
+    List(
+      a.zipBackward { (p, out) =>
+        val bt = b.value.transpose(1, 2)
+        ATen.baddbmm_out(out, out, p, bt, 1d, 1d)
+        bt.release
+      },
+      b.zipBackward { (p, out) =>
+        val at = a.value.transpose(1, 2)
+        ATen.baddbmm_out(out, out, at, p, 1d, 1d)
+        at.release
+      }
+    )
+
+  val value = Variable(this, ATen.bmm(a.value, b.value))
+
+}
 
 case class Exp(a: Variable) extends Op {
   val params = List(
