@@ -15,15 +15,15 @@ case class Constant(const: Tensor) extends Op {
   val params = Nil
   val value = Variable(this, const, leaf = true)
 }
-case class Transpose(a: Variable) extends Op {
+case class Transpose(a: Variable, dim1: Int = 0, dim2: Int = 1) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
-      val tmp = p.transpose(0L, 1L)
+      val tmp = p.transpose(dim1, dim2)
       ATen.add_out(out, out, tmp, 1d)
       tmp.release()
     }
   )
-  val value = Variable(this, a.value.transpose(0L, 1L))
+  val value = Variable(this, a.value.transpose(dim1, dim2))
 }
 case class View(a: Variable, shape: Array[Long]) extends Op {
   val params = List(
@@ -34,6 +34,21 @@ case class View(a: Variable, shape: Array[Long]) extends Op {
     }
   )
   val value = Variable(this, ATen._unsafe_view(a.value, shape))
+}
+
+case class Concatenate(a: Seq[Variable], dim: Long) extends Op {
+  val ashapes = a.map(_.shape(dim.toInt))
+  val boundaries =
+    ashapes.scanLeft(0L)(_ + _).sliding(2).toList.map(g => g(0) -> g(1))
+  val params = a.zip(boundaries).toList.map {
+    case (a, (from, to)) =>
+      a.zipBackward { (p, out) =>
+        val selected = ATen.slice(p, dim, from, to, 1L)
+        ATen.add_out(out, out, selected, 1d)
+        selected.release
+      }
+  }
+  val value = Variable(this, ATen.cat(a.map(_.value).toArray, dim))
 }
 
 /** Prepends a new dimension and concatenates the tensors along that axis

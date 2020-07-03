@@ -107,20 +107,22 @@ class TensorHelperSuite extends AnyFunSuite {
     val t3x2 = t2x3.transpose(0, 1)
     assert(t3x2.toMat == mat2x3.T)
   }
-  ignore("cat - memory leak") {
+  ignore(" memory leak") {
+    val m = mat.ones(3000, 3000)
     0 until 1000 foreach { _ =>
-      val t = TensorHelpers.fromMat(mat.ones(3000, 3000))
-      val t2 = TensorHelpers.fromMat(mat.ones(3000, 3000))
-      val t3 = TensorHelpers.fromMat(mat.ones(3000, 3000))
+      val t = TensorHelpers.fromMat(m)
+      val t2 = TensorHelpers.fromMat(m)
+      val t3 = TensorHelpers.fromMat(m)
       val t4 =
-        ConcatenateAddNewDim(
+        Concatenate(
           List(
             const(t).copy(leaf = false),
             const(t2).copy(leaf = false),
             const(t3).copy(leaf = false)
-          )
+          ),
+          1
         ).value
-      assert(t4.shape == List(3, 3000, 3000))
+      assert(t4.shape == List(3000, 9000))
 
       t4.releaseAll
 

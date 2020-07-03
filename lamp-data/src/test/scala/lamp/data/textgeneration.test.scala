@@ -108,7 +108,7 @@ class TextGenerationSuite extends AnyFunSuite {
           }
 
         },
-        epochs = 10
+        epochs = 15
       )
       .unsafeRunSync()
 

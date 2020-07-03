@@ -115,6 +115,7 @@ case class Variable(
   }
 
   def t = Transpose(this).value
+  def transpose(dim1: Int, dim2: Int) = Transpose(this, dim1, dim2).value
   def select(dim: Long, index: Long) =
     Select(this, dim = dim, index = index).value
   def argmax(dim: Long, keepDim: Boolean) =
@@ -125,6 +126,8 @@ case class Variable(
   def attach(other: Variable) = Assign(keep = this, abandon = other).value
   def cast(precision: FloatingPointPrecision) =
     CastToPrecision(this, precision).value
+  def cat(other: Variable, dim: Long) =
+    Concatenate(List(this, other), dim).value
   def +(other: Variable) = Add(this, other).value
   def +(other: Double) = ConstAdd(this, other).value
   def -(other: Variable) = Minus(this, other).value

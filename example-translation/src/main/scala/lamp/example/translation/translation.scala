@@ -43,6 +43,8 @@ import lamp.nn.statefulSequence
 import lamp.nn.Seq2Seq
 import lamp.nn.GenericModule
 import java.nio.charset.StandardCharsets
+import lamp.nn.Seq2SeqWithAttention
+import lamp.nn.Linear
 
 case class CliConfig(
     trainData: String = "",
@@ -226,14 +228,11 @@ object Train extends App {
             tOpt = tensorOptions
           )
         )
+        val contextModule =
+          Linear(in = hiddenSize, out = 20, tOpt = tensorOptions)
         val decoder = statefulSequence(
-          Embedding(
-            classes = vocabularSize,
-            dimensions = 20,
-            tOpt = tensorOptions
-          ).lift,
           LSTM(
-            in = 20,
+            in = 20 + 20,
             hiddenSize = hiddenSize,
             tOpt = tensorOptions
           ),
@@ -247,10 +246,21 @@ object Train extends App {
             .lift,
           Fun(_.logSoftMax(2)).lift
         )
+
+        val destinationEmbedding = Embedding(
+          classes = vocabularSize,
+          dimensions = 20,
+          tOpt = tensorOptions
+        )
         val net1 =
-          Seq2Seq(encoder.mapState {
-            case (_, lstmState) => ((), lstmState, (), (), ())
-          }, decoder).unlift
+          Seq2SeqWithAttention(
+            destinationEmbedding,
+            encoder.mapState {
+              case (_, lstmState) => (lstmState, (), (), ())
+            },
+            decoder,
+            contextModule
+          )(_._1.get._1).unlift
 
         val net =
           config.checkpointLoad
@@ -279,7 +289,6 @@ object Train extends App {
             config.trainBatchSize,
             lookAhead,
             vocab('#'),
-            vocab('*'),
             device
           )
       val testEpochs = testTokenized.map { t => () =>
@@ -289,7 +298,6 @@ object Train extends App {
             config.validationBatchSize,
             lookAhead,
             vocab('#'),
-            vocab('*'),
             device
           )
       }

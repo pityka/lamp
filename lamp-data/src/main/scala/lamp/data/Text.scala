@@ -308,7 +308,6 @@ object Text {
       minibatchSize: Int,
       timeSteps: Int,
       pad: Long,
-      endOfSequence: Long,
       device: Device
   ): BatchStream[(Variable, Variable)] = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
@@ -327,7 +326,6 @@ object Text {
               text(i)._2
                 .drop(1)
                 .take(timeSteps)
-                .:+(endOfSequence)
                 .padTo(timeSteps, pad.toLong)
             assert(segmentSource.length == segmentTarget.length)
             assert(segmentSource.length == segmentTarget.length)
