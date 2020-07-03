@@ -107,6 +107,10 @@
                         <a href="Add.html" title="">Add</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="class" href="AllocatedVariablePool.html" title=""></a>
+                        <a href="AllocatedVariablePool.html" title="">AllocatedVariablePool</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="class" href="ArcTan.html" title=""></a>
                         <a href="ArcTan.html" title="">ArcTan</a>
                       </li><li class="current-entities indented2">
@@ -145,6 +149,10 @@
                         <span class="separator"></span>
                         <a class="class" href="ColSum.html" title=""></a>
                         <a href="ColSum.html" title="">ColSum</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="Concatenate.html" title=""></a>
+                        <a href="Concatenate.html" title="">Concatenate</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="ConcatenateAddNewDim.html" title="Prepends a new dimension and concatenates the tensors along that axis"></a>
@@ -469,6 +477,22 @@
       </span>
       
       
+    </li><li name="lamp.autograd.AllocatedVariablePool" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="AllocatedVariablePoolextendsAnyRef"></a><a id="AllocatedVariablePool:AllocatedVariablePool"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/AllocatedVariablePool.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="AllocatedVariablePool.html"><span class="name">AllocatedVariablePool</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      
+      
     </li><li name="lamp.autograd.ArcTan" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="ArcTanextendsOpwithProductwithSerializable"></a><a id="ArcTan:ArcTan"></a>
       <span class="permalink">
@@ -618,6 +642,22 @@
       </span>
       
       
+    </li><li name="lamp.autograd.Concatenate" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ConcatenateextendsOpwithProductwithSerializable"></a><a id="Concatenate:Concatenate"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Concatenate.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Concatenate.html"><span class="name">Concatenate</span></a><span class="params">(<span name="a">a: <span class="extype" name="scala.Seq">Seq</span>[<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.autograd.ConcatenateAddNewDim" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="ConcatenateAddNewDimextendsOpwithProductwithSerializable"></a><a id="ConcatenateAddNewDim:ConcatenateAddNewDim"></a>
       <span class="permalink">
@@ -679,7 +719,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Constant.html"><span class="name">Constant</span></a><span class="params">(<span name="const">const: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="Constant.html"><span class="name">Constant</span></a><span class="params">(<span name="const">const: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="params">(<span name="pool">pool: <a href="AllocatedVariablePool.html" class="extype" name="lamp.autograd.AllocatedVariablePool">AllocatedVariablePool</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -1211,7 +1251,7 @@ derivative is taken (dy/dw1)</p></div></div>
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Transpose.html"><span class="name">Transpose</span></a><span class="params">(<span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="Transpose.html"><span class="name">Transpose</span></a><span class="params">(<span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim1">dim1: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">0</span></span>, <span name="dim2">dim2: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">1</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -1227,7 +1267,7 @@ derivative is taken (dy/dw1)</p></div></div>
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Variable.html"><span class="name">Variable</span></a><span class="params">(<span name="op">op: <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>, <span name="value">value: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="needsGrad">needsGrad: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>, <span name="leaf">leaf: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">false</span></span>, <span name="releaseWith">releaseWith: <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="aten.Tensor">Tensor</span>] = <span class="symbol">Nil</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="Variable.html"><span class="name">Variable</span></a><span class="params">(<span name="op">op: <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>, <span name="value">value: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="pool">pool: <a href="AllocatedVariablePool.html" class="extype" name="lamp.autograd.AllocatedVariablePool">AllocatedVariablePool</a></span>, <span name="needsGrad">needsGrad: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -1272,9 +1312,9 @@ derivative is taken (dy/dw1)</p></div></div>
               <h3>Value Members</h3>
               <ol>
                 <li name="lamp.autograd#const" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="const(m:Double,tOpt:aten.TensorOptions):lamp.autograd.Variable"></a><a id="const(Double,TensorOptions):Variable"></a>
+      <a id="const(m:Double,tOpt:aten.TensorOptions)(implicitpool:lamp.autograd.AllocatedVariablePool):lamp.autograd.Variable"></a><a id="const(Double,TensorOptions)(AllocatedVariablePool):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/index.html#const(m:Double,tOpt:aten.TensorOptions):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/index.html#const(m:Double,tOpt:aten.TensorOptions)(implicitpool:lamp.autograd.AllocatedVariablePool):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1283,14 +1323,14 @@ derivative is taken (dy/dw1)</p></div></div>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">const</span><span class="params">(<span name="m">m: <span class="extype" name="scala.Double">Double</span></span>, <span name="tOpt">tOpt: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.dtypeDouble()</span></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">const</span><span class="params">(<span name="m">m: <span class="extype" name="scala.Double">Double</span></span>, <span name="tOpt">tOpt: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.dtypeDouble()</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="pool">pool: <a href="AllocatedVariablePool.html" class="extype" name="lamp.autograd.AllocatedVariablePool">AllocatedVariablePool</a></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
     </li><li name="lamp.autograd#const" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="const(m:aten.Tensor):lamp.autograd.Variable"></a><a id="const(Tensor):Variable"></a>
+      <a id="const(m:aten.Tensor)(implicitpool:lamp.autograd.AllocatedVariablePool):lamp.autograd.Variable"></a><a id="const(Tensor)(AllocatedVariablePool):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/index.html#const(m:aten.Tensor):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/index.html#const(m:aten.Tensor)(implicitpool:lamp.autograd.AllocatedVariablePool):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1299,7 +1339,7 @@ derivative is taken (dy/dw1)</p></div></div>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">const</span><span class="params">(<span name="m">m: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">const</span><span class="params">(<span name="m">m: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="pool">pool: <a href="AllocatedVariablePool.html" class="extype" name="lamp.autograd.AllocatedVariablePool">AllocatedVariablePool</a></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
@@ -1320,9 +1360,9 @@ derivative is taken (dy/dw1)</p></div></div>
       
       
     </li><li name="lamp.autograd#param" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="param(m:aten.Tensor):lamp.autograd.Variable"></a><a id="param(Tensor):Variable"></a>
+      <a id="param(m:aten.Tensor)(implicitpool:lamp.autograd.AllocatedVariablePool):lamp.autograd.Variable"></a><a id="param(Tensor)(AllocatedVariablePool):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/index.html#param(m:aten.Tensor):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/index.html#param(m:aten.Tensor)(implicitpool:lamp.autograd.AllocatedVariablePool):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1331,7 +1371,23 @@ derivative is taken (dy/dw1)</p></div></div>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">param</span><span class="params">(<span name="m">m: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">param</span><span class="params">(<span name="m">m: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="pool">pool: <a href="AllocatedVariablePool.html" class="extype" name="lamp.autograd.AllocatedVariablePool">AllocatedVariablePool</a></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.autograd#withPool" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="withPool[T](f:lamp.autograd.AllocatedVariablePool=&gt;T):T"></a><a id="withPool[T]((AllocatedVariablePool)⇒T):T"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/index.html#withPool[T](f:lamp.autograd.AllocatedVariablePool=&gt;T):T" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withPool</span><span class="tparams">[<span name="T">T</span>]</span><span class="params">(<span name="f">f: (<a href="AllocatedVariablePool.html" class="extype" name="lamp.autograd.AllocatedVariablePool">AllocatedVariablePool</a>) ⇒ <span class="extype" name="lamp.autograd.withPool.T">T</span></span>)</span><span class="result">: <span class="extype" name="lamp.autograd.withPool.T">T</span></span>
       </span>
       
       

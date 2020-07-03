@@ -154,6 +154,10 @@
                         <a class="class" href="AdamW.html" title=""></a>
                         <a href="AdamW.html" title="">AdamW</a>
                       </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="object" href="Attention$.html" title=""></a>
+                        <a href="Attention$.html" title="">Attention</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="BatchNorm$.html" title=""></a>
                         <a class="class" href="BatchNorm.html" title=""></a>
                         <a href="BatchNorm.html" title="">BatchNorm</a>
@@ -285,6 +289,10 @@
                         <a class="object" href="Seq2Seq$.html" title=""></a>
                         <a class="class" href="Seq2Seq.html" title=""></a>
                         <a href="Seq2Seq.html" title="">Seq2Seq</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="Seq2SeqWithAttention$.html" title=""></a>
+                        <a class="class" href="Seq2SeqWithAttention.html" title=""></a>
+                        <a href="Seq2SeqWithAttention.html" title="">Seq2SeqWithAttention</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Seq3$.html" title=""></a>
                         <a class="class" href="Seq3.html" title=""></a>
@@ -985,6 +993,22 @@ Outputs of size (sequence length * batch * hidden dim)
       </span>
       
       
+    </li><li name="lamp.nn.Seq2SeqWithAttention" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Seq2SeqWithAttention[S0,S1,M0&lt;:lamp.nn.Module,M1&lt;:lamp.nn.StatefulModule2[lamp.autograd.Variable,lamp.autograd.Variable,S0,S1],M2&lt;:lamp.nn.StatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,S1],M3&lt;:lamp.nn.Module]extendsStatefulModule2[(lamp.autograd.Variable,lamp.autograd.Variable),lamp.autograd.Variable,S0,S1]withProductwithSerializable"></a><a id="Seq2SeqWithAttention[S0,S1,M0&lt;:nn.Module,M1&lt;:nn.StatefulModule2[Variable,Variable,S0,S1],M2&lt;:nn.StatefulModule[Variable,Variable,S1],M3&lt;:nn.Module]:Seq2SeqWithAttention[S0,S1,M0,M1,M2,M3]"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/Seq2SeqWithAttention.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Seq2SeqWithAttention.html"><span class="name">Seq2SeqWithAttention</span></a><span class="tparams">[<span name="S0">S0</span>, <span name="S1">S1</span>, <span name="M0">M0 &lt;: <span class="extype" name="lamp.nn.Module">nn.Module</span></span>, <span name="M1">M1 &lt;: <span class="extype" name="lamp.nn.StatefulModule2">nn.StatefulModule2</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.Seq2SeqWithAttention.S0">S0</span>, <span class="extype" name="lamp.nn.Seq2SeqWithAttention.S1">S1</span>]</span>, <span name="M2">M2 &lt;: <span class="extype" name="lamp.nn.StatefulModule">nn.StatefulModule</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.Seq2SeqWithAttention.S1">S1</span>]</span>, <span name="M3">M3 &lt;: <span class="extype" name="lamp.nn.Module">nn.Module</span></span>]</span><span class="params">(<span name="destinationEmbedding">destinationEmbedding: <span class="extype" name="lamp.nn.Seq2SeqWithAttention.M0">M0</span> with <a href="#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="encoder">encoder: <span class="extype" name="lamp.nn.Seq2SeqWithAttention.M1">M1</span> with <a href="#StatefulModule2[A,B,C,D]=lamp.nn.GenericModule[(A,C),(B,D)]" class="extmbr" name="lamp.nn.StatefulModule2">StatefulModule2</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.Seq2SeqWithAttention.S0">S0</span>, <span class="extype" name="lamp.nn.Seq2SeqWithAttention.S1">S1</span>]</span>, <span name="decoder">decoder: <span class="extype" name="lamp.nn.Seq2SeqWithAttention.M2">M2</span> with <a href="#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.Seq2SeqWithAttention.S1">S1</span>]</span>, <span name="contextLinear">contextLinear: <span class="extype" name="lamp.nn.Seq2SeqWithAttention.M3">M3</span> with <a href="#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>)</span><span class="params">(<span name="stateToKey">stateToKey: (<span class="extype" name="lamp.nn.Seq2SeqWithAttention.S1">S1</span>) ⇒ <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="#StatefulModule2[A,B,C,D]=lamp.nn.GenericModule[(A,C),(B,D)]" class="extmbr" name="lamp.nn.StatefulModule2">StatefulModule2</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.Seq2SeqWithAttention.S0">S0</span>, <span class="extype" name="lamp.nn.Seq2SeqWithAttention.S1">S1</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.Seq3" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="Seq3[T1,T2,T3,T4,M1&lt;:lamp.nn.GenericModule[T1,T2],M2&lt;:lamp.nn.GenericModule[T2,T3],M3&lt;:lamp.nn.GenericModule[T3,T4]]extendsGenericModule[T1,T4]withProductwithSerializable"></a><a id="Seq3[T1,T2,T3,T4,M1&lt;:GenericModule[T1,T2],M2&lt;:GenericModule[T2,T3],M3&lt;:GenericModule[T3,T4]]:Seq3[T1,T2,T3,T4,M1,M2,M3]"></a>
       <span class="permalink">
@@ -1412,6 +1436,22 @@ Applies a linear function to each time step
       </span>
       
       
+    </li><li name="lamp.nn.Attention" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Attention"></a><a id="Attention:Attention"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/Attention$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Attention$.html"><span class="name">Attention</span></a>
+      </span>
+      
+      
     </li><li name="lamp.nn.BatchNorm" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="BatchNorm"></a><a id="BatchNorm:BatchNorm"></a>
       <span class="permalink">
@@ -1779,6 +1819,22 @@ Applies a linear function to each time step
       </span>
       <span class="symbol">
         <a title="" href="Seq2Seq$.html"><span class="name">Seq2Seq</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.Seq2SeqWithAttention" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Seq2SeqWithAttention"></a><a id="Seq2SeqWithAttention:Seq2SeqWithAttention"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/Seq2SeqWithAttention$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Seq2SeqWithAttention$.html"><span class="name">Seq2SeqWithAttention</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       

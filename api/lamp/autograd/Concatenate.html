@@ -123,8 +123,8 @@
                         <a href="Assign.html" title="">Assign</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="object" href="" title=""></a>
-                        <a href="" title="">Autograd</a>
+                        <a class="object" href="Autograd$.html" title=""></a>
+                        <a href="Autograd$.html" title="">Autograd</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="AvgPool2D.html" title="2D avg pooling"></a>
@@ -151,8 +151,8 @@
                         <a href="ColSum.html" title="">ColSum</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="Concatenate.html" title=""></a>
-                        <a href="Concatenate.html" title="">Concatenate</a>
+                        <a class="class" href="" title=""></a>
+                        <a href="" title="">Concatenate</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="ConcatenateAddNewDim.html" title="Prepends a new dimension and concatenates the tensors along that axis"></a>
@@ -322,12 +322,12 @@
             </div>
           </div>
           <div id="content">
-            <body class="object value">
+            <body class="class type">
       <div id="definition">
-        <div class="big-circle object">o</div>
+        <div class="big-circle class">c</div>
         <p id="owner"><a href="../index.html" class="extype" name="lamp">lamp</a>.<a href="index.html" class="extype" name="lamp.autograd">autograd</a></p>
-        <h1>Autograd<span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html" title="Permalink">
+        <h1>Concatenate<span class="permalink">
+      <a href="../../lamp/autograd/Concatenate.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span></h1>
@@ -337,10 +337,10 @@
       <h4 id="signature" class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">object</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Autograd</span>
+        <span class="name">Concatenate</span><span class="params">(<span name="a">a: <span class="extype" name="scala.Seq">Seq</span>[<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -349,7 +349,7 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -375,7 +375,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.autograd.Autograd"><span>Autograd</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.autograd.Concatenate"><span>Concatenate</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.autograd.Op"><span>Op</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -393,7 +393,26 @@
 
       <div id="template">
         <div id="allMembers">
-        
+        <div id="constructors" class="members">
+              <h3>Instance Constructors</h3>
+              <ol><li name="lamp.autograd.Concatenate#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="&lt;init&gt;(a:Seq[lamp.autograd.Variable],dim:Long):lamp.autograd.Concatenate"></a><a id="&lt;init&gt;:Concatenate"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Concatenate.html#&lt;init&gt;(a:Seq[lamp.autograd.Variable],dim:Long):lamp.autograd.Concatenate" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">new</span>
+      </span>
+      <span class="symbol">
+        <span class="name">Concatenate</span><span class="params">(<span name="a">a: <span class="extype" name="scala.Seq">Seq</span>[<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span>
+      </span>
+      
+      
+    </li></ol>
+            </div>
 
         
 
@@ -405,7 +424,7 @@
                 <li name="scala.AnyRef#!=" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="!=(x$1:Any):Boolean"></a><a id="!=(Any):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#!=(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#!=(x$1:Any):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -421,7 +440,7 @@
     </li><li name="scala.AnyRef###" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="##():Int"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html###():Int" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html###():Int" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -437,7 +456,7 @@
     </li><li name="scala.AnyRef#==" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="==(x$1:Any):Boolean"></a><a id="==(Any):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#==(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#==(x$1:Any):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -450,10 +469,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="lamp.autograd.Concatenate#a" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="a:Seq[lamp.autograd.Variable]"></a><a id="a:Seq[Variable]"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Concatenate.html#a:Seq[lamp.autograd.Variable]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">a</span><span class="result">: <span class="extype" name="scala.Seq">Seq</span>[<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>
+      </span>
+      
+      
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#asInstanceOf[T0]:T0" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#asInstanceOf[T0]:T0" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -466,10 +501,42 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="lamp.autograd.Concatenate#ashapes" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ashapes:Seq[Long]"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Concatenate.html#ashapes:Seq[Long]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ashapes</span><span class="result">: <span class="extype" name="scala.collection.Seq">Seq</span>[<span class="extype" name="scala.Long">Long</span>]</span>
+      </span>
+      
+      
+    </li><li name="lamp.autograd.Concatenate#boundaries" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="boundaries:List[(Long,Long)]"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Concatenate.html#boundaries:List[(Long,Long)]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">boundaries</span><span class="result">: <span class="extype" name="scala.collection.immutable.List">List</span>[(<span class="extype" name="scala.Long">Long</span>, <span class="extype" name="scala.Long">Long</span>)]</span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#clone" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a><a id="clone():AnyRef"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#clone():Object" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#clone():Object" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -490,10 +557,26 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.autograd.Concatenate#dim" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="dim:Long"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Concatenate.html#dim:Long" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">dim</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#eq(x$1:AnyRef):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#eq(x$1:AnyRef):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -506,26 +589,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="scala.AnyRef#equals" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="equals(x$1:Any):Boolean"></a><a id="equals(Any):Boolean"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#equals(x$1:Any):Boolean" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">equals</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="scala.AnyRef#finalize" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#finalize():Unit" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#finalize():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -547,7 +614,7 @@
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#getClass():Class[_]" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#getClass():Class[_]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -563,29 +630,10 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="scala.AnyRef#hashCode" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="hashCode():Int"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#hashCode():Int" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">hashCode</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd><dt>Annotations</dt><dd>
-                <span class="name">@native</span><span class="args">()</span>
-              
-        </dd></dl></div>
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#isInstanceOf[T0]:Boolean" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#isInstanceOf[T0]:Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -601,7 +649,7 @@
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#ne(x$1:AnyRef):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#ne(x$1:AnyRef):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -617,7 +665,7 @@
     </li><li name="scala.AnyRef#notify" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notify():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#notify():Unit" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#notify():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -636,7 +684,7 @@
     </li><li name="scala.AnyRef#notifyAll" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notifyAll():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#notifyAll():Unit" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#notifyAll():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -652,10 +700,26 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.autograd.Concatenate#params" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="params:List[(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)]"></a><a id="params:List[(Variable,(Tensor,Tensor)⇒Unit)]"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Concatenate.html#params:List[(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">params</span><span class="result">: <span class="extype" name="scala.List">List</span>[(<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)]</span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.Concatenate">Concatenate</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a><a id="synchronized[T0](⇒T0):T0"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#synchronized[T0](x$1:=&gt;T0):T0" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#synchronized[T0](x$1:=&gt;T0):T0" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -668,26 +732,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="scala.AnyRef#toString" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="toString():String"></a>
+    </li><li name="lamp.autograd.Concatenate#value" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="value:lamp.autograd.Variable"></a><a id="value:Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#toString():String" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#value:lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">def</span>
+        <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">toString</span><span class="params">()</span><span class="result">: <span class="extype" name="java.lang.String">String</span></span>
+        <span class="name">value</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.Concatenate">Concatenate</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#wait():Unit" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#wait():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -709,7 +773,7 @@
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long,x$2:Int):Unit"></a><a id="wait(Long,Int):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#wait(x$1:Long,x$2:Int):Unit" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#wait(x$1:Long,x$2:Int):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -731,7 +795,7 @@
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long):Unit"></a><a id="wait(Long):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Autograd$.html#wait(x$1:Long):Unit" title="Permalink">
+      <a href="../../lamp/autograd/Concatenate.html#wait(x$1:Long):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -762,7 +826,17 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="scala.AnyRef">
+        <div class="parent" name="scala.Serializable">
+              <h3>Inherited from <span class="extype" name="scala.Serializable">Serializable</span></h3>
+            </div><div class="parent" name="java.io.Serializable">
+              <h3>Inherited from <span class="extype" name="java.io.Serializable">Serializable</span></h3>
+            </div><div class="parent" name="scala.Product">
+              <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
+            </div><div class="parent" name="scala.Equals">
+              <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
+            </div><div class="parent" name="lamp.autograd.Op">
+              <h3>Inherited from <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></h3>
+            </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
             </div><div class="parent" name="scala.Any">
               <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>

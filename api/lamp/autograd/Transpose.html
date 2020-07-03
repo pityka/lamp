@@ -107,6 +107,10 @@
                         <a href="Add.html" title="">Add</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="class" href="AllocatedVariablePool.html" title=""></a>
+                        <a href="AllocatedVariablePool.html" title="">AllocatedVariablePool</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="class" href="ArcTan.html" title=""></a>
                         <a href="ArcTan.html" title="">ArcTan</a>
                       </li><li class="current-entities indented2">
@@ -145,6 +149,10 @@
                         <span class="separator"></span>
                         <a class="class" href="ColSum.html" title=""></a>
                         <a href="ColSum.html" title="">ColSum</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="Concatenate.html" title=""></a>
+                        <a href="Concatenate.html" title="">Concatenate</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="ConcatenateAddNewDim.html" title="Prepends a new dimension and concatenates the tensors along that axis"></a>
@@ -332,7 +340,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Transpose</span><span class="params">(<span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Transpose</span><span class="params">(<span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim1">dim1: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">0</span></span>, <span name="dim2">dim2: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">1</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -388,9 +396,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.autograd.Transpose#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(a:lamp.autograd.Variable):lamp.autograd.Transpose"></a><a id="&lt;init&gt;:Transpose"></a>
+      <a id="&lt;init&gt;(a:lamp.autograd.Variable,dim1:Int,dim2:Int):lamp.autograd.Transpose"></a><a id="&lt;init&gt;:Transpose"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Transpose.html#&lt;init&gt;(a:lamp.autograd.Variable):lamp.autograd.Transpose" title="Permalink">
+      <a href="../../lamp/autograd/Transpose.html#&lt;init&gt;(a:lamp.autograd.Variable,dim1:Int,dim2:Int):lamp.autograd.Transpose" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -399,7 +407,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Transpose</span><span class="params">(<span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span>
+        <span class="name">Transpose</span><span class="params">(<span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim1">dim1: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">0</span></span>, <span name="dim2">dim2: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">1</span></span>)</span>
       </span>
       
       
@@ -517,6 +525,38 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.autograd.Transpose#dim1" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="dim1:Int"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Transpose.html#dim1:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">dim1</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.autograd.Transpose#dim2" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="dim2:Int"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Transpose.html#dim2:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">dim2</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
