@@ -11,7 +11,7 @@ import cats.effect.IO
 import lamp.util.NDArray
 
 class GradientSuite extends AnyFunSuite {
-
+  implicit val pool = new AllocatedVariablePool
   val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
     4d, 5d, 6d)
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))

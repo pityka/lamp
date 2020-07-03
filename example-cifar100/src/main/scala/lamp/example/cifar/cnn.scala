@@ -9,6 +9,7 @@ import aten.Tensor
 import lamp.util.NDArray
 import lamp.autograd.AvgPool2D
 import org.saddle.RankTie.Avg
+import lamp.autograd.AllocatedVariablePool
 
 case class Peek(label: String) extends Module {
   def state = Nil
@@ -52,7 +53,7 @@ object Residual {
       tOpt: TensorOptions,
       dropout: Double,
       stride: Int
-  ) =
+  )(implicit pool: AllocatedVariablePool) =
     sequence(
       Residual(
         right = Seq6(
@@ -107,7 +108,7 @@ object Cnn {
       numClasses: Int,
       dropout: Double,
       tOpt: TensorOptions
-  ) =
+  )(implicit pool: AllocatedVariablePool) =
     sequence(
       Conv2D(
         inChannels = 3,
@@ -155,7 +156,7 @@ object Cnn {
       numClasses: Int,
       dropOut: Double,
       tOpt: TensorOptions
-  ) =
+  )(implicit pool: AllocatedVariablePool) =
     Sequential(
       Conv2D(
         inChannels = 3,

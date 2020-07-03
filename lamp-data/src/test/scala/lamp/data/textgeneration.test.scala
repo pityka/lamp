@@ -27,8 +27,10 @@ import lamp.nn.Seq4
 import lamp.nn.Seq5
 import lamp.nn.StatefulSeq5
 import lamp.nn.statefulSequence
+import lamp.autograd.AllocatedVariablePool
 
 class TextGenerationSuite extends AnyFunSuite {
+  implicit val pool = new AllocatedVariablePool
   val asciiSilentCharsetDecoder = Charset
     .forName("UTF8")
     .newDecoder()

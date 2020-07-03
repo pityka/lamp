@@ -4,13 +4,24 @@ import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
 package object autograd {
-  def const(m: Tensor): Variable = Constant(m).value.needsNoGrad
+  def withPool[T](f: AllocatedVariablePool => T): T = {
+    val pool = new AllocatedVariablePool
+    val r = f(pool)
+    pool.releaseAll()
+    r
+  }
+
+  def const(m: Tensor)(implicit pool: AllocatedVariablePool): Variable =
+    Constant(m)(pool).value.needsNoGrad
+
   def const(
       m: Double,
       tOpt: TensorOptions = TensorOptions.dtypeDouble()
-  ): Variable =
-    Constant(ATen.scalar_tensor(m, tOpt)).value.needsNoGrad
-  def param(m: Tensor): Variable = Constant(m).value
+  )(implicit pool: AllocatedVariablePool): Variable =
+    Constant(ATen.scalar_tensor(m, tOpt))(pool).value.needsNoGrad
+
+  def param(m: Tensor)(implicit pool: AllocatedVariablePool): Variable =
+    Constant(m)(pool).value
 
   def measure[T](tag: String)(body: => T): T = {
     val t1 = System.nanoTime()

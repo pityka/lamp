@@ -15,8 +15,10 @@ import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 import java.io.File
 import lamp.CPU
+import lamp.autograd.AllocatedVariablePool
 
 class ReadWriteSuite extends AnyFunSuite {
+  implicit val pool = new AllocatedVariablePool
   test("to tensor") {
     val t = ATen.ones(Array(3, 3, 3), TensorOptions.dtypeFloat())
     val t2 = Reader

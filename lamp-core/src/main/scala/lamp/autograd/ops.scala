@@ -11,9 +11,9 @@ import lamp.FloatingPointPrecision
 import lamp.DoublePrecision
 import lamp.SinglePrecision
 
-case class Constant(const: Tensor) extends Op {
+case class Constant(const: Tensor)(pool: AllocatedVariablePool) extends Op {
   val params = Nil
-  val value = Variable(this, const, leaf = true)
+  val value = Variable(this, const, pool)
 }
 case class Transpose(a: Variable, dim1: Int = 0, dim2: Int = 1) extends Op {
   val params = List(
@@ -23,7 +23,7 @@ case class Transpose(a: Variable, dim1: Int = 0, dim2: Int = 1) extends Op {
       tmp.release()
     }
   )
-  val value = Variable(this, a.value.transpose(dim1, dim2))
+  val value = Variable(this, a.value.transpose(dim1, dim2), a.pool).releasable
 }
 case class View(a: Variable, shape: Array[Long]) extends Op {
   val params = List(
@@ -33,10 +33,12 @@ case class View(a: Variable, shape: Array[Long]) extends Op {
       selected.release
     }
   )
-  val value = Variable(this, ATen._unsafe_view(a.value, shape))
+  val value =
+    Variable(this, ATen._unsafe_view(a.value, shape), a.pool).releasable
 }
 
 case class Concatenate(a: Seq[Variable], dim: Long) extends Op {
+  assert(a.map(_.pool).distinct.size == 1)
   val ashapes = a.map(_.shape(dim.toInt))
   val boundaries =
     ashapes.scanLeft(0L)(_ + _).sliding(2).toList.map(g => g(0) -> g(1))
@@ -48,12 +50,14 @@ case class Concatenate(a: Seq[Variable], dim: Long) extends Op {
         selected.release
       }
   }
-  val value = Variable(this, ATen.cat(a.map(_.value).toArray, dim))
+  val value =
+    Variable(this, ATen.cat(a.map(_.value).toArray, dim), a.head.pool).releasable
 }
 
 /** Prepends a new dimension and concatenates the tensors along that axis
   */
 case class ConcatenateAddNewDim(a: Seq[Variable]) extends Op {
+  assert(a.map(_.pool).distinct.size == 1)
   val params = a.zipWithIndex.toList.map {
     case (a, idx) =>
       a.zipBackward { (p, out) =>
@@ -79,7 +83,7 @@ case class ConcatenateAddNewDim(a: Seq[Variable]) extends Op {
     viewed.release
     offset + 1
   }
-  val value = Variable(this, zeros)
+  val value = Variable(this, zeros, a.head.pool).releasable
 }
 case class Select(a: Variable, dim: Long, index: Long) extends Op {
   val params = List(
@@ -98,7 +102,8 @@ case class Select(a: Variable, dim: Long, index: Long) extends Op {
       tmp2.release()
     }
   )
-  val value = Variable(this, ATen.select(a.value, dim, index))
+  val value =
+    Variable(this, ATen.select(a.value, dim, index), a.pool).releasable
 }
 case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
   val params = List(
@@ -106,15 +111,17 @@ case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
       throw new RuntimeException("Argmax is not differentiable")
     }
   )
-  val value = Variable(this, ATen.argmax(a.value, dim, keepDim))
+  val value =
+    Variable(this, ATen.argmax(a.value, dim, keepDim), a.pool).releasable
 }
 
 case class Assign(abandon: Variable, keep: Variable) extends Op {
+  assert(abandon.pool == keep.pool)
   val params = List(
     abandon.zipBackward { (p, out) => () },
     keep.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) }
   )
-  val value = Variable(this, keep.value)
+  val value = Variable(this, keep.value, abandon.pool).releasable
 }
 case class OneHot(a: Variable, numClasses: Int) extends Op {
   val params = List(
@@ -122,7 +129,8 @@ case class OneHot(a: Variable, numClasses: Int) extends Op {
       throw new RuntimeException("OneHot is not differentiable")
     }
   )
-  val value = Variable(this, ATen.one_hot(a.value, numClasses))
+  val value =
+    Variable(this, ATen.one_hot(a.value, numClasses), a.pool).releasable
 }
 case class CastToPrecision(a: Variable, precision: FloatingPointPrecision)
     extends Op {
@@ -136,10 +144,11 @@ case class CastToPrecision(a: Variable, precision: FloatingPointPrecision)
       case DoublePrecision => ATen._cast_Double(a.value, false)
       case SinglePrecision => ATen._cast_Float(a.value, false)
     }
-  })
+  }, a.pool).releasable
 }
 
 case class Add(a: Variable, b: Variable) extends Op {
+  assert(a.pool == b.pool)
   val params = List(
     a.zipBackward { (p, out) =>
       val p2 = ub(p, a.sizes)
@@ -152,7 +161,8 @@ case class Add(a: Variable, b: Variable) extends Op {
       p2.release()
     }
   )
-  val value = Variable(this, ATen.add_0(a.value, b.value, 1d))
+  val value =
+    Variable(this, ATen.add_0(a.value, b.value, 1d), a.pool).releasable
 
 }
 case class ConstAdd(a: Variable, b: Double) extends Op {
@@ -163,10 +173,11 @@ case class ConstAdd(a: Variable, b: Double) extends Op {
       p2.release()
     }
   )
-  val value = Variable(this, ATen.add_1(a.value, b, 1d))
+  val value = Variable(this, ATen.add_1(a.value, b, 1d), a.pool).releasable
 
 }
 case class Minus(a: Variable, b: Variable) extends Op {
+  assert(a.pool == b.pool)
   val params = List(
     a.zipBackward { (p, out) =>
       val p2 = ub(p, a.sizes)
@@ -179,7 +190,8 @@ case class Minus(a: Variable, b: Variable) extends Op {
       p2.release()
     }
   )
-  val value = Variable(this, ATen.add_0(a.value, b.value, -1d))
+  val value =
+    Variable(this, ATen.add_0(a.value, b.value, -1d), a.pool).releasable
 
 }
 case class ConstMult(a: Variable, b: Double) extends Op {
@@ -193,10 +205,11 @@ case class ConstMult(a: Variable, b: Double) extends Op {
     }
   )
 
-  val value = Variable(this, ATen.mul_1(a.value, b))
+  val value = Variable(this, ATen.mul_1(a.value, b), a.pool).releasable
 
 }
 case class Mult(a: Variable, b: Variable) extends Op {
+  assert(a.pool == b.pool)
   val params = List(
     a.zipBackward { (p, out) =>
       val tmp = ATen.mul_0(p, b.value)
@@ -214,10 +227,11 @@ case class Mult(a: Variable, b: Variable) extends Op {
     }
   )
 
-  val value = Variable(this, ATen.mul_0(a.value, b.value))
+  val value = Variable(this, ATen.mul_0(a.value, b.value), a.pool).releasable
 
 }
 case class Div(a: Variable, b: Variable) extends Op {
+  assert(a.pool == b.pool)
   val params = List(
     a.zipBackward { (p, out) =>
       val tmp = ATen.div_0(p, b.value)
@@ -237,31 +251,34 @@ case class Div(a: Variable, b: Variable) extends Op {
     }
   )
 
-  val value = Variable(this, ATen.div_0(a.value, b.value))
+  val value = Variable(this, ATen.div_0(a.value, b.value), a.pool).releasable
 
 }
 
 case class Sum(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) })
 
-  val value = Variable(this, ATen.sum_0(a.value))
+  val value = Variable(this, ATen.sum_0(a.value), a.pool).releasable
 
 }
 case class ColSum(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) })
 
-  val value = Variable(this, ATen.sum_1(a.value, Array(1), true))
+  val value =
+    Variable(this, ATen.sum_1(a.value, Array(1), true), a.pool).releasable
 
 }
 case class RowSum(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) })
 
-  val value = Variable(this, ATen.sum_1(a.value, Array(0), true))
+  val value =
+    Variable(this, ATen.sum_1(a.value, Array(0), true), a.pool).releasable
 
 }
 
 // http://cs231n.stanford.edu/handouts/derivatives.pdf
 case class MatMul(a: Variable, b: Variable) extends Op {
+  assert(a.pool == b.pool)
   val params =
     List(
       a.zipBackward { (p, out) =>
@@ -272,10 +289,11 @@ case class MatMul(a: Variable, b: Variable) extends Op {
       }
     )
 
-  val value = Variable(this, ATen.mm(a.value, b.value))
+  val value = Variable(this, ATen.mm(a.value, b.value), a.pool).releasable
 
 }
 case class BatchedMatMul(a: Variable, b: Variable) extends Op {
+  assert(a.pool == b.pool)
   val params =
     List(
       a.zipBackward { (p, out) =>
@@ -290,7 +308,7 @@ case class BatchedMatMul(a: Variable, b: Variable) extends Op {
       }
     )
 
-  val value = Variable(this, ATen.bmm(a.value, b.value))
+  val value = Variable(this, ATen.bmm(a.value, b.value), a.pool).releasable
 
 }
 
@@ -298,7 +316,7 @@ case class Exp(a: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) => ATen.addcmul_out(out, out, p, value.value, 1d) }
   )
-  val value = Variable(this, ATen.exp(a.value))
+  val value = Variable(this, ATen.exp(a.value), a.pool).releasable
 }
 case class Log(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -306,7 +324,7 @@ case class Log(a: Variable) extends Op {
     ATen.addcmul_out(out, out, p, tmp, 1d)
     tmp.release
   })
-  val value = Variable(this, ATen.log(a.value))
+  val value = Variable(this, ATen.log(a.value), a.pool).releasable
 }
 case class Sin(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -314,7 +332,7 @@ case class Sin(a: Variable) extends Op {
     ATen.addcmul_out(out, out, p, tmp, 1d)
     tmp.release
   })
-  val value = Variable(this, ATen.sin(a.value))
+  val value = Variable(this, ATen.sin(a.value), a.pool).releasable
 }
 case class Cos(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -322,7 +340,7 @@ case class Cos(a: Variable) extends Op {
     ATen.addcmul_out(out, out, p, tmp, -1d)
     tmp.release
   })
-  val value = Variable(this, ATen.cos(a.value))
+  val value = Variable(this, ATen.cos(a.value), a.pool).releasable
 }
 case class Tan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -334,7 +352,7 @@ case class Tan(a: Variable) extends Op {
     tmp1.release
     one.release
   })
-  val value = Variable(this, ATen.tan(a.value))
+  val value = Variable(this, ATen.tan(a.value), a.pool).releasable
 }
 case class Tanh(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -342,7 +360,7 @@ case class Tanh(a: Variable) extends Op {
     ATen.add_out(out, out, tmp1, 1d)
     tmp1.release
   })
-  val value = Variable(this, ATen.tanh(a.value))
+  val value = Variable(this, ATen.tanh(a.value), a.pool).releasable
 }
 case class ArcTan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -355,7 +373,7 @@ case class ArcTan(a: Variable) extends Op {
     tmp1.release
     one.release
   })
-  val value = Variable(this, ATen.atan(a.value))
+  val value = Variable(this, ATen.atan(a.value), a.pool).releasable
 }
 case class PowConst(a: Variable, exponent: Double) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -363,7 +381,7 @@ case class PowConst(a: Variable, exponent: Double) extends Op {
     ATen.addcmul_out(out, out, p, tmp1, exponent)
     tmp1.release
   })
-  val value = Variable(this, ATen.pow_0(a.value, exponent))
+  val value = Variable(this, ATen.pow_0(a.value, exponent), a.pool).releasable
 }
 case class Relu(a: Variable) extends Op {
   val params = List(
@@ -381,7 +399,7 @@ case class Relu(a: Variable) extends Op {
       zeros.release
     }
   )
-  val value = Variable(this, ATen.relu(a.value))
+  val value = Variable(this, ATen.relu(a.value), a.pool).releasable
 }
 
 case class LogSoftMax(a: Variable, dim: Int) extends Op {
@@ -393,7 +411,7 @@ case class LogSoftMax(a: Variable, dim: Int) extends Op {
       tmp.release
     }
   )
-  val value = Variable(this, ATen.log_softmax(a.value, dim))
+  val value = Variable(this, ATen.log_softmax(a.value, dim), a.pool).releasable
 
 }
 case class Gelu(a: Variable) extends Op {
@@ -405,7 +423,7 @@ case class Gelu(a: Variable) extends Op {
       tmp.release
     }
   )
-  val value = Variable(this, ATen.gelu(a.value))
+  val value = Variable(this, ATen.gelu(a.value), a.pool).releasable
 
 }
 case class Sigmoid(a: Variable) extends Op {
@@ -417,7 +435,7 @@ case class Sigmoid(a: Variable) extends Op {
       tmp.release
     }
   )
-  val value = Variable(this, ATen.sigmoid(a.value))
+  val value = Variable(this, ATen.sigmoid(a.value), a.pool).releasable
 
 }
 
@@ -434,7 +452,11 @@ case class Mean(a: Variable, dim: List[Int]) extends Op {
     }
   )
   val value =
-    Variable(this, ATen.mean_1(a.value, dim.map(_.toLong).toArray, true))
+    Variable(
+      this,
+      ATen.mean_1(a.value, dim.map(_.toLong).toArray, true),
+      a.pool
+    ).releasable
 
 }
 case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
@@ -448,12 +470,15 @@ case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
     ones
   }
   val value =
-    Variable(this, ATen.mul_0(a.value, mask), releaseWith = List(mask))
+    Variable(this, ATen.mul_0(a.value, mask), a.pool)
+      .releaseWith(mask)
+      .releasable
 
 }
 
 // https://arxiv.org/pdf/1602.07868.pdf
 case class WeightNorm(v: Variable, g: Variable, dim: Long) extends Op {
+  assert(v.pool == g.pool)
   assert(v.sizes.size == 2, "WeightNorm: v should have 2 dimensions")
   assert(
     g.sizes.toList == List(1, v.sizes(1)),
@@ -498,7 +523,7 @@ case class WeightNorm(v: Variable, g: Variable, dim: Long) extends Op {
   val w = ATen.mul_0(v.value, g.value)
   ATen.div_out(w, w, norm)
 
-  val value = Variable(this, w, releaseWith = List(norm))
+  val value = Variable(this, w, v.pool).releaseWith(norm).releasable
 
 }
 
@@ -562,8 +587,8 @@ case class NllLoss(
     Variable(
       this,
       value1,
-      releaseWith = List(total_weight)
-    )
+      input.pool
+    ).releaseWith(total_weight).releasable
 
 }
 
@@ -576,7 +601,7 @@ case class SquaredFrobeniusMatrixNorm(a: Variable) extends Op {
       val fr = ATen.frobenius_norm_0(a.value)
       ATen.pow_out_0(fr, fr, 2d)
       fr
-    })
+    }, a.pool).releasable
 }
 
 /** 1D convolution
@@ -595,7 +620,8 @@ case class Conv1D(
     dilation: Long,
     groups: Long
 ) extends Op {
-
+  assert(input.pool == weight.pool)
+  assert(input.pool == bias.pool)
   assert(input.shape.size == 3, "Input dimensions must be 3")
   assert(weight.shape.size == 3, "Weight dimensions must be 3")
   val batchSize = input.shape(0)
@@ -710,7 +736,7 @@ case class Conv1D(
         Array(dilation),
         groups
       )
-    })
+    }, input.pool).releasable
 }
 
 /** 2D convolution
@@ -729,7 +755,8 @@ case class Conv2D(
     dilation: Long,
     groups: Long
 ) extends Op {
-
+  assert(input.pool == weight.pool)
+  assert(input.pool == bias.pool)
   assert(input.shape.size == 4, "Input dimensions must be 3")
   assert(weight.shape.size == 4, "Weight dimensions must be 3")
   val batchSize = input.shape(0)
@@ -895,7 +922,7 @@ case class Conv2D(
         Array(dilation),
         groups
       )
-    })
+    }, input.pool).releasable
 }
 
 /** 1D max pooling
@@ -956,7 +983,7 @@ case class MaxPool1D(
   )
 
   val value =
-    Variable(this, output, releaseWith = List(mask))
+    Variable(this, output, input.pool).releaseWith(mask).releasable
 }
 
 /** 2D max pooling
@@ -1005,7 +1032,7 @@ case class MaxPool2D(
   )
 
   val value =
-    Variable(this, output, releaseWith = List(mask))
+    Variable(this, output, input.pool).releaseWith(mask).releasable
 }
 
 /** 2D avg pooling
@@ -1054,8 +1081,9 @@ case class AvgPool2D(
         false,
         true,
         Long.MinValue
-      )
-    )
+      ),
+      input.pool
+    ).releasable
 }
 
 case class FlattenLastDimensions(
@@ -1079,8 +1107,9 @@ case class FlattenLastDimensions(
   val value =
     Variable(
       this,
-      ATen._unsafe_view(input.value, Array(-1, size))
-    )
+      ATen._unsafe_view(input.value, Array(-1, size)),
+      input.pool
+    ).releasable
 }
 
 /* 0-th dimension has samples. Everything else is flattened out into features. */
@@ -1094,6 +1123,8 @@ case class BatchNorm(
     momentum: Double,
     eps: Double
 ) extends Op {
+  assert(input.pool == weight.pool)
+  assert(input.pool == bias.pool)
   val input_flattened = ATen.flatten(input.value, 1, input.shape.size - 1)
   val expectedShape = List(input_flattened.shape.last)
   assert(
@@ -1126,11 +1157,14 @@ case class BatchNorm(
   val output_reshaped = ATen._unsafe_view(output, input.shape.toArray)
 
   override val value: Variable =
-    Variable(
-      this,
-      output_reshaped,
-      releaseWith = List(saveMean, saveInvstd, input_flattened, output)
-    )
+    Variable(this, output_reshaped, input.pool)
+      .releaseWith(
+        saveMean,
+        saveInvstd,
+        input_flattened,
+        output
+      )
+      .releasable
 
   override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
     input.zipBackward { (p, out) =>
@@ -1203,6 +1237,8 @@ case class BatchNorm2D(
     momentum: Double,
     eps: Double
 ) extends Op {
+  assert(input.pool == weight.pool)
+  assert(input.pool == bias.pool)
   val inputShape = input.shape
   assert(inputShape.size >= 3, "Expected 3D or 4D tensor")
   val expectedShape = List(inputShape(1))
@@ -1234,11 +1270,9 @@ case class BatchNorm2D(
     eps
   )
   override val value: Variable =
-    Variable(
-      this,
-      output,
-      releaseWith = List(saveMean, saveInvstd)
-    )
+    Variable(this, output, input.pool)
+      .releaseWith(saveMean, saveInvstd)
+      .releasable
 
   override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
     input.zipBackward { (p, out) =>
@@ -1297,7 +1331,7 @@ case class Embedding(
     input: Variable,
     weight: Variable
 ) extends Op {
-
+  assert(input.pool == weight.pool)
   assert(input.shape.size >= 1, "Input dimensions must be at least 1")
   assert(weight.shape.size == 2, "Weight must have 2 dimensions")
 
@@ -1315,6 +1349,7 @@ case class Embedding(
   val value =
     Variable(
       this,
-      ATen.embedding(weight.value, input.value, 0L, false, false)
-    )
+      ATen.embedding(weight.value, input.value, 0L, false, false),
+      input.pool
+    ).releasable
 }

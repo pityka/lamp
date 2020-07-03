@@ -17,6 +17,7 @@ object CudaTest extends Tag("cuda")
 object SlowTest extends Tag("slow")
 
 class NNSuite extends AnyFunSuite {
+  implicit val pool = new AllocatedVariablePool
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }
@@ -536,8 +537,9 @@ class NNSuite extends AnyFunSuite {
 
 }
 
-case class LogisticRegression1(dim: Int, k: Int, y: Variable) extends Module {
-
+case class LogisticRegression1(dim: Int, k: Int, y: Variable)(
+    implicit pool: AllocatedVariablePool
+) extends Module {
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
   val w = param(TensorHelpers.fromMat(mat2x3_2))
 
@@ -552,8 +554,9 @@ object LogisticRegression1 {
   implicit val load: Load[LogisticRegression1] =
     Load.identity[LogisticRegression1]
 }
-case class LogisticRegression2(dim: Int, k: Int, y: Variable) extends Module {
-
+case class LogisticRegression2(dim: Int, k: Int, y: Variable)(
+    implicit pool: AllocatedVariablePool
+) extends Module {
   val mod = sequence(
     Linear(
       param(ATen.ones(Array(k, dim), y.options)),
@@ -577,7 +580,9 @@ object LogisticRegression2 {
     Load.identity[LogisticRegression2]
 }
 
-case class Mlp1(dim: Int, k: Int, y: Variable) extends Module {
+case class Mlp1(dim: Int, k: Int, y: Variable)(
+    implicit pool: AllocatedVariablePool
+) extends Module {
 
   val mod = Sequential(
     Linear(

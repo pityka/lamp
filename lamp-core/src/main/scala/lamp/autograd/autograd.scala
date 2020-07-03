@@ -37,7 +37,24 @@ import lamp.syntax
 trait Op {
   val value: Variable
   val params: List[(Variable, (Tensor, Tensor) => Unit)]
+}
 
+class AllocatedVariablePool {
+  private val buffer0 = scala.collection.mutable.ArrayBuffer[Variable]()
+  private val buffer1 = scala.collection.mutable.ArrayBuffer[Tensor]()
+  def append(v: Variable) = buffer0.append(v)
+  def appendTensor(t: Tensor) = buffer1.append(t)
+  def releaseAll() = {
+    val buffer = mutable.ArrayBuffer[Tensor]()
+    buffer0.foreach { variable =>
+      buffer.append(variable.value)
+      variable.partialDerivative.foreach(t => buffer.append(t))
+    }
+    buffer1.foreach { t => buffer.append(t) }
+    Tensor.releaseAll(buffer.distinct.toArray)
+    buffer0.clear()
+    buffer1.clear()
+  }
 }
 
 // Variable takes ownership of the value: Tensor
@@ -45,13 +62,12 @@ trait Op {
 case class Variable(
     op: Op,
     value: Tensor,
-    needsGrad: Boolean = true,
-    leaf: Boolean = false,
-    releaseWith: Seq[Tensor] = Nil
+    pool: AllocatedVariablePool,
+    needsGrad: Boolean = true
 ) {
 
   override def toString =
-    s"Var(shape=$shape,value=$value,needsGrad=$needsGrad,leaf=$leaf,releaseWith=$releaseWith)"
+    s"Var(shape=$shape,value=$value,needsGrad=$needsGrad)"
 
   def options = value.options
 
@@ -64,19 +80,23 @@ case class Variable(
   val id = ju.UUID.randomUUID()
 
   def releaseAll(): Unit = {
-    val buffer = mutable.ArrayBuffer[Tensor]()
-    wengert.filterNot(_.leaf).foreach { variable =>
-      buffer.append(variable.value)
-      variable.releaseWith.foreach(t => buffer.append(t))
-      variable.partialDerivative.foreach(t => buffer.append(t))
-    }
-    Tensor.releaseAll(buffer.distinct.toArray)
+    pool.releaseAll
+
   }
-  def preserved = copy(leaf = true)
-  def releasable = copy(leaf = false)
-  def releaseWith(t: Tensor) = copy(releaseWith = releaseWith :+ t)
+  def releasable = {
+    pool.append(this)
+    this
+  }
+  def releaseWith(t: Tensor*) = {
+    t.foreach { t => pool.appendTensor(t) }
+    this
+  }
+  def releaseWithVariable(t: Variable*) = {
+    t.foreach { t => pool.append(t) }
+    this
+  }
   def needsNoGrad = copy(needsGrad = false)
-  def detached = const(value).copy(releaseWith = this.releaseWith)
+  def detached(implicit pool: AllocatedVariablePool) = const(value)
   def zeroGrad() = {
     partialDerivative.foreach { t => ATen.zero_(t) }
   }
@@ -123,7 +143,7 @@ case class Variable(
   def oneHot(numClasses: Int) =
     OneHot(this, numClasses).value
   def assign(other: Variable) = Assign(abandon = this, keep = other).value
-  def attach(other: Variable) = Assign(keep = this, abandon = other).value
+  // def attach(other: Variable) = Assign(keep = this, abandon = other).value
   def cast(precision: FloatingPointPrecision) =
     CastToPrecision(this, precision).value
   def cat(other: Variable, dim: Long) =
@@ -152,7 +172,8 @@ case class Variable(
   def atan = ArcTan(this).value
   def pow(const: Double) = PowConst(this, const).value
   def logSoftMax(dim: Int) = LogSoftMax(this, dim).value
-  def crossEntropy(other: Variable) = (const(-1)) * ((this.*(other)).rowSum)
+  def crossEntropy(other: Variable) =
+    ((this.*(other)).rowSum).*(-1d)
   def nllLoss(
       target: Tensor,
       numClasses: Int,

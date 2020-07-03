@@ -1,6 +1,12 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param, Conv1D => Conv1dOp, const}
+import lamp.autograd.{
+  Variable,
+  param,
+  Conv1D => Conv1dOp,
+  const,
+  AllocatedVariablePool
+}
 import aten.{ATen, TensorOptions}
 import lamp.autograd.TensorHelpers
 import aten.Tensor
@@ -28,6 +34,7 @@ object Conv1D {
   implicit val trainingMode = TrainingMode.identity[Conv1D]
   implicit val load = Load.make[Conv1D](m =>
     parameters => {
+      implicit val pool = m.weights.pool
       val w = param(parameters.head)
       val b = param(parameters(1))
       m.copy(weights = w, bias = b)
@@ -45,7 +52,7 @@ object Conv1D {
       padding: Long = 0,
       dilation: Long = 1,
       groups: Long = 1
-  ): Conv1D = {
+  )(implicit pool: AllocatedVariablePool): Conv1D = {
     val weightVar = param(
       ATen.normal_3(
         0d,

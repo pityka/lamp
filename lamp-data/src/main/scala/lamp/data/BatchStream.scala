@@ -9,6 +9,7 @@ import lamp.Device
 import lamp.FloatingPointPrecision
 import lamp.DoublePrecision
 import lamp.autograd.Variable
+import lamp.autograd.AllocatedVariablePool
 
 trait BatchStream[I] { self =>
   def nextBatch: Resource[IO, Option[(I, Tensor)]]
@@ -34,7 +35,7 @@ object BatchStream {
       features: Tensor,
       target: Tensor,
       device: Device
-  ) = {
+  )(implicit pool: AllocatedVariablePool) = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make(IO {
         val idxT = TensorHelpers.fromLongVec(idx.toVec.map(_.toLong))
@@ -79,7 +80,9 @@ object BatchStream {
 
   }
 
-  def fromFullBatch(features: Tensor, targets: Tensor, device: Device) = {
+  def fromFullBatch(features: Tensor, targets: Tensor, device: Device)(
+      implicit pool: AllocatedVariablePool
+  ) = {
     val resource = Resource.make(IO {
       val xcl = device.to(features)
       val tcl = device.to(targets)

@@ -8,6 +8,7 @@ import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
 import cats.effect.concurrent.Ref
 import cats.effect.IO
+import lamp.autograd.AllocatedVariablePool
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * hidden dim)
@@ -28,7 +29,9 @@ case class RNN(
     )
 
   private def initHidden(batchSize: Long) = {
-    param(ATen.zeros(Array(batchSize, hiddenSize), weightHh.options)).releasable
+    param(ATen.zeros(Array(batchSize, hiddenSize), weightHh.options))(
+      weightHh.pool
+    ).releasable
   }
 
   def forward(a: (Variable, Option[Variable])) = forward1(a._1, a._2)
@@ -55,6 +58,7 @@ object RNN {
   implicit val trainingMode = TrainingMode.identity[RNN]
   implicit val is = InitState.make[RNN, Option[Variable]](_ => None)
   implicit val load = Load.make[RNN] { m => tensors =>
+    implicit val pool = m.weightHh.pool
     m.copy(
       weightXh = param(tensors(0)),
       weightHh = param(tensors(1)),
@@ -69,7 +73,7 @@ object RNN {
       in: Int,
       hiddenSize: Int,
       tOpt: TensorOptions
-  ): RNN =
+  )(implicit pool: AllocatedVariablePool): RNN =
     RNN(
       weightXh = param(
         ATen.normal_3(

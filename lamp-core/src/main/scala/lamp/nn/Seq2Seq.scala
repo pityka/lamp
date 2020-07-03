@@ -14,7 +14,7 @@ case class Seq2Seq[S0, S1, M1 <: StatefulModule2[Variable, Variable, S0, S1], M2
   override def forward(x: ((Variable, Variable), S0)): (Variable, S1) = {
     val ((source, dest), state0) = x
     val (encoderOutput, encoderState) = encoder.forward((source, state0))
-    decoder.forward((dest.attach(encoderOutput), encoderState))
+    decoder.forward((dest, encoderState))
   }
 
   override def state: Seq[(Variable, PTag)] = encoder.state ++ decoder.state

@@ -4,6 +4,7 @@ import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
 import lamp.autograd.TensorHelpers
 import aten.Tensor
+import lamp.autograd.AllocatedVariablePool
 
 /** Factory for multilayer fully connected feed forward networks
   *
@@ -22,7 +23,7 @@ object MLP {
       hidden: Seq[Int],
       tOpt: TensorOptions,
       dropout: Double = 0d
-  ) =
+  )(implicit pool: AllocatedVariablePool) =
     Sequential(
       (List(in) ++ hidden ++ List(out)).sliding(2).toList.map { group =>
         val in = group(0)

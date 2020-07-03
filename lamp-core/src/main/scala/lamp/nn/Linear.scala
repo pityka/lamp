@@ -4,7 +4,7 @@ import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
 import lamp.autograd.TensorHelpers
 import aten.Tensor
-
+import lamp.autograd.AllocatedVariablePool
 case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
 
   override val state = List(
@@ -21,6 +21,7 @@ case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
 object Linear {
   implicit val trainingMode = TrainingMode.identity[Linear]
   implicit val load = Load.make[Linear] { m => parameters =>
+    implicit val pool = m.weights.pool
     val w = param(parameters.head)
     val b = if (m.bias.isDefined) Some(param(parameters(1))) else None
     m.copy(weights = w, bias = b)
@@ -32,7 +33,7 @@ object Linear {
       out: Int,
       tOpt: TensorOptions,
       bias: Boolean = true
-  ): Linear =
+  )(implicit pool: AllocatedVariablePool): Linear =
     Linear(
       weights = param(
         ATen.normal_3(0d, math.sqrt(2d / (in + out)), Array(out, in), tOpt)

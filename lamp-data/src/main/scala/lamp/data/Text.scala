@@ -18,6 +18,7 @@ import lamp.nn.StatefulModule
 import lamp.nn.GenericModule
 import lamp.nn.InitState
 import lamp.nn.FreeRunningRNN
+import lamp.autograd.AllocatedVariablePool
 
 object Text {
   def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
@@ -26,7 +27,10 @@ object Text {
       precision: FloatingPointPrecision,
       module: M with StatefulModule[Variable, Variable, T],
       steps: Int
-  )(implicit is: InitState[M, T]): Resource[IO, Variable] = {
+  )(
+      implicit is: InitState[M, T],
+      pool: AllocatedVariablePool
+  ): Resource[IO, Variable] = {
 
     makePredictionBatch(batch, device, precision).flatMap { batch =>
       Resource.make(IO {
@@ -47,7 +51,10 @@ object Text {
       steps: Int,
       startSequence: Int,
       endOfSequence: Int
-  )(implicit is: InitState[M, T]): Resource[IO, Seq[(Variable, Double)]] = {
+  )(
+      implicit is: InitState[M, T],
+      pool: AllocatedVariablePool
+  ): Resource[IO, Seq[(Variable, Double)]] = {
     val batchSize = 1
     val k = 3
     def loop(
@@ -99,8 +106,7 @@ object Text {
             }
 
         }
-        val (chosen, rejected) = candidates.sortBy(_._3).reverse.splitAt(k)
-        rejected.foreach(_._2.value.release)
+        val (chosen, _) = candidates.sortBy(_._3).reverse.splitAt(k)
         val newBuffers = chosen.map {
           case (sequence, selected, logProb, state, i) =>
             (sequence :+ ((selected, state, i)), logProb)
@@ -220,7 +226,7 @@ object Text {
       minibatchSize: Int,
       timeSteps: Int,
       device: Device
-  ) = {
+  )(implicit pool: AllocatedVariablePool) = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make(IO {
         val pairs = idx.map { i =>
@@ -309,7 +315,7 @@ object Text {
       timeSteps: Int,
       pad: Long,
       device: Device
-  ): BatchStream[(Variable, Variable)] = {
+  )(implicit pool: AllocatedVariablePool): BatchStream[(Variable, Variable)] = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make {
         val io = IO {

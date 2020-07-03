@@ -9,6 +9,7 @@ import lamp.syntax
 import lamp.util.NDArray
 
 class TensorHelperSuite extends AnyFunSuite {
+  implicit val pool = new AllocatedVariablePool
   test("to/from cuda", CudaTest) {
     val eye = ATen.eye_1(3, 3, TensorOptions.d.cuda)
     val m = TensorHelpers.toMat(eye)
@@ -116,9 +117,9 @@ class TensorHelperSuite extends AnyFunSuite {
       val t4 =
         Concatenate(
           List(
-            const(t).copy(leaf = false),
-            const(t2).copy(leaf = false),
-            const(t3).copy(leaf = false)
+            const(t).releasable,
+            const(t2).releasable,
+            const(t3).releasable
           ),
           1
         ).value

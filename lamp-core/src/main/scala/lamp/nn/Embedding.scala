@@ -4,6 +4,7 @@ import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
 import lamp.autograd.TensorHelpers
 import aten.Tensor
+import lamp.autograd.AllocatedVariablePool
 
 /**
   * Learnable mapping from classes to dense vectors.
@@ -31,6 +32,7 @@ case class Embedding(weights: Variable) extends Module {
 object Embedding {
   implicit val trainingMode = TrainingMode.identity[Embedding]
   implicit val load = Load.make[Embedding] { m => parameters =>
+    implicit val pool = m.weights.pool
     val w = param(parameters.head)
     m.copy(weights = w)
   }
@@ -39,7 +41,7 @@ object Embedding {
       classes: Int,
       dimensions: Int,
       tOpt: TensorOptions
-  ): Embedding =
+  )(implicit pool: AllocatedVariablePool): Embedding =
     Embedding(
       weights = param(
         ATen.normal_3(

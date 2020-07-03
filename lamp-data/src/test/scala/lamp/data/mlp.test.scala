@@ -11,9 +11,10 @@ import aten.ATen
 import aten.TensorOptions
 import aten.Tensor
 import scribe.Level
+import lamp.autograd.AllocatedVariablePool
 
 class MLPSuite extends AnyFunSuite {
-
+  implicit val pool = new AllocatedVariablePool
   def mlp(dim: Int, k: Int, tOpt: TensorOptions) =
     sequence(
       MLP(dim, k, List(64, 32), tOpt, dropout = 0.2),

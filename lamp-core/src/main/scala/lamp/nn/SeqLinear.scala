@@ -1,6 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.{Variable, param, const}
+import lamp.autograd.AllocatedVariablePool
 import aten.Tensor
 import aten.ATen
 import scala.collection.mutable
@@ -39,6 +40,7 @@ case class SeqLinear(
 object SeqLinear {
   implicit val trainingMode = TrainingMode.identity[SeqLinear]
   implicit val load = Load.make[SeqLinear] { m => tensors =>
+    implicit val pool = m.weight.pool
     m.copy(
       weight = param(tensors(0)),
       bias = param(tensors(1))
@@ -51,7 +53,7 @@ object SeqLinear {
       in: Int,
       out: Int,
       tOpt: TensorOptions
-  ): SeqLinear =
+  )(implicit pool: AllocatedVariablePool): SeqLinear =
     SeqLinear(
       weight = param(
         ATen.normal_3(

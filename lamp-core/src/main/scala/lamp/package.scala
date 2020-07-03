@@ -1,7 +1,7 @@
 import aten.ATen
 
 import cats.effect.{IO, Resource}
-import lamp.autograd.TensorHelpers
+import lamp.autograd.{TensorHelpers, AllocatedVariablePool}
 import aten.Tensor
 import org.saddle.Vec
 import org.saddle.Mat
@@ -46,11 +46,12 @@ package object lamp {
       val bias = ATen.zeros(Array(features), this.options)
       val runningMean = ATen.clone(weights)
       val runningVar = ATen.clone(weights)
+      val pool = new AllocatedVariablePool
       val v = autograd
         .BatchNorm(
-          const(self),
-          const(weights),
-          const(bias),
+          const(self)(pool),
+          const(weights)(pool),
+          const(bias)(pool),
           runningMean,
           runningVar,
           true,

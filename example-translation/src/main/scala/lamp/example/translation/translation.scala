@@ -45,6 +45,7 @@ import lamp.nn.GenericModule
 import java.nio.charset.StandardCharsets
 import lamp.nn.Seq2SeqWithAttention
 import lamp.nn.Linear
+import lamp.autograd.AllocatedVariablePool
 
 case class CliConfig(
     trainData: String = "",
@@ -117,7 +118,7 @@ object Train extends App {
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) =>
       scribe.info(s"Config: $config")
-
+      implicit val pool = new AllocatedVariablePool
       val charsetDecoder = StandardCharsets.UTF_8
         .newDecoder()
         .onMalformedInput(CodingErrorAction.REPLACE)

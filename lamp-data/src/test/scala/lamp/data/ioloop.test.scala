@@ -11,9 +11,10 @@ import aten.TensorOptions
 import lamp.CudaDevice
 import lamp.CPU
 import lamp.DoublePrecision
+import lamp.autograd.AllocatedVariablePool
 
 class IOLoopSuite extends AnyFunSuite {
-
+  implicit val pool = new AllocatedVariablePool
   def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions) =
     Seq2(
       Linear(dim, k, tOpt = tOpt),

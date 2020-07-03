@@ -30,6 +30,7 @@ import lamp.data.Reader
 import lamp.DoublePrecision
 import lamp.FloatingPointPrecision
 import lamp.SinglePrecision
+import lamp.autograd.AllocatedVariablePool
 
 object Cifar {
   def loadImageFile(
@@ -132,6 +133,7 @@ object Train extends App {
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) =>
       scribe.info(s"Config: $config")
+      implicit val pool = new AllocatedVariablePool
       val device = if (config.cuda) CudaDevice(0) else CPU
       val precision =
         if (config.singlePrecision) SinglePrecision else DoublePrecision

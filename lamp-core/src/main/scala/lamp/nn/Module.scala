@@ -116,9 +116,7 @@ trait GenericModule[A, B] extends (A => B) {
   def apply(a: A): B = forward(a)
   def state: Seq[(Variable, PTag)]
   final def parameters =
-    state.filter(v =>
-      v._1.needsGrad && v._1.leaf && v._2.updateDuringOptimization
-    )
+    state.filter(v => v._1.needsGrad && v._2.updateDuringOptimization)
   final def gradients(
       loss: Variable,
       zeroGrad: Boolean = true

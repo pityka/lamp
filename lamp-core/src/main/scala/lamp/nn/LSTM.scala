@@ -8,6 +8,7 @@ import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
 import cats.effect.concurrent.Ref
 import cats.effect.IO
+import lamp.autograd.AllocatedVariablePool
 
 /** Inputs of size (sequence length * batch * vocab)
   * Outputs of size (sequence length * batch * output dim)
@@ -45,6 +46,7 @@ case class LSTM(
     )
 
   private def initHidden(batchSize: Long) = {
+    implicit val pool = weightHc.pool
     (
       param(ATen.zeros(Array(batchSize, hiddenSize), weightHf.options)).releasable,
       param(
@@ -91,6 +93,7 @@ object LSTM {
   implicit val is =
     InitState.make[LSTM, Option[(Variable, Variable)]](_ => None)
   implicit val load = Load.make[LSTM] { m => tensors =>
+    implicit val pool = m.weightHc.pool
     m.copy(
       weightXi = param(tensors(0)),
       weightXf = param(tensors(1)),
@@ -123,7 +126,7 @@ object LSTM {
       in: Int,
       hiddenSize: Int,
       tOpt: TensorOptions
-  ): LSTM =
+  )(implicit pool: AllocatedVariablePool): LSTM =
     LSTM(
       weightXi = param(
         ATen.normal_3(

@@ -41,6 +41,7 @@ import lamp.nn.Seq5
 import lamp.nn.LSTM
 import lamp.nn.StatefulSeq5
 import lamp.nn.statefulSequence
+import lamp.autograd.AllocatedVariablePool
 
 case class CliConfig(
     trainData: String = "",
@@ -95,7 +96,7 @@ object Train extends App {
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) =>
       scribe.info(s"Config: $config")
-
+      implicit val pool = new AllocatedVariablePool
       val asciiSilentCharsetDecoder = Charset
         .forName("UTF8")
         .newDecoder()

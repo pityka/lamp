@@ -1,6 +1,12 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, BatchNorm2D => BN, param, const}
+import lamp.autograd.{
+  Variable,
+  BatchNorm2D => BN,
+  param,
+  const,
+  AllocatedVariablePool
+}
 import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
@@ -43,6 +49,7 @@ object BatchNorm2D {
   )
   implicit val load = Load.make[BatchNorm2D](m =>
     parameters => {
+      implicit val pool = m.weight.pool
       val w = param(parameters.head)
       val b = param(parameters(1))
       val rm = const(parameters(2))
@@ -58,7 +65,7 @@ object BatchNorm2D {
       training: Boolean = true,
       momentum: Double = 0.1,
       eps: Double = 1e-5
-  ): BatchNorm2D = BatchNorm2D(
+  )(implicit pool: AllocatedVariablePool): BatchNorm2D = BatchNorm2D(
     weight = param(ATen.normal_3(0.0, 0.01, Array(features.toLong), tOpt)),
     bias = param(ATen.zeros(Array(features.toLong), tOpt)),
     runningMean = const(ATen.zeros(Array(features.toLong), tOpt)),

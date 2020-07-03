@@ -7,9 +7,10 @@ import org.saddle.ops.BinOps._
 import lamp.autograd.{Variable, const, param, TensorHelpers}
 import aten.ATen
 import aten.TensorOptions
+import lamp.autograd.AllocatedVariablePool
 
 class LogisticSuite extends AnyFunSuite {
-
+  implicit val pool = new AllocatedVariablePool
   def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions) =
     Sequential(
       Linear(dim, k, tOpt = tOpt),
