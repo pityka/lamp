@@ -89,8 +89,8 @@ case class ConcatenateAddNewDim(a: Seq[Variable]) extends Op {
 case class Select(a: Variable, dim: Long, index: Long) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
-      val tmp = ATen.zeros(out.sizes, out.options())
-      val scalar = Tensor.scalarLong(index, out.options().toLong())
+      val tmp = ATen.zeros(out.sizes, a.options)
+      val scalar = Tensor.scalarLong(index, a.options.toLong())
       val pshape = p.shape
       val reshape = pshape.take(dim.toInt) ::: (1L :: pshape.drop(dim.toInt))
       val p2 = ATen._unsafe_view(p, reshape.toArray)
@@ -391,7 +391,7 @@ case class Tan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
     val tmp1 = ATen.pow_0(value.value, 2d)
     val one =
-      ATen.ones(Array(1L), tmp1.options)
+      ATen.ones(Array(1L), a.options)
     ATen.add_out(tmp1, tmp1, one, 1d)
     ATen.addcmul_out(out, out, p, tmp1, 1d)
     tmp1.release
@@ -411,7 +411,7 @@ case class ArcTan(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
     val tmp1 = ATen.pow_0(a.value, 2d)
     val one =
-      ATen.ones(Array(1L), tmp1.options())
+      ATen.ones(Array(1L), a.options)
     ATen.add_out(tmp1, tmp1, one, 1d)
     ATen.reciprocal_(tmp1)
     ATen.addcmul_out(out, out, p, tmp1, 1d)
@@ -433,9 +433,9 @@ case class Relu(a: Variable) extends Op {
     a.zipBackward { (p, out) =>
       val pred = ATen.lt_0(a.value, 0d)
       val ones =
-        ATen.ones(Array(1), a.value.options)
+        ATen.ones(Array(1), a.options)
       val zeros =
-        ATen.zeros(Array(1), a.value.options)
+        ATen.zeros(Array(1), a.options)
       val tmp = ATen.where_0(pred, zeros, ones)
       ATen.addcmul_out(out, out, p, tmp, 1d)
       pred.release
@@ -988,7 +988,7 @@ case class MaxPool1D(
 
   override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      val zeros = ATen.zeros_like(out, out.options())
+      val zeros = ATen.zeros_like(out, input.options)
       val p_flatten = ATen.flatten(p, 0, 1)
       val mask_flatten = ATen.flatten(mask, 0, 1)
       val zeros_flatten = ATen.flatten(zeros, 0, 1)

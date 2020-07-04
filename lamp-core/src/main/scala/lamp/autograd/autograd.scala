@@ -42,13 +42,44 @@ trait Op {
 class AllocatedVariablePool {
   private val buffer0 = scala.collection.mutable.ArrayBuffer[Variable]()
   private val buffer1 = scala.collection.mutable.ArrayBuffer[Tensor]()
+
+  private val leased =
+    scala.collection.mutable.HashSet[(List[Long], Tensor)]()
+  private val leasables =
+    scala.collection.mutable.AnyRefMap[List[Long], List[Tensor]]()
+
+  def askForLease(shape: List[Long], tOpt: TensorOptions) = {
+    leasables.get(shape) match {
+      case None | Some(Nil) =>
+        val t = ATen.zeros(shape.toArray, tOpt)
+        leased += ((shape, t))
+        t
+      case Some(x :: xs) =>
+        leasables.update(shape, xs)
+        leased += ((shape, x))
+        ATen.zero_(x)
+        x
+
+    }
+  }
+
+  def returnLease(shape: List[Long], tensor: Tensor) = {
+    leased -= ((shape, tensor))
+    leasables.get(shape) match {
+      case None    => leasables.update(shape, List(tensor))
+      case Some(l) => leasables.update(shape, tensor :: l)
+    }
+  }
+
   def append(v: Variable) = buffer0.append(v)
   def appendTensor(t: Tensor) = buffer1.append(t)
   def releaseAll() = {
     val buffer = mutable.ArrayBuffer[Tensor]()
     buffer0.foreach { variable =>
       buffer.append(variable.value)
-      variable.partialDerivative.foreach(t => buffer.append(t))
+      variable.partialDerivative.foreach { pd =>
+        returnLease(variable.shape, pd)
+      }
     }
     buffer1.foreach { t => buffer.append(t) }
     Tensor.releaseAll(buffer.distinct.toArray)
@@ -69,7 +100,7 @@ case class Variable(
   override def toString =
     s"Var(shape=$shape,value=$value,needsGrad=$needsGrad)"
 
-  def options = value.options
+  val options = value.options
 
   var partialDerivative: Option[Tensor] = None
 
@@ -127,9 +158,7 @@ case class Variable(
   ) = if (needsGrad) {
 
     if (partialDerivative.isEmpty) {
-      partialDerivative = Some(
-        ATen.zeros(value.sizes, value.options())
-      )
+      partialDerivative = Some(pool.askForLease(shape, options))
     }
     computeGrad(incoming, partialDerivative.get)
   }
