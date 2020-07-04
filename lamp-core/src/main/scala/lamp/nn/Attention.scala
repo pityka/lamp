@@ -18,12 +18,14 @@ object Attention {
   ) = {
     val d = query.shape(1)
     val batch = query.shape(0)
+    // batch x 1 x d
     val queryT = query.view(List(batch.toInt, 1, d.toInt))
+    // batch x d x keys
     val keyT = key.transpose(0, 1).transpose(1, 2)
     // batch x 1 x keys
     val a = queryT.bmm(keyT).*(math.sqrt(d.toDouble))
     // batch x 1 x keys
-    val sm = a.logSoftMax(2)
+    val sm = a.logSoftMax(2).exp
     // batch x 1 x d2
     val output = sm.bmm(value.transpose(0, 1))
     // 1 x batch x d2
@@ -65,12 +67,30 @@ object Attention {
   }
 }
 
-// case class AttentionDecoder[T, M <: StatefulModule[Variable, Variable, T]](
-//     module: M with StatefulModule[Variable, Variable, T]
-// ) extends StatefulModule[(Variable, Variable), Variable, T] {
+case class AttentionDecoder[T, M <: StatefulModule[Variable, Variable, T], M0 <: Module, M2 <: Module](
+    decoder: M with StatefulModule[Variable, Variable, T],
+    embedding: M0 with Module,
+    contextModule: M2 with Module,
+    stateToKey: T => Variable,
+    keyValue: Variable
+) extends StatefulModule[Variable, Variable, T] {
 
-//   override def state: Seq[(Variable, PTag)] = module.state
+  override def state: Seq[(Variable, PTag)] =
+    decoder.state ++ contextModule.state
 
-//   def forward(a: ((Variable, Variable), T)) = forward1(a._1._1, a._1._2, a._2)
+  def forward(x: (Variable, T)) = {
+    val (input, state) = x
+    forward1(input, state)
+  }
+  def forward1(x: Variable, state: T) =
+    Attention.forward(
+      decoder,
+      contextModule,
+      embedding.forward(x),
+      keyValue,
+      state
+    )(
+      stateToKey
+    )
 
-// }
+}

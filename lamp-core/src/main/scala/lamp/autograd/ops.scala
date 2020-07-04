@@ -25,6 +25,7 @@ case class Transpose(a: Variable, dim1: Int = 0, dim2: Int = 1) extends Op {
   )
   val value = Variable(this, a.value.transpose(dim1, dim2), a.pool).releasable
 }
+
 case class View(a: Variable, shape: Array[Long]) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
@@ -104,6 +105,50 @@ case class Select(a: Variable, dim: Long, index: Long) extends Op {
   )
   val value =
     Variable(this, ATen.select(a.value, dim, index), a.pool).releasable
+}
+case class EqWhere(a: Variable, b: Long) extends Op {
+  val params = List(
+    )
+  val value = Variable(
+    this, {
+      val sc = Tensor.scalarLong(b, a.options)
+      val r = ATen.eq_1(a.value, sc)
+      sc.release
+      r
+    },
+    a.pool
+  ).releasable
+}
+case class MaskFill(input: Variable, mask: Variable, fill: Double) extends Op {
+  assert(input.pool == mask.pool)
+  val params = List(
+    input.zipBackward { (p, out) =>
+      val masked_p = ATen.masked_fill_0(p, mask.value, 0d)
+      ATen.add_out(out, out, masked_p, 1d)
+      masked_p.release
+    }
+  )
+  val value = Variable(
+    this,
+    ATen.masked_fill_0(input.value, mask.value, fill),
+    input.pool
+  ).releasable
+}
+case class IndexFill(input: Variable, dim: Long, index: Variable, fill: Double)
+    extends Op {
+  assert(input.pool == index.pool)
+  val params = List(
+    input.zipBackward { (p, out) =>
+      val masked_p = ATen.index_fill_0(p, dim, index.value, 0d)
+      ATen.add_out(out, out, masked_p, 1d)
+      masked_p.release
+    }
+  )
+  val value = Variable(
+    this,
+    ATen.index_fill_0(input.value, dim, index.value, fill),
+    input.pool
+  ).releasable
 }
 case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
   val params = List(
@@ -460,7 +505,6 @@ case class Mean(a: Variable, dim: List[Int]) extends Op {
 
 }
 case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
-
   val params = List(
     a.zipBackward { (p, out) => ATen.addcmul_out(out, out, p, mask, 1d) }
   )

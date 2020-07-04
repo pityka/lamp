@@ -143,7 +143,8 @@ case class Variable(
   def oneHot(numClasses: Int) =
     OneHot(this, numClasses).value
   def assign(other: Variable) = Assign(abandon = this, keep = other).value
-  // def attach(other: Variable) = Assign(keep = this, abandon = other).value
+  def maskFill(mask: Variable, fill: Double) = MaskFill(this, mask, fill).value
+  def makeBooleanMask(q: Long) = EqWhere(this, q).value
   def cast(precision: FloatingPointPrecision) =
     CastToPrecision(this, precision).value
   def cat(other: Variable, dim: Long) =

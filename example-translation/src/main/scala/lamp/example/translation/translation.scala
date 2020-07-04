@@ -207,8 +207,10 @@ object Train extends App {
         s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
       )
 
-      val hiddenSize = 1024
-      val lookAhead = 100
+      val hiddenSize = 512
+      val lookAhead = 50
+      val embeddingDimension = 20
+      val attentionContextDimensin = 10
       val device = if (config.cuda) CudaDevice(0) else CPU
       val precision =
         if (config.singlePrecision) SinglePrecision else DoublePrecision
@@ -220,20 +222,24 @@ object Train extends App {
         val encoder = statefulSequence(
           Embedding(
             classes = vocabularSize,
-            dimensions = 20,
+            dimensions = embeddingDimension,
             tOpt = tensorOptions
           ).lift,
           LSTM(
-            in = 20,
+            in = embeddingDimension,
             hiddenSize = hiddenSize,
             tOpt = tensorOptions
           )
         )
         val contextModule =
-          Linear(in = hiddenSize, out = 20, tOpt = tensorOptions)
+          Linear(
+            in = hiddenSize,
+            out = attentionContextDimensin,
+            tOpt = tensorOptions
+          )
         val decoder = statefulSequence(
           LSTM(
-            in = 20 + 20,
+            in = embeddingDimension + attentionContextDimensin,
             hiddenSize = hiddenSize,
             tOpt = tensorOptions
           ),
@@ -250,7 +256,7 @@ object Train extends App {
 
         val destinationEmbedding = Embedding(
           classes = vocabularSize,
-          dimensions = 20,
+          dimensions = embeddingDimension,
           tOpt = tensorOptions
         )
         val net1 =
@@ -260,7 +266,8 @@ object Train extends App {
               case (_, lstmState) => (lstmState, (), (), ())
             },
             decoder,
-            contextModule
+            contextModule,
+            vocab('#').toLong
           )(_._1.get._1).unlift
 
         val net =
@@ -367,7 +374,9 @@ object Train extends App {
               enc.forward(const(warmupBatch) -> enc.initState)
 
             val dec =
-              trainedModel.module.statefulModule.decoder.withInit(encState)
+              trainedModel.module.statefulModule
+                .attentionDecoder(encOut)
+                .withInit(encState)
 
             Text
               .sequencePredictionBeam(

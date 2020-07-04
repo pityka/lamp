@@ -9,6 +9,7 @@ import lamp.nn.CudaTest
 import lamp.syntax
 import cats.effect.IO
 import lamp.util.NDArray
+import aten.Tensor
 
 class GradientSuite extends AnyFunSuite {
   implicit val pool = new AllocatedVariablePool
@@ -726,6 +727,46 @@ class GradientSuite extends AnyFunSuite {
         TensorHelpers.toMat(L.value).raw(0),
         v.partialDerivative.map(t => TensorHelpers.toMat(t))
       )
+  }
+  testGradientAndValueND("mask")(nd1x2x2, 5d) { (m, doBackprop, cuda) =>
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+    val mask = {
+      val q = NDArray.tensorFromNDArray(
+        NDArray(Array(1d, 0d, 0d, 0d), List(1, 2, 2)),
+        cuda
+      )
+      val sc = Tensor.scalarDouble(1d, q.options())
+      param(ATen.eq_1(q, sc))
+    }
+
+    val output = MaskFill(input, mask, 2d).value
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
+  }
+  testGradientAndValueND("index_fill")(nd1x2x2, 6d) { (m, doBackprop, cuda) =>
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+    val index =
+      param(NDArray.tensorFromLongNDArray(NDArray(Array(1L), List(1)), cuda))
+
+    val output = IndexFill(input, 1L, index, 2d).value
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
   }
   testGradientAndValueND("conv1d - wrt weights")(nd1x2x2, 30d) {
     (m, doBackprop, cuda) =>
