@@ -211,8 +211,8 @@
                         <a href="Gelu.html" title="">Gelu</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="IndexFill.html" title=""></a>
-                        <a href="IndexFill.html" title="">IndexFill</a>
+                        <a class="class" href="" title=""></a>
+                        <a href="" title="">IndexFill</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Log.html" title=""></a>
@@ -235,8 +235,8 @@
                         <a href="MaxPool1D.html" title="1D max pooling">MaxPool1D</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="" title="2D max pooling"></a>
-                        <a href="" title="2D max pooling">MaxPool2D</a>
+                        <a class="class" href="MaxPool2D.html" title="2D max pooling"></a>
+                        <a href="MaxPool2D.html" title="2D max pooling">MaxPool2D</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Mean$.html" title=""></a>
                         <a class="class" href="Mean.html" title=""></a>
@@ -338,8 +338,8 @@
       <div id="definition">
         <div class="big-circle class">c</div>
         <p id="owner"><a href="../index.html" class="extype" name="lamp">lamp</a>.<a href="index.html" class="extype" name="lamp.autograd">autograd</a></p>
-        <h1>MaxPool2D<span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html" title="Permalink">
+        <h1>IndexFill<span class="permalink">
+      <a href="../../lamp/autograd/IndexFill.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span></h1>
@@ -352,13 +352,12 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">MaxPool2D</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="kernelSize">kernelSize: <span class="extype" name="scala.Long">Long</span></span>, <span name="stride">stride: <span class="extype" name="scala.Long">Long</span></span>, <span name="padding">padding: <span class="extype" name="scala.Long">Long</span></span>, <span name="dilation">dilation: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">IndexFill</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>, <span name="index">index: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="fill">fill: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
       
-          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>2D max pooling
-</p></div><dl class="paramcmts block"><dt class="param">input</dt><dd class="cmt"><p>batch x in_channels x h x w</p></dd></dl><div class="toggleContainer block">
+          <div id="comment" class="fullcommenttop"><div class="toggleContainer block">
           <span class="toggle">
             Linear Supertypes
           </span>
@@ -388,7 +387,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.autograd.MaxPool2D"><span>MaxPool2D</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.autograd.Op"><span>Op</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.autograd.IndexFill"><span>IndexFill</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.autograd.Op"><span>Op</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -408,10 +407,10 @@
         <div id="allMembers">
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
-              <ol><li name="lamp.autograd.MaxPool2D#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="&lt;init&gt;(input:lamp.autograd.Variable,kernelSize:Long,stride:Long,padding:Long,dilation:Long):lamp.autograd.MaxPool2D"></a><a id="&lt;init&gt;:MaxPool2D"></a>
+              <ol><li name="lamp.autograd.IndexFill#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="&lt;init&gt;(input:lamp.autograd.Variable,dim:Long,index:lamp.autograd.Variable,fill:Double):lamp.autograd.IndexFill"></a><a id="&lt;init&gt;:IndexFill"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#&lt;init&gt;(input:lamp.autograd.Variable,kernelSize:Long,stride:Long,padding:Long,dilation:Long):lamp.autograd.MaxPool2D" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#&lt;init&gt;(input:lamp.autograd.Variable,dim:Long,index:lamp.autograd.Variable,fill:Double):lamp.autograd.IndexFill" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -420,10 +419,10 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">MaxPool2D</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="kernelSize">kernelSize: <span class="extype" name="scala.Long">Long</span></span>, <span name="stride">stride: <span class="extype" name="scala.Long">Long</span></span>, <span name="padding">padding: <span class="extype" name="scala.Long">Long</span></span>, <span name="dilation">dilation: <span class="extype" name="scala.Long">Long</span></span>)</span>
+        <span class="name">IndexFill</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>, <span name="index">index: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="fill">fill: <span class="extype" name="scala.Double">Double</span></span>)</span>
       </span>
       
-      <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="paramcmts block"><dt class="param">input</dt><dd class="cmt"><p>batch x in_channels x h x w</p></dd></dl></div>
+      
     </li></ol>
             </div>
 
@@ -437,7 +436,7 @@
                 <li name="scala.AnyRef#!=" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="!=(x$1:Any):Boolean"></a><a id="!=(Any):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#!=(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#!=(x$1:Any):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -453,7 +452,7 @@
     </li><li name="scala.AnyRef###" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="##():Int"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html###():Int" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html###():Int" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -469,7 +468,7 @@
     </li><li name="scala.AnyRef#==" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="==(x$1:Any):Boolean"></a><a id="==(Any):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#==(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#==(x$1:Any):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -485,7 +484,7 @@
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#asInstanceOf[T0]:T0" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#asInstanceOf[T0]:T0" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -498,26 +497,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.autograd.MaxPool2D#batchSize" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="batchSize:Long"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#batchSize:Long" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">batchSize</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#clone" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a><a id="clone():AnyRef"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#clone():Object" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#clone():Object" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -538,10 +521,10 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.autograd.MaxPool2D#dilation" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="dilation:Long"></a>
+    </li><li name="lamp.autograd.IndexFill#dim" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="dim:Long"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#dilation:Long" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#dim:Long" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -550,14 +533,14 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">dilation</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+        <span class="name">dim</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
       </span>
       
       
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#eq(x$1:AnyRef):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#eq(x$1:AnyRef):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -570,10 +553,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="lamp.autograd.IndexFill#fill" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="fill:Double"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/IndexFill.html#fill:Double" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">fill</span><span class="result">: <span class="extype" name="scala.Double">Double</span></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#finalize" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#finalize():Unit" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#finalize():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -595,7 +594,7 @@
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#getClass():Class[_]" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#getClass():Class[_]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -611,10 +610,10 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.autograd.MaxPool2D#imageSize" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="imageSize:Long"></a>
+    </li><li name="lamp.autograd.IndexFill#index" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="index:lamp.autograd.Variable"></a><a id="index:Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#imageSize:Long" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#index:lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -623,14 +622,14 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">imageSize</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+        <span class="name">index</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
-    </li><li name="lamp.autograd.MaxPool2D#input" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+    </li><li name="lamp.autograd.IndexFill#input" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="input:lamp.autograd.Variable"></a><a id="input:Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#input:lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#input:lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -643,26 +642,10 @@
       </span>
       
       
-    </li><li name="lamp.autograd.MaxPool2D#inputChannels" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="inputChannels:Long"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#inputChannels:Long" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">inputChannels</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
-      </span>
-      
-      
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#isInstanceOf[T0]:Boolean" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#isInstanceOf[T0]:Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -675,42 +658,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.autograd.MaxPool2D#kernelSize" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="kernelSize:Long"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#kernelSize:Long" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">kernelSize</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.MaxPool2D#mask" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="mask:aten.Tensor"></a><a id="mask:Tensor"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#mask:aten.Tensor" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">mask</span><span class="result">: <span class="extype" name="aten.Tensor">Tensor</span></span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#ne(x$1:AnyRef):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#ne(x$1:AnyRef):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -726,7 +677,7 @@
     </li><li name="scala.AnyRef#notify" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notify():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#notify():Unit" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#notify():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -745,7 +696,7 @@
     </li><li name="scala.AnyRef#notifyAll" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notifyAll():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#notifyAll():Unit" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#notifyAll():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -761,42 +712,10 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.autograd.MaxPool2D#output" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="output:aten.Tensor"></a><a id="output:Tensor"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#output:aten.Tensor" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">output</span><span class="result">: <span class="extype" name="aten.Tensor">Tensor</span></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.MaxPool2D#padding" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="padding:Long"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#padding:Long" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">padding</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.MaxPool2D#params" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="lamp.autograd.IndexFill#params" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="params:List[(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)]"></a><a id="params:List[(Variable,(Tensor,Tensor)⇒Unit)]"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#params:List[(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)]" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#params:List[(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -805,30 +724,14 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">params</span><span class="result">: <span class="extype" name="scala.List">List</span>[(<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)]</span>
+        <span class="name">params</span><span class="result">: <span class="extype" name="scala.collection.immutable.List">List</span>[(<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.MaxPool2D">MaxPool2D</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
-    </li><li name="lamp.autograd.MaxPool2D#stride" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="stride:Long"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#stride:Long" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">stride</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
-      </span>
-      
-      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.IndexFill">IndexFill</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a><a id="synchronized[T0](⇒T0):T0"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#synchronized[T0](x$1:=&gt;T0):T0" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#synchronized[T0](x$1:=&gt;T0):T0" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -841,10 +744,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="lamp.autograd.MaxPool2D#value" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="lamp.autograd.IndexFill#value" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="value:lamp.autograd.Variable"></a><a id="value:Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#value:lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#value:lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -856,11 +759,11 @@
         <span class="name">value</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.MaxPool2D">MaxPool2D</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.IndexFill">IndexFill</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#wait():Unit" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#wait():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -882,7 +785,7 @@
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long,x$2:Int):Unit"></a><a id="wait(Long,Int):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#wait(x$1:Long,x$2:Int):Unit" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#wait(x$1:Long,x$2:Int):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -904,7 +807,7 @@
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long):Unit"></a><a id="wait(Long):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/MaxPool2D.html#wait(x$1:Long):Unit" title="Permalink">
+      <a href="../../lamp/autograd/IndexFill.html#wait(x$1:Long):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
