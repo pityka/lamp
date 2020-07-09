@@ -24,18 +24,10 @@ object Attention {
     assert(tokens.shape(1) == maskable.shape(0))
     assert(tokens.shape.size == 2)
     assert(maskable.shape.size == 2)
-    val timesteps = tokens.shape(0)
-    val maskedTimesteps = 0 until timesteps.toInt map { i =>
-      val tokensT = tokens.select(0, i)
-      val maskableT = maskable.select(1, i)
-      val mask =
-        tokensT
-          .makeBooleanMask(maskedToken)
+    val tokensT = tokens.transpose(0, 1)
+    val mask = tokensT.makeBooleanMask(maskedToken)
+    maskable.maskFill(mask, fill)
 
-      maskableT.maskFill(mask, fill)
-
-    }
-    ConcatenateAddNewDim(maskedTimesteps).value.transpose(0, 1)
   }
 
   /** Dot product attention
@@ -72,8 +64,6 @@ object Attention {
 
     // batch x 1 x keys
     val sm = aMasked.view(List(batch.toInt, 1, k.toInt)).logSoftMax(2).exp
-    // import lamp.syntax
-    // println(sm.view(List(batch.toInt, k.toInt)).value.toMat.stringify(100, 100))
     // batch x 1 x d2
     val output = sm.bmm(keyT)
     // 1 x batch x d2
@@ -95,7 +85,6 @@ object Attention {
     val lastHidden =
       (0 until timesteps.toInt).foldLeft(state) { (h, t) =>
         val xt = x.select(0, t)
-        // println(t)
         val context =
           Attention
             .dotProductAttention(
@@ -104,12 +93,7 @@ object Attention {
               tokens = tokens,
               padToken = padToken
             )
-        // .detached
-        // )
-        // .detached
-        // println(context.shape)
-        // val z =
-        // const(ATen.rand_like(context.value, xt.options))(xt.pool).releasable
+
         val catted = xt.cat(context, dim = 1)
         val viewed = catted.view((1L :: catted.shape).map(_.toInt))
         val (output, nextHidden) = decoder.forward((viewed, h))
