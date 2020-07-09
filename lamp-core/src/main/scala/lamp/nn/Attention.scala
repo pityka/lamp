@@ -1,44 +1,93 @@
 package lamp.nn
 
-import lamp.autograd.Variable
+import lamp.autograd.{Variable, const}
 import lamp.autograd.ConcatenateAddNewDim
+import lamp.util.NDArray
+import aten.ATen
 
 object Attention {
+
+  /**
+    * @param tokens seq x batch (long)
+    * @param maskable batch x seq
+    * @param maskedToken
+    * @param fill
+    * @return batch x seq where (seq,batch,:) is set to fill if tokens(seq,batch)== maskedToken
+    */
+  def sequenceMask(
+      tokens: Variable,
+      maskable: Variable,
+      maskedToken: Long,
+      fill: Double
+  ) = {
+    assert(tokens.shape(0) == maskable.shape(1))
+    assert(tokens.shape(1) == maskable.shape(0))
+    assert(tokens.shape.size == 2)
+    assert(maskable.shape.size == 2)
+    val timesteps = tokens.shape(0)
+    val maskedTimesteps = 0 until timesteps.toInt map { i =>
+      val tokensT = tokens.select(0, i)
+      val maskableT = maskable.select(1, i)
+      val mask =
+        tokensT
+          .makeBooleanMask(maskedToken)
+
+      maskableT.maskFill(mask, fill)
+
+    }
+    ConcatenateAddNewDim(maskedTimesteps).value.transpose(0, 1)
+  }
 
   /** Dot product attention
     * @param query  batch x d
     * @param key num keys x batch x d
-    * @param value num keys x batch x d2
-    * @return  batch x d2
+    * @return  batch x d
     */
   def dotProductAttention(
       query: Variable,
-      key: Variable,
-      value: Variable
+      keyvalue: Variable,
+      tokens: Variable,
+      padToken: Long
   ) = {
     val d = query.shape(1)
+    val k = keyvalue.shape(0)
     val batch = query.shape(0)
-    // batch x 1 x d
-    val queryT = query.view(List(batch.toInt, 1, d.toInt))
-    // batch x d x keys
-    val keyT = key.transpose(0, 1).transpose(1, 2)
+
+    // batch x d x 1
+    val queryT = query.view(List(batch.toInt, d.toInt, 1))
+    // batch x keys x d
+    val keyT = keyvalue.transpose(0, 1)
     // batch x 1 x keys
-    val a = queryT.bmm(keyT).*(math.sqrt(d.toDouble))
+    val a = keyT
+      .bmm(queryT)
+      .*(1 / math.sqrt(d.toDouble))
+      .view(List(batch.toInt, -1))
+
+    val aMasked = sequenceMask(
+      tokens = tokens,
+      maskable = a,
+      maskedToken = padToken,
+      fill = -100000d
+    )
+
     // batch x 1 x keys
-    val sm = a.logSoftMax(2).exp
+    val sm = aMasked.view(List(batch.toInt, 1, k.toInt)).logSoftMax(2).exp
+    // import lamp.syntax
+    // println(sm.view(List(batch.toInt, k.toInt)).value.toMat.stringify(100, 100))
     // batch x 1 x d2
-    val output = sm.bmm(value.transpose(0, 1))
+    val output = sm.bmm(keyT)
     // 1 x batch x d2
     val outputT = output.transpose(0, 1)
     output.view(List(batch.toInt, -1))
   }
 
-  def forward[T, M <: StatefulModule[Variable, Variable, T], M2 <: Module](
+  def forward[T, M <: StatefulModule[Variable, Variable, T]](
       decoder: M with StatefulModule[Variable, Variable, T],
-      contextModule: M2 with Module,
       x: Variable,
       keyValue: Variable,
-      state: T
+      state: T,
+      tokens: Variable,
+      padToken: Long
   )(stateToKey: T => Variable) = {
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
@@ -46,14 +95,21 @@ object Attention {
     val lastHidden =
       (0 until timesteps.toInt).foldLeft(state) { (h, t) =>
         val xt = x.select(0, t)
+        // println(t)
         val context =
-          contextModule.forward(
-            Attention.dotProductAttention(
+          Attention
+            .dotProductAttention(
               query = stateToKey(h),
-              key = keyValue,
-              value = keyValue
+              keyvalue = keyValue,
+              tokens = tokens,
+              padToken = padToken
             )
-          )
+        // .detached
+        // )
+        // .detached
+        // println(context.shape)
+        // val z =
+        // const(ATen.rand_like(context.value, xt.options))(xt.pool).releasable
         val catted = xt.cat(context, dim = 1)
         val viewed = catted.view((1L :: catted.shape).map(_.toInt))
         val (output, nextHidden) = decoder.forward((viewed, h))
@@ -67,16 +123,17 @@ object Attention {
   }
 }
 
-case class AttentionDecoder[T, M <: StatefulModule[Variable, Variable, T], M0 <: Module, M2 <: Module](
+case class AttentionDecoder[T, M <: StatefulModule[Variable, Variable, T], M0 <: Module](
     decoder: M with StatefulModule[Variable, Variable, T],
     embedding: M0 with Module,
-    contextModule: M2 with Module,
     stateToKey: T => Variable,
-    keyValue: Variable
+    keyValue: Variable,
+    tokens: Variable,
+    padToken: Long
 ) extends StatefulModule[Variable, Variable, T] {
 
   override def state: Seq[(Variable, PTag)] =
-    decoder.state ++ contextModule.state
+    decoder.state ++ embedding.state
 
   def forward(x: (Variable, T)) = {
     val (input, state) = x
@@ -85,10 +142,11 @@ case class AttentionDecoder[T, M <: StatefulModule[Variable, Variable, T], M0 <:
   def forward1(x: Variable, state: T) =
     Attention.forward(
       decoder,
-      contextModule,
       embedding.forward(x),
       keyValue,
-      state
+      state,
+      tokens,
+      padToken
     )(
       stateToKey
     )
