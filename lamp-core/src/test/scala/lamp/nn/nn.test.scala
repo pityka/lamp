@@ -17,7 +17,10 @@ object CudaTest extends Tag("cuda")
 object SlowTest extends Tag("slow")
 
 class NNSuite extends AnyFunSuite {
-  implicit val pool = new AllocatedVariablePool
+  val cpuPool = new AllocatedVariablePool
+  val cudaPool = new AllocatedVariablePool
+  def selectPool(cuda: Boolean) = if (cuda) cudaPool else cpuPool
+
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }
@@ -25,13 +28,18 @@ class NNSuite extends AnyFunSuite {
   def testGradientAndValue[M <: Module: Load](
       id: String,
       cuda: Boolean = false
-  )(m: Mat[Double], moduleF: () => M with Module, expectedValue: Double) =
+  )(
+      m: Mat[Double],
+      moduleF: AllocatedVariablePool => M with Module,
+      expectedValue: Double
+  ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+      implicit val pool = selectPool(cuda)
       val d = const(TensorHelpers.fromMat(m, cuda))
-      val module = moduleF()
+      val module = moduleF(pool)
 
       {
-        val module1 = moduleF()
+        val module1 = moduleF(pool)
         val state = module1.state
         val modifiedState = state.map {
           case (v, ptag) =>
@@ -95,15 +103,20 @@ class NNSuite extends AnyFunSuite {
       cuda: Boolean = false
   )(
       m: NDArray[Double],
-      moduleF: () => M with StatefulModule[Variable, Variable, T],
+      moduleF: AllocatedVariablePool => M with StatefulModule[
+        Variable,
+        Variable,
+        T
+      ],
       expectedValue: Double
   ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+      implicit val pool = selectPool(cuda)
       val d = const(NDArray.tensorFromNDArray(m, cuda))
-      val module = moduleF()
+      val module = moduleF(pool)
 
       {
-        val module1 = moduleF()
+        val module1 = moduleF(pool)
         val state = module1.state
         val modifiedState = state.map {
           case (v, ptag) =>
@@ -168,15 +181,20 @@ class NNSuite extends AnyFunSuite {
       cuda: Boolean = false
   )(
       m: NDArray[Long],
-      moduleF: () => M with StatefulModule[Variable, Variable, T],
+      moduleF: AllocatedVariablePool => M with StatefulModule[
+        Variable,
+        Variable,
+        T
+      ],
       expectedValue: Double
   ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+      implicit val pool = selectPool(cuda)
       val d = const(NDArray.tensorFromLongNDArray(m, cuda))
-      val module = moduleF()
+      val module = moduleF(pool)
 
       {
-        val module1 = moduleF()
+        val module1 = moduleF(pool)
         val state = module1.state
         val modifiedState = state.map {
           case (v, ptag) =>
@@ -246,6 +264,7 @@ class NNSuite extends AnyFunSuite {
     NDArray((0 until 12).toArray.map(_.toDouble), List(2, 3, 2))
 
   test("linear") {
+    implicit val pool = selectPool(false)
     val linear = Linear(3, 1, TensorOptions.dtypeDouble())
     val output = linear.forward(const(TensorHelpers.fromMat(mat2x3)))
     val sum = output.sum
@@ -256,7 +275,7 @@ class NNSuite extends AnyFunSuite {
   }
   testGradientAndValue("Linear 0")(
     mat2x3,
-    () =>
+    implicit pool =>
       Linear(
         param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
         Some(param(ATen.ones(Array(1), TensorOptions.dtypeDouble)))
@@ -266,7 +285,7 @@ class NNSuite extends AnyFunSuite {
 
   testGradientAndValue("WeightNormLinear 0")(
     mat2x3,
-    () =>
+    implicit pool =>
       WeightNormLinear(
         param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
         param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
@@ -276,17 +295,19 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValue("Logistic 1")(
     mat3x2,
-    () => LogisticRegression1(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
+    implicit pool =>
+      LogisticRegression1(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
     151.0000008318073
   )
   testGradientAndValue("Logistic 2")(
     mat3x2,
-    () => LogisticRegression2(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
+    implicit pool =>
+      LogisticRegression2(2, 3, const(TensorHelpers.fromMat(mat.ident(3)))),
     12.295836866004327
   )
   testGradientAndValue("Logistic 2 - cuda", true)(
     mat3x2,
-    () =>
+    implicit pool =>
       LogisticRegression2(
         2,
         3,
@@ -296,7 +317,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValue("Mlp1 ", false)(
     mat3x2,
-    () =>
+    implicit pool =>
       Mlp1(
         2,
         3,
@@ -306,7 +327,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValue("Mlp1 - cuda", true)(
     mat3x2,
-    () =>
+    implicit pool =>
       Mlp1(
         2,
         3,
@@ -317,7 +338,7 @@ class NNSuite extends AnyFunSuite {
 
   testGradientAndValueND("Conv1D ", (), false)(
     nd1x2x3,
-    () =>
+    implicit pool =>
       Conv1D(
         param(ATen.ones(Array(1, 2, 3), TensorOptions.dtypeDouble)),
         param(ATen.ones(Array(1), TensorOptions.dtypeDouble)),
@@ -330,7 +351,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("Conv1D/cuda ", (), true)(
     nd1x2x3,
-    () =>
+    implicit pool =>
       Conv1D(
         param(ATen.ones(Array(1, 2, 3), TensorOptions.dtypeDouble.cuda)),
         param(ATen.ones(Array(1), TensorOptions.dtypeDouble.cuda)),
@@ -343,7 +364,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("Conv2D ", (), false)(
     nd1x2x3x3,
-    () =>
+    implicit pool =>
       Conv2D(
         param(ATen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble)),
         param(ATen.ones(Array(1), TensorOptions.dtypeDouble)),
@@ -356,7 +377,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("Conv2D/cuda ", (), true)(
     nd1x2x3x3,
-    () =>
+    implicit pool =>
       Conv2D(
         param(ATen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble.cuda)),
         param(ATen.ones(Array(1), TensorOptions.dtypeDouble.cuda)),
@@ -369,7 +390,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("BatchNorm ", (), false)(
     nd1x2x3x3,
-    () =>
+    implicit pool =>
       BatchNorm(
         18,
         TensorOptions.dtypeDouble()
@@ -378,7 +399,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("BatchNorm 2D", (), false)(
     nd1x2x3x3,
-    () =>
+    implicit pool =>
       BatchNorm2D(
         2,
         TensorOptions.dtypeDouble()
@@ -388,7 +409,7 @@ class NNSuite extends AnyFunSuite {
 
   testGradientAndValueNDLong("Embedding ", (), false)(
     nd2x3L,
-    () =>
+    implicit pool =>
       Embedding(
         weights = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble))
       ).lift,
@@ -396,7 +417,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("RNN ", Option.empty[Variable], false)(
     nd2x3x2,
-    () =>
+    implicit pool =>
       RNN(
         weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
         weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
@@ -410,7 +431,7 @@ class NNSuite extends AnyFunSuite {
     false
   )(
     nd2x3L,
-    () => {
+    implicit pool => {
       val rnn = statefulSequence(
         Embedding
           .apply(weights =
@@ -429,7 +450,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("SeqLinear ", (), false)(
     nd2x3x2,
-    () =>
+    implicit pool =>
       SeqLinear(
         weight = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
         bias = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
@@ -438,7 +459,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("GRU ", Option.empty[Variable], false)(
     nd2x3x2,
-    () =>
+    implicit pool =>
       GRU(
         weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
         weightXr = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
@@ -454,7 +475,7 @@ class NNSuite extends AnyFunSuite {
   )
   testGradientAndValueND("LSTM ", Option.empty[(Variable, Variable)], false)(
     nd2x3x2,
-    () =>
+    implicit pool =>
       LSTM(
         weightXi = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
         weightXo = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
@@ -472,6 +493,7 @@ class NNSuite extends AnyFunSuite {
     20.0321
   )
   test("RNN shape and loss") {
+    implicit val pool = cpuPool
     val output = RNN(
       weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
       weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
@@ -490,6 +512,7 @@ class NNSuite extends AnyFunSuite {
   }
 
   test1("gradient clipping") { cuda =>
+    implicit val pool = selectPool(cuda)
     val topt =
       if (cuda) TensorOptions.dtypeDouble().cuda
       else TensorOptions.dtypeDouble()
@@ -506,7 +529,7 @@ class NNSuite extends AnyFunSuite {
   }
 
   test("load params") {
-
+    implicit val pool = cpuPool
     val mod = sequence(
       Linear(in = 30, out = 3, TensorOptions.dtypeDouble()),
       Linear(in = 3, out = 2, TensorOptions.dtypeDouble()),

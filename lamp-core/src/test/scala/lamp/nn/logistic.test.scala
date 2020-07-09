@@ -10,8 +10,10 @@ import aten.TensorOptions
 import lamp.autograd.AllocatedVariablePool
 
 class LogisticSuite extends AnyFunSuite {
-  implicit val pool = new AllocatedVariablePool
-  def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions) =
+
+  def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions)(
+      implicit pool: AllocatedVariablePool
+  ) =
     Sequential(
       Linear(dim, k, tOpt = tOpt),
       Fun(_.logSoftMax(dim = 1))
@@ -23,6 +25,7 @@ class LogisticSuite extends AnyFunSuite {
   }
 
   test1("mnist tabular") { cuda =>
+    implicit val pool = new AllocatedVariablePool
     val data = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source

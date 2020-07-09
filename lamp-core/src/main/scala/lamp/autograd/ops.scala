@@ -18,12 +18,16 @@ case class Constant(const: Tensor)(pool: AllocatedVariablePool) extends Op {
 case class Transpose(a: Variable, dim1: Int = 0, dim2: Int = 1) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
-      val tmp = p.transpose(dim1, dim2)
+      val tmp = ATen.transpose(p, dim1, dim2)
       ATen.add_out(out, out, tmp, 1d)
       tmp.release()
     }
   )
-  val value = Variable(this, a.value.transpose(dim1, dim2), a.pool).releasable
+  val value = Variable(
+    this,
+    ATen.transpose(a.value, dim1, dim2),
+    a.pool
+  ).releasable
 }
 
 case class View(a: Variable, shape: Array[Long]) extends Op {
@@ -342,14 +346,10 @@ case class BatchedMatMul(a: Variable, b: Variable) extends Op {
   val params =
     List(
       a.zipBackward { (p, out) =>
-        val bt = b.value.transpose(1, 2)
-        ATen.baddbmm_out(out, out, p, bt, 1d, 1d)
-        bt.release
+        Tensor.baddbmm_out_transposed2(out, out, p, b.value, 1d, 1d)
       },
       b.zipBackward { (p, out) =>
-        val at = a.value.transpose(1, 2)
-        ATen.baddbmm_out(out, out, at, p, 1d, 1d)
-        at.release
+        Tensor.baddbmm_out_transposed1(out, out, a.value, p, 1d, 1d)
       }
     )
 
@@ -723,7 +723,7 @@ case class Conv1D(
           conv_1_sum,
           Array(inputChannels / groups, outChannels, conv_1.sizes.apply(2))
         )
-      val conv_1_sum_viewed_transposed = conv_1_sum_viewed.transpose(0, 1)
+      val conv_1_sum_viewed_transposed = ATen.transpose(conv_1_sum_viewed, 0, 1)
 
       val conv_1_sum_viewed_transposed_narrowed =
         ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
@@ -885,7 +885,8 @@ case class Conv2D(
               conv_1.sizes.apply(3)
             )
           )
-        val conv_1_sum_viewed_transposed = conv_1_sum_viewed.transpose(0, 1)
+        val conv_1_sum_viewed_transposed =
+          ATen.transpose(conv_1_sum_viewed, 0, 1)
 
         val conv_1_sum_viewed_transposed_narrowed1 =
           ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)

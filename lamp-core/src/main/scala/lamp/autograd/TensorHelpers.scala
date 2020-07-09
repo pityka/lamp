@@ -50,15 +50,15 @@ object TensorHelpers {
     val shape = t.sizes()
     if (shape.size == 2) {
       val arr = Array.ofDim[Double]((shape(0) * shape(1)).toInt)
-      val data = t.copyToDoubleArray(arr)
+      assert(t.copyToDoubleArray(arr), "failed to copy")
       Mat.apply(shape(0).toInt, shape(1).toInt, arr)
     } else if (shape.size == 0) {
       val arr = Array.ofDim[Double](1)
-      val data = t.copyToDoubleArray(arr)
+      assert(t.copyToDoubleArray(arr))
       Mat.apply(1, 1, arr)
     } else if (shape.size == 1) {
       val arr = Array.ofDim[Double](shape(0).toInt)
-      val data = t.copyToDoubleArray(arr)
+      assert(t.copyToDoubleArray(arr))
       Mat.apply(1, shape(0).toInt, arr)
     } else throw new RuntimeException("shape: " + shape.deep)
   }
@@ -70,15 +70,15 @@ object TensorHelpers {
     val shape = t.sizes()
     if (shape.size == 2) {
       val arr = Array.ofDim[Float]((shape(0) * shape(1)).toInt)
-      val data = t.copyToFloatArray(arr)
+      assert(t.copyToFloatArray(arr))
       Mat.apply(shape(0).toInt, shape(1).toInt, arr)
     } else if (shape.size == 0) {
       val arr = Array.ofDim[Float](1)
-      val data = t.copyToFloatArray(arr)
+      assert(t.copyToFloatArray(arr))
       Mat.apply(1, 1, arr)
     } else if (shape.size == 1) {
       val arr = Array.ofDim[Float](shape(0).toInt)
-      val data = t.copyToFloatArray(arr)
+      assert(t.copyToFloatArray(arr))
       Mat.apply(1, shape(0).toInt, arr)
     } else throw new RuntimeException("shape: " + shape.deep)
   }
@@ -90,15 +90,15 @@ object TensorHelpers {
     val shape = t.sizes()
     if (shape.size == 2) {
       val arr = Array.ofDim[Long]((shape(0) * shape(1)).toInt)
-      val data = t.copyToLongArray(arr)
+      assert(t.copyToLongArray(arr))
       Mat.apply(shape(0).toInt, shape(1).toInt, arr)
     } else if (shape.size == 0) {
       val arr = Array.ofDim[Long](1)
-      val data = t.copyToLongArray(arr)
+      assert(t.copyToLongArray(arr))
       Mat.apply(1, 1, arr)
     } else if (shape.size == 1) {
       val arr = Array.ofDim[Long](shape(0).toInt)
-      val data = t.copyToLongArray(arr)
+      assert(t.copyToLongArray(arr))
       Mat.apply(1, shape(0).toInt, arr)
     } else ???
   }
@@ -125,7 +125,7 @@ object TensorHelpers {
       Array(m.length, d1, d2),
       TensorOptions.dtypeDouble
     )
-    t.copyFromDoubleArray(arr)
+    assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = t.to(device.options(precision), true)
       t.release
@@ -151,7 +151,7 @@ object TensorHelpers {
       Array(m.numRows.toLong, m.numCols.toLong),
       TensorOptions.dtypeDouble
     )
-    t.copyFromDoubleArray(arr)
+    assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = t.to(device.options(precision), true)
       t.release
@@ -166,7 +166,7 @@ object TensorHelpers {
       Array(m.numRows.toLong, m.numCols.toLong),
       TensorOptions.dtypeLong
     )
-    t.copyFromLongArray(arr)
+    assert(t.copyFromLongArray(arr))
     if (device != CPU) {
       val t2 = t.cuda
       t.release
@@ -181,7 +181,7 @@ object TensorHelpers {
       Array(m.length.toLong),
       TensorOptions.dtypeLong
     )
-    t.copyFromLongArray(arr)
+    assert(t.copyFromLongArray(arr))
     if (device != CPU) {
       val t2 = t.cuda
       t.release
@@ -207,7 +207,7 @@ object TensorHelpers {
       Array(m.length.toLong),
       TensorOptions.dtypeDouble
     )
-    t.copyFromDoubleArray(arr)
+    assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = t.to(device.options(precision), true)
       t.release

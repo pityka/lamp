@@ -127,7 +127,7 @@ case class Variable(
     this
   }
   def needsNoGrad = copy(needsGrad = false)
-  def detached(implicit pool: AllocatedVariablePool) = const(value)
+  def detached = const(value)(pool).releasable
   def zeroGrad() = {
     partialDerivative.foreach { t => ATen.zero_(t) }
   }

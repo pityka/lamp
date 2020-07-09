@@ -81,7 +81,10 @@ object NDArray {
       m.shape.toArray.map(_.toLong),
       TensorOptions.dtypeDouble
     )
-    t.copyFromDoubleArray(arr)
+    val success = t.copyFromDoubleArray(arr)
+    if (!success) {
+      throw new RuntimeException("Failed to copy")
+    }
     if (cuda) {
       val t2 = t.cuda
       t.release
@@ -94,7 +97,10 @@ object NDArray {
       m.shape.toArray.map(_.toLong),
       TensorOptions.dtypeLong
     )
-    t.copyFromLongArray(arr)
+    val success = t.copyFromLongArray(arr)
+    if (!success) {
+      throw new RuntimeException("Failed to copy")
+    }
     if (cuda) {
       val t2 = t.cuda
       t.release
@@ -102,10 +108,14 @@ object NDArray {
     } else t
   }
   def tensorToNDArray(t: Tensor) = {
+
     val shape = t.sizes().toList
     val s = if (shape.size > 0) shape.reduce(_ * _).toInt else 1
     val arr = Array.ofDim[Double](s)
     val data = t.copyToDoubleArray(arr)
+    if (!data) {
+      throw new RuntimeException("Failed to copy")
+    }
     NDArray(arr, if (shape.size > 0) shape.map(_.toInt) else List(1))
 
   }
@@ -114,6 +124,9 @@ object NDArray {
     val s = if (shape.size > 0) shape.reduce(_ * _).toInt else 1
     val arr = Array.ofDim[Long](s)
     val data = t.copyToLongArray(arr)
+    if (!data) {
+      throw new RuntimeException("Failed to copy")
+    }
     NDArray(arr, if (shape.size > 0) shape.map(_.toInt) else List(1))
 
   }
@@ -122,6 +135,9 @@ object NDArray {
     val s = if (shape.size > 0) shape.reduce(_ * _).toInt else 1
     val arr = Array.ofDim[Float](s)
     val data = t.copyToFloatArray(arr)
+    if (!data) {
+      throw new RuntimeException("Failed to copy")
+    }
     NDArray(arr, if (shape.size > 0) shape.map(_.toInt) else List(1))
 
   }

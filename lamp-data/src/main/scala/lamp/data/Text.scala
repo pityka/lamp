@@ -203,7 +203,7 @@ object Text {
         flattenedFeature,
         Array(examples.size.toLong, examples.head.size.toLong)
       )
-      val transposedFeatures = viewedFeature.transpose(0, 1)
+      val transposedFeatures = ATen.transpose(viewedFeature, 0, 1)
       val movedFeature = device.to(transposedFeatures)
 
       Tensor.releaseAll(
@@ -254,8 +254,8 @@ object Text {
           Array(idx.size.toLong, timeSteps.toLong)
         )
         val transposedFeatures =
-          viewedFeature.transpose(0, 1)
-        val transposedTarget = viewedTarget.transpose(0, 1)
+          ATen.transpose(viewedFeature, 0, 1)
+        val transposedTarget = ATen.transpose(viewedTarget, 0, 1)
 
         Tensor.releaseAll(
           Array(
@@ -354,7 +354,7 @@ object Text {
             Array(idx.size.toLong, timeSteps.toLong)
           )
           val transposedSource =
-            viewedSource.transpose(0, 1)
+            ATen.transpose(viewedSource, 0, 1)
           val flattenedDest =
             TensorHelpers
               .fromLongVec(pairs.flatMap(_._2).toVec, device)
@@ -363,14 +363,14 @@ object Text {
             Array(idx.size.toLong, timeSteps.toLong)
           )
           val transposedDest =
-            viewedDest.transpose(0, 1)
+            ATen.transpose(viewedDest, 0, 1)
           val flattenedTarget =
             TensorHelpers.fromLongVec(pairs.flatMap(_._3).toVec, device)
           val viewedTarget = ATen._unsafe_view(
             flattenedTarget,
             Array(idx.size.toLong, timeSteps.toLong)
           )
-          val transposedTarget = viewedTarget.transpose(0, 1)
+          val transposedTarget = ATen.transpose(viewedTarget, 0, 1)
 
           Tensor.releaseAll(
             Array(

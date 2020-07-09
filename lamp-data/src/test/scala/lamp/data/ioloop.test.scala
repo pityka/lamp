@@ -14,8 +14,10 @@ import lamp.DoublePrecision
 import lamp.autograd.AllocatedVariablePool
 
 class IOLoopSuite extends AnyFunSuite {
-  implicit val pool = new AllocatedVariablePool
-  def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions) =
+
+  def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions)(
+      implicit pool: AllocatedVariablePool
+  ) =
     Seq2(
       Linear(dim, k, tOpt = tOpt),
       Fun(_.logSoftMax(dim = 1))
@@ -27,6 +29,7 @@ class IOLoopSuite extends AnyFunSuite {
   }
 
   test1("mnist tabular full batch") { cuda =>
+    implicit val pool = new AllocatedVariablePool
     val device = if (cuda) CudaDevice(0) else CPU
     val data = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
@@ -80,6 +83,7 @@ class IOLoopSuite extends AnyFunSuite {
 
   }
   test1("mnist tabular mini batch") { cuda =>
+    implicit val pool = new AllocatedVariablePool
     val device = if (cuda) CudaDevice(0) else CPU
     val data = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](

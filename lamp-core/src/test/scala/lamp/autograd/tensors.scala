@@ -105,7 +105,7 @@ class TensorHelperSuite extends AnyFunSuite {
   test("transpose") {
     val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
     val t2x3 = TensorHelpers.fromMat(mat2x3)
-    val t3x2 = t2x3.transpose(0, 1)
+    val t3x2 = ATen.transpose(t2x3, 0, 1)
     assert(t3x2.toMat == mat2x3.T)
   }
   ignore(" memory leak") {

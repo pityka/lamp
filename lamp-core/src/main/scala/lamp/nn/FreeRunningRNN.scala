@@ -44,7 +44,7 @@ case class FreeRunningRNN[T, M <: StatefulModule[Variable, Variable, T]](
       } else output
 
       val nextInput =
-        lastChar.argmax(2, false).detached(lastOutput.pool)
+        lastChar.argmax(2, false).detached
 
       loop(
         nextInput,

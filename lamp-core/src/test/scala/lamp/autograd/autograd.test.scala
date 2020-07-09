@@ -12,7 +12,9 @@ import lamp.util.NDArray
 import aten.Tensor
 
 class GradientSuite extends AnyFunSuite {
-  implicit val pool = new AllocatedVariablePool
+  val cudaPool = new AllocatedVariablePool
+  val cpuPool = new AllocatedVariablePool
+  def selectPool(cuda: Boolean) = if (cuda) cudaPool else cpuPool
   val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
     4d, 5d, 6d)
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
@@ -25,6 +27,7 @@ class GradientSuite extends AnyFunSuite {
     List(18)
   )
   val nd1x2x3 = NDArray(mat2x3.toArray, List(1, 2, 3))
+  val nd1x2x3_2 = NDArray((mat2x3 * 3).toArray, List(1, 2, 3))
   val nd3x2x3 = NDArray(ar18, List(3, 2, 3))
   val nd3x3x2 = NDArray(ar18, List(3, 3, 2))
   val nd1x2x3x3 =
@@ -35,7 +38,7 @@ class GradientSuite extends AnyFunSuite {
   val mat3x2 = mat2x3.T
   val t2x3 = TensorHelpers.fromMat(mat2x3)
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
-  val t3x2 = t2x3.transpose(0, 1)
+  val t3x2 = ATen.transpose(t2x3, 0, 1)
 
   def diff(m: Mat[Double])(f: Mat[Double] => Double): Mat[Double] = {
     val eps = 1e-6
@@ -137,6 +140,7 @@ class GradientSuite extends AnyFunSuite {
   }
 
   test("constant is not accumulating gradients") {
+    implicit val pool = cpuPool
     val x1 = const(t2x3)
     val L = x1.sum
     assert(
@@ -147,6 +151,7 @@ class GradientSuite extends AnyFunSuite {
     assert(x1.partialDerivative.isEmpty)
   }
   test("param is accumulating gradients") {
+    implicit val pool = cpuPool
     val x1 = param(t2x3)
     val L = x1.sum
     // assert(L.value == Mat(Vec(mat2x3.toVec.sum2)))
@@ -155,6 +160,7 @@ class GradientSuite extends AnyFunSuite {
   }
 
   testGradientAndValue("sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.sum
     if (doBackprop) {
@@ -166,6 +172,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("colSum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.colSum.sum
     if (doBackprop) {
@@ -177,6 +184,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("rowSum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.rowSum.sum
     if (doBackprop) {
@@ -188,6 +196,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("assign - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x2.assign(x1).sum
@@ -200,6 +209,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("assign - left")(mat2x3, 42d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x2 = param(TensorHelpers.fromMat(m, cuda))
     val x1 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x2.assign(x1).sum
@@ -213,6 +223,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("add broadcasted - left")(Mat(Vec(1d)), 48d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
       val L = (x1.+(x2)).sum
@@ -225,6 +236,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValue("add - left")(mat2x3, 63d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x1.+(x2).sum
@@ -238,6 +250,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("add broadcasted - right")(Mat(Vec(1d)), 48d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
       val L = (x2.+(x1)).sum
@@ -250,6 +263,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValue("add - right")(mat2x3, 63d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x2.+(x1).sum
@@ -262,6 +276,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("minus - left")(mat2x3, -21d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x1.-(x2).sum
@@ -275,6 +290,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("minus broadcasted - left")(mat1x1, -36d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
       val L = x1.-(x2).sum
@@ -288,6 +304,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("minus broadcasted - right")(mat1x1, 36d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
       val L = x2.-(x1).sum
@@ -300,6 +317,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValue("minus - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x2.-(x1).sum
@@ -312,6 +330,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("constmult")(mat2x3, 42d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.*(2d).sum
     if (doBackprop) {
@@ -323,6 +342,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("constadd")(mat2x3, 33d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.+(2d).sum
     if (doBackprop) {
@@ -335,6 +355,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("mult broadcasted - left")(mat1x1, 42d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
       val L = x1.*(x2).sum
@@ -348,6 +369,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("mult broadcasted - right")(mat1x1, 42d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
       val L = x2.*(x1).sum
@@ -360,6 +382,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValue("mult - right")(mat2x3, 182d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x2.*(x1).sum
@@ -373,6 +396,7 @@ class GradientSuite extends AnyFunSuite {
   }
 
   testGradientAndValue("div - left")(mat2x3, 3d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x1./(x2).sum
@@ -386,6 +410,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("div broadcasted - left")(mat1x1, 1.225d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
       val L = x1./(x2).sum
@@ -398,6 +423,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValue("div - right")(mat2x3, 12d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
     val L = x2./(x1).sum
@@ -411,6 +437,7 @@ class GradientSuite extends AnyFunSuite {
   }
 
   testGradientAndValue("mm - left")(mat2x3, 358d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat3x2 * 2, cuda))
     val L = x1.mm(x2).sum
@@ -423,6 +450,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("mm - right")(mat2x3, 450d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val x2 = param(TensorHelpers.fromMat(mat3x2 * 2, cuda))
     val L = x2.mm(x1).sum
@@ -436,6 +464,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("crossentropy - left")(mat2x3, -182.0) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
 
@@ -450,6 +479,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("crossentropy - right")(mat2x3, -182.0) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val x2 = param(TensorHelpers.fromMat(mat2x3 * 2, cuda))
       val L = x2.crossEntropy(x1).sum
@@ -463,6 +493,7 @@ class GradientSuite extends AnyFunSuite {
   }
 
   testGradientAndValue("relu")(mat2x3_2, 16d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.relu.sum
     if (doBackprop) {
@@ -474,6 +505,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("gelu")(mat2x3_2, 15.7917) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.gelu.sum
     if (doBackprop) {
@@ -485,6 +517,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("sigmoid")(mat2x3_2, 4.1111) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.sigmoid.sum
     if (doBackprop) {
@@ -497,6 +530,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("exp")(mat2x3_2, 579.7027406974902) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val L = x1.exp.sum
       if (doBackprop) {
@@ -509,6 +543,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("log")(mat2x3, 6.579251212010101) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val L = x1.log.sum
       if (doBackprop) {
@@ -521,6 +556,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("sin")(mat2x3_2, -0.27259082747648367) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val L = x1.sin.sum
       if (doBackprop) {
@@ -533,6 +569,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("cos")(mat2x3_2, -0.2756481760294678) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val L = x1.cos.sum
       if (doBackprop) {
@@ -545,6 +582,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("tan")(mat2x3_2, -8.71433661097161) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val L = x1.tan.sum
       if (doBackprop) {
@@ -558,6 +596,7 @@ class GradientSuite extends AnyFunSuite {
 
   testGradientAndValue("atan")(mat2x3_2, 3.02402707945215) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val L = x1.atan.sum
       if (doBackprop) {
@@ -569,6 +608,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValue("pow")(mat2x3_2, 91d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.pow(2d).sum
     if (doBackprop) {
@@ -580,6 +620,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("tanh")(mat2x3_2, 2.1981) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.tanh.sum
     if (doBackprop) {
@@ -592,6 +633,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("softmax")(mat2x3_2, -22.441910257332836) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val L = x1.logSoftMax(dim = 1).sum
       if (doBackprop) {
@@ -604,6 +646,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("squaredFrobenius")(mat2x3_2, 91d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val x1 = param(TensorHelpers.fromMat(m, cuda))
       val L = x1.squaredFrobenius.sum
       if (doBackprop) {
@@ -615,6 +658,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValue("transpose")(mat2x3_2, 11d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.t.sum
     if (doBackprop) {
@@ -626,6 +670,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("mean")(mat2x3_2, 5.5d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.mean(List(0)).sum
     if (doBackprop) {
@@ -640,6 +685,7 @@ class GradientSuite extends AnyFunSuite {
     mat2x3_2,
     151.0000008318073
   ) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val w = param(TensorHelpers.fromMat(m))
     val data = const(TensorHelpers.fromMat(mat3x2))
     val y = const(TensorHelpers.fromMat(mat.ident(3)))
@@ -661,6 +707,7 @@ class GradientSuite extends AnyFunSuite {
     mat2x3_2,
     151.0000008318073
   ) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val w = param(TensorHelpers.fromMat(m))
     val data = const(TensorHelpers.fromMat(mat3x2))
     val y =
@@ -683,6 +730,7 @@ class GradientSuite extends AnyFunSuite {
     mat2x3_2,
     151.0000008318073
   ) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val w = param(TensorHelpers.fromMat(m))
     val data = const(TensorHelpers.fromMat(mat3x2))
     val y =
@@ -704,6 +752,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("weight norm - wrt g")(mat2x3.row(Array(0)), 12.7279) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val v = param(TensorHelpers.fromMat(mat.ones(2, 3), cuda))
       val g = param(TensorHelpers.fromMat(m, cuda))
       val L = WeightNorm(v, g, 0).value.sum
@@ -717,6 +766,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("weight norm - wrt v")(mat2x3, 4.1500) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val v = param(TensorHelpers.fromMat(m, cuda))
       val g = param(TensorHelpers.fromMat(mat.ones(1, 3), cuda))
       val L = WeightNorm(v, g, 0).value.sum
@@ -729,6 +779,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValueND("mask")(nd1x2x2, 5d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val input =
       param(NDArray.tensorFromNDArray(m, cuda))
     val mask = {
@@ -752,6 +803,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValueND("index_fill")(nd1x2x2, 6d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val input =
       param(NDArray.tensorFromNDArray(m, cuda))
     val index =
@@ -770,6 +822,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv1d - wrt weights")(nd1x2x2, 30d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3, cuda))
       val weight = param(NDArray.tensorFromNDArray(m, cuda))
@@ -789,6 +842,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv1d - wrt input")(nd1x2x3, 30d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
@@ -808,6 +862,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv1d - padded - wrt weights")(nd1x2x2, 46d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3, cuda))
       val weight = param(NDArray.tensorFromNDArray(m, cuda))
@@ -827,6 +882,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv1d -padded - wrt input")(nd1x2x3, 46d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
@@ -846,6 +902,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv1d - stride-2 - wrt weights")(nd1x2x2, 23d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3, cuda))
       val weight = param(NDArray.tensorFromNDArray(m, cuda))
@@ -865,6 +922,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv1d -stride-2 - wrt input")(nd1x2x3, 23d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
@@ -884,6 +942,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv1d -stride-2 - wrt bias")(ndx1, 23d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3, cuda))
       val weight = param(NDArray.tensorFromNDArray(nd1x2x2, cuda))
@@ -903,6 +962,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv2d - wrt weights")(nd1x2x2x2, 276d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3x3, cuda))
       val weight = param(NDArray.tensorFromNDArray(m, cuda))
@@ -922,6 +982,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv2d - wrt input")(nd1x2x3x3, 276d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val weight = param(NDArray.tensorFromNDArray(nd1x2x2x2, cuda))
@@ -941,6 +1002,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv2d - padded - wrt input")(nd1x2x3x3, 628d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val weight = param(NDArray.tensorFromNDArray(nd1x2x2x2, cuda))
@@ -960,6 +1022,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("conv2d - wrt bias")(ndx1, 276d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3x3, cuda))
       val weight = param(NDArray.tensorFromNDArray(nd1x2x2x2, cuda))
@@ -980,6 +1043,7 @@ class GradientSuite extends AnyFunSuite {
 
   testGradientAndValueND("maxpool1d padded")(nd1x2x3, 32d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val output =
@@ -996,6 +1060,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("maxpool1d unpadded")(nd1x2x3, 18d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1013,6 +1078,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("maxpool1d strided")(nd1x2x3, 7d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1030,6 +1096,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("maxpool2d strided")(nd1x2x3x3, 17d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1047,6 +1114,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("maxpool2d strided padded")(nd1x2x3x3, 68d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1064,6 +1132,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("avgpool2d strided padded")(nd1x2x3x3, 38.25) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1082,6 +1151,7 @@ class GradientSuite extends AnyFunSuite {
 
   testGradientAndValue("batch norm 1d - wrt to input")(mat2x3, 0d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(TensorHelpers.fromMat(m, cuda))
       val weight = param(TensorHelpers.fromVec(Vec(1d, 2d, 3d), cuda))
@@ -1113,6 +1183,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("batch norm 1d - wrt to weight")(ndx3, 0d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(TensorHelpers.fromMat(mat2x3, cuda))
       val weight = param(NDArray.tensorFromNDArray(m, cuda))
@@ -1144,6 +1215,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("batch norm 1d - wrt to bias")(ndx3, 12d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(TensorHelpers.fromMat(mat2x3, cuda))
       val bias = param(NDArray.tensorFromNDArray(m, cuda))
@@ -1175,6 +1247,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("bmm - wrt left")(nd3x2x3, 489d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val other = param(NDArray.tensorFromNDArray(nd3x3x2, cuda))
@@ -1191,6 +1264,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("bmm - wrt right")(nd3x3x2, 489d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val other = param(NDArray.tensorFromNDArray(nd3x2x3, cuda))
@@ -1207,6 +1281,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("batch norm 2d - wrt to input")(nd1x2x3, 6d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val bias = param(TensorHelpers.fromVec(vec.ones(6), cuda))
@@ -1238,6 +1313,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("batch norm 2d - wrt to weights")(ndx6, 6d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3, cuda))
       val bias = param(TensorHelpers.fromVec(vec.ones(6), cuda))
@@ -1269,6 +1345,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("batch norm 2d - wrt to bias")(ndx6, 21d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3, cuda))
       val weight = param(TensorHelpers.fromVec(vec.ones(6), cuda))
@@ -1300,6 +1377,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("batch norm 3d - wrt to input")(nd1x2x3x3, 18d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val bias = param(TensorHelpers.fromVec(vec.ones(18), cuda))
@@ -1331,6 +1409,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("batch norm 3d - wrt to weights")(ndx18, 18d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3x3, cuda))
       val bias = param(TensorHelpers.fromVec(vec.ones(18), cuda))
@@ -1362,6 +1441,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("batch norm 3d - wrt to bias")(ndx18, 63d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3x3, cuda))
       val weights = param(TensorHelpers.fromVec(vec.ones(18), cuda))
@@ -1393,6 +1473,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("BatchNorm2D - wrt to input")(nd1x2x3x3, 18d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
       val weights = param(TensorHelpers.fromVec(vec.ones(2), cuda))
@@ -1424,6 +1505,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("BatchNorm2D - wrt to weights")(ndx2, 18d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3x3, cuda))
       val weights = param(NDArray.tensorFromNDArray(m, cuda))
@@ -1455,6 +1537,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("BatchNorm2D - wrt to bias")(ndx2, 18d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(nd1x2x3x3, cuda))
       val bias = param(NDArray.tensorFromNDArray(m, cuda))
@@ -1485,6 +1568,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValueND("flatten ")(nd1x2x3x3, 153d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val input =
       param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1507,6 +1591,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("select 0 0 ")(nd1x2x3x3, 153d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1526,6 +1611,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValueND("select 2 1 ")(nd1x2x3x3, 51d) {
     (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
       val input =
         param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1544,6 +1630,7 @@ class GradientSuite extends AnyFunSuite {
       )
   }
   testGradientAndValueND("cat 0 ")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val input =
       param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1561,12 +1648,15 @@ class GradientSuite extends AnyFunSuite {
       input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
     )
   }
-  testGradientAndValueND("cat 1 ")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
+  testGradientAndValueND("cat 1 ")(nd1x2x3, 84d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val input =
       param(NDArray.tensorFromNDArray(m, cuda))
+    val t2 =
+      param(NDArray.tensorFromNDArray(nd1x2x3_2, cuda))
 
     val output =
-      Concatenate(List(input, input), 1).value
+      Concatenate(List(input, t2), 1).value
 
     assert(output.shape == List(1, 4, 3))
 
@@ -1579,12 +1669,14 @@ class GradientSuite extends AnyFunSuite {
       input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
     )
   }
-  testGradientAndValueND("cat 2 ")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
+  testGradientAndValueND("cat 2 ")(nd1x2x3, 84d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val input =
       param(NDArray.tensorFromNDArray(m, cuda))
-
+    val t2 =
+      param(NDArray.tensorFromNDArray(nd1x2x3_2, cuda))
     val output =
-      Concatenate(List(input, input), 2).value
+      Concatenate(List(input, t2), 2).value
 
     assert(output.shape == List(1, 2, 6))
 
@@ -1599,6 +1691,7 @@ class GradientSuite extends AnyFunSuite {
   }
 
   testGradientAndValueND("view 1 ")(nd1x2x3, 21d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val input =
       param(NDArray.tensorFromNDArray(m, cuda))
 
@@ -1616,6 +1709,7 @@ class GradientSuite extends AnyFunSuite {
     )
   }
   testGradientAndValue("embedding ")(mat2x3, 240d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
     val weight =
       param(TensorHelpers.fromMat(m, cuda))
     val input =

@@ -14,8 +14,10 @@ import scribe.Level
 import lamp.autograd.AllocatedVariablePool
 
 class MLPSuite extends AnyFunSuite {
-  implicit val pool = new AllocatedVariablePool
-  def mlp(dim: Int, k: Int, tOpt: TensorOptions) =
+
+  def mlp(dim: Int, k: Int, tOpt: TensorOptions)(
+      implicit pool: AllocatedVariablePool
+  ) =
     sequence(
       MLP(dim, k, List(64, 32), tOpt, dropout = 0.2),
       Fun(_.logSoftMax(dim = 1))
@@ -27,6 +29,7 @@ class MLPSuite extends AnyFunSuite {
   }
 
   test1("mnist tabular mini batch") { cuda =>
+    implicit val pool = new AllocatedVariablePool
     val device = if (cuda) CudaDevice(0) else CPU
     val testData = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
