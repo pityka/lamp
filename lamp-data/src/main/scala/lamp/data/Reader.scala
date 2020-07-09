@@ -133,13 +133,15 @@ object Reader {
           case ScalarTagFloat  => dopt.toFloat()
           case ScalarTagLong   => dopt.toLong()
         }
-        val t = ATen.zeros(shape.map(_.toLong).toArray, topt)
+        val t = ATen.zeros(shape.map(_.toLong).toArray, topt.cpu)
         implicitly[ST[T]] match {
           case ScalarTagDouble => t.copyFromDoubleArray(data)
           case ScalarTagFloat  => t.copyFromFloatArray(data)
           case ScalarTagLong   => t.copyFromLongArray(data)
         }
-        Right(t)
+        val tdevice = t.to(topt, true)
+        t.release
+        Right(tdevice)
       }
     }
   }
