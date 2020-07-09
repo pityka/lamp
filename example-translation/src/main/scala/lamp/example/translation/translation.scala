@@ -46,6 +46,7 @@ import java.nio.charset.StandardCharsets
 import lamp.nn.Seq2SeqWithAttention
 import lamp.nn.Linear
 import lamp.autograd.AllocatedVariablePool
+import lamp.nn.sequence
 
 case class CliConfig(
     trainData: String = "",
@@ -207,39 +208,33 @@ object Train extends App {
         s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
       )
 
-      val hiddenSize = 512
-      val lookAhead = 50
-      val embeddingDimension = 20
-      val attentionContextDimensin = 10
+      val hiddenSize = 256
+      val lookAhead = 70
+      val embeddingDimension = 8
       val device = if (config.cuda) CudaDevice(0) else CPU
       val precision =
         if (config.singlePrecision) SinglePrecision else DoublePrecision
       val tensorOptions = device.options(precision)
-      val model = {
-        val classWeights =
-          ATen.ones(Array(vocabularSize), tensorOptions)
-
-        val encoder = statefulSequence(
-          Embedding(
-            classes = vocabularSize,
-            dimensions = embeddingDimension,
-            tOpt = tensorOptions
-          ).lift,
-          LSTM(
-            in = embeddingDimension,
-            hiddenSize = hiddenSize,
-            tOpt = tensorOptions
-          )
+      val classWeights =
+        ATen.ones(Array(vocabularSize), tensorOptions)
+      val encoder = statefulSequence(
+        Embedding(
+          classes = vocabularSize,
+          dimensions = embeddingDimension,
+          tOpt = tensorOptions
+        ).lift,
+        LSTM(
+          in = embeddingDimension,
+          hiddenSize = hiddenSize,
+          tOpt = tensorOptions
         )
-        val contextModule =
-          Linear(
-            in = hiddenSize,
-            out = attentionContextDimensin,
-            tOpt = tensorOptions
-          )
+      )
+
+      val model = {
+
         val decoder = statefulSequence(
           LSTM(
-            in = embeddingDimension + attentionContextDimensin,
+            in = embeddingDimension + hiddenSize,
             hiddenSize = hiddenSize,
             tOpt = tensorOptions
           ),
@@ -266,7 +261,6 @@ object Train extends App {
               case (_, lstmState) => (lstmState, (), (), ())
             },
             decoder,
-            contextModule,
             vocab('#').toLong
           )(_._1.get._1).unlift
 
@@ -313,7 +307,7 @@ object Train extends App {
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
         learningRate = simple(config.learningRate),
-        scheduler = LearningRateSchedule.cyclicSchedule(10d, 200L),
+        scheduler = LearningRateSchedule.noop,
         clip = Some(1d)
       )
 
@@ -375,7 +369,7 @@ object Train extends App {
 
             val dec =
               trainedModel.module.statefulModule
-                .attentionDecoder(encOut)
+                .attentionDecoder(encOut, const(warmupBatch))
                 .withInit(encState)
 
             Text
