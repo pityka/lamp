@@ -270,10 +270,6 @@
                         <a class="class" href="SeqLinear.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * output dim) Applies a linear function to each time step"></a>
                         <a href="SeqLinear.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * output dim) Applies a linear function to each time step">SeqLinear</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
-                        <a class="object" href="SequenceMask$.html" title=""></a>
-                        <a href="SequenceMask$.html" title="">SequenceMask</a>
-                      </li><li class="current-entities indented2">
                         <a class="object" href="Sequential$.html" title=""></a>
                         <a class="class" href="Sequential.html" title=""></a>
                         <a href="Sequential.html" title="">Sequential</a>
@@ -368,7 +364,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">AttentionDecoder</span><span class="tparams">[<span name="T">T</span>, <span name="M">M &lt;: <span class="extype" name="lamp.nn.StatefulModule">nn.StatefulModule</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>]</span>, <span name="M0">M0 &lt;: <span class="extype" name="lamp.nn.Module">nn.Module</span></span>, <span name="M2">M2 &lt;: <span class="extype" name="lamp.nn.Module">nn.Module</span></span>]</span><span class="params">(<span name="decoder">decoder: <span class="extype" name="lamp.nn.AttentionDecoder.M">M</span> with <a href="index.html#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>]</span>, <span name="embedding">embedding: <span class="extype" name="lamp.nn.AttentionDecoder.M0">M0</span> with <a href="index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="contextModule">contextModule: <span class="extype" name="lamp.nn.AttentionDecoder.M2">M2</span> with <a href="index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="stateToKey">stateToKey: (<span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>) ⇒ <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="keyValue">keyValue: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="index.html#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">AttentionDecoder</span><span class="tparams">[<span name="T">T</span>, <span name="M">M &lt;: <span class="extype" name="lamp.nn.StatefulModule">nn.StatefulModule</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>]</span>, <span name="M0">M0 &lt;: <span class="extype" name="lamp.nn.Module">nn.Module</span></span>]</span><span class="params">(<span name="decoder">decoder: <span class="extype" name="lamp.nn.AttentionDecoder.M">M</span> with <a href="index.html#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>]</span>, <span name="embedding">embedding: <span class="extype" name="lamp.nn.AttentionDecoder.M0">M0</span> with <a href="index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="stateToKey">stateToKey: (<span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>) ⇒ <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="keyValue">keyValue: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="tokens">tokens: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="padToken">padToken: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="index.html#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -424,9 +420,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.AttentionDecoder#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(decoder:Mwithlamp.nn.StatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T],embedding:M0withlamp.nn.Module,contextModule:M2withlamp.nn.Module,stateToKey:T=&gt;lamp.autograd.Variable,keyValue:lamp.autograd.Variable):lamp.nn.AttentionDecoder[T,M,M0,M2]"></a><a id="&lt;init&gt;:AttentionDecoder[T,M,M0,M2]"></a>
+      <a id="&lt;init&gt;(decoder:Mwithlamp.nn.StatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T],embedding:M0withlamp.nn.Module,stateToKey:T=&gt;lamp.autograd.Variable,keyValue:lamp.autograd.Variable,tokens:lamp.autograd.Variable,padToken:Long):lamp.nn.AttentionDecoder[T,M,M0]"></a><a id="&lt;init&gt;:AttentionDecoder[T,M,M0]"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/AttentionDecoder.html#&lt;init&gt;(decoder:Mwithlamp.nn.StatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T],embedding:M0withlamp.nn.Module,contextModule:M2withlamp.nn.Module,stateToKey:T=&gt;lamp.autograd.Variable,keyValue:lamp.autograd.Variable):lamp.nn.AttentionDecoder[T,M,M0,M2]" title="Permalink">
+      <a href="../../lamp/nn/AttentionDecoder.html#&lt;init&gt;(decoder:Mwithlamp.nn.StatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T],embedding:M0withlamp.nn.Module,stateToKey:T=&gt;lamp.autograd.Variable,keyValue:lamp.autograd.Variable,tokens:lamp.autograd.Variable,padToken:Long):lamp.nn.AttentionDecoder[T,M,M0]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -435,7 +431,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">AttentionDecoder</span><span class="params">(<span name="decoder">decoder: <span class="extype" name="lamp.nn.AttentionDecoder.M">M</span> with <a href="index.html#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>]</span>, <span name="embedding">embedding: <span class="extype" name="lamp.nn.AttentionDecoder.M0">M0</span> with <a href="index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="contextModule">contextModule: <span class="extype" name="lamp.nn.AttentionDecoder.M2">M2</span> with <a href="index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="stateToKey">stateToKey: (<span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>) ⇒ <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="keyValue">keyValue: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span>
+        <span class="name">AttentionDecoder</span><span class="params">(<span name="decoder">decoder: <span class="extype" name="lamp.nn.AttentionDecoder.M">M</span> with <a href="index.html#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>]</span>, <span name="embedding">embedding: <span class="extype" name="lamp.nn.AttentionDecoder.M0">M0</span> with <a href="index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>, <span name="stateToKey">stateToKey: (<span class="extype" name="lamp.nn.AttentionDecoder.T">T</span>) ⇒ <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="keyValue">keyValue: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="tokens">tokens: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="padToken">padToken: <span class="extype" name="scala.Long">Long</span></span>)</span>
       </span>
       
       
@@ -591,22 +587,6 @@
                 <span class="name">@unspecialized</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.nn.AttentionDecoder#contextModule" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="contextModule:M2withlamp.nn.Module"></a><a id="contextModule:M2withModule"></a>
-      <span class="permalink">
-      <a href="../../lamp/nn/AttentionDecoder.html#contextModule:M2withlamp.nn.Module" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">contextModule</span><span class="result">: <span class="extype" name="lamp.nn.AttentionDecoder.M2">M2</span> with <a href="index.html#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a></span>
-      </span>
-      
-      
     </li><li name="lamp.nn.AttentionDecoder#decoder" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="decoder:Mwithlamp.nn.StatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T]"></a><a id="decoder:MwithStatefulModule[Variable,Variable,T]"></a>
       <span class="permalink">
@@ -846,6 +826,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.nn.AttentionDecoder#padToken" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="padToken:Long"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/AttentionDecoder.html#padToken:Long" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">padToken</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.GenericModule#parameters" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="parameters:Seq[(lamp.autograd.Variable,lamp.nn.PTag)]"></a><a id="parameters:Seq[(Variable,PTag)]"></a>
       <span class="permalink">
@@ -926,6 +922,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Function1 → AnyRef → Any</dd></dl></div>
+    </li><li name="lamp.nn.AttentionDecoder#tokens" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="tokens:lamp.autograd.Variable"></a><a id="tokens:Variable"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/AttentionDecoder.html#tokens:lamp.autograd.Variable" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">tokens</span><span class="result">: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <span class="permalink">
