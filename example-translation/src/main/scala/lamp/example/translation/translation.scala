@@ -307,7 +307,7 @@ object Train extends App {
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
         learningRate = simple(config.learningRate),
-        scheduler = LearningRateSchedule.noop,
+        scheduler = LearningRateSchedule.cyclicSchedule(10d, 300),
         clip = Some(1d)
       )
 
