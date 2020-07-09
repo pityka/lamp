@@ -6,6 +6,7 @@ import lamp.autograd.Reduction
 import lamp.autograd.Mean
 import aten.ATen
 import lamp.autograd.Sum
+import lamp.syntax
 
 trait LossFunction {
 
@@ -38,11 +39,17 @@ object LossFunctions {
       classWeights: Tensor,
       ignore: Long = -100L
   ) extends LossFunction {
+    val ignoreScalar = Tensor.scalarLong(ignore, classWeights.options)
     def apply(out: Variable, target: Tensor) = {
       val timeSteps = out.shape(0)
       val batches = out.shape(1)
       val lossesAtTimeSteps = (0 until timeSteps.toInt).map { t =>
         val t1 = ATen.select(target, 0, t)
+        val ignored = ATen.eq_1(t1, ignoreScalar)
+        val sumT = ATen.sum_0(ignored)
+        val ignoredCount = sumT.toLongMat.raw(0)
+        val count = batches - ignoredCount
+        Tensor.releaseAll(Array(sumT, ignored))
         val v = out
           .select(0, t)
           .nllLoss(
@@ -52,10 +59,12 @@ object LossFunctions {
             reduction = Sum,
             ignore = ignore
           )
-        v.releaseWith(t1)
+        (v.releaseWith(t1), count)
       }
-      val v = lossesAtTimeSteps.reduce(_ + _) * (1d / (timeSteps * batches))
-      (v, timeSteps * batches)
+      val totalCount = lossesAtTimeSteps.map(_._2).sum
+      val v =
+        lossesAtTimeSteps.map(_._1).reduce(_ + _) * (1d / totalCount)
+      (v, totalCount)
     }
   }
 }
