@@ -36,6 +36,8 @@ class GradientSuite extends AnyFunSuite {
   val nd1x2x2x2 = NDArray(mat.ones(2, 4).toArray, List(1, 2, 2, 2))
   val mat1x1 = Mat(Vec(1d))
   val mat3x2 = mat2x3.T
+  val mat3x1 = Mat(Vec(1d, 2d, 3d))
+  val mat3x1_2 = Mat(Vec(2d, 3d, 4d))
   val t2x3 = TensorHelpers.fromMat(mat2x3)
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
   val t3x2 = ATen.transpose(t2x3, 0, 1)
@@ -673,6 +675,32 @@ class GradientSuite extends AnyFunSuite {
     implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.mean(List(0)).sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
+  testGradientAndValue("mse loss")(mat3x1, 1d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val x2 = TensorHelpers.fromMat(mat3x1_2, cuda)
+    val L = x1.mseLoss(ATen.squeeze_0(x2)).sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
+  testGradientAndValue("l1 loss")(mat3x1, 1d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val x2 = TensorHelpers.fromMat(mat3x1_2, cuda)
+    val L = x1.l1Loss(ATen.squeeze_0(x2)).sum
     if (doBackprop) {
       L.backprop()
     }

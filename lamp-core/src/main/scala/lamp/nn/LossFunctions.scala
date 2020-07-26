@@ -17,6 +17,18 @@ trait LossFunction {
 }
 
 object LossFunctions {
+  case object MSE extends LossFunction {
+    def apply(out: Variable, target: Tensor) = {
+      val v = out.mseLoss(target)
+      (v, out.shape(0))
+    }
+  }
+  case object L1Loss extends LossFunction {
+    def apply(out: Variable, target: Tensor) = {
+      val v = out.l1Loss(target)
+      (v, out.shape(0))
+    }
+  }
   case class NLL(
       numClasses: Int,
       classWeights: Tensor,

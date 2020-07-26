@@ -11,6 +11,14 @@ object LearningRateSchedule {
     startY + (endY - startY) * f
   }
   def noop = (_: Long) => 1d
+  def linear(start: Double, end: Double, maxSteps: Long) =
+    (stepCount: Long) => {
+      math.max(end, interpolate(start, end, maxSteps, stepCount))
+    }
+  def stepAfter(steps: Long, factor: Double) =
+    (stepCount: Long) => {
+      if (stepCount > steps) factor else 1d
+    }
   def cyclicSchedule(
       maxFactor: Double,
       periodLength: Long

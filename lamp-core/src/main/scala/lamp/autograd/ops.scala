@@ -584,6 +584,48 @@ case object Sum extends Reduction {
   def asLong = 2L
 }
 
+case class MseLoss(input: Variable, target: Tensor, reduction: Reduction)
+    extends Op {
+  assert(input.value.numel == target.numel())
+  val params = List(
+    input.zipBackward { (p, out) =>
+      val tmp =
+        ATen.mse_loss_backward(p, input.value, targetViewed, reduction.asLong)
+
+      ATen.add_out(out, out, tmp, 1d)
+
+      tmp.release
+    }
+  )
+  val targetViewed = ATen._unsafe_view(target, input.shape.toArray)
+  val value =
+    Variable(
+      this,
+      ATen.mse_loss(input.value, targetViewed, reduction.asLong),
+      input.pool
+    ).releasable.releaseWith(targetViewed)
+}
+case class L1Loss(input: Variable, target: Tensor, reduction: Reduction)
+    extends Op {
+  assert(input.value.numel == target.numel())
+  val params = List(
+    input.zipBackward { (p, out) =>
+      val tmp =
+        ATen.l1_loss_backward(p, input.value, targetViewed, reduction.asLong)
+
+      ATen.add_out(out, out, tmp, 1d)
+
+      tmp.release
+    }
+  )
+  val targetViewed = ATen._unsafe_view(target, input.shape.toArray)
+  val value =
+    Variable(
+      this,
+      ATen.l1_loss(input.value, targetViewed, reduction.asLong),
+      input.pool
+    ).releasable.releaseWith(targetViewed)
+}
 case class NllLoss(
     input: Variable,
     target: Tensor,
@@ -1379,7 +1421,6 @@ case class Embedding(
   assert(input.pool == weight.pool)
   assert(input.shape.size >= 1, "Input dimensions must be at least 1")
   assert(weight.shape.size == 2, "Weight must have 2 dimensions")
-
   override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
     weight.zipBackward { (p, out) =>
       val tmp = ATen
@@ -1392,9 +1433,16 @@ case class Embedding(
   )
 
   val value =
-    Variable(
-      this,
-      ATen.embedding(weight.value, input.value, 0L, false, false),
-      input.pool
-    ).releasable
+    try {
+      Variable(
+        this,
+        ATen.embedding(weight.value, input.value, 0L, false, false),
+        input.pool
+      ).releasable
+    } catch {
+      case e: Throwable =>
+        println(weight.shape)
+        println(input.value.toLongMat)
+        throw e
+    }
 }

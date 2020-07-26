@@ -10,9 +10,10 @@ import org.saddle.scalar.ScalarTagDouble
 import scribe.Logger
 import Writer.writeCheckpoint
 import lamp.autograd.Variable
+import aten.ATen
 object IOLoops {
 
-  def epochs[I, M <: GenericModule[I, Variable]](
+  def epochs[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(Tensor, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I],
@@ -24,16 +25,33 @@ object IOLoops {
       minimumCheckpointFile: Option[File] = None,
       logFrequency: Int = 1,
       validationFrequency: Int = 1,
-      logger: Option[Logger] = None
+      logger: Option[Logger] = None,
+      returnMinValidationLossModel: Seq[Int] = Nil
   ): IO[SupervisedModel[I, M]] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
     def loop(
         epoch: Int,
-        minValidationLoss: Option[Double]
+        minValidationLoss: Option[Double],
+        minValidationLossModel: Option[Seq[Tensor]]
     ): IO[SupervisedModel[I, M]] =
-      if (epoch >= epochs) IO.pure(modelWithOptimizer.model)
+      if (epoch >= epochs)
+        IO.pure {
+          minValidationLossModel match {
+            case None => modelWithOptimizer.model
+            case Some(state) =>
+              modelWithOptimizer.model
+                .copy(module = modelWithOptimizer.model.module.load(state))
+          }
+        }
       else {
+
+        def copyModel = {
+          logger.foreach(_.info(s"Copying model at epoch $epoch"))
+          minValidationLossModel.foreach(_.foreach(_.release))
+          model.module.state.map(_._1.value).map { t => ATen.clone(t) }
+        }
+
         for {
           _ <- oneEpoch(
             modelWithOptimizer,
@@ -62,14 +80,24 @@ object IOLoops {
             minValidationLoss
           else if (minValidationLoss.isEmpty) maybeValidationLoss
           else Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
+
+          nextMinValidationLossModel = if (returnMinValidationLossModel
+                                             .contains(epoch)) {
+            if (maybeValidationLoss.isEmpty) None
+            else if (minValidationLoss.isEmpty) Some(copyModel)
+            else if (minValidationLoss.get > maybeValidationLoss.get)
+              Some(copyModel)
+            else None
+          } else None
           next <- loop(
             epoch + 1,
-            nextMinValidationLoss
+            nextMinValidationLoss,
+            nextMinValidationLossModel
           )
         } yield next
       }
 
-    loop(0, None)
+    loop(0, None, None)
   }
 
   def oneEpoch[I, M <: GenericModule[I, Variable]](
@@ -98,7 +126,7 @@ object IOLoops {
                   if (batchCount % trainLogFrequency == 0) {
                     logger.foreach(
                       _.info(
-                        s"Training loss after batch $batchCount: $loss (exp: ${math.exp(loss)})"
+                        s"Training loss in batch $batchCount: $loss (exp: ${math.exp(loss)})"
                       )
                     )
                   }
@@ -155,16 +183,7 @@ object IOLoops {
                           )
                         }
                       }
-                      _ <- IO {
-                        if (batchCount % validationLogFrequency == 0) {
-                          logger.foreach(
-                            _.info(
-                              s"Validation loss after batch $batchCount in epoch $epochCount over $numExamples examples: $validationLoss (exp: ${math
-                                .exp(validationLoss)})"
-                            )
-                          )
-                        }
-                      }
+
                     } yield (validationLoss * numExamples, numExamples)
                 }
           }

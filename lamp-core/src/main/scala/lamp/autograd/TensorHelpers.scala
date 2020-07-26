@@ -9,6 +9,7 @@ import lamp.FloatingPointPrecision
 import lamp.DoublePrecision
 import lamp.Device
 import lamp.CudaDevice
+import lamp.SinglePrecision
 
 object TensorHelpers {
   def unbroadcast(p: Tensor, desiredShape: List[Long]) = {
@@ -213,6 +214,19 @@ object TensorHelpers {
       t.release
       t2
     } else t
+  }
+
+  def device(t: Tensor) = {
+    val op = t.options
+    if (op.isCPU) CPU
+    else CudaDevice(op.deviceIndex)
+  }
+
+  def precision(t: Tensor) = {
+    val op = t.options
+    if (op.isFloat()) Some(SinglePrecision)
+    else if (op.isDouble) Some(DoublePrecision)
+    else None
   }
 
 }

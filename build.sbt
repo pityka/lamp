@@ -112,6 +112,26 @@ lazy val data = project
   )
   .dependsOn(core % "test->test;compile->compile")
 
+lazy val tabular = project
+  .in(file("lamp-tabular"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-tabular",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.1.2" % "test",
+      "net.sourceforge.jdistlib" % "jdistlib" % "0.4.5"
+    ),
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := Nil,
+    testOptions in AllTest := Nil
+  )
+  .dependsOn(data)
+  .dependsOn(core % "test->test;compile->compile")
+
 lazy val example_cifar100 = project
   .in(file("example-cifar100"))
   .settings(commonSettings: _*)
@@ -171,4 +191,4 @@ lazy val root = project
     publishArtifact := false,
     skip in publish := true
   )
-  .aggregate(core, data, docs, example_cifar100, example_timemachine)
+  .aggregate(core, data, tabular, docs, example_cifar100, example_timemachine)

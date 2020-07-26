@@ -52,4 +52,9 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
 case class ModelWithOptimizer[I, M <: GenericModule[I, Variable]](
     model: SupervisedModel[I, M],
     optimizer: Optimizer
-)
+) {
+  def release() = {
+    optimizer.release
+    model.module.state.foreach(_._1.value.release)
+  }
+}

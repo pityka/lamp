@@ -48,6 +48,10 @@ case class AdamW(
   }
 
   var stepCount = 0L
+  def release = {
+    mt.foreach(_.release)
+    vt.foreach(_.release)
+  }
   def step(gradients: Seq[Option[Tensor]]) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1

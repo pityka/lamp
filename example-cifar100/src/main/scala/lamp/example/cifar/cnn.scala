@@ -24,9 +24,6 @@ case class Residual[M1 <: Module, M2 <: Module](
     right: M1 with Module,
     left: Option[M2 with Module]
 ) extends Module {
-  // override def asEval: Residual = copy(right.asEval, left.map(_.asEval))
-  // override def asTraining: Residual =
-  // copy(right.asTraining, left.map(_.asTraining))
   override def state = right.state ++ left.toList.flatMap(_.state)
   def forward(x: Variable) = {
     val r = right.forward(x)
