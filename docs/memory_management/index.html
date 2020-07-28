@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <title>Lamp Documentation - Lamp</title>
+  <title>Memory management - Lamp</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   <link rel="icon" href="https://pityka.github.io/lamp/favicon.png">
@@ -18,7 +18,7 @@
 
 </head>
 
-<body class='page page-default-list'>
+<body class='page page-default-single'>
   <div id="main-menu-mobile" class="main-menu-mobile">
   <ul>
     
@@ -29,7 +29,7 @@
       </a>
     </li>
     
-    <li class="menu-item-docs active">
+    <li class="menu-item-docs">
       <a href="/lamp/docs/">
         <span>Docs</span>
       </a>
@@ -64,7 +64,7 @@
       </a>
     </li>
     
-    <li class="menu-item-docs active">
+    <li class="menu-item-docs">
       <a href="/lamp/docs/">
         <span>Docs</span>
       </a>
@@ -109,7 +109,7 @@
       <a href="https://pityka.github.io/lamp/docs/usage_overview/">How to build and train a model</a>
     </li>
     
-    <li class="">
+    <li class="active ">
       <a href="https://pityka.github.io/lamp/docs/memory_management/">Memory management</a>
     </li>
     
@@ -119,63 +119,24 @@
         </div>
         <div class="col-12 col-md-9">
           
-
-<span class="overview">Overview</span>
-<h1 class="title">Lamp Documentation</h1>
-<div class="content">
+<h1 class="title">Memory management</h1>
+<div class="content anchor-link-enabled">
   
 
-<h1 id="lamp">Lamp</h1>
+<p>Lamp allocates data as ATen tensors which are stored off heap.
+Native ATen tensors are exposed to the JVM via the <code>aten.Tensor</code> class.
+Each <code>aten.Tensor</code> JVM object is a handle to the tensor - actually handle to native <code>Tensor</code> object which is a handle itself to the tensor&rsquo;s data.</p>
 
-<p><a href="https://codecov.io/gh/pityka/lamp"><img src="https://codecov.io/gh/pityka/lamp/branch/master/graph/badge.svg" alt="codecov" /></a>
-<a href="https://github.com/pityka/lamp/actions?query=workflow%3ACI"><img src="https://github.com/pityka/lamp/workflows/CI/badge.svg" alt="" /></a>
-<a href="https://pityka.github.io/lamp/api/lamp/index.html"><img src="https://img.shields.io/badge/api-scaladoc-green" alt="doc" /></a>
-<a href="https://pityka.github.io/lamp"><img src="https://img.shields.io/badge/docs-green" alt="doc" /></a></p>
+<p>Tensors must be released manually with the <code>aten.Tensor#release</code> or <code>releaseAll</code> methods. A double release might crash the VM.</p>
 
-<p>Lamp is small a deep learning library for Scala with native CPU and GPU backend.</p>
+<h1 id="autograd-variables">autograd Variables</h1>
 
-<p>Lamp is inspired by <a href="https://pytorch.org/">pytorch</a>.
-The foundation of lamp is a <a href="https://github.com/pityka/aten-scala">JNI binding to ATen</a>, the C++ tensor backend of torch (<a href="https://pytorch.org/cppdocs/#aten]">see here</a>).
-As a consequence lamp uses fast CPU and GPU code and stores its data in off-heap memory.</p>
+<p>In contrast with <code>aten.Tensor</code>s <code>lamp.autograd.Variable</code>s are managed. Allocation of these are recorded into a pool (<code>lamp.autograd.AllocatedVariablePool</code>) and the pool is released at certain points - after each backpropagation step - during the training loop.</p>
 
-<h1 id="features">Features</h1>
-
-<p>Lamp implements generic automatic reverse mode differentiation (also known as autograd, see e.g. <a href="https://arxiv.org/pdf/1811.05031.pdf">this paper</a>).</p>
-
-<p>On top of that it provides a small set of components to build neural networks:</p>
-
-<ul>
-<li>fully connected, 1D and 2D convolutional, RNN and GRU layers</li>
-<li>various nonlinearities</li>
-<li>batch normalization and weight normalization</li>
-<li>dropout</li>
-<li>SgdW and AdamW optimizers (see <a href="https://arxiv.org/abs/1711.05101">here</a>)</li>
-<li>training loop and data loaders on top of cats-effect</li>
-<li>checkpointing</li>
-</ul>
+<p>The <code>const(t:Tensor)</code> or <code>param(t:Tensor)</code> Variable factories do not append their argument to the pool, therefore those tensors are not released when the pool is cleared. Use the <code>releasable</code> method on a variable to ensure the pool will release their tensor.</p>
 
 </div>
-
-
-<div class="summary mb-2">
-  
-  <h2 class="title-summary"><a href="https://pityka.github.io/lamp/docs/getting_started/">Getting started</a></h2>
-  
 </div>
-
-<div class="summary mb-2">
-  
-  <h2 class="title-summary"><a href="https://pityka.github.io/lamp/docs/usage_overview/">How to build and train a model</a></h2>
-  
-</div>
-
-<div class="summary mb-2">
-  
-  <h2 class="title-summary"><a href="https://pityka.github.io/lamp/docs/memory_management/">Memory management</a></h2>
-  
-</div>
-
-
 
         </div>
       </div>

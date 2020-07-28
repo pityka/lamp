@@ -109,6 +109,10 @@
       <a href="https://pityka.github.io/lamp/docs/usage_overview/">How to build and train a model</a>
     </li>
     
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/memory_management/">Memory management</a>
+    </li>
+    
   </ul>
 </div>
           </div>
@@ -121,11 +125,14 @@
 
 <h1 id="overview">Overview</h1>
 
-<p>Lamp&rsquo;s design closely follows the design of pytorch. It is organized into the following components:
-1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the <code>aten</code> package.
-2. An algorithm to compute partial derivatives of complex functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package <code>lamp.autograd</code>.
-3. A set of building blocks to build neural networks in the package <code>lamp.nn</code>.
-4. Training loop and utilities to work with image and text data in <code>lamp.data</code>.</p>
+<p>Lamp&rsquo;s design closely follows the design of pytorch. It is organized into the following components:</p>
+
+<ol>
+<li>A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the <code>aten</code> package.</li>
+<li>An algorithm to compute partial derivatives of composite functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package <code>lamp.autograd</code>.</li>
+<li>A set of building blocks to build neural networks in the package <code>lamp.nn</code>.</li>
+<li>Training loop and utilities to work with image and text data in <code>lamp.data</code>.</li>
+</ol>
 
 <h1 id="building-a-classifier">Building a classifier</h1>
 
@@ -202,25 +209,25 @@ The feature matrix is copied into a 2D floating point tensor and the target vect
 <span style="color:#75715e">// precision: SinglePrecision.type = SinglePrecision
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testDataTensor <span style="color:#66d9ef">=</span>
       <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span> precision<span style="color:#f92672">)</span>
-<span style="color:#75715e">// testDataTensor: aten.Tensor = Tensor at 140417479396256; CPUFloatType
+<span style="color:#75715e">// testDataTensor: aten.Tensor = Tensor at 140584507815200; CPUFloatType
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testTarget <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>squeeze_0<span style="color:#f92672">(</span>
       <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
         <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>firstCol<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toVec<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toLong<span style="color:#f92672">)),</span>
         device
       <span style="color:#f92672">)</span>
     <span style="color:#f92672">)</span>
-<span style="color:#75715e">// testTarget: aten.Tensor = Tensor at 140417493023296; CPULongType
+<span style="color:#75715e">// testTarget: aten.Tensor = Tensor at 140584510420112; CPULongType
 </span><span style="color:#75715e"></span>
     <span style="color:#66d9ef">val</span> trainDataTensor <span style="color:#66d9ef">=</span>
       <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span>precision<span style="color:#f92672">)</span>
-<span style="color:#75715e">// trainDataTensor: aten.Tensor = Tensor at 140417493036832; CPUFloatType
+<span style="color:#75715e">// trainDataTensor: aten.Tensor = Tensor at 140584510391280; CPUFloatType
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> trainTarget <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>squeeze_0<span style="color:#f92672">(</span>
       <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
         <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>firstCol<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toVec<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toLong<span style="color:#f92672">)),</span>
         device
       <span style="color:#f92672">)</span>
     <span style="color:#f92672">)</span>
-<span style="color:#f92672">//</span> trainTarget<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">140417493037696</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPULongType</span></code></pre></div>
+<span style="color:#f92672">//</span> trainTarget<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">140584510393888</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPULongType</span></code></pre></div>
 <h2 id="specify-the-model">Specify the model</h2>
 
 <p>Here we use the predefined modules in <code>lamp.nn</code>.</p>
@@ -237,11 +244,11 @@ We also have to give it an <code>aten.TensorOptions</code> which holds informati
 <p>We also have to provide an instance of <code>lamp.autograd.AllocatedVariablePool</code> which is used to keep track of allocated tensors in <code>lamp.autograd</code>. The pool is released after each backward pass. Variables created with <code>lamp.autograd.const</code> and <code>lamp.autograd.param</code> are not put in the pool, therefore those won&rsquo;t get released.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.nn._
 <span style="color:#66d9ef">val</span> tensorOptions <span style="color:#66d9ef">=</span> device<span style="color:#f92672">.</span>options<span style="color:#f92672">(</span><span style="color:#a6e22e">SinglePrecision</span><span style="color:#f92672">)</span>
-<span style="color:#75715e">// tensorOptions: aten.TensorOptions = aten.TensorOptions@14f05ca0
+<span style="color:#75715e">// tensorOptions: aten.TensorOptions = aten.TensorOptions@4f5080ea
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classWeights <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">Array</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">)</span>
-<span style="color:#75715e">// classWeights: aten.Tensor = Tensor at 140417493033600; CPUFloatType
+<span style="color:#75715e">// classWeights: aten.Tensor = Tensor at 140584510393920; CPUFloatType
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">implicit</span> <span style="color:#66d9ef">val</span> pool <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> lamp<span style="color:#f92672">.</span>autograd<span style="color:#f92672">.</span><span style="color:#a6e22e">AllocatedVariablePool</span>
-<span style="color:#75715e">// pool: AllocatedVariablePool = lamp.autograd.AllocatedVariablePool@4ce1ab4c
+<span style="color:#75715e">// pool: AllocatedVariablePool = lamp.autograd.AllocatedVariablePool@28cc690d
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> model <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SupervisedModel</span><span style="color:#f92672">(</span>
   sequence<span style="color:#f92672">(</span>
       <span style="color:#a6e22e">MLP</span><span style="color:#f92672">(</span>in <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">784</span><span style="color:#f92672">,</span> out <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">10</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">List</span><span style="color:#f92672">(</span><span style="color:#ae81ff">64</span><span style="color:#f92672">,</span> <span style="color:#ae81ff">32</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">,</span> dropout <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">0.2</span><span style="color:#f92672">),</span>
@@ -256,43 +263,43 @@ We also have to give it an <code>aten.TensorOptions</code> which holds informati
 </span><span style="color:#75715e">//         Seq4(
 </span><span style="color:#75715e">//           Linear(
 </span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140417472766720; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140417472766720; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//               Constant(Tensor at 140584510744912; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140584510744912; CPUFloatType,
+</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//               true
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             Some(
 </span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140417472992960; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140417472992960; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//                 Constant(Tensor at 140584510966512; CPUFloatType),
+</span><span style="color:#75715e">//                 Tensor at 140584510966512; CPUFloatType,
+</span><span style="color:#75715e">//                 lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//                 true
 </span><span style="color:#75715e">//               )
 </span><span style="color:#75715e">//             )
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           BatchNorm(
 </span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140417472984912; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140417472984912; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//               Constant(Tensor at 140584511103808; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140584511103808; CPUFloatType,
+</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//               true
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140417472987872; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140417472987872; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//               Constant(Tensor at 140584511090352; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140584511090352; CPUFloatType,
+</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//               true
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140417472987840; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140417472987840; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//               Constant(Tensor at 140584510973024; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140584510973024; CPUFloatType,
+</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//               false
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140417473001200; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140417473001200; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//               Constant(Tensor at 140584510976640; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140584510976640; CPUFloatType,
+</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//               false
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             true,
@@ -335,13 +342,10 @@ into appropriately sized mini-batches.</p>
     <span style="color:#f92672">)</span>
 <span style="color:#75715e">// trainedModelIO: IO[SupervisedModel[Variable, Seq2[Variable, Variable, Variable, Sequential[Variable, Seq4[Variable, Variable, Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable], nn.Dropout with GenericModule[Variable, Variable]]] with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable]]]] = Bind(
 </span><span style="color:#75715e">//   Bind(
-</span><span style="color:#75715e">//     Async(
-</span><span style="color:#75715e">//       cats.effect.internals.IOBracket$$$Lambda$1719/264843581@40a32c25,
-</span><span style="color:#75715e">//       false
-</span><span style="color:#75715e">//     ),
-</span><span style="color:#75715e">//     lamp.data.IOLoops$$$Lambda$1720/1694924176@685280dd
+</span><span style="color:#75715e">//     Async(cats.effect.internals.IOBracket$$$Lambda$1747/25333503@bcde468, false),
+</span><span style="color:#75715e">//     lamp.data.IOLoops$$$Lambda$1748/146703551@6be7a271
 </span><span style="color:#75715e">//   ),
-</span><span style="color:#75715e">//   lamp.data.IOLoops$$$Lambda$1721/1834582370@56957f08
+</span><span style="color:#75715e">//   lamp.data.IOLoops$$$Lambda$1749/1100660981@7cfb255
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">)</span></code></pre></div>
 <p>Lamp provides two optimizers: SgdW and AdamW.</p>
 
@@ -353,43 +357,43 @@ into appropriately sized mini-batches.</p>
 </span><span style="color:#75715e">//       Seq4(
 </span><span style="color:#75715e">//         Linear(
 </span><span style="color:#75715e">//           Variable(
-</span><span style="color:#75715e">//             Constant(Tensor at 140417472766720; CPUFloatType),
-</span><span style="color:#75715e">//             Tensor at 140417472766720; CPUFloatType,
-</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//             Constant(Tensor at 140584510744912; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140584510744912; CPUFloatType,
+</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//             true
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           Some(
 </span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140417472992960; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140417472992960; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//               Constant(Tensor at 140584510966512; CPUFloatType),
+</span><span style="color:#75715e">//               Tensor at 140584510966512; CPUFloatType,
+</span><span style="color:#75715e">//               lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//               true
 </span><span style="color:#75715e">//             )
 </span><span style="color:#75715e">//           )
 </span><span style="color:#75715e">//         ),
 </span><span style="color:#75715e">//         BatchNorm(
 </span><span style="color:#75715e">//           Variable(
-</span><span style="color:#75715e">//             Constant(Tensor at 140417472984912; CPUFloatType),
-</span><span style="color:#75715e">//             Tensor at 140417472984912; CPUFloatType,
-</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//             Constant(Tensor at 140584511103808; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140584511103808; CPUFloatType,
+</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//             true
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           Variable(
-</span><span style="color:#75715e">//             Constant(Tensor at 140417472987872; CPUFloatType),
-</span><span style="color:#75715e">//             Tensor at 140417472987872; CPUFloatType,
-</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//             Constant(Tensor at 140584511090352; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140584511090352; CPUFloatType,
+</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//             true
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           Variable(
-</span><span style="color:#75715e">//             Constant(Tensor at 140417472987840; CPUFloatType),
-</span><span style="color:#75715e">//             Tensor at 140417472987840; CPUFloatType,
-</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//             Constant(Tensor at 140584510973024; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140584510973024; CPUFloatType,
+</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//             false
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           Variable(
-</span><span style="color:#75715e">//             Constant(Tensor at 140417473001200; CPUFloatType),
-</span><span style="color:#75715e">//             Tensor at 140417473001200; CPUFloatType,
-</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@4ce1ab4c,
+</span><span style="color:#75715e">//             Constant(Tensor at 140584510976640; CPUFloatType),
+</span><span style="color:#75715e">//             Tensor at 140584510976640; CPUFloatType,
+</span><span style="color:#75715e">//             lamp.autograd.AllocatedVariablePool@28cc690d,
 </span><span style="color:#75715e">//             false
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           true,
@@ -399,7 +403,7 @@ into appropriately sized mini-batches.</p>
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">...</span></code></pre></div>
 <p>The trained model we can use for prediction:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> bogusData <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">Array</span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span><span style="color:#f92672">,</span><span style="color:#ae81ff">784</span><span style="color:#f92672">),</span>tensorOptions<span style="color:#f92672">)</span>
-<span style="color:#75715e">// bogusData: aten.Tensor = Tensor at 140417455490528; CPUFloatType
+<span style="color:#75715e">// bogusData: aten.Tensor = Tensor at 140584509139552; CPUFloatType
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classProbabilities <span style="color:#66d9ef">=</span> trainedModel<span style="color:#f92672">.</span>forward<span style="color:#f92672">(</span>const<span style="color:#f92672">(</span>bogusData<span style="color:#f92672">)).</span>toMat<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>math<span style="color:#f92672">.</span>exp<span style="color:#f92672">)</span>
 <span style="color:#75715e">// classProbabilities: Mat[Double] = [1 x 10]
 </span><span style="color:#75715e">// 0.1000 0.1000 0.1000 0.1000  ... 0.1000 0.1000 0.1000 0.1000 
