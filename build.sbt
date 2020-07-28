@@ -88,7 +88,7 @@ lazy val core = project
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := Tests.Argument("-n", "cuda"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil
   )
 
@@ -107,7 +107,7 @@ lazy val data = project
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := Tests.Argument("-n", "cuda"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil
   )
   .dependsOn(core % "test->test;compile->compile")
@@ -127,7 +127,7 @@ lazy val e2etest = project
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := Tests.Argument("-n", "cuda"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil
   )
   .dependsOn(data)
@@ -147,7 +147,7 @@ lazy val tabular = project
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := Tests.Argument("-n", "cuda"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil
   )
   .dependsOn(data)
