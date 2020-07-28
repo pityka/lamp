@@ -171,7 +171,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         precision = precision,
         minibatchSize = minibatchSize,
         logFrequency = logFrequency,
-        logger = logger,
+        logger = None,
         // ensembleMinibatchSize = minibatchSize,
         // ensembleHiddenSize = 4,
         // ensembleEpochs = 4 :: Nil,

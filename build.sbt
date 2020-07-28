@@ -88,7 +88,7 @@ lazy val core = project
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := Nil,
+    testOptions in Cuda := Tests.Argument("-n", "cuda"),
     testOptions in AllTest := Nil
   )
 
@@ -107,9 +107,30 @@ lazy val data = project
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := Nil,
+    testOptions in Cuda := Tests.Argument("-n", "cuda"),
     testOptions in AllTest := Nil
   )
+  .dependsOn(core % "test->test;compile->compile")
+
+lazy val e2etest = project
+  .in(file("endtoendtest"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-e2etest",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.1.2" % "test"
+    ),
+    skip in publish := true,
+    publishArtifact := false,
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := Tests.Argument("-n", "cuda"),
+    testOptions in AllTest := Nil
+  )
+  .dependsOn(data)
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val tabular = project
@@ -126,7 +147,7 @@ lazy val tabular = project
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := Nil,
+    testOptions in Cuda := Tests.Argument("-n", "cuda"),
     testOptions in AllTest := Nil
   )
   .dependsOn(data)
