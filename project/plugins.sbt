@@ -7,3 +7,5 @@ addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
 addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.4.3")
 
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.2.1")
+
+addSbtPlugin("com.dwijnand" % "sbt-dynver" % "4.0.0")
