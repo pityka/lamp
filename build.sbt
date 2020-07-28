@@ -65,7 +65,9 @@ lazy val commonSettings = Seq(
   cancelable in Global := true,
   githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
     .Environment("GITHUB_TOKEN"),
-  coverageExcludedPackages := "lamp.example.*"
+  coverageExcludedPackages := "lamp.example.*",
+  githubOwner := "pityka",
+  githubRepository := "lamp"
 )
 
 lazy val Cuda = config("cuda").extend(Test)
