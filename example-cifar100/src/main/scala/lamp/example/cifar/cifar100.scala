@@ -21,11 +21,8 @@ import lamp.nn.simple
 import lamp.nn.LossFunctions
 import lamp.syntax
 import lamp.data.BufferedImageHelper
-import lamp.nn.SGDW
 import lamp.nn.LearningRateSchedule
-import org.saddle.scalar.ScalarTagDouble
-import lamp.data.Writer
-import java.io.FileOutputStream
+
 import lamp.data.Reader
 import lamp.DoublePrecision
 import lamp.FloatingPointPrecision
@@ -44,7 +41,7 @@ object Cifar {
       val bb = ByteBuffer
         .allocate(3074)
       lamp.data.Reader.readFully(bb, channel)
-      val label1 = bb.get
+      bb.get
       val label2 = bb.get
 
       val to = ByteBuffer.allocate(3072)
@@ -112,8 +109,8 @@ object Train extends App {
         .action((x, c) => c.copy(labels = x))
         .text("path to cifar100 fine label file")
         .required(),
-      opt[Unit]("gpu").action((x, c) => c.copy(cuda = true)),
-      opt[Unit]("single").action((x, c) => c.copy(singlePrecision = true)),
+      opt[Unit]("gpu").action((_, c) => c.copy(cuda = true)),
+      opt[Unit]("single").action((_, c) => c.copy(singlePrecision = true)),
       opt[Int]("batch-train").action((x, c) => c.copy(trainBatchSize = x)),
       opt[Int]("batch-test").action((x, c) => c.copy(testBatchSize = x)),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
@@ -144,7 +141,7 @@ object Train extends App {
         val net =
           // if (config.network == "lenet")
           //   Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
-          Cnn.resnet(32, numClasses, config.dropout, tensorOptions)
+          Cnn.resnet(numClasses, config.dropout, tensorOptions)
 
         val loadedNet = config.checkpointLoad match {
           case None => net
@@ -167,13 +164,12 @@ object Train extends App {
         Cifar.loadImageFile(new File(config.trainData), 50000, precision)
       val (testTarget, testFullbatch) =
         Cifar.loadImageFile(new File(config.testData), 10000, precision)
-      val textLabels =
-        Resource
-          .fromAutoCloseable(IO {
-            scala.io.Source.fromFile(config.labels)
-          })
-          .use(src => IO { src.getLines.toVector })
-          .unsafeRunSync
+      Resource
+        .fromAutoCloseable(IO {
+          scala.io.Source.fromFile(config.labels)
+        })
+        .use(src => IO { src.getLines.toVector })
+        .unsafeRunSync
 
       scribe.info(
         s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
@@ -202,7 +198,7 @@ object Train extends App {
         scheduler = LearningRateSchedule.noop
       )
 
-      val trainedModel = IOLoops
+      IOLoops
         .epochs(
           model = model,
           optimizerFactory = optimizer,
@@ -229,7 +225,7 @@ object AWTWindow {
   import java.awt.geom.AffineTransform
   def showImage(t: Tensor): javax.swing.JFrame = {
     import javax.swing._
-    import java.awt.{Graphics, RenderingHints}
+    import java.awt.{Graphics}
     val image = BufferedImageHelper.fromDoubleTensor(t)
     val frame = new JFrame("");
     frame.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
@@ -240,7 +236,6 @@ object AWTWindow {
           override def paintComponent(g: Graphics) = {
             super.paintComponent(g)
             val g2 = g.asInstanceOf[Graphics2D]
-            val bounds = getBounds()
             val at = new AffineTransform();
             g2.drawImage(image, at, null);
 

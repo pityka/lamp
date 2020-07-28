@@ -1,8 +1,6 @@
 package lamp.nn
 
 import lamp.autograd.Variable
-import lamp.autograd.ConcatenateAddNewDim
-import lamp.util.NDArray
 
 case class Seq2SeqWithAttention[S0, S1, M0 <: Module, M1 <: StatefulModule2[
   Variable,

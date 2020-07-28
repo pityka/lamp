@@ -3,8 +3,6 @@ package lamp.data
 import aten.Tensor
 import lamp.autograd._
 import aten.ATen
-import aten.TensorOptions
-import lamp.nn._
 import scribe.Logger
 
 trait TrainingCallback {

@@ -2,11 +2,7 @@ package lamp.data
 import lamp.nn._
 import cats.effect._
 import aten.Tensor
-import lamp.syntax
-import lamp.util.NDArray
-import java.io.FileOutputStream
 import java.io.File
-import org.saddle.scalar.ScalarTagDouble
 import scribe.Logger
 import Writer.writeCheckpoint
 import lamp.autograd.Variable

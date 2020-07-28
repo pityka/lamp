@@ -2,15 +2,10 @@ package lamp.data
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
-import org.saddle.order._
-import org.saddle.ops.BinOps._
-import lamp.autograd.{Variable, const, param, TensorHelpers}
 import lamp.nn._
 import aten.ATen
 import aten.TensorOptions
-import java.awt.image.BufferedImage
 import lamp.util.NDArray
-import java.awt.Color
 import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 import java.io.File

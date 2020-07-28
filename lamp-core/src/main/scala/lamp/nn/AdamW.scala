@@ -2,9 +2,6 @@ package lamp.nn
 
 import aten.Tensor
 import aten.ATen
-import cats.implicits._
-import lamp.autograd.TensorHelpers
-import lamp.syntax
 
 object AdamW {
   def factory(

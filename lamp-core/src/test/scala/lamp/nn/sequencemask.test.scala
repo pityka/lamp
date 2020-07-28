@@ -1,17 +1,10 @@
 package lamp.nn
 
 import org.saddle._
-import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
-import aten.ATen
 import lamp.autograd._
-import aten.TensorOptions
-import org.scalatest.Tag
-import lamp.syntax
+
 import lamp.util.NDArray
-import aten.Tensor
-import cats.effect.IO
-import cats.effect.concurrent.Ref
 
 class AttentionSuite extends AnyFunSuite {
   implicit val pool = new AllocatedVariablePool

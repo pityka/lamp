@@ -1,25 +1,18 @@
 package lamp.tabular
 
 import org.saddle._
-import org.saddle.order._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
 import lamp.autograd._
-import aten.TensorOptions
-import org.scalatest.Tag
 import lamp.syntax
-import lamp.util.NDArray
 import aten.Tensor
 import cats.effect.IO
-import cats.effect.concurrent.Ref
-import lamp.nn._
 import lamp.SinglePrecision
 import lamp.CPU
 import lamp.CudaDevice
 import lamp.Device
 import lamp.DoublePrecision
-import scribe.Logger
 import lamp.StringMetadata
 
 object TestTrain {

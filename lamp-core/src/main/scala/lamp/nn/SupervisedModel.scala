@@ -1,12 +1,9 @@
 package lamp.nn
-import lamp.autograd.const
 import aten.Tensor
 import lamp.autograd.Variable
-import lamp.autograd.TensorHelpers
 import aten.ATen
 import cats.effect.Resource
 import cats.effect.IO
-import cats.data.State
 import lamp.syntax
 
 case class SupervisedModel[I, M <: GenericModule[I, Variable]](

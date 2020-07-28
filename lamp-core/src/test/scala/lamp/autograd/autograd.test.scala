@@ -4,10 +4,8 @@ import org.saddle._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
-import aten.TensorOptions
 import lamp.nn.CudaTest
 import lamp.syntax
-import cats.effect.IO
 import lamp.util.NDArray
 import aten.Tensor
 

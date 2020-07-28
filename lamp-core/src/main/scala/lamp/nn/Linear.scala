@@ -2,8 +2,6 @@ package lamp.nn
 
 import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
-import lamp.autograd.TensorHelpers
-import aten.Tensor
 import lamp.autograd.AllocatedVariablePool
 case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
 

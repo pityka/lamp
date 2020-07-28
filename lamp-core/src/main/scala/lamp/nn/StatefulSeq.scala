@@ -1,8 +1,5 @@
 package lamp.nn
 
-import lamp.autograd.Variable
-import aten.Tensor
-
 object statefulSequence {
   def apply[T1, T2, T3, S1, S2, M1 <: StatefulModule[T1, T2, S1], M2 <: StatefulModule[
     T2,

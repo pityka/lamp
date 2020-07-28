@@ -8,8 +8,6 @@ import lamp.autograd.{
   AllocatedVariablePool
 }
 import aten.{ATen, TensorOptions}
-import lamp.autograd.TensorHelpers
-import aten.Tensor
 
 case class Conv1D(
     weights: Variable,

@@ -1,21 +1,16 @@
 package lamp.data
 import org.saddle.{Buffer => _, _}
 import org.saddle.scalar._
-import org.saddle.order._
 import java.nio._
 import scala.util.{Left, Right, Either}
 import java.nio.channels.ReadableByteChannel
 import Writer._
-import org.saddle.index.IndexIntRange
 import aten.Tensor
-import aten.TensorOptions
 import aten.ATen
 import cats.effect.IO
 import java.io.FileInputStream
 import cats.effect.Resource
-import lamp.nn.Module
 import java.io.File
-import lamp.util.NDArray
 import lamp.Device
 import lamp.SinglePrecision
 import lamp.nn.GenericModule

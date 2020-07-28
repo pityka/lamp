@@ -6,16 +6,10 @@ import lamp.autograd.{TensorHelpers, const}
 import org.saddle._
 import aten.ATen
 import aten.Tensor
-import lamp.nn.Module
-import lamp.syntax
 import lamp.Device
 import lamp.autograd.Variable
 import lamp.autograd.ConcatenateAddNewDim
-import lamp.FloatingPointPrecision
-import lamp.DoublePrecision
-import cats.effect.ContextShift
 import lamp.nn.StatefulModule
-import lamp.nn.GenericModule
 import lamp.nn.InitState
 import lamp.nn.FreeRunningRNN
 import lamp.autograd.AllocatedVariablePool
@@ -24,7 +18,6 @@ object Text {
   def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
       batch: Seq[Vector[Long]],
       device: Device,
-      precision: FloatingPointPrecision,
       module: M with StatefulModule[Variable, Variable, T],
       steps: Int
   )(
@@ -32,7 +25,7 @@ object Text {
       pool: AllocatedVariablePool
   ): Resource[IO, Variable] = {
 
-    makePredictionBatch(batch, device, precision).flatMap { batch =>
+    makePredictionBatch(batch, device).flatMap { batch =>
       Resource.make(IO {
 
         FreeRunningRNN(module, steps)
@@ -46,7 +39,6 @@ object Text {
   def sequencePredictionBeam[T, M <: StatefulModule[Variable, Variable, T]](
       prefix: Vector[Long],
       device: Device,
-      precision: FloatingPointPrecision,
       module: M with StatefulModule[Variable, Variable, T],
       steps: Int,
       startSequence: Int,
@@ -55,7 +47,6 @@ object Text {
       implicit is: InitState[M, T],
       pool: AllocatedVariablePool
   ): Resource[IO, Seq[(Variable, Double)]] = {
-    val batchSize = 1
     val k = 3
     def loop(
         n: Int,
@@ -119,7 +110,7 @@ object Text {
       }
     }
 
-    makePredictionBatch(Vector(prefix), device, precision).flatMap { batch =>
+    makePredictionBatch(Vector(prefix), device).flatMap { batch =>
       Resource.make(IO {
 
         loop(
@@ -192,8 +183,7 @@ object Text {
 
   def makePredictionBatch(
       examples: Seq[Vector[Long]],
-      device: Device,
-      precision: FloatingPointPrecision
+      device: Device
   ) = {
     Resource.make(IO {
 

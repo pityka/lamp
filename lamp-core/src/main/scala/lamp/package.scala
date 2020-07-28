@@ -3,7 +3,6 @@ import aten.ATen
 import cats.effect.{IO, Resource}
 import lamp.autograd.{TensorHelpers, AllocatedVariablePool}
 import aten.Tensor
-import org.saddle.Vec
 import org.saddle.Mat
 
 package object lamp {

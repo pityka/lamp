@@ -3,10 +3,7 @@ package lamp.nn
 import org.saddle._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
-import aten.ATen
 import lamp.autograd._
-import aten.TensorOptions
-import org.scalatest.Tag
 
 class SGDSuite extends AnyFunSuite {
 

@@ -4,7 +4,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.CPU
 import lamp.SinglePrecision
 import aten.ATen
-import lamp.nn.Seq3
 import lamp.nn.Embedding
 import lamp.nn.RNN
 import lamp.nn.Fun
@@ -15,7 +14,6 @@ import lamp.nn.simple
 import lamp.nn.LearningRateSchedule
 import cats.effect.IO
 import scala.collection.mutable
-import java.io.File
 import cats.effect.Resource
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.Charset
@@ -23,9 +21,6 @@ import scala.io.Codec
 import lamp.nn.SlowTest
 import lamp.nn.LSTM
 import lamp.nn.SeqLinear
-import lamp.nn.Seq4
-import lamp.nn.Seq5
-import lamp.nn.StatefulSeq5
 import lamp.nn.statefulSequence
 import lamp.autograd.AllocatedVariablePool
 
@@ -47,9 +42,6 @@ class TextGenerationSuite extends AnyFunSuite {
     val (vocab, _) = Text.charsToIntegers(trainText)
     val trainTokenized = Text.charsToIntegers(trainText, vocab)
     val vocabularSize = vocab.size
-    val rvocab = vocab.map(_.swap)
-
-    val hiddenSize = 8
     val lookAhead = 5
     val device = CPU
     val precision = SinglePrecision
@@ -97,7 +89,7 @@ class TextGenerationSuite extends AnyFunSuite {
     )
 
     val buffer = mutable.ArrayBuffer[Double]()
-    val trainedModel = IOLoops
+    IOLoops
       .epochs(
         model = model,
         optimizerFactory = optimizer,
@@ -128,7 +120,6 @@ class TextGenerationSuite extends AnyFunSuite {
     val (vocab, _) = Text.charsToIntegers(trainText)
     val trainTokenized = Text.charsToIntegers(trainText, vocab)
     val vocabularSize = vocab.size
-    val rvocab = vocab.map(_.swap)
 
     val hiddenSize = 1024
     val lookAhead = 10
@@ -178,7 +169,7 @@ class TextGenerationSuite extends AnyFunSuite {
     )
 
     val buffer = mutable.ArrayBuffer[Double]()
-    val trainedModel = IOLoops
+    IOLoops
       .epochs(
         model = model,
         optimizerFactory = optimizer,
@@ -247,7 +238,6 @@ class TextGenerationSuite extends AnyFunSuite {
           Text.charsToIntegers(t, vocab).map(_.toLong)
         ),
         device,
-        precision,
         trainedModel,
         lookAhead
       )
@@ -305,7 +295,6 @@ class TextGenerationSuite extends AnyFunSuite {
           .map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
           .head,
         device,
-        precision,
         trainedModel,
         lookAhead,
         0,

@@ -3,7 +3,6 @@ package lamp.util
 import org.saddle._
 import scala.reflect.ClassTag
 import org.saddle._
-import org.saddle.order._
 import aten.ATen
 import aten.TensorOptions
 import aten.Tensor

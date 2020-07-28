@@ -23,7 +23,6 @@ import lamp.SinglePrecision
 import org.saddle.index.IndexIntRange
 import lamp.DoublePrecision
 import lamp.CudaDevice
-import lamp.data.ValidationCallback
 
 sealed trait Metadata
 case object Numerical extends Metadata
@@ -300,7 +299,7 @@ object AutoLoop {
     val numericalSubset = ATen.index_select(data, 1, numericalIdxTensor)
     numericalIdxTensor.release
     val categoricals = dataLayout.zipWithIndex.collect {
-      case (Categorical(classes), idx) =>
+      case (Categorical(_), idx) =>
         val selected = ATen.select(data, 1, idx)
         val long = ATen._cast_Long(selected, false)
         selected.release
@@ -328,7 +327,6 @@ object AutoLoop {
     }
 
     val embedding = TabularEmbedding.make(
-      numericInputDimension = numericalCount,
       categoricalClassesWithEmbeddingDimensions = categoricalEmbeddingSizes,
       modelTensorOptions
     )
@@ -543,7 +541,7 @@ object AutoLoop {
         // (instanceID, index within fold, index of fold)
         val indices: Seq[(Int, Int, Int)] =
           predictionsWithInstanceIDs.zipWithIndex.flatMap {
-            case ((predicted, instanceIdx), foldIdx) =>
+            case ((_, instanceIdx), foldIdx) =>
               instanceIdx.zipWithIndex.map {
                 case (instanceIdx, innerIdx) =>
                   (instanceIdx, innerIdx, foldIdx)

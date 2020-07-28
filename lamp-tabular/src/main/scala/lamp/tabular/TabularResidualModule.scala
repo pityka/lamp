@@ -1,13 +1,8 @@
 package lamp.tabular
 
-import lamp._
 import lamp.nn._
 import aten.TensorOptions
-import lamp.autograd.MaxPool2D
 import lamp.autograd.Variable
-import aten.Tensor
-import lamp.util.NDArray
-import lamp.autograd.AvgPool2D
 import lamp.autograd.AllocatedVariablePool
 
 case class TabularResidual[Block <: Module, B2 <: Module](

@@ -1,5 +1,4 @@
 package lamp.autograd
-import org.saddle._
 import aten.{Tensor, ATen}
 import java.{util => ju}
 import aten.TensorOptions

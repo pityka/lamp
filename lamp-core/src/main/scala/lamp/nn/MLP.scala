@@ -1,10 +1,7 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param}
-import aten.{ATen, TensorOptions}
-import lamp.autograd.TensorHelpers
-import aten.Tensor
 import lamp.autograd.AllocatedVariablePool
+import aten.TensorOptions
 
 /** Factory for multilayer fully connected feed forward networks
   *

@@ -2,9 +2,6 @@ package lamp.nn
 
 import aten.Tensor
 import lamp.autograd._
-import aten.ATen
-import aten.TensorOptions
-import lamp.syntax
 
 case class Sequential[A, M <: GenericModule[A, A]](
     members: M with GenericModule[A, A]*
@@ -123,7 +120,7 @@ trait GenericModule[A, B] extends (A => B) {
   ): Seq[Option[Tensor]] = {
     if (zeroGrad) {
       parameters.foreach {
-        case (param, tag) =>
+        case (param, _) =>
           param.zeroGrad()
       }
     }

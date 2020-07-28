@@ -1,14 +1,10 @@
 package lamp.example.cifar
 
-import lamp._
 import lamp.nn._
 import aten.TensorOptions
 import lamp.autograd.MaxPool2D
 import lamp.autograd.Variable
-import aten.Tensor
-import lamp.util.NDArray
 import lamp.autograd.AvgPool2D
-import org.saddle.RankTie.Avg
 import lamp.autograd.AllocatedVariablePool
 
 case class Peek(label: String) extends Module {
@@ -101,7 +97,6 @@ object Residual {
 object Cnn {
 
   def resnet(
-      width: Int,
       numClasses: Int,
       dropout: Double,
       tOpt: TensorOptions

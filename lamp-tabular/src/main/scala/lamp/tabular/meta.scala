@@ -8,9 +8,7 @@ import cats.effect.Resource
 import cats.effect.IO
 import lamp.tabular.Metadata
 import aten.Tensor
-import lamp.tabular.Categorical
 import lamp.tabular.Numerical
-import org.saddle.index.IndexIntRange
 
 sealed trait StringMetadata
 object StringMetadata {
@@ -161,7 +159,7 @@ object StringMetadata {
       if (missingCount >= 5)
         Some(
           (
-            v.map(v => 0d).fillNA(_ => 1d),
+            v.map(_ => 0d).fillNA(_ => 1d),
             lamp.tabular.Categorical(2)
           )
         )
@@ -232,7 +230,7 @@ object StringMetadata {
                 indicators,
                 missingCount
               )
-            case (column, Unknown(_)) => Nil
+            case (_, Unknown(_)) => Nil
             case (column, Categorical(levels, missingLevel)) =>
               convertCategorical(column, levels, missingLevel)
           }

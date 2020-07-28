@@ -8,21 +8,12 @@ import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
 import lamp.autograd._
 import aten.TensorOptions
-import org.scalatest.Tag
-import lamp.syntax
-import lamp.util.NDArray
-import aten.Tensor
-import cats.effect.IO
-import cats.effect.concurrent.Ref
+
 import lamp.nn._
 import lamp.SinglePrecision
 import lamp.CPU
 import lamp.CudaDevice
-import lamp.Device
-import lamp.DoublePrecision
-import scribe.Logger
 import java.io.File
-import scala.annotation.meta.field
 import lamp.data.BatchStream
 import lamp.data.IOLoops
 import java.io.FileOutputStream
@@ -142,12 +133,6 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         device
       )
 
-    val logger = scribe
-      .Logger("test")
-      .clearHandlers()
-      .clearModifiers()
-      .withMinimumLevel(scribe.Level.Debug)
-
     val trainedModel = IOLoops.epochs(
       model = model,
       optimizerFactory = AdamW
@@ -160,7 +145,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       epochs = 50,
       logger = None //Some(logger)
     )
-    val (loss, output, _) = trainedModel
+    val (_, output, _) = trainedModel
       .flatMap(
         _.lossAndOutput(const(testFeaturesTensor), testTargetTensor).allocated
           .map(_._1)

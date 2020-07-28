@@ -2,8 +2,6 @@ package lamp.nn
 
 import lamp.autograd.{Variable, param, Conv2D => Conv2dOp, const}
 import aten.{ATen, TensorOptions}
-import lamp.autograd.TensorHelpers
-import aten.Tensor
 import lamp.autograd.AllocatedVariablePool
 case class Conv2D(
     weights: Variable,

@@ -1,7 +1,6 @@
 package lamp.nn
 
 import lamp.autograd.Variable
-import aten.Tensor
 
 case class Dropout(prob: Double, training: Boolean) extends Module {
   override def state: Seq[(Variable, PTag)] = Nil

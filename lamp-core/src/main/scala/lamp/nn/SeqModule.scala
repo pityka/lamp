@@ -1,8 +1,5 @@
 package lamp.nn
 
-import lamp.autograd.Variable
-import aten.Tensor
-
 object sequence {
 
   def apply[T1, T2, T3, M1 <: GenericModule[T1, T2], M2 <: GenericModule[

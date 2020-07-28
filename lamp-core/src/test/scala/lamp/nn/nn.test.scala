@@ -9,9 +9,6 @@ import aten.TensorOptions
 import org.scalatest.Tag
 import lamp.syntax
 import lamp.util.NDArray
-import aten.Tensor
-import cats.effect.IO
-import cats.effect.concurrent.Ref
 
 object CudaTest extends Tag("cuda")
 object SlowTest extends Tag("slow")
@@ -42,7 +39,7 @@ class NNSuite extends AnyFunSuite {
         val module1 = moduleF(pool)
         val state = module1.state
         val modifiedState = state.map {
-          case (v, ptag) =>
+          case (v, _) =>
             ATen.mul_1(v.value, -1d)
         }
         val module2 = module1.load(modifiedState)
@@ -119,7 +116,7 @@ class NNSuite extends AnyFunSuite {
         val module1 = moduleF(pool)
         val state = module1.state
         val modifiedState = state.map {
-          case (v, ptag) =>
+          case (v, _) =>
             ATen.mul_1(v.value, -1d)
         }
         val module2 = module1.load(modifiedState)
@@ -197,7 +194,7 @@ class NNSuite extends AnyFunSuite {
         val module1 = moduleF(pool)
         val state = module1.state
         val modifiedState = state.map {
-          case (v, ptag) =>
+          case (v, _) =>
             ATen.mul_1(v.value, -1d)
         }
         val module2 = module1.load(modifiedState)
@@ -512,7 +509,6 @@ class NNSuite extends AnyFunSuite {
   }
 
   test1("gradient clipping") { cuda =>
-    implicit val pool = selectPool(cuda)
     val topt =
       if (cuda) TensorOptions.dtypeDouble().cuda
       else TensorOptions.dtypeDouble()

@@ -1,7 +1,6 @@
 package lamp.data
 
 import java.awt.image.BufferedImage
-import lamp.autograd.TensorHelpers
 import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
@@ -70,7 +69,8 @@ object BufferedImageHelper {
       )
     val ar = Array.ofDim[Float](dataAsInt.length * 3)
     val n = dataAsInt.length
-    val r = {
+
+    {
       var i = 0
       while (i < n) {
         val c = dataAsInt(i)
@@ -78,7 +78,8 @@ object BufferedImageHelper {
         i += 1
       }
     }
-    val g = {
+
+    {
       var i = n
       while (i < n * 2) {
         val c = dataAsInt(i - n)
@@ -86,7 +87,8 @@ object BufferedImageHelper {
         i += 1
       }
     }
-    val b = {
+
+    {
       var i = n * 2
       while (i < n * 3) {
         val c = dataAsInt(i - n * 2)

@@ -4,42 +4,26 @@ import lamp.CudaDevice
 import lamp.CPU
 import lamp.nn.SupervisedModel
 import aten.ATen
-import lamp.nn.Module
 import lamp.nn.LossFunctions
-import lamp.data.{Reader, Text, IOLoops, Peek}
+import lamp.data.{Reader, Text, IOLoops}
 import java.io.File
-import lamp.data.BatchStream
 import lamp.nn.AdamW
 import lamp.nn.LearningRateSchedule
 import lamp.nn.simple
-import lamp.nn.RNN
 import cats.effect.Resource
 import cats.effect.IO
 import lamp.data.TrainingCallback
 import lamp.data.ValidationCallback
-import lamp.nn.Sequential
 import lamp.nn.Fun
 import aten.Tensor
-import lamp.util.NDArray
-import lamp.syntax
-import lamp.nn.Seq2
-import lamp.nn.StatefulModule
-import lamp.autograd.Variable
-import lamp.autograd.const
-import lamp.nn.Seq3
-import lamp.nn.Seq4
 import lamp.DoublePrecision
-import lamp.FloatingPointPrecision
 import lamp.SinglePrecision
-import lamp.nn.GRU
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.Charset
 import scala.io.Codec
 import lamp.nn.Embedding
 import lamp.nn.SeqLinear
-import lamp.nn.Seq5
 import lamp.nn.LSTM
-import lamp.nn.StatefulSeq5
 import lamp.nn.statefulSequence
 import lamp.autograd.AllocatedVariablePool
 
@@ -73,8 +57,8 @@ object Train extends App {
         .action((x, c) => c.copy(testData = x))
         .text("path to cifar100 binary test data")
         .required(),
-      opt[Unit]("gpu").action((x, c) => c.copy(cuda = true)),
-      opt[Unit]("single").action((x, c) => c.copy(singlePrecision = true)),
+      opt[Unit]("gpu").action((_, c) => c.copy(cuda = true)),
+      opt[Unit]("single").action((_, c) => c.copy(singlePrecision = true)),
       opt[Int]("train-batch").action((x, c) => c.copy(trainBatchSize = x)),
       opt[Int]("validation-batch").action((x, c) =>
         c.copy(validationBatchSize = x)
@@ -250,7 +234,6 @@ object Train extends App {
           .sequencePrediction(
             List(prefix).map(t => Text.charsToIntegers(t, vocab).map(_.toLong)),
             device,
-            precision,
             trainedModel.module.statefulModule,
             lookAhead
           )

@@ -2,8 +2,6 @@ package lamp.nn
 
 import lamp.autograd.{Variable, param, AllocatedVariablePool}
 import aten.{ATen, TensorOptions}
-import lamp.autograd.TensorHelpers
-import aten.Tensor
 
 case class WeightNormLinear(
     weightsV: Variable,

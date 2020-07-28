@@ -6,8 +6,6 @@ import org.saddle._
 import lamp.autograd.{TensorHelpers, const}
 import aten.ATen
 import lamp.Device
-import lamp.FloatingPointPrecision
-import lamp.DoublePrecision
 import lamp.autograd.Variable
 import lamp.autograd.AllocatedVariablePool
 

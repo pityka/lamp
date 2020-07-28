@@ -9,7 +9,6 @@ import java.io.File
 import cats.effect.IO
 import cats.effect.Resource
 import java.io.FileOutputStream
-import lamp.nn.Module
 import lamp.nn.GenericModule
 
 /** Binary serialization for Tensor with primitive Double, Float, Long

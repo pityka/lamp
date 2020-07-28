@@ -2,9 +2,7 @@ package lamp.nn
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
-import org.saddle.order._
-import org.saddle.ops.BinOps._
-import lamp.autograd.{Variable, const, param, TensorHelpers}
+import lamp.autograd.{Variable, const, TensorHelpers}
 import aten.ATen
 import aten.TensorOptions
 import lamp.autograd.AllocatedVariablePool

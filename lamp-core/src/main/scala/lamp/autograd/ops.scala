@@ -1,12 +1,8 @@
 package lamp.autograd
-import org.saddle._
-import java.{util => ju}
 import aten.Tensor
 import aten.ATen
-import aten.TensorOptions
 import TensorHelpers.{unbroadcast => ub}
 import lamp.syntax
-import lamp.util.NDArray
 import lamp.FloatingPointPrecision
 import lamp.DoublePrecision
 import lamp.SinglePrecision
@@ -156,7 +152,7 @@ case class IndexFill(input: Variable, dim: Long, index: Variable, fill: Double)
 }
 case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
   val params = List(
-    a.zipBackward { (p, out) =>
+    a.zipBackward { (_, _) =>
       throw new RuntimeException("Argmax is not differentiable")
     }
   )
@@ -167,14 +163,14 @@ case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
 case class Assign(abandon: Variable, keep: Variable) extends Op {
   assert(abandon.pool == keep.pool)
   val params = List(
-    abandon.zipBackward { (p, out) => () },
+    abandon.zipBackward { (_, _) => () },
     keep.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) }
   )
   val value = Variable(this, keep.value, abandon.pool).releasable
 }
 case class OneHot(a: Variable, numClasses: Int) extends Op {
   val params = List(
-    a.zipBackward { (p, out) =>
+    a.zipBackward { (_, _) =>
       throw new RuntimeException("OneHot is not differentiable")
     }
   )
@@ -184,7 +180,7 @@ case class OneHot(a: Variable, numClasses: Int) extends Op {
 case class CastToPrecision(a: Variable, precision: FloatingPointPrecision)
     extends Op {
   val params = List(
-    a.zipBackward { (p, out) =>
+    a.zipBackward { (_, _) =>
       throw new RuntimeException("Cast to Precision is not differentiable")
     }
   )
@@ -726,8 +722,6 @@ case class Conv1D(
 
   override val params: List[(Variable, (Tensor, Tensor) => Unit)] = List(
     weight.zipBackward { (p, out) =>
-      val pSize = p.sizes
-
       val p_repeated = ATen.repeat_interleave_2(p, inputChannels / groups, 1)
       val p_repeated_size = p_repeated.sizes
       val p_repeated_viewed =
@@ -877,7 +871,6 @@ case class Conv2D(
         ATen.add_out(out, out, tmp, 1d)
         tmp.release
       } else {
-        val pSize = p.sizes
 
         val p_repeated = ATen.repeat_interleave_2(p, inputChannels / groups, 1)
         val p_repeated_size = p_repeated.sizes
@@ -1429,7 +1422,7 @@ case class Embedding(
       tmp.release
 
     },
-    input.zipBackward { (p, out) => () }
+    input.zipBackward { (_, _) => () }
   )
 
   val value =

@@ -7,7 +7,6 @@ import lamp.autograd.{
   const,
   AllocatedVariablePool
 }
-import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
 

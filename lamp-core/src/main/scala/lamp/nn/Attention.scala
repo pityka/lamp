@@ -1,9 +1,7 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, const}
+import lamp.autograd.Variable
 import lamp.autograd.ConcatenateAddNewDim
-import lamp.util.NDArray
-import aten.ATen
 
 object Attention {
 
@@ -67,7 +65,6 @@ object Attention {
     // batch x 1 x d2
     val output = sm.bmm(keyT)
     // 1 x batch x d2
-    val outputT = output.transpose(0, 1)
     output.view(List(batch.toInt, -1))
   }
 
@@ -80,7 +77,6 @@ object Attention {
       padToken: Long
   )(stateToKey: T => Variable) = {
     val timesteps = x.shape.head
-    val batchSize = x.shape(1)
     val outputs = scala.collection.mutable.ArrayBuffer[Variable]()
     val lastHidden =
       (0 until timesteps.toInt).foldLeft(state) { (h, t) =>

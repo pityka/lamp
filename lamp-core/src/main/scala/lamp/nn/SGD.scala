@@ -2,8 +2,6 @@ package lamp.nn
 
 import aten.Tensor
 import aten.ATen
-import cats.implicits._
-import lamp.syntax
 object SGDW {
   def factory(
       learningRate: OptimizerHyperparameter,

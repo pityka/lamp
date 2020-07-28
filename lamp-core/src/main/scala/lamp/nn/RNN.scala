@@ -1,13 +1,10 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param, const}
-import aten.Tensor
+import lamp.autograd.{Variable, param}
 import aten.ATen
 import scala.collection.mutable
 import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
-import cats.effect.concurrent.Ref
-import cats.effect.IO
 import lamp.autograd.AllocatedVariablePool
 
 /** Inputs of size (sequence length * batch * in dim)

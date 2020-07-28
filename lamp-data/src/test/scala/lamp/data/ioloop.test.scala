@@ -2,9 +2,7 @@ package lamp.data
 
 import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
-import org.saddle.order._
-import org.saddle.ops.BinOps._
-import lamp.autograd.{Variable, const, param, TensorHelpers}
+import lamp.autograd.{const, TensorHelpers}
 import lamp.nn._
 import aten.ATen
 import aten.TensorOptions
@@ -75,7 +73,7 @@ class IOLoopSuite extends AnyFunSuite {
       minimumCheckpointFile = None
     )
 
-    val (loss, output, numExamples) = trainedModel
+    val (loss, _, _) = trainedModel
       .flatMap(_.lossAndOutput(const(x), target).allocated.map(_._1))
       .unsafeRunSync
 
@@ -130,7 +128,7 @@ class IOLoopSuite extends AnyFunSuite {
       minimumCheckpointFile = None
     )
 
-    val (loss, output, numExamples) = trainedModel
+    val (loss, _, _) = trainedModel
       .flatMap(_.lossAndOutput(const(x), target).allocated.map(_._1))
       .unsafeRunSync
     assert(loss < 900)
