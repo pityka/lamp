@@ -48,9 +48,11 @@ The aten-scala artifacts are public, nevertheless Github still requires authenti
 
 ## Running tests
 
-`sbt test`
+`sbt test` will run a short test suite of unit tests.
 
 Cuda tests are run separately with `sbt cuda:test`. See `test_cuda.sh` in the source tree about how to run this in a remote docker context. Some additional tests are run from `test_slow.sh`.
+
+All tests are executed with `sbt alltest:test`. This runs all unit tests, all cuda tests, additional tests marked as slow, and a more extensive end-to-end benchmark against PyTorch itself on 50 datasets.
 
 ## Running the cifar-100 example
 

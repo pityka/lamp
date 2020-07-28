@@ -6,8 +6,9 @@ weight: 2
 # Overview
 
 Lamp's design closely follows the design of pytorch. It is organized into the following components:
+
 1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the `aten` package. 
-2. An algorithm to compute partial derivatives of complex functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package `lamp.autograd`.
+2. An algorithm to compute partial derivatives of composite functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package `lamp.autograd`.
 3. A set of building blocks to build neural networks in the package `lamp.nn`.
 4. Training loop and utilities to work with image and text data in `lamp.data`.
 
