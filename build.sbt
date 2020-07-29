@@ -4,7 +4,7 @@ githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
   .Environment("GITHUB_TOKEN")
 
 lazy val commonSettings = Seq(
-  scalaVersion := "2.12.11",
+  scalaVersion := "2.12.12",
   parallelExecution in Test := false,
   scalacOptions ++= Seq(
     "-opt-warnings",
