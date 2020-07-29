@@ -20,13 +20,11 @@ On top of that it provides a small set of components to build neural networks:
 - fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM layers
 - various nonlinearities
 - batch normalization and weight normalization
+- seq2seq
 - dropout
 - SgdW and AdamW optimizers (see [here](https://arxiv.org/abs/1711.05101))
 - training loop and data loaders on top of cats-effect
 - checkpointing
-
-All gradient operations are tested for correctness with numeric differentiation.
-All of these tests are replicated to the GPU as well.
 
 # Platforms
 
@@ -35,16 +33,50 @@ Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-
 On mac it suffices to install torch with `brew install libtorch`.
 On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile).
 
+# Completeness
+
+The machine generated ATen JNI binding ([aten-scala](https://github.com/pityka/aten-scala)) exposes hundreds of tensor operations from libtorch. 
+On top of those lamp provides autograd for the operations needed to build neural networks. The library is expressive enough to implement common models for text, image and tabular data processing.
+
+# Correctness
+
+There is substantial test coverage in terms of unit tests and a suite of end to end tests which compares lamp to PyTorch on 50 datasets. All gradient operations and neural network modules are tested for correctness using numeric differentiation, both on CPU and GPU. Nevertheless, advance with caution.
+
 # Getting started
 
-Lamp is experimental, and no artifacts are pubished to maven central.
+Lamp is experimental, and no artifacts are pubished to maven central. Artifacts of lamp and aten-scala are delivered to Github Packages. Despite the artifacts being public, you need to authenticate to Github.
 
-The aten-scala artifacts are published to Github Packages, which needs a github user token available either in a $GITHUB_TOKEN environmental variable, or in the git global configuration (`~/.gitconfig`): 
+A minimal sbt project to use lamp:
+
+```scala
+// in build.sbt
+scalaVersion := "2.12.12"
+
+resolvers in ThisBuild += Resolver.githubPackages("pityka")
+
+githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
+  .Environment("GITHUB_TOKEN")
+
+libraryDependencies += "io.github.pityka" %% "lamp-data" % "VERSION" // look at the github project page for version
+```
+
+```scala
+// in project/plugins.sbt
+addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.0")
+
+resolvers += Resolver.bintrayRepo("djspiewak", "maven")
+```
+
+```scala
+// in project/build.properties
+sbt.version=1.3.13
+```
+
+Github Packages needs a github user token available either in a $GITHUB_TOKEN environmental variable, or in the git global configuration (`~/.gitconfig`): 
 ```gitconfig
 [github]
   token = TOKEN_DATA
 ```
-The aten-scala artifacts are public, nevertheless Github still requires authentication.
 
 ## Running tests
 
