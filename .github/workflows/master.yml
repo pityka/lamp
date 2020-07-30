@@ -19,7 +19,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Compile
-      run: git fetch --tags && sbt -mem 3000 clean coverage test coverageAggregate ci-release
+      run: sbt -mem 3000 clean coverage test coverageAggregate publish
     - name: Codecov
       uses: codecov/codecov-action@v1.0.2
       if: github.actor == 'pityka'
