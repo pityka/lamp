@@ -247,7 +247,7 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><a href="../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -395,7 +395,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">clone</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+        <span class="name">clone</span><span class="params">()</span><span class="result">: <a href="../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<span class="extype" name="java.lang">lang</span>] </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
@@ -419,7 +419,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">convertFrameToTensor</span><span class="tparams">[<span name="R">R</span>, <span name="C">C</span>]</span><span class="params">(<span name="frame">frame: <span class="extype" name="org.saddle.Frame">Frame</span>[<span class="extype" name="lamp.StringMetadata.convertFrameToTensor.R">R</span>, <span class="extype" name="lamp.StringMetadata.convertFrameToTensor.C">C</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="metadata">metadata: <span class="extype" name="scala.Seq">Seq</span>[<a href="StringMetadata.html" class="extype" name="lamp.StringMetadata">StringMetadata</a>]</span>, <span name="device">device: <a href="Device.html" class="extype" name="lamp.Device">Device</a></span>, <span name="precision">precision: <a href="FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a></span>, <span name="oneHotThreshold">oneHotThreshold: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <span class="extype" name="cats.effect.Resource">Resource</span>[<span class="extype" name="cats.effect.IO">IO</span>, (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="scala.Seq">Seq</span>[<a href="tabular/Metadata.html" class="extype" name="lamp.tabular.Metadata">Metadata</a>])]</span>
+        <span class="name">convertFrameToTensor</span><span class="tparams">[<span name="R">R</span>, <span name="C">C</span>]</span><span class="params">(<span name="frame">frame: <span class="extype" name="org.saddle.Frame">Frame</span>[<span class="extype" name="lamp.StringMetadata.convertFrameToTensor.R">R</span>, <span class="extype" name="lamp.StringMetadata.convertFrameToTensor.C">C</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="metadata">metadata: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="StringMetadata.html" class="extype" name="lamp.StringMetadata">StringMetadata</a>]</span>, <span name="device">device: <a href="Device.html" class="extype" name="lamp.Device">Device</a></span>, <span name="precision">precision: <a href="FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a></span>, <span name="oneHotThreshold">oneHotThreshold: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <span class="extype" name="cats.effect.Resource">Resource</span>[<span class="extype" name="cats.effect.IO">IO</span>, (<span class="extype" name="aten.Tensor">Tensor</span>, <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="tabular/Metadata.html" class="extype" name="lamp.tabular.Metadata">Metadata</a>])]</span>
       </span>
       
       
@@ -435,7 +435,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">eq</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.AnyRef">AnyRef</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">eq</span><span class="params">(<span name="arg0">arg0: <a href="../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
@@ -527,7 +527,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">inferMetaFromFrame</span><span class="tparams">[<span name="R">R</span>, <span name="C">C</span>]</span><span class="params">(<span name="frame">frame: <span class="extype" name="org.saddle.Frame">Frame</span>[<span class="extype" name="lamp.StringMetadata.inferMetaFromFrame.R">R</span>, <span class="extype" name="lamp.StringMetadata.inferMetaFromFrame.C">C</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="numericNaN">numericNaN: <span class="extype" name="scala.Predef.Set">Set</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol">Set(&quot;na&quot;, &quot;nan&quot;)</span></span>, <span name="categoricalThreshold">categoricalThreshold: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">100</span></span>, <span name="categoricalMissing">categoricalMissing: <span class="extype" name="scala.Predef.String">String</span> = <span class="symbol">&quot;NA&quot;</span></span>)</span><span class="result">: <span class="extype" name="scala.Seq">Seq</span>[(<span class="extype" name="lamp.StringMetadata.inferMetaFromFrame.C">C</span>, <a href="StringMetadata.html" class="extype" name="lamp.StringMetadata">StringMetadata</a>)]</span>
+        <span class="name">inferMetaFromFrame</span><span class="tparams">[<span name="R">R</span>, <span name="C">C</span>]</span><span class="params">(<span name="frame">frame: <span class="extype" name="org.saddle.Frame">Frame</span>[<span class="extype" name="lamp.StringMetadata.inferMetaFromFrame.R">R</span>, <span class="extype" name="lamp.StringMetadata.inferMetaFromFrame.C">C</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="numericNaN">numericNaN: <span class="extype" name="scala.Predef.Set">Set</span>[<span class="extype" name="scala.Predef.String">String</span>] = <span class="symbol"><span class="name"><a href="../scala/index.html">Set(&quot;na&quot;, &quot;nan&quot;)</a></span></span></span>, <span name="categoricalThreshold">categoricalThreshold: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">100</span></span>, <span name="categoricalMissing">categoricalMissing: <span class="extype" name="scala.Predef.String">String</span> = <span class="symbol">&quot;NA&quot;</span></span>)</span><span class="result">: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<span class="extype" name="lamp.StringMetadata.inferMetaFromFrame.C">C</span>, <a href="StringMetadata.html" class="extype" name="lamp.StringMetadata">StringMetadata</a>)]</span>
       </span>
       
       
@@ -559,7 +559,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">ne</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.AnyRef">AnyRef</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">ne</span><span class="params">(<span name="arg0">arg0: <a href="../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
@@ -712,7 +712,7 @@
 
         <div id="inheritedMembers">
         <div class="parent" name="scala.AnyRef">
-              <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
+              <h3>Inherited from <a href="../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></h3>
             </div><div class="parent" name="scala.Any">
               <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>
             </div>

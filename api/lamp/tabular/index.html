@@ -170,11 +170,11 @@
                         <a class="object" href="AutoLoop$.html" title=""></a>
                         <a href="AutoLoop$.html" title="">AutoLoop</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="Categorical$.html" title=""></a>
                         <a class="class" href="Categorical.html" title=""></a>
                         <a href="Categorical.html" title="">Categorical</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="Classification$.html" title=""></a>
                         <a class="class" href="Classification.html" title=""></a>
                         <a href="Classification.html" title="">Classification</a>
                       </li><li class="current-entities indented2">
@@ -190,7 +190,7 @@
                         <a class="class" href="EnsembleModel.html" title=""></a>
                         <a href="EnsembleModel.html" title="">EnsembleModel</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="Metadata$.html" title=""></a>
                         <a class="trait" href="Metadata.html" title=""></a>
                         <a href="Metadata.html" title="">Metadata</a>
                       </li><li class="current-entities indented2">
@@ -202,6 +202,10 @@
                         <a class="object" href="Regression$.html" title=""></a>
                         <a href="Regression$.html" title="">Regression</a>
                       </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="object" href="Serialization$.html" title=""></a>
+                        <a href="Serialization$.html" title="">Serialization</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="TabularEmbedding$.html" title=""></a>
                         <a class="class" href="TabularEmbedding.html" title=""></a>
                         <a href="TabularEmbedding.html" title="">TabularEmbedding</a>
@@ -210,7 +214,7 @@
                         <a class="class" href="TabularResidual.html" title=""></a>
                         <a href="TabularResidual.html" title="">TabularResidual</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="TargetType$.html" title=""></a>
                         <a class="trait" href="TargetType.html" title=""></a>
                         <a href="TargetType.html" title="">TargetType</a>
                       </li><li name="lamp.util" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
@@ -320,7 +324,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Classification.html"><span class="name">Classification</span></a><span class="params">(<span name="classes">classes: <span class="extype" name="scala.Int">Int</span></span>, <span name="weights">weights: <span class="extype" name="org.saddle.Vec">Vec</span>[<span class="extype" name="scala.Double">Double</span>]</span>)</span><span class="result"> extends <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="Classification.html"><span class="name">Classification</span></a><span class="params">(<span name="classes">classes: <span class="extype" name="scala.Int">Int</span></span>, <span name="weights">weights: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Double">Double</span>]</span>)</span><span class="result"> extends <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -352,7 +356,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="EnsembleModel.html"><span class="name">EnsembleModel</span></a><span class="params">(<span name="selectionModels">selectionModels: <span class="extype" name="scala.Seq">Seq</span>[(<span class="extype" name="scala.Int">Int</span>, <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="aten.Tensor">Tensor</span>])]</span>, <span name="baseModels">baseModels: <span class="extype" name="scala.Seq">Seq</span>[(<span class="extype" name="scala.Int">Int</span>, <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="aten.Tensor">Tensor</span>]])]</span>, <span name="dataLayout">dataLayout: <span class="extype" name="scala.Seq">Seq</span>[<a href="Metadata.html" class="extype" name="lamp.tabular.Metadata">Metadata</a>]</span>, <span name="targetType">targetType: <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a></span>, <span name="precision">precision: <a href="../FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a></span>, <span name="validationLosses">validationLosses: <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="scala.Double">Double</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="EnsembleModel.html"><span class="name">EnsembleModel</span></a><span class="params">(<span name="selectionModels">selectionModels: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<span class="extype" name="scala.Int">Int</span>, <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="aten.Tensor">Tensor</span>])]</span>, <span name="baseModels">baseModels: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<span class="extype" name="scala.Int">Int</span>, <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="aten.Tensor">Tensor</span>]])]</span>, <span name="dataLayout">dataLayout: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Metadata.html" class="extype" name="lamp.tabular.Metadata">Metadata</a>]</span>, <span name="targetType">targetType: <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a></span>, <span name="precision">precision: <a href="../FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a></span>, <span name="validationLosses">validationLosses: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Double">Double</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -368,7 +372,7 @@
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="Metadata.html"><span class="name">Metadata</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+        <a title="" href="Metadata.html"><span class="name">Metadata</span></a><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
       
@@ -384,7 +388,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="TabularEmbedding.html"><span class="name">TabularEmbedding</span></a><span class="params">(<span name="categoricalEmbeddings">categoricalEmbeddings: <span class="extype" name="scala.Seq">Seq</span>[<a href="../nn/Embedding.html" class="extype" name="lamp.nn.Embedding">Embedding</a>]</span>)</span><span class="result"> extends <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<span class="extype" name="scala.Seq">Seq</span>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>], <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="TabularEmbedding.html"><span class="name">TabularEmbedding</span></a><span class="params">(<span name="categoricalEmbeddings">categoricalEmbeddings: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../nn/Embedding.html" class="extype" name="lamp.nn.Embedding">Embedding</a>]</span>)</span><span class="result"> extends <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>], <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -416,7 +420,7 @@
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="TargetType.html"><span class="name">TargetType</span></a><span class="result"> extends <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+        <a title="" href="TargetType.html"><span class="name">TargetType</span></a><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
       
@@ -441,6 +445,38 @@
       </span>
       <span class="symbol">
         <a title="" href="AutoLoop$.html"><span class="name">AutoLoop</span></a>
+      </span>
+      
+      
+    </li><li name="lamp.tabular.Categorical" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Categorical"></a><a id="Categorical:Categorical"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/Categorical$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Categorical$.html"><span class="name">Categorical</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.tabular.Classification" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Classification"></a><a id="Classification:Classification"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/Classification$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Classification$.html"><span class="name">Classification</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -492,6 +528,22 @@
       </span>
       
       
+    </li><li name="lamp.tabular.Metadata" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Metadata"></a><a id="Metadata:Metadata"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/Metadata$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Metadata$.html"><span class="name">Metadata</span></a>
+      </span>
+      
+      
     </li><li name="lamp.tabular.Numerical" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="Numerical"></a><a id="Numerical:Numerical"></a>
       <span class="permalink">
@@ -524,6 +576,22 @@
       </span>
       
       
+    </li><li name="lamp.tabular.Serialization" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Serialization"></a><a id="Serialization:Serialization"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/Serialization$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Serialization$.html"><span class="name">Serialization</span></a>
+      </span>
+      
+      
     </li><li name="lamp.tabular.TabularEmbedding" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="TabularEmbedding"></a><a id="TabularEmbedding:TabularEmbedding"></a>
       <span class="permalink">
@@ -553,6 +621,22 @@
       </span>
       <span class="symbol">
         <a title="" href="TabularResidual$.html"><span class="name">TabularResidual</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.tabular.TargetType" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="TargetType"></a><a id="TargetType:TargetType"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/TargetType$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="TargetType$.html"><span class="name">TargetType</span></a>
       </span>
       
       

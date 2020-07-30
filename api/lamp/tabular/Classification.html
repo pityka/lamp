@@ -106,11 +106,11 @@
                         <a class="object" href="AutoLoop$.html" title=""></a>
                         <a href="AutoLoop$.html" title="">AutoLoop</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="Categorical$.html" title=""></a>
                         <a class="class" href="Categorical.html" title=""></a>
                         <a href="Categorical.html" title="">Categorical</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="Classification$.html" title=""></a>
                         <a class="class" href="" title=""></a>
                         <a href="" title="">Classification</a>
                       </li><li class="current-entities indented2">
@@ -126,7 +126,7 @@
                         <a class="class" href="EnsembleModel.html" title=""></a>
                         <a href="EnsembleModel.html" title="">EnsembleModel</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="Metadata$.html" title=""></a>
                         <a class="trait" href="Metadata.html" title=""></a>
                         <a href="Metadata.html" title="">Metadata</a>
                       </li><li class="current-entities indented2">
@@ -138,6 +138,10 @@
                         <a class="object" href="Regression$.html" title=""></a>
                         <a href="Regression$.html" title="">Regression</a>
                       </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="object" href="Serialization$.html" title=""></a>
+                        <a href="Serialization$.html" title="">Serialization</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="TabularEmbedding$.html" title=""></a>
                         <a class="class" href="TabularEmbedding.html" title=""></a>
                         <a href="TabularEmbedding.html" title="">TabularEmbedding</a>
@@ -146,7 +150,7 @@
                         <a class="class" href="TabularResidual.html" title=""></a>
                         <a href="TabularResidual.html" title="">TabularResidual</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="TargetType$.html" title=""></a>
                         <a class="trait" href="TargetType.html" title=""></a>
                         <a href="TargetType.html" title="">TargetType</a>
                       </li>
@@ -156,14 +160,16 @@
           <div id="content">
             <body class="class type">
       <div id="definition">
-        <div class="big-circle class">c</div>
+        <a href="Classification$.html" title="See companion object"><div class="big-circle class-companion-object">c</div></a>
         <p id="owner"><a href="../index.html" class="extype" name="lamp">lamp</a>.<a href="index.html" class="extype" name="lamp.tabular">tabular</a></p>
-        <h1>Classification<span class="permalink">
+        <h1><a href="Classification$.html" title="See companion object">Classification</a><span class="permalink">
       <a href="../../lamp/tabular/Classification.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span></h1>
-        <h3><span class="morelinks"></span></h3>
+        <h3><span class="morelinks"><div>
+            Companion <a href="Classification$.html" title="See companion object">object Classification</a>
+          </div></span></h3>
       </div>
 
       <h4 id="signature" class="signature">
@@ -172,7 +178,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Classification</span><span class="params">(<span name="classes">classes: <span class="extype" name="scala.Int">Int</span></span>, <span name="weights">weights: <span class="extype" name="org.saddle.Vec">Vec</span>[<span class="extype" name="scala.Double">Double</span>]</span>)</span><span class="result"> extends <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Classification</span><span class="params">(<span name="classes">classes: <span class="extype" name="scala.Int">Int</span></span>, <span name="weights">weights: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Double">Double</span>]</span>)</span><span class="result"> extends <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -181,7 +187,7 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a>, <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -228,9 +234,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.tabular.Classification#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(classes:Int,weights:org.saddle.Vec[Double]):lamp.tabular.Classification"></a><a id="&lt;init&gt;:Classification"></a>
+      <a id="&lt;init&gt;(classes:Int,weights:Seq[Double]):lamp.tabular.Classification"></a><a id="&lt;init&gt;:Classification"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Classification.html#&lt;init&gt;(classes:Int,weights:org.saddle.Vec[Double]):lamp.tabular.Classification" title="Permalink">
+      <a href="../../lamp/tabular/Classification.html#&lt;init&gt;(classes:Int,weights:Seq[Double]):lamp.tabular.Classification" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -239,7 +245,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Classification</span><span class="params">(<span name="classes">classes: <span class="extype" name="scala.Int">Int</span></span>, <span name="weights">weights: <span class="extype" name="org.saddle.Vec">Vec</span>[<span class="extype" name="scala.Double">Double</span>]</span>)</span>
+        <span class="name">Classification</span><span class="params">(<span name="classes">classes: <span class="extype" name="scala.Int">Int</span></span>, <span name="weights">weights: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Double">Double</span>]</span>)</span>
       </span>
       
       
@@ -345,7 +351,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">clone</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+        <span class="name">clone</span><span class="params">()</span><span class="result">: <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<span class="extype" name="java.lang">lang</span>] </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
@@ -369,7 +375,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">eq</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.AnyRef">AnyRef</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">eq</span><span class="params">(<span name="arg0">arg0: <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
@@ -442,7 +448,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">ne</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.AnyRef">AnyRef</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">ne</span><span class="params">(<span name="arg0">arg0: <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
@@ -569,9 +575,9 @@
               
         </dd></dl></div>
     </li><li name="lamp.tabular.Classification#weights" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="weights:org.saddle.Vec[Double]"></a><a id="weights:Vec[Double]"></a>
+      <a id="weights:Seq[Double]"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Classification.html#weights:org.saddle.Vec[Double]" title="Permalink">
+      <a href="../../lamp/tabular/Classification.html#weights:Seq[Double]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -580,7 +586,7 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">weights</span><span class="result">: <span class="extype" name="org.saddle.Vec">Vec</span>[<span class="extype" name="scala.Double">Double</span>]</span>
+        <span class="name">weights</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Double">Double</span>]</span>
       </span>
       
       
@@ -605,7 +611,7 @@
             </div><div class="parent" name="lamp.tabular.TargetType">
               <h3>Inherited from <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a></h3>
             </div><div class="parent" name="scala.AnyRef">
-              <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
+              <h3>Inherited from <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></h3>
             </div><div class="parent" name="scala.Any">
               <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>
             </div>
