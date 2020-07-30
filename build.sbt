@@ -3,6 +3,22 @@ resolvers in ThisBuild += Resolver.githubPackages("pityka")
 githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
   .Environment("GITHUB_TOKEN")
 
+inThisBuild(
+  List(
+    organization := "io.github.pityka",
+    homepage := Some(url("https://github.com/pityka/lamp")),
+    licenses := List(("MIT", url("https://opensource.org/licenses/MIT"))),
+    developers := List(
+      Developer(
+        "pityka",
+        "pityka",
+        "bartha.pityu@gmail.com",
+        url("https://github.com/pityka")
+      )
+    )
+  )
+)
+
 lazy val commonSettings = Seq(
   scalaVersion := "2.12.12",
   parallelExecution in Test := false,
@@ -51,23 +67,13 @@ lazy val commonSettings = Seq(
   scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings"))
 ) ++ Seq(
   organization := "io.github.pityka",
-  licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
-  pomExtra in Global := {
-    <url>https://github.com/pityka/candle</url>
-      <developers>
-        <developer>
-          <id>pityka</id>
-          <name>Istvan Bartha</name>
-        </developer>
-      </developers>
-  },
   fork := true,
   cancelable in Global := true,
   githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
     .Environment("GITHUB_TOKEN"),
-  coverageExcludedPackages := "lamp.example.*",
-  githubOwner := "pityka",
-  githubRepository := "lamp"
+  coverageExcludedPackages := "lamp.example.*"
+  // githubOwner := "pityka",
+  // githubRepository := "lamp"
 )
 
 lazy val Cuda = config("cuda").extend(Test)
