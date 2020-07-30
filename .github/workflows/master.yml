@@ -19,7 +19,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Compile
-      run: sbt -mem 3000 clean coverage test coverageAggregate publish
+      run: sbt -mem 3000 clean coverage test coverageAggregate
     - name: Codecov
       uses: codecov/codecov-action@v1.0.2
       if: github.actor == 'pityka'
@@ -40,3 +40,5 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
         publish_dir: ./website/public
+    - name: Publish
+      run: sbt -mem 3000 publish
