@@ -15,6 +15,7 @@ import lamp.CPU
 import lamp.CudaDevice
 import lamp.Device
 import lamp.DoublePrecision
+import java.io.File
 
 class TabularResidualModuleSuite extends AnyFunSuite {
   val cpuPool = new AllocatedVariablePool
@@ -120,7 +121,6 @@ class TabularResidualModuleSuite extends AnyFunSuite {
     assert(result.numCols == 5)
 
   }
-
   test("mnist") {
 
     def train(
@@ -158,7 +158,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         epochs = Seq(4),
         weighDecays = Seq(0.0),
         dropouts = Seq(0.5),
-        hiddenSizes = Seq(32, 64),
+        hiddenSizes = Seq(32),
         device = device,
         precision = precision,
         minibatchSize = minibatchSize,
@@ -202,7 +202,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
       features,
       target,
       0 until features.sizes.apply(1).toInt map (_ => Numerical),
-      Classification(10, vec.ones(10)),
+      Classification(10, vec.ones(10).toSeq),
       device,
       logFrequency = 100
     ).unsafeRunSync()
@@ -226,7 +226,11 @@ class TabularResidualModuleSuite extends AnyFunSuite {
           false
         )
         .to(TensorOptions.dtypeFloat(), true)
-    trained
+
+    val savePath = File.createTempFile("lampsave", "data").getAbsolutePath
+    Serialization.saveModel(trained, savePath)
+    val trained2 = Serialization.loadModel(savePath).right.get
+    trained2
       .predict(featuresTest)
       .use { modelOutput =>
         IO {

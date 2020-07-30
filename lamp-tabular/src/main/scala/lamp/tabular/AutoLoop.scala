@@ -27,11 +27,28 @@ import lamp.CudaDevice
 sealed trait Metadata
 case object Numerical extends Metadata
 case class Categorical(classes: Int) extends Metadata
+object Categorical {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[Categorical] = macroRW
+}
+object Metadata {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[Metadata] = macroRW
+}
 
 sealed trait TargetType
 case object Regression extends TargetType
-case class Classification(classes: Int, weights: Vec[Double]) extends TargetType
+case class Classification(classes: Int, weights: Seq[Double]) extends TargetType
+object Classification {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[Classification] = macroRW
+}
 case object ECDFRegression extends TargetType
+
+object TargetType {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[TargetType] = macroRW
+}
 
 object EnsembleModel {
   def train(
@@ -409,7 +426,7 @@ object AutoLoop {
         case ECDFRegression => (LossFunctions.L1Loss, None)
         case Classification(classes, classWeights) =>
           val classWeightsT =
-            TensorHelpers.fromVec(classWeights, device, precision)
+            TensorHelpers.fromVec(classWeights.toVec, device, precision)
           (
             LossFunctions.NLL(
               numClasses = classes,
@@ -818,7 +835,7 @@ object AutoLoop {
                       case Classification(classes, classWeights) =>
                         val classWeightsT =
                           TensorHelpers.fromVec(
-                            classWeights,
+                            classWeights.toVec,
                             device,
                             precision
                           )

@@ -103,7 +103,7 @@ lazy val data = project
     name := "lamp-data",
     libraryDependencies ++= Seq(
       "com.outr" %% "scribe" % "2.7.3",
-      "com.lihaoyi" %% "ujson" % "1.1.0",
+      "com.lihaoyi" %% "ujson" % "1.2.0",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
@@ -143,8 +143,8 @@ lazy val tabular = project
   .settings(
     name := "lamp-tabular",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % "3.1.2" % "test",
-      "net.sourceforge.jdistlib" % "jdistlib" % "0.4.5"
+      "com.lihaoyi" %% "upickle" % "1.2.0",
+      "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
