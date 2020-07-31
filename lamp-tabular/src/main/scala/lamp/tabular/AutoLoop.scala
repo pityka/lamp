@@ -521,7 +521,12 @@ object AutoLoop {
                   val copy = predicted.value.to(predictNumerical.options, true)
                   val modelState = model.state.map { v =>
                     val clone = ATen.clone(v._1.value)
-                    (clone, v._2)
+                    val c1 = if (!clone.options.isCPU) {
+                      val cp = CPU.to(clone)
+                      clone.release
+                      cp
+                    } else clone
+                    (c1, v._2)
                   }
                   predicted.releaseAll()
                   (epoch, copy, modelState) +: predictedAtEpochs
@@ -795,6 +800,8 @@ object AutoLoop {
             )
             predictionsInFolds.map(_.map {
               case (epoch, prediction, models) =>
+                assert(prediction.options.isCPU())
+                assert(models.forall(_.forall(_._1.options.isCPU)))
                 (epoch, wd, dro, hiddenSize, prediction, models)
             })
         }
@@ -829,6 +836,8 @@ object AutoLoop {
               withValidationErrors <- IO {
                 trainedEnsembleFolds.map {
                   case (epoch, pred, models) =>
+                    assert(pred.options.isCPU())
+                    assert(models.forall(_.forall(_._1.options.isCPU)))
                     val (lossFunction, classWeightsT) = targetType match {
                       case Regression     => (LossFunctions.L1Loss, None)
                       case ECDFRegression => (LossFunctions.L1Loss, None)
@@ -836,7 +845,7 @@ object AutoLoop {
                         val classWeightsT =
                           TensorHelpers.fromVec(
                             classWeights.toVec,
-                            device,
+                            CPU,
                             precision
                           )
                         (
