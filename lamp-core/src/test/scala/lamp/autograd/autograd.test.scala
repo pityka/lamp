@@ -846,6 +846,26 @@ class GradientSuite extends AnyFunSuite {
       input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
     )
   }
+  testGradientAndValueND("index_select")(nd1x2x2, 6d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+    val index =
+      param(
+        NDArray.tensorFromLongNDArray(NDArray(Array(1L, 1L, 1L), List(3)), cuda)
+      )
+
+    val output = IndexSelect(input, 1L, index).value
+
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
+  }
   testGradientAndValueND("conv1d - wrt weights")(nd1x2x2, 30d) {
     (m, doBackprop, cuda) =>
       implicit val pool = selectPool(cuda)

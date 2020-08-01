@@ -166,6 +166,8 @@ case class Variable(
   def transpose(dim1: Int, dim2: Int) = Transpose(this, dim1, dim2).value
   def select(dim: Long, index: Long) =
     Select(this, dim = dim, index = index).value
+  def indexSelect(dim: Long, index: Variable) =
+    IndexSelect(this, dim = dim, index = index).value
   def argmax(dim: Long, keepDim: Boolean) =
     ArgMax(this, dim = dim, keepDim = keepDim).value
   def oneHot(numClasses: Int) =

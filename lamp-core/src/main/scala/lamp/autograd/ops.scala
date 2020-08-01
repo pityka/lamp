@@ -150,6 +150,22 @@ case class IndexFill(input: Variable, dim: Long, index: Variable, fill: Double)
     input.pool
   ).releasable
 }
+case class IndexSelect(input: Variable, dim: Long, index: Variable) extends Op {
+  assert(input.pool == index.pool)
+  val params = List(
+    input.zipBackward { (p, out) =>
+      val tmp = ATen.index_add(out, dim, index.value, p)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+
+    }
+  )
+  val value = Variable(
+    this,
+    ATen.index_select(input.value, dim, index.value),
+    input.pool
+  ).releasable
+}
 case class ArgMax(a: Variable, dim: Long, keepDim: Boolean) extends Op {
   val params = List(
     a.zipBackward { (_, _) =>
