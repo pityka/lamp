@@ -67,7 +67,9 @@ lazy val commonSettings = Seq(
     .Environment("GITHUB_TOKEN"),
   coverageExcludedPackages := "lamp.example.*",
   githubOwner := "pityka",
-  githubRepository := "lamp"
+  githubRepository := "lamp",
+  publishArtifact in (Compile, packageDoc) := false,
+  publishArtifact in (Compile, packageSrc) := false
 )
 
 lazy val Cuda = config("cuda").extend(Test)
