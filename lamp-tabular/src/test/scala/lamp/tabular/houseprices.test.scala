@@ -58,7 +58,8 @@ object TestTrain {
       logFrequency = logFrequency,
       logger = None,
       ensembleFolds = ensembleFolds,
-      learningRate = 0.001
+      learningRate = 0.001,
+      prescreenHyperparameters = true
     )
   }
 }

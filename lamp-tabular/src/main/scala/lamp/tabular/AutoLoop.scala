@@ -100,13 +100,8 @@ object EnsembleModel {
       minibatchSize = minibatchSize,
       logFrequency = logFrequency,
       logger = logger,
-      // ensembleMinibatchSize = minibatchSize,
-      // ensembleHiddenSize = 8,
-      // ensembleEpochs = Seq(4, 16, 64, 256),
-      // ensembleWeightDecay = 0.001,
-      // ensembleDropout = 0.0,
-      ensembleFolds = ensembleFolds
-      // ensembleLearningRate = 0.0001
+      ensembleFolds = ensembleFolds,
+      prescreenHyperparameters = true
     )
   }
 }
@@ -738,7 +733,7 @@ object AutoLoop {
       aggregatedByEpochs <- IO {
         logger.foreach(
           _.info(
-            s"Ensemble folds done. Aggregating predictions.."
+            s"Folds done. Aggregating predictions.."
           )
         )
         val byEpoch = trainedFolds.flatten.groupBy {
@@ -751,6 +746,41 @@ object AutoLoop {
         )
       }
     } yield aggregatedByEpochs
+  }
+
+  def computeValidationErrorsAndReleasePrediction(
+      pred: Tensor,
+      targetType: TargetType,
+      precision: FloatingPointPrecision,
+      targetFullbatch: Tensor
+  )(implicit pool: AllocatedVariablePool) = {
+    val (lossFunction, classWeightsT) = targetType match {
+      case Regression     => (LossFunctions.L1Loss, None)
+      case ECDFRegression => (LossFunctions.L1Loss, None)
+      case Classification(classes, classWeights) =>
+        val classWeightsT =
+          TensorHelpers.fromVec(
+            classWeights.toVec,
+            CPU,
+            precision
+          )
+        (
+          LossFunctions.NLL(
+            numClasses = classes,
+            classWeights = classWeightsT
+          ),
+          Some(classWeightsT)
+        )
+    }
+    val (loss, _) =
+      lossFunction.apply(
+        const(pred).releasable,
+        targetFullbatch
+      )
+    val lossM = loss.toMat.raw(0)
+    loss.releaseAll
+    classWeightsT.foreach(_.release)
+    lossM
   }
 
   def train(
@@ -769,16 +799,53 @@ object AutoLoop {
       minibatchSize: Int,
       logFrequency: Int,
       logger: Option[Logger],
-      ensembleFolds: Seq[(Seq[Int], Seq[Int])]
+      ensembleFolds: Seq[(Seq[Int], Seq[Int])],
+      prescreenHyperparameters: Boolean
   )(implicit pool: AllocatedVariablePool) = {
 
     val hyperparameters =
-      hiddenSizes.flatMap(hd =>
-        weighDecays.flatMap(wd => dropouts.map(dro => (wd, dro, hd)))
-      )
-    val baseModels =
-      hyperparameters
-        .map {
+      hiddenSizes
+        .flatMap(hd =>
+          weighDecays.flatMap(wd => dropouts.map(dro => (wd, dro, hd)))
+        )
+        .distinct
+    val firstpass =
+      if (hyperparameters.size > 1 && prescreenHyperparameters)
+        hyperparameters
+          .map {
+            case (wd, dro, hiddenSize) =>
+              val predictionsInFolds = trainAndAverageFolds(
+                dataFullbatch = dataFullbatch,
+                targetFullbatch = targetFullbatch,
+                predictions = Nil,
+                folds = makeCVFolds(dataFullbatch.sizes.apply(0).toInt, 2, 1),
+                targetType = targetType,
+                dataLayout = dataLayout,
+                epochs = epochs,
+                weightDecay = wd,
+                dropout = dro,
+                hiddenSize = hiddenSize,
+                learningRate = learningRate,
+                device = device,
+                precision = precision,
+                minibatchSize = minibatchSize,
+                logFrequency = logFrequency,
+                logger = logger
+              )
+              predictionsInFolds.map(_.map {
+                case (epoch, prediction, models) =>
+                  assert(prediction.options.isCPU())
+                  assert(models.forall(_.forall(_._1.options.isCPU)))
+                  (epoch, wd, dro, hiddenSize, prediction, models)
+              })
+          }
+          .toList
+          .sequence
+          .map(_.flatten)
+      else IO { Nil }
+
+    def baseModels(hp: Seq[(Double, Double, Int)]) =
+      hp.map {
           case (wd, dro, hiddenSize) =>
             val predictionsInFolds = trainAndAverageFolds(
               dataFullbatch = dataFullbatch,
@@ -838,32 +905,12 @@ object AutoLoop {
                   case (epoch, pred, models) =>
                     assert(pred.options.isCPU())
                     assert(models.forall(_.forall(_._1.options.isCPU)))
-                    val (lossFunction, classWeightsT) = targetType match {
-                      case Regression     => (LossFunctions.L1Loss, None)
-                      case ECDFRegression => (LossFunctions.L1Loss, None)
-                      case Classification(classes, classWeights) =>
-                        val classWeightsT =
-                          TensorHelpers.fromVec(
-                            classWeights.toVec,
-                            CPU,
-                            precision
-                          )
-                        (
-                          LossFunctions.NLL(
-                            numClasses = classes,
-                            classWeights = classWeightsT
-                          ),
-                          Some(classWeightsT)
-                        )
-                    }
-                    val (loss, _) =
-                      lossFunction.apply(
-                        const(pred).releasable,
-                        targetFullbatch
-                      )
-                    val lossM = loss.toMat.raw(0)
-                    loss.releaseAll
-                    classWeightsT.foreach(_.release)
+                    val lossM = computeValidationErrorsAndReleasePrediction(
+                      pred,
+                      targetType,
+                      precision,
+                      targetFullbatch
+                    )
                     (lossM, models, epoch, wd, dro, hiddenSize)
 
                 }
@@ -876,7 +923,39 @@ object AutoLoop {
         .map(_.flatten)
 
     for {
-      pred <- baseModels
+      firstpassPred <- firstpass
+      filteredHyperparameters = {
+        if (firstpassPred.isEmpty) hyperparameters
+        else {
+          val lossAndHp = firstpassPred
+            .map {
+              case (_, wd, dro, hiddenSize, prediction, models) =>
+                val loss = computeValidationErrorsAndReleasePrediction(
+                  prediction,
+                  targetType,
+                  precision,
+                  targetFullbatch
+                )
+                models.foreach(_.foreach(_._1.release))
+                loss -> ((wd, dro, hiddenSize))
+            }
+            .groupBy(_._2)
+            .toSeq
+            .map { case (_, group) => group.minBy(_._1) }
+            .sortBy(_._1)
+          val topLoss = lossAndHp.head._1
+          val maxLoss = topLoss * 1.5
+          val (accept, reject) = lossAndHp.partition(_._1 <= maxLoss)
+          logger.foreach(
+            _.info(
+              s"Reject hyperparameters ${reject.map(_._2)} based on 2-fold runs. ${accept.size} hyperparameters remain. Sorted validation losses: ${accept
+                .map(_._1)}"
+            )
+          )
+          accept.map(_._2)
+        }
+      }
+      pred <- baseModels(filteredHyperparameters)
       _ <- IO {
         logger.foreach(_.info(s"${pred.size} base models done."))
       }

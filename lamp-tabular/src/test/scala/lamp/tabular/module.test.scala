@@ -165,7 +165,8 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         logFrequency = logFrequency,
         logger = None,
         ensembleFolds = ensembleFolds,
-        learningRate = 0.0001
+        learningRate = 0.0001,
+        prescreenHyperparameters = true
       )
     }
 

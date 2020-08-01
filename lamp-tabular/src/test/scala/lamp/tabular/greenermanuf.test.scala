@@ -66,7 +66,8 @@ class GreenerManufacturingSuite extends AnyFunSuite {
         logFrequency = logFrequency,
         logger = logger,
         ensembleFolds = ensembleFolds,
-        learningRate = 0.001
+        learningRate = 0.001,
+        prescreenHyperparameters = true
       )
     }
 
