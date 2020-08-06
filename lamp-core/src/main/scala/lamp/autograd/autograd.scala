@@ -196,6 +196,7 @@ case class Variable(
   def colSum = ColSum(this).value
   def exp = Exp(this).value
   def log = Log(this).value
+  def log1p = Log1p(this).value
   def sin = Sin(this).value
   def cos = Cos(this).value
   def tan = Tan(this).value
