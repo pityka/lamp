@@ -554,6 +554,18 @@ class GradientSuite extends AnyFunSuite {
         x1.partialDerivative.map(t => TensorHelpers.toMat(t))
       )
   }
+  testGradientAndValue("log1p")(mat2x3, 8.5252) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val L = x1.log1p.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
   testGradientAndValue("sin")(mat2x3_2, -0.27259082747648367) {
     (m, doBackprop, cuda) =>
       implicit val pool = selectPool(cuda)

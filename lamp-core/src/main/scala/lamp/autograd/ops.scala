@@ -313,7 +313,6 @@ case class Div(a: Variable, b: Variable) extends Op {
   )
 
   val value = Variable(this, ATen.div_0(a.value, b.value), a.pool).releasable
-
 }
 
 case class Sum(a: Variable) extends Op {
@@ -326,14 +325,14 @@ case class ColSum(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) })
 
   val value =
-    Variable(this, ATen.sum_1(a.value, Array(1), true), a.pool).releasable
+    Variable(this, ATen.sum_1(a.value, Array(0), true), a.pool).releasable
 
 }
 case class RowSum(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) })
 
   val value =
-    Variable(this, ATen.sum_1(a.value, Array(0), true), a.pool).releasable
+    Variable(this, ATen.sum_1(a.value, Array(1), true), a.pool).releasable
 
 }
 
@@ -382,6 +381,15 @@ case class Log(a: Variable) extends Op {
     tmp.release
   })
   val value = Variable(this, ATen.log(a.value), a.pool).releasable
+}
+case class Log1p(a: Variable) extends Op {
+  val params = List(a.zipBackward { (p, out) =>
+    val tmp = ATen.add_1(a.value, 1d, 1d)
+    ATen.reciprocal_(tmp)
+    ATen.addcmul_out(out, out, p, tmp, 1d)
+    tmp.release
+  })
+  val value = Variable(this, ATen.log1p(a.value), a.pool).releasable
 }
 case class Sin(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
