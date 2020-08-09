@@ -17,6 +17,9 @@ package object lamp {
     def options = self.options
     def size = self.numel
 
+    def asVariable(implicit pool: AllocatedVariablePool) =
+      lamp.autograd.const(self)(pool)
+
     def toDoubleArray = {
       val arr = Array.ofDim[Double](size.toInt)
       val success = self.copyToDoubleArray(arr)
