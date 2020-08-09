@@ -367,12 +367,57 @@ case class BatchedMatMul(a: Variable, b: Variable) extends Op {
   val value = Variable(this, ATen.bmm(a.value, b.value), a.pool).releasable
 
 }
+case class EuclideanDistance(a: Variable, b: Variable, dim: Int) extends Op {
+  assert(a.pool == b.pool)
+  val params =
+    List(
+      a.zipBackward { (p, out) =>
+        val tmp = ATen.div_0(diff, norm)
+        ATen.addcmul_out(out, out, p, tmp, 1d)
+        tmp.release
+      },
+      b.zipBackward { (p, out) =>
+        val tmp = ATen.div_0(diff, norm)
+        ATen.addcmul_out(out, out, p, tmp, -1d)
+        tmp.release
+      }
+    )
+
+  val diff = ATen.sub_0(a.value, b.value, dim)
+  val norm = ATen.norm_2(diff, Array(1), true, diff.options().scalarTypeByte())
+  val value = Variable(this, norm, a.pool).releasable.releaseWith(diff, norm)
+
+}
 
 case class Exp(a: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) => ATen.addcmul_out(out, out, p, value.value, 1d) }
   )
   val value = Variable(this, ATen.exp(a.value), a.pool).releasable
+}
+case class CappedShiftedNegativeExponential(a: Variable, shift: Double)
+    extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val zeros =
+        ATen.zeros(Array(1), a.options)
+      val nonzeros = ATen.mul_1(result, -1d)
+      val tmp = ATen.where_0(pred, zeros, nonzeros)
+      ATen.addcmul_out(out, out, p, tmp, 1d)
+      tmp.release
+      zeros.release
+      nonzeros.release
+    }
+  )
+  val pred = ATen.le_0(a.value, shift)
+  val ones =
+    ATen.ones(Array(1), a.options)
+  val scalar = ATen.scalar_tensor(shift, a.options)
+  val above = ATen.sub_0(scalar, a.value, 1d)
+  ATen.exp_(above)
+  val result = ATen.where_0(pred, ones, above)
+  val value = Variable(this, result, a.pool).releasable
+    .releaseWith(pred, ones, scalar, above)
 }
 case class Log(a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
@@ -447,6 +492,33 @@ case class PowConst(a: Variable, exponent: Double) extends Op {
     tmp1.release
   })
   val value = Variable(this, ATen.pow_0(a.value, exponent), a.pool).releasable
+}
+case class Pow(a: Variable, exponent: Variable) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val exp = exponent.toMat.raw(0)
+      val tmp1 = ATen.pow_0(a.value, exp - 1)
+      ATen.addcmul_out(out, out, p, tmp1, exp)
+      tmp1.release
+    },
+    exponent.zipBackward { (p, out) =>
+      val exp = exponent.toMat.raw(0)
+      val tmp1 = ATen.pow_0(a.value, exp)
+      val tmp2 = ATen.log(a.value)
+      val tmp3 = ATen.mul_0(tmp1, tmp2)
+      val p2 =
+        ub(p, List(if (out.sizes.isEmpty) 1 else out.sizes.toList.head, 1))
+      val tmp4 = ATen.sum_0(tmp3)
+      ATen.addcmul_out(out, out, p2, tmp4, 1d)
+      tmp1.release
+      tmp2.release
+      tmp3.release
+      tmp4.release
+      p2.release
+    }
+  )
+  val value =
+    Variable(this, ATen.pow_1(a.value, exponent.value), a.pool).releasable
 }
 case class Relu(a: Variable) extends Op {
   val params = List(

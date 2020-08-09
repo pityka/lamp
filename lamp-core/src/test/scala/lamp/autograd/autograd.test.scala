@@ -619,10 +619,71 @@ class GradientSuite extends AnyFunSuite {
         x1.partialDerivative.map(t => TensorHelpers.toMat(t))
       )
   }
+  testGradientAndValue("capped exp")(mat3x1, 2.6065) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val out = CappedShiftedNegativeExponential(x1, 2.5d).value
+    assert(out.toMat.roundTo(4) == Mat(Vec(1d, 1d, math.exp(-0.5))).roundTo(4))
+    val L = out.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
   testGradientAndValue("pow")(mat2x3_2, 91d) { (m, doBackprop, cuda) =>
     implicit val pool = selectPool(cuda)
     val x1 = param(TensorHelpers.fromMat(m, cuda))
     val L = x1.pow(2d).sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+    )
+  }
+  testGradientAndValue("euclidean distance wrt a")(mat2x3_2, 10d) {
+    (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
+      val x1 = param(TensorHelpers.fromMat(m, cuda))
+      val out =
+        x1.euclideanDistance(const(TensorHelpers.fromMat(mat2x3, cuda)), 1)
+      assert(out.shape == List(2, 1))
+      assert(out.toMat.roundTo(4) == Mat(Vec(2d, 8d)))
+      val L = out.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+      )
+  }
+  testGradientAndValue("euclidean distance wrt b")(mat2x3_2, 10d) {
+    (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
+      val x1 = param(TensorHelpers.fromMat(m, cuda))
+      val out =
+        const(TensorHelpers.fromMat(mat2x3, cuda)).euclideanDistance(x1, 1)
+      assert(out.shape == List(2, 1))
+      assert(out.toMat.roundTo(4) == Mat(Vec(2d, 8d)))
+      val L = out.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+      )
+  }
+  testGradientAndValue("pow  2")(mat1x1, 11d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
+    val x1 = param(TensorHelpers.fromMat(m, cuda))
+    val x2 = param(TensorHelpers.fromMat(mat2x3_2, cuda))
+    val L = x2.pow(x1).sum
     if (doBackprop) {
       L.backprop()
     }

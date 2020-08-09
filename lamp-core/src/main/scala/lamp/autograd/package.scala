@@ -21,6 +21,10 @@ package object autograd {
 
   def param(m: Tensor)(implicit pool: AllocatedVariablePool): Variable =
     Constant(m)(pool).value
+  def param(m: Double, tOpt: TensorOptions = TensorOptions.dtypeDouble())(
+      implicit pool: AllocatedVariablePool
+  ): Variable =
+    Constant(ATen.scalar_tensor(m, tOpt))(pool).value.view(List(1, 1))
 
   def measure[T](tag: String)(body: => T): T = {
     val t1 = System.nanoTime()

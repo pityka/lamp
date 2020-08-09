@@ -69,7 +69,9 @@ class AllocatedVariablePool {
       case Some(l) => leasables.update(shape, tensor :: l)
     }
   }
-
+  def remove(v: Variable) = {
+    buffer0 -= v
+  }
   def append(v: Variable) = buffer0.append(v)
   def appendTensor(t: Tensor) = buffer1.append(t)
   def releaseAll() = {
@@ -112,6 +114,10 @@ case class Variable(
   def releaseAll(): Unit = {
     pool.releaseAll
 
+  }
+  def keep = {
+    pool.remove(this)
+    this
   }
   def releasable = {
     pool.append(this)
@@ -203,6 +209,9 @@ case class Variable(
   def tanh = Tanh(this).value
   def atan = ArcTan(this).value
   def pow(const: Double) = PowConst(this, const).value
+  def pow(exponent: Variable) = Pow(this, exponent).value
+  def euclideanDistance(b: Variable, dim: Int) =
+    EuclideanDistance(this, b, dim).value
   def logSoftMax(dim: Int) = LogSoftMax(this, dim).value
   def crossEntropy(other: Variable) =
     ((this.*(other)).rowSum).*(-1d)
