@@ -7,8 +7,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.DoublePrecision
 import lamp.CPU
 
-import org.saddle.index.InnerJoin
-import lamp.SinglePrecision
 import lamp.autograd.TensorHelpers
 import lamp.nn.CudaTest
 import lamp.CudaDevice

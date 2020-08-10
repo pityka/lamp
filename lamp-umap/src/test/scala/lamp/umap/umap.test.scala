@@ -1,16 +1,13 @@
 package lamp.umap
 
 import org.saddle._
-import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.DoublePrecision
 import lamp.CPU
 
-import org.nspl._
-import org.nspl.awtrenderer._
-import org.nspl.saddle._
-import org.saddle.index.InnerJoin
-import lamp.SinglePrecision
+// import org.nspl._
+// import org.nspl.awtrenderer._
+// import org.nspl.saddle._
 
 class UmapSuite extends AnyFunSuite {
 
@@ -53,12 +50,13 @@ class UmapSuite extends AnyFunSuite {
       .get
       .withRowIndex(0)
 
-    val (locs, weights, loss) = Umap.umap(
+    val (locs, _, loss) = Umap.umap(
       data = data.toMat,
       numDim = 2
     )
 
     assert(loss < 0.6)
+    val _ = locs
     // println(
     //   pdfToFile(
     //     xyplot(

@@ -1,14 +1,8 @@
 package lamp
 
 import org.saddle._
-import org.saddle.linalg._
 import org.saddle.macros.BinOps._
 import lamp.autograd._
-import lamp.nn.AdamW
-import lamp.nn.simple
-import lamp.nn.LearningRateSchedule
-import lamp.nn.NoTag
-import lamp.nn.SGDW
 import aten.Tensor
 import aten.ATen
 
