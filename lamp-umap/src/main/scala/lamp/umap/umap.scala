@@ -8,7 +8,6 @@ import lamp.autograd._
 import lamp.nn.AdamW
 import lamp.nn.simple
 import lamp.nn.NoTag
-import lamp.nn.SGDW
 import scribe.Logger
 
 object Umap {
