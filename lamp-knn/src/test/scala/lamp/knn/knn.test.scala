@@ -60,7 +60,7 @@ class KnnSuite extends AnyFunSuite {
     val values = Vec(0, 1, 2)
     val indices = Mat(Vec(0, 1), Vec(1, 2)).T
     assert(
-      classification(values, indices, 3) == Mat(
+      classification(values, indices, 3, log = false) == Mat(
         Vec(0.5, 0.5, 0d),
         Vec(0d, 0.5, 0.5)
       ).T

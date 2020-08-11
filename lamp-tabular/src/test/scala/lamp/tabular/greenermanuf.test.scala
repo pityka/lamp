@@ -59,6 +59,7 @@ class GreenerManufacturingSuite extends AnyFunSuite {
         epochs = Seq(4, 8, 16, 32, 64, 128, 256, 512),
         weighDecays = Seq(0.0001, 0.001),
         dropouts = Seq(0.1, 0.95),
+        knnK = Seq(5, 25),
         hiddenSizes = Seq(64),
         device = device,
         precision = precision,
@@ -67,7 +68,8 @@ class GreenerManufacturingSuite extends AnyFunSuite {
         logger = logger,
         ensembleFolds = ensembleFolds,
         learningRate = 0.001,
-        prescreenHyperparameters = true
+        prescreenHyperparameters = true,
+        knnMinibatchSize = 512
       )
     }
 
