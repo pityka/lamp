@@ -39,14 +39,13 @@ lazy val commonSettings = Seq(
     "-Ywarn-inaccessible", // Warn about inaccessible types in method signatures.
     "-Ywarn-infer-any", // Warn when a type argument is inferred to be `Any`.
     "-Ywarn-nullary-override", // Warn when non-nullary `def f()' overrides nullary `def f'.
-    "-Ywarn-nullary-unit", // Warn when nullary methods return Unit.
-    // "-Ywarn-numeric-widen", // Warn when numerics are widened.
-    "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
-    "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
-    "-Ywarn-unused:locals", // Warn if a local definition is unused.
-    "-Ywarn-unused:params", // Warn if a value parameter is unused.
-    "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
-    "-Ywarn-unused:privates" // Warn if a private member is unused.
+    "-Ywarn-nullary-unit" // Warn when nullary methods return Unit.
+    // "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
+    // "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
+    // "-Ywarn-unused:locals", // Warn if a local definition is unused.
+    // "-Ywarn-unused:params", // Warn if a value parameter is unused.
+    // "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
+    // "-Ywarn-unused:privates" // Warn if a private member is unused.
   ),
   scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings"))
 ) ++ Seq(
@@ -169,6 +168,25 @@ lazy val umap = project
       "io.github.pityka" %% "saddle-linalg" % "2.0.0-M26",
       "io.github.pityka" %% "nspl-awt" % "0.0.22" % "test",
       "io.github.pityka" %% "nspl-saddle" % "0.0.22" % "test"
+    ),
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
+    testOptions in AllTest := Nil
+  )
+  .dependsOn(data, knn)
+  .dependsOn(core % "test->test;compile->compile")
+
+lazy val nnrf = project
+  .in(file("lamp-nnrf"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-nnrf",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
