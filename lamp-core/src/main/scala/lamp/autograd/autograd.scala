@@ -193,6 +193,7 @@ case class Variable(
   def /(other: Variable) = Div(this, other).value
   def mm(other: Variable) = MatMul(this, other).value
   def bmm(other: Variable) = BatchedMatMul(this, other).value
+  def leakyRelu(negativeSlope: Double) = LeakyRelu(this, negativeSlope).value
   def relu = Relu(this).value
   def gelu = Gelu(this).value
   def sigmoid = Sigmoid(this).value

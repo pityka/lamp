@@ -538,6 +538,18 @@ case class Relu(a: Variable) extends Op {
   )
   val value = Variable(this, ATen.relu(a.value), a.pool).releasable
 }
+case class LeakyRelu(a: Variable, negativeSlope: Double = 0.01) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val tmp = ATen.leaky_relu_backward(p, value.value, negativeSlope, true)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+
+    }
+  )
+  val value =
+    Variable(this, ATen.leaky_relu(a.value, negativeSlope), a.pool).releasable
+}
 
 case class LogSoftMax(a: Variable, dim: Int) extends Op {
 
