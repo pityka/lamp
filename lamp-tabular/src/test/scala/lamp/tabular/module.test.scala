@@ -159,6 +159,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         weighDecays = Seq(0.0),
         dropouts = Seq(0.5),
         hiddenSizes = Seq(32),
+        knnK = Seq(),
         device = device,
         precision = precision,
         minibatchSize = minibatchSize,
@@ -166,7 +167,8 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         logger = None,
         ensembleFolds = ensembleFolds,
         learningRate = 0.0001,
-        prescreenHyperparameters = true
+        prescreenHyperparameters = true,
+        knnMinibatchSize = 512
       )
     }
 

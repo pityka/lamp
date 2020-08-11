@@ -52,6 +52,7 @@ object TestTrain {
       weighDecays = Seq(0.0001, 0.001),
       dropouts = Seq(0.05, 0.5, 0.95),
       hiddenSizes = Seq(32),
+      knnK = Seq(5, 25),
       device = device,
       precision = precision,
       minibatchSize = minibatchSize,
@@ -59,7 +60,8 @@ object TestTrain {
       logger = None,
       ensembleFolds = ensembleFolds,
       learningRate = 0.001,
-      prescreenHyperparameters = true
+      prescreenHyperparameters = true,
+      knnMinibatchSize = 512
     )
   }
 }

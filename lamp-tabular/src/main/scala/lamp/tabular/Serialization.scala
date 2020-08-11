@@ -10,15 +10,39 @@ import lamp.CPU
 import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 import java.io.FileInputStream
+import org.saddle.scalar.ScalarTagLong
+import aten.TensorOptions
 
 object Serialization {
 
+  sealed trait BaseModelDTO
+  object BaseModelDTO {
+    import upickle.default.{ReadWriter => RW, macroRW}
+    implicit val rw: RW[BaseModelDTO] = macroRW
+  }
+  case class KnnDto(k: Int, path: String, dataTypes: Seq[String])
+      extends BaseModelDTO
+  object KnnDto {
+    import upickle.default.{ReadWriter => RW, macroRW}
+    implicit val rw: RW[KnnDto] = macroRW
+  }
+  case class NNDto(
+      hiddenSize: Int,
+      numTensors: Int,
+      path: String,
+      dataTypes: Seq[String]
+  ) extends BaseModelDTO
+  object NNDto {
+    import upickle.default.{ReadWriter => RW, macroRW}
+    implicit val rw: RW[NNDto] = macroRW
+  }
+
   case class DTO(
-      selectionModels: Seq[(Int, Int, String)],
-      baseModels: Seq[(Int, Seq[(Int, String)])],
+      selectionModels: Seq[BaseModelDTO],
+      baseModels: Seq[Seq[BaseModelDTO]],
       dataLayout: Seq[Metadata],
-      targetType: TargetType,
       precision: String,
+      targetType: TargetType,
       validationLosses: Seq[Double]
   )
   object DTO {
@@ -28,36 +52,55 @@ object Serialization {
   def loadModel(path: String) = {
     val json = scala.io.Source.fromFile(path).mkString
     val dto = read[DTO](json)
-    val st = dto.precision match {
+    def scalarTag(p: String) = p match {
       case "single" => ScalarTagFloat
       case "double" => ScalarTagDouble
+      case "long"   => ScalarTagLong
     }
     val selectionModels = lamp.data.Reader.sequence(dto.selectionModels.map {
-      case (n, num, file) =>
+      case KnnDto(k, file, dataTypes) =>
         val channel = new FileInputStream(new File(file)).getChannel()
         val tensors = lamp.data.Reader.readTensorsFromChannel(
-          types = 0 until num map (_ => st),
+          types = dataTypes.map(scalarTag),
           channel = channel,
           device = CPU
         )
         channel.close
-        tensors.map(v => (n, v))
+        tensors.map(v => KnnBase(k, v.head, v.drop(2), v(1)))
+      case NNDto(hiddenSize, num, file, dataTypes) =>
+        val channel = new FileInputStream(new File(file)).getChannel()
+        val tensors = lamp.data.Reader.readTensorsFromChannel(
+          types = dataTypes.map(scalarTag),
+          channel = channel,
+          device = CPU
+        )
+        channel.close
+        tensors.map(v => NNBase(hiddenSize, v))
     })
     val baseModels = lamp.data.Reader.sequence(dto.baseModels.map {
-      case (n, files) =>
+      case files =>
         lamp.data.Reader
           .sequence(files.map {
-            case (num, file) =>
+            case NNDto(hiddenSize, num, file, dataTypes) =>
               val channel = new FileInputStream(new File(file)).getChannel()
               val tensors = lamp.data.Reader.readTensorsFromChannel(
-                types = 0 until num map (_ => st),
+                types = dataTypes.map(scalarTag),
                 channel = channel,
                 device = CPU
               )
               channel.close
-              tensors
+              tensors.map(t => NNBase(hiddenSize, t))
+            case KnnDto(k, file, dataTypes) =>
+              val channel = new FileInputStream(new File(file)).getChannel()
+              val tensors = lamp.data.Reader.readTensorsFromChannel(
+                types = dataTypes.map(scalarTag),
+                channel = channel,
+                device = CPU
+              )
+              channel.close
+              tensors.map(t => KnnBase(k, t.head, t.drop(2), t(1)))
           })
-          .map(v => (n, v))
+
     })
     for {
 
@@ -78,37 +121,79 @@ object Serialization {
     }
   }
   def saveModel(model: EnsembleModel, outPath: String) = {
+    def dataType(b: TensorOptions) = b.scalarTypeByte() match {
+      case 6 => "single"
+      case 7 => "double"
+      case 4 => "long"
+    }
     val selectionFiles = model.selectionModels.zipWithIndex.map {
-      case ((n, tensors), idx) =>
-        val path = outPath + ".selection." + idx
+      case (NNBase(hiddenSize, tensors), idx) =>
+        val path = outPath + ".selection.nn." + idx
         val channel =
           new FileOutputStream(new File(path)).getChannel()
         lamp.data.Writer.writeTensorsIntoChannel(tensors, channel)
         channel.close
-        (n, tensors.size, path)
+        NNDto(
+          hiddenSize,
+          tensors.size,
+          path,
+          tensors.map(t => dataType(t.options))
+        )
+      case (KnnBase(k, tensor1, tensors, tensor2), idx) =>
+        val path = outPath + ".selection.knn." + idx
+        val channel =
+          new FileOutputStream(new File(path)).getChannel()
+        lamp.data.Writer
+          .writeTensorsIntoChannel(List(tensor1, tensor2) ++ tensors, channel)
+        channel.close
+        KnnDto(
+          k,
+          path,
+          (List(tensor1, tensor2) ++ tensors).map(t => dataType(t.options))
+        )
     }
     val baseFiles = model.baseModels.zipWithIndex.map {
-      case ((n, listsOfTensors), idx0) =>
-        val paths = listsOfTensors.zipWithIndex.map {
-          case (tensors, idx1) =>
-            val path = outPath + ".base." + idx0 + "." + idx1
+      case (listOfModels, idx0) =>
+        val paths = listOfModels.zipWithIndex.map {
+          case (KnnBase(k, tensor1, tensors, tensor2), idx1) =>
+            val path = outPath + ".base.knn." + idx0 + "." + idx1
+            val channel =
+              new FileOutputStream(new File(path)).getChannel()
+            lamp.data.Writer
+              .writeTensorsIntoChannel(
+                List(tensor1, tensor2) ++ tensors,
+                channel
+              )
+            channel.close
+            KnnDto(
+              k,
+              path,
+              (List(tensor1, tensor2) ++ tensors).map(t => dataType(t.options))
+            )
+          case (NNBase(hiddenSize, tensors), idx1) =>
+            val path = outPath + ".base.nn." + idx0 + "." + idx1
             val channel =
               new FileOutputStream(new File(path)).getChannel()
             lamp.data.Writer.writeTensorsIntoChannel(tensors, channel)
             channel.close
-            (tensors.size, path)
+            NNDto(
+              hiddenSize,
+              tensors.size,
+              path,
+              tensors.map(t => dataType(t.options))
+            )
         }
-        (n, paths)
+        paths
     }
     val dto = DTO(
       selectionFiles,
       baseFiles,
       model.dataLayout,
-      model.targetType,
       model.precision match {
         case DoublePrecision => "double"
         case SinglePrecision => "single"
       },
+      model.targetType,
       model.validationLosses
     )
     val json = write(dto)

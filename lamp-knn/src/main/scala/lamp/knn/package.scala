@@ -73,14 +73,15 @@ package object knn {
   def classification(
       values: Vec[Int],
       indices: Mat[Int],
-      numClasses: Int
+      numClasses: Int,
+      log: Boolean
   ): Mat[Double] =
     Mat(indices.rows.map { r =>
       val selected = values.take(r.toArray)
       vec
         .range(0, numClasses)
         .map(c => selected.countif(_ == c).toDouble) / selected.length
-    }: _*).T
+    }: _*).T.map(v => if (log) math.log(v + 1e-6) else v)
 
   def knnSearch(
       features: Mat[Double],
@@ -114,13 +115,14 @@ package object knn {
       distance: (Tensor, Tensor) => Tensor,
       device: Device,
       precision: FloatingPointPrecision,
-      minibatchSize: Int
+      minibatchSize: Int,
+      log: Boolean
   ) = {
     val indices =
       knnSearch(features, query, k, distance, device, precision, minibatchSize)
 
     val numClasses = values.toArray.distinct.size
-    classification(values, indices, numClasses)
+    classification(values, indices, numClasses, log)
   }
   def knnRegression(
       features: Mat[Double],
