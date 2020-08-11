@@ -106,6 +106,10 @@
                         <a class="object" href="AutoLoop$.html" title=""></a>
                         <a href="AutoLoop$.html" title="">AutoLoop</a>
                       </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="trait" href="BaseModel.html" title=""></a>
+                        <a href="BaseModel.html" title="">BaseModel</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="Categorical$.html" title=""></a>
                         <a class="class" href="Categorical.html" title=""></a>
                         <a href="Categorical.html" title="">Categorical</a>
@@ -126,9 +130,17 @@
                         <a class="class" href="EnsembleModel.html" title=""></a>
                         <a href="EnsembleModel.html" title="">EnsembleModel</a>
                       </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="KnnBase.html" title=""></a>
+                        <a href="KnnBase.html" title="">KnnBase</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="Metadata$.html" title=""></a>
                         <a class="trait" href="Metadata.html" title=""></a>
                         <a href="Metadata.html" title="">Metadata</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="NNBase.html" title=""></a>
+                        <a href="NNBase.html" title="">NNBase</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="object" href="Numerical$.html" title=""></a>
@@ -523,9 +535,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.tabular.EnsembleModel#train" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="train(features:aten.Tensor,target:aten.Tensor,dataLayout:Seq[lamp.tabular.Metadata],targetType:lamp.tabular.TargetType,device:lamp.Device,logger:Option[scribe.Logger],logFrequency:Int,learningRate:Double,minibatchSize:Int):cats.effect.IO[lamp.tabular.EnsembleModel]"></a><a id="train(Tensor,Tensor,Seq[Metadata],TargetType,Device,Option[Logger],Int,Double,Int):IO[EnsembleModel]"></a>
+      <a id="train(features:aten.Tensor,target:aten.Tensor,dataLayout:Seq[lamp.tabular.Metadata],targetType:lamp.tabular.TargetType,device:lamp.Device,logger:Option[scribe.Logger],logFrequency:Int,learningRate:Double,minibatchSize:Int,knnMinibatchSize:Int):cats.effect.IO[lamp.tabular.EnsembleModel]"></a><a id="train(Tensor,Tensor,Seq[Metadata],TargetType,Device,Option[Logger],Int,Double,Int,Int):IO[EnsembleModel]"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/EnsembleModel$.html#train(features:aten.Tensor,target:aten.Tensor,dataLayout:Seq[lamp.tabular.Metadata],targetType:lamp.tabular.TargetType,device:lamp.Device,logger:Option[scribe.Logger],logFrequency:Int,learningRate:Double,minibatchSize:Int):cats.effect.IO[lamp.tabular.EnsembleModel]" title="Permalink">
+      <a href="../../lamp/tabular/EnsembleModel$.html#train(features:aten.Tensor,target:aten.Tensor,dataLayout:Seq[lamp.tabular.Metadata],targetType:lamp.tabular.TargetType,device:lamp.Device,logger:Option[scribe.Logger],logFrequency:Int,learningRate:Double,minibatchSize:Int,knnMinibatchSize:Int):cats.effect.IO[lamp.tabular.EnsembleModel]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -534,7 +546,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">train</span><span class="params">(<span name="features">features: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="dataLayout">dataLayout: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Metadata.html" class="extype" name="lamp.tabular.Metadata">Metadata</a>]</span>, <span name="targetType">targetType: <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a></span>, <span name="device">device: <a href="../Device.html" class="extype" name="lamp.Device">Device</a></span>, <span name="logger">logger: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scribe.Logger">Logger</span>]</span>, <span name="logFrequency">logFrequency: <span class="extype" name="scala.Int">Int</span></span>, <span name="learningRate">learningRate: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">0.0001</span></span>, <span name="minibatchSize">minibatchSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">512</span></span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<a href="EnsembleModel.html" class="extype" name="lamp.tabular.EnsembleModel">EnsembleModel</a>]</span>
+        <span class="name">train</span><span class="params">(<span name="features">features: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="dataLayout">dataLayout: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Metadata.html" class="extype" name="lamp.tabular.Metadata">Metadata</a>]</span>, <span name="targetType">targetType: <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a></span>, <span name="device">device: <a href="../Device.html" class="extype" name="lamp.Device">Device</a></span>, <span name="logger">logger: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scribe.Logger">Logger</span>]</span>, <span name="logFrequency">logFrequency: <span class="extype" name="scala.Int">Int</span></span>, <span name="learningRate">learningRate: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">0.0001</span></span>, <span name="minibatchSize">minibatchSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">512</span></span>, <span name="knnMinibatchSize">knnMinibatchSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">512</span></span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<a href="EnsembleModel.html" class="extype" name="lamp.tabular.EnsembleModel">EnsembleModel</a>]</span>
       </span>
       
       

@@ -131,12 +131,12 @@
                         <a href="EnsembleModel.html" title="">EnsembleModel</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="KnnBase.html" title=""></a>
-                        <a href="KnnBase.html" title="">KnnBase</a>
+                        <a class="class" href="" title=""></a>
+                        <a href="" title="">KnnBase</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Metadata$.html" title=""></a>
-                        <a class="trait" href="" title=""></a>
-                        <a href="" title="">Metadata</a>
+                        <a class="trait" href="Metadata.html" title=""></a>
+                        <a href="Metadata.html" title="">Metadata</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="NNBase.html" title=""></a>
@@ -170,27 +170,25 @@
             </div>
           </div>
           <div id="content">
-            <body class="trait type">
+            <body class="class type">
       <div id="definition">
-        <a href="Metadata$.html" title="See companion object"><div class="big-circle trait-companion-object">t</div></a>
+        <div class="big-circle class">c</div>
         <p id="owner"><a href="../index.html" class="extype" name="lamp">lamp</a>.<a href="index.html" class="extype" name="lamp.tabular">tabular</a></p>
-        <h1><a href="Metadata$.html" title="See companion object">Metadata</a><span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html" title="Permalink">
+        <h1>KnnBase<span class="permalink">
+      <a href="../../lamp/tabular/KnnBase.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span></h1>
-        <h3><span class="morelinks"><div>
-            Companion <a href="Metadata$.html" title="See companion object">object Metadata</a>
-          </div></span></h3>
+        <h3><span class="morelinks"></span></h3>
       </div>
 
       <h4 id="signature" class="signature">
       <span class="modifier_kind">
-        <span class="modifier">sealed </span>
-        <span class="kind">trait</span>
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Metadata</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+        <span class="name">KnnBase</span><span class="params">(<span name="k">k: <span class="extype" name="scala.Int">Int</span></span>, <span name="features">features: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="predictedFeatures">predictedFeatures: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="aten.Tensor">Tensor</span>]</span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="result"> extends <a href="BaseModel.html" class="extype" name="lamp.tabular.BaseModel">BaseModel</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -199,13 +197,8 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
-        </div><div class="toggleContainer block">
-            <span class="toggle">
-              Known Subclasses
-            </span>
-            <div class="subClasses hiddenContent"><a href="Categorical.html" class="extype" name="lamp.tabular.Categorical">Categorical</a>, <a href="Numerical$.html" class="extype" name="lamp.tabular.Numerical">Numerical</a></div>
-          </div></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="BaseModel.html" class="extype" name="lamp.tabular.BaseModel">BaseModel</a>, <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
+        </div></div>
         
 
       <div id="mbrsel">
@@ -230,7 +223,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.tabular.Metadata"><span>Metadata</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.tabular.KnnBase"><span>KnnBase</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.tabular.BaseModel"><span>BaseModel</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -248,7 +241,26 @@
 
       <div id="template">
         <div id="allMembers">
-        
+        <div id="constructors" class="members">
+              <h3>Instance Constructors</h3>
+              <ol><li name="lamp.tabular.KnnBase#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="&lt;init&gt;(k:Int,features:aten.Tensor,predictedFeatures:Seq[aten.Tensor],target:aten.Tensor):lamp.tabular.KnnBase"></a><a id="&lt;init&gt;:KnnBase"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/KnnBase.html#&lt;init&gt;(k:Int,features:aten.Tensor,predictedFeatures:Seq[aten.Tensor],target:aten.Tensor):lamp.tabular.KnnBase" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">new</span>
+      </span>
+      <span class="symbol">
+        <span class="name">KnnBase</span><span class="params">(<span name="k">k: <span class="extype" name="scala.Int">Int</span></span>, <span name="features">features: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="predictedFeatures">predictedFeatures: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="aten.Tensor">Tensor</span>]</span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span>
+      </span>
+      
+      
+    </li></ol>
+            </div>
 
         
 
@@ -260,7 +272,7 @@
                 <li name="scala.AnyRef#!=" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="!=(x$1:Any):Boolean"></a><a id="!=(Any):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#!=(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#!=(x$1:Any):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -276,7 +288,7 @@
     </li><li name="scala.AnyRef###" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="##():Int"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html###():Int" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html###():Int" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -292,7 +304,7 @@
     </li><li name="scala.AnyRef#==" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="==(x$1:Any):Boolean"></a><a id="==(Any):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#==(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#==(x$1:Any):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -308,7 +320,7 @@
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#asInstanceOf[T0]:T0" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#asInstanceOf[T0]:T0" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -324,7 +336,7 @@
     </li><li name="scala.AnyRef#clone" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a><a id="clone():AnyRef"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#clone():Object" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#clone():Object" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -348,7 +360,7 @@
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#eq(x$1:AnyRef):Boolean" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#eq(x$1:AnyRef):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -361,26 +373,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="scala.AnyRef#equals" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="equals(x$1:Any):Boolean"></a><a id="equals(Any):Boolean"></a>
+    </li><li name="lamp.tabular.KnnBase#features" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="features:aten.Tensor"></a><a id="features:Tensor"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#equals(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#features:aten.Tensor" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">def</span>
+        <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">equals</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">features</span><span class="result">: <span class="extype" name="aten.Tensor">Tensor</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+      
     </li><li name="scala.AnyRef#finalize" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#finalize():Unit" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#finalize():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -402,7 +414,7 @@
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#getClass():Class[_]" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#getClass():Class[_]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -418,29 +430,10 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="scala.AnyRef#hashCode" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="hashCode():Int"></a>
-      <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#hashCode():Int" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">hashCode</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd><dt>Annotations</dt><dd>
-                <span class="name">@native</span><span class="args">()</span>
-              
-        </dd></dl></div>
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#isInstanceOf[T0]:Boolean" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#isInstanceOf[T0]:Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -453,10 +446,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="lamp.tabular.KnnBase#k" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="k:Int"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/KnnBase.html#k:Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">k</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#ne(x$1:AnyRef):Boolean" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#ne(x$1:AnyRef):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -472,7 +481,7 @@
     </li><li name="scala.AnyRef#notify" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notify():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#notify():Unit" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#notify():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -491,7 +500,7 @@
     </li><li name="scala.AnyRef#notifyAll" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notifyAll():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#notifyAll():Unit" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#notifyAll():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -507,10 +516,26 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.tabular.KnnBase#predictedFeatures" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="predictedFeatures:Seq[aten.Tensor]"></a><a id="predictedFeatures:Seq[Tensor]"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/KnnBase.html#predictedFeatures:Seq[aten.Tensor]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">predictedFeatures</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="aten.Tensor">Tensor</span>]</span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#synchronized" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a><a id="synchronized[T0](⇒T0):T0"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#synchronized[T0](x$1:=&gt;T0):T0" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#synchronized[T0](x$1:=&gt;T0):T0" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -523,26 +548,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="scala.AnyRef#toString" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="toString():String"></a>
+    </li><li name="lamp.tabular.KnnBase#target" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="target:aten.Tensor"></a><a id="target:Tensor"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#toString():String" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#target:aten.Tensor" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">def</span>
+        <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">toString</span><span class="params">()</span><span class="result">: <span class="extype" name="java.lang.String">String</span></span>
+        <span class="name">target</span><span class="result">: <span class="extype" name="aten.Tensor">Tensor</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+      
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#wait():Unit" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#wait():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -564,7 +589,7 @@
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long,x$2:Int):Unit"></a><a id="wait(Long,Int):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#wait(x$1:Long,x$2:Int):Unit" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#wait(x$1:Long,x$2:Int):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -586,7 +611,7 @@
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long):Unit"></a><a id="wait(Long):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Metadata.html#wait(x$1:Long):Unit" title="Permalink">
+      <a href="../../lamp/tabular/KnnBase.html#wait(x$1:Long):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -617,7 +642,17 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="scala.AnyRef">
+        <div class="parent" name="scala.Serializable">
+              <h3>Inherited from <span class="extype" name="scala.Serializable">Serializable</span></h3>
+            </div><div class="parent" name="java.io.Serializable">
+              <h3>Inherited from <span class="extype" name="java.io.Serializable">Serializable</span></h3>
+            </div><div class="parent" name="scala.Product">
+              <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
+            </div><div class="parent" name="scala.Equals">
+              <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
+            </div><div class="parent" name="lamp.tabular.BaseModel">
+              <h3>Inherited from <a href="BaseModel.html" class="extype" name="lamp.tabular.BaseModel">BaseModel</a></h3>
+            </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></h3>
             </div><div class="parent" name="scala.Any">
               <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>
