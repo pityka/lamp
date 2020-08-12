@@ -191,14 +191,14 @@ class NnrfSuite extends AnyFunSuite {
       const(TensorHelpers.fromMat(data.filterIx(_ != "label").toMat, cuda))
 
     val tOpt = if (cuda) TensorOptions.d.cuda else TensorOptions.d.cpu
-    val model = Seq3(
+    val model = Seq2(
       Nnrf.apply(
-        levels = 5,
+        levels = 7,
         numFeatures = 32,
         totalDataFeatures = 784,
+        out = 10,
         tOpt = tOpt
       ),
-      Linear.apply(in = 60, out = 10, tOpt),
       Fun(_.logSoftMax(dim = 1))
     )
 

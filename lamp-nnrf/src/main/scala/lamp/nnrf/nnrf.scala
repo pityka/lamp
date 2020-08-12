@@ -11,8 +11,15 @@ import aten.{ATen, TensorOptions}
 import lamp.autograd.AllocatedVariablePool
 import org.saddle._
 
-case class Nnrf(cells: IndexedSeq[NnrfCell]) extends Module {
-  override def state = cells.flatMap(_.state)
+case class Nnrf(
+    cells: IndexedSeq[NnrfCell],
+    heads: Seq[Variable],
+    biases: Seq[Variable]
+) extends Module {
+  override def state =
+    cells.flatMap(_.state) ++ heads.map(v => (v -> NoTag)) ++ biases.map(v =>
+      (v -> NoTag)
+    )
   val maxLevels = (math.log(cells.size) / math.log(2)).toInt
   def loop(
       level: Int,
@@ -51,8 +58,11 @@ case class Nnrf(cells: IndexedSeq[NnrfCell]) extends Module {
     )(x.pool).releasable
     val s1 = cells(0).forward((x, ones)).logSoftMax(1).exp
     val signals = loop(1, x, s1, Nil)
-    val r = Concatenate(signals, 1).value
-    // println(r.toMat.stringify(20, 20))
+    val r = signals.reverse zip heads zip biases map {
+      case ((s, h), b) =>
+        s mm h + b
+    } reduce (_ + _)
+
     r
   }
 }
@@ -73,6 +83,7 @@ object Nnrf {
       levels: Int,
       numFeatures: Int,
       totalDataFeatures: Int,
+      out: Int,
       tOpt: TensorOptions
   )(implicit pool: AllocatedVariablePool): Nnrf =
     Nnrf(
@@ -82,7 +93,14 @@ object Nnrf {
           totalDataFeatures,
           tOpt
         )
-      )
+      ),
+      1 to levels map { i =>
+        val in = math.pow(2d, i + 1).toInt
+        param(
+          ATen.normal_3(0d, math.sqrt(2d / in), Array(in, out), tOpt)
+        )
+      },
+      1 to levels map { i => param(ATen.zeros(Array(1, out), tOpt)) }
     )
 }
 
