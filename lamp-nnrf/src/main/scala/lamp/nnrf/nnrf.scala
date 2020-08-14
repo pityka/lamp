@@ -88,8 +88,11 @@ object Nnrf {
       numClasses: Int,
       classWeights: Vec[Double],
       device: Device,
+      levels: Int = 6,
+      numFeatures: Int = 32,
       precision: FloatingPointPrecision = SinglePrecision,
       learningRate: Double = 0.001,
+      weightDecay: Double = 0d,
       epochs: Int = 300,
       logger: Option[scribe.Logger] = None
   ) = {
@@ -108,10 +111,10 @@ object Nnrf {
     val tOpt = device.options(precision)
     val model = Seq2(
       Nnrf.apply(
-        levels = 5,
-        numFeatures = 32,
-        totalDataFeatures = 784,
-        out = 10,
+        levels = levels,
+        numFeatures = numFeatures,
+        totalDataFeatures = features.numCols,
+        out = numClasses,
         tOpt = tOpt,
         fullBatchData = Some(x)
       ),
@@ -119,8 +122,8 @@ object Nnrf {
     )
     val optim = AdamW(
       model.parameters.map(v => (v._1.value, v._2)),
-      learningRate = simple(0.001),
-      weightDecay = simple(0.0d)
+      learningRate = simple(learningRate),
+      weightDecay = simple(weightDecay)
     )
     val cw = TensorHelpers.fromVec(classWeights, device, precision)
 

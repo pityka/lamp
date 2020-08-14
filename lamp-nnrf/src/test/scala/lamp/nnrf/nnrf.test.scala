@@ -105,7 +105,18 @@ class NnrfSuite extends AnyFunSuite {
 
   test1("mnist tabular") { cuda =>
     implicit val pool = new AllocatedVariablePool
-    val data = org.saddle.csv.CsvParser
+    val dataTrain = org.saddle.csv.CsvParser
+      .parseSourceWithHeader[Double](
+        scala.io.Source
+          .fromInputStream(
+            new java.util.zip.GZIPInputStream(
+              getClass.getResourceAsStream("/mnist_train.csv.gz")
+            )
+          )
+      )
+      .right
+      .get
+    val dataTest = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source
           .fromInputStream(
@@ -116,10 +127,10 @@ class NnrfSuite extends AnyFunSuite {
       )
       .right
       .get
-    val target = data.firstCol("label").toVec.map(_.toLong)
+    val target = dataTrain.firstCol("label").toVec.map(_.toLong)
     val device = if (cuda) CudaDevice(0) else CPU
     val precision = SinglePrecision
-    val x = data.filterIx(_ != "label").toMat
+    val x = dataTrain.filterIx(_ != "label").toMat
 
     val tOpt = if (cuda) TensorOptions.f.cuda else TensorOptions.f.cpu
     val (trained, lastLoss) = Nnrf.trainClassification(
@@ -127,21 +138,23 @@ class NnrfSuite extends AnyFunSuite {
       target = target,
       device = device,
       precision = precision,
+      levels = 7,
       numClasses = 10,
-      classWeights = vec.ones(10)
-      // logger = Some(scribe.Logger("test"))
+      classWeights = vec.ones(10),
+      epochs = 100,
+      logger = Some(scribe.Logger("test"))
     )
 
-    val output = Nnrf.predict(x, trained)
+    val output = Nnrf.predict(dataTest.filterIx(_ != "label").toMat, trained)
     val prediction = output.reduceRows((v, _) => v.argmax)
 
-    val correct = prediction.zipMap(data.firstCol("label").toVec)((a, b) =>
+    val correct = prediction.zipMap(dataTest.firstCol("label").toVec)((a, b) =>
       if (a == b) 1d else 0d
     )
 
-    val lastAccuracy = correct.mean2
-
-    assert(lastAccuracy > 0.6)
+    val accuracy = correct.mean2
+    println(accuracy)
+    assert(accuracy > 0.6)
     assert(lastLoss < 0.6)
 
   }
