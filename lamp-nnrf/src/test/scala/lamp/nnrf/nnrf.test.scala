@@ -193,7 +193,7 @@ class NnrfSuite extends AnyFunSuite {
     val tOpt = if (cuda) TensorOptions.d.cuda else TensorOptions.d.cpu
     val model = Seq2(
       Nnrf.apply(
-        levels = 7,
+        levels = 5,
         numFeatures = 32,
         totalDataFeatures = 784,
         out = 10,

@@ -37,6 +37,17 @@ case class View(a: Variable, shape: Array[Long]) extends Op {
   val value =
     Variable(this, ATen._unsafe_view(a.value, shape), a.pool).releasable
 }
+case class Reshape(a: Variable, shape: Array[Long]) extends Op {
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val selected = ATen.reshape(p, out.sizes)
+      ATen.add_out(out, out, selected, 1d)
+      selected.release
+    }
+  )
+  val value =
+    Variable(this, ATen.reshape(a.value, shape), a.pool).releasable
+}
 
 case class Concatenate(a: Seq[Variable], dim: Long) extends Op {
   assert(a.map(_.pool).distinct.size == 1)

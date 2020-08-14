@@ -237,6 +237,8 @@ case class Variable(
   def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
   def mean(dim: List[Int]) = Mean(this, dim).value
   def view(shape: List[Int]) = View(this, shape.map(_.toLong).toArray).value
+  def reshape(shape: List[Int]) =
+    Reshape(this, shape.map(_.toLong).toArray).value
   def flattenLastDimensions(dims: Int) = FlattenLastDimensions(this, dims).value
 
   def toMat = value.toMat

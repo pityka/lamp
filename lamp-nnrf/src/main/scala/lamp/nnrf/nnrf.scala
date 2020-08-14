@@ -12,41 +12,35 @@ import lamp.autograd.AllocatedVariablePool
 import org.saddle._
 
 case class Nnrf(
-    cells: IndexedSeq[NnrfCell],
+    levels: IndexedSeq[NnrfCell],
     heads: Seq[Variable],
     biases: Seq[Variable]
 ) extends Module {
+
   override def state =
-    cells.flatMap(_.state) ++ heads.map(v => (v -> NoTag)) ++ biases.map(v =>
+    levels.flatMap(_.state) ++ heads.map(v => (v -> NoTag)) ++ biases.map(v =>
       (v -> NoTag)
     )
-  val maxLevels = (math.log(cells.size) / math.log(2)).toInt
+  val maxLevels = levels.size
   def loop(
       level: Int,
       x: Variable,
       s1: Variable,
       acc: List[Variable]
   ): List[Variable] = {
-    if (level > maxLevels) acc
+    if (level >= maxLevels) acc
     else {
-      val cellsOnThisLevel = {
-        val from = math.pow(2d, level).toInt - 1
-        val to = math.pow(2d, level + 1).toInt - 1
-        (from until to) toList
-      }
-
-      val levelOutputs = cellsOnThisLevel.zipWithIndex.map {
-        case (cellIdx, levelIdx) =>
-          val cell = cells(cellIdx)
-          val s = s1.select(1, levelIdx).view(List(-1, 1))
-          cell.forward((x, s))
-      }
-      val nextS = Concatenate(levelOutputs, 1).value.logSoftMax(1).exp
+      val r = levels(level).forward((x, s1))
+      val nextS =
+        r.logSoftMax(2)
+          .exp
+          .transpose(1, 2)
+          .reshape(List(-1, r.shape(1).toInt, 1))
       loop(level + 1, x, nextS, nextS :: acc)
 
     }
   }
-  def setData(data: Variable) = cells.foreach(_.setData(data))
+  def setData(data: Variable) = levels.foreach(_.setData(data))
   def forward(x: Variable): Variable = {
     val ones = const(
       TensorHelpers
@@ -55,12 +49,12 @@ case class Nnrf(
           TensorHelpers.device(x.options),
           TensorHelpers.precision(x.value).get
         )
-    )(x.pool).releasable
-    val s1 = cells(0).forward((x, ones)).logSoftMax(1).exp
-    val signals = loop(1, x, s1, Nil)
+    )(x.pool).releasable.view(List(1, -1, 1))
+    val samples = x.shape(0).toInt
+    val signals = loop(0, x, ones, Nil)
     val r = signals.reverse zip heads zip biases map {
       case ((s, h), b) =>
-        s mm h + b
+        s.view(List(-1, samples)).transpose(0, 1) mm h + b
     } reduce (_ + _)
 
     r
@@ -69,16 +63,16 @@ case class Nnrf(
 
 object Nnrf {
   implicit val trainingMode = TrainingMode.identity[Nnrf]
-  implicit def load(implicit l: Load[NnrfCell]) = Load.make[Nnrf] {
-    m => parameters =>
-      implicit val pool = m.cells.head.weights.pool
-      val groups = parameters.grouped(3).toList
-      val loadedCells = (groups zip m.cells).map {
-        case (params, cell) => cell.load(params)
-      }
+  // implicit def load(implicit l: Load[NnrfCell]) = Load.make[Nnrf] {
+  //   m => parameters =>
+  //     implicit val pool = m.cells.head.weights.pool
+  //     val groups = parameters.grouped(3).toList
+  //     val loadedCells = (groups zip m.cells).map {
+  //       case (params, cell) => cell.load(params)
+  //     }
 
-      m.copy(cells = loadedCells.toIndexedSeq)
-  }
+  //     m.copy(cells = loadedCells.toIndexedSeq)
+  // }
   def apply(
       levels: Int,
       numFeatures: Int,
@@ -87,25 +81,31 @@ object Nnrf {
       tOpt: TensorOptions
   )(implicit pool: AllocatedVariablePool): Nnrf =
     Nnrf(
-      1 until math.pow(2d, levels).toInt map (i =>
+      0 until levels.toInt map (i =>
         NnrfCell(
+          math.pow(2d, i).toInt,
           numFeatures,
           totalDataFeatures,
           tOpt
         )
       ),
-      1 to levels map { i =>
+      0 until levels map { i =>
         val in = math.pow(2d, i + 1).toInt
         param(
           ATen.normal_3(0d, math.sqrt(2d / in), Array(in, out), tOpt)
         )
       },
-      1 to levels map { i => param(ATen.zeros(Array(1, out), tOpt)) }
+      0 until levels map { i => param(ATen.zeros(Array(1, out), tOpt)) }
     )
 }
 
-case class NnrfCell(weights: Variable, bias: Variable, features: Variable)
-    extends GenericModule[
+// Trees x Samples x features
+case class NnrfCell(
+    weights: Variable,
+    biases: Variable,
+    features: Variable,
+    featuresPerNode: Int
+) extends GenericModule[
       (Variable, Variable),
       (Variable)
     ] {
@@ -113,14 +113,18 @@ case class NnrfCell(weights: Variable, bias: Variable, features: Variable)
   override val state = List(
     features -> NnrfCell.Features,
     weights -> NnrfCell.Weights,
-    bias -> NnrfCell.Bias
+    biases -> NnrfCell.Bias
   )
 
   var subsetX: Option[Variable] = None
   def subsetData(data: Variable) = {
     val fLong =
       const(ATen._cast_Long(features.value, false))(features.pool).releasable
-    data.indexSelect(1, fLong).releaseWithVariable(fLong)
+    data
+      .indexSelect(1, fLong)
+      .releaseWithVariable(fLong)
+      .view(List(data.shape(0).toInt, -1, featuresPerNode))
+      .transpose(0, 1)
   }
   def setData(data: Variable) = {
     subsetX = Some(subsetData(data).keep)
@@ -128,8 +132,9 @@ case class NnrfCell(weights: Variable, bias: Variable, features: Variable)
 
   def forward(tuple: (Variable, Variable)) = {
     val (x, s) = tuple
-
-    (subsetX.getOrElse(subsetData(x)).mm(weights) + bias).relu * s
+    val features = subsetX.getOrElse(subsetData(x))
+    val r = (features.bmm(weights) + biases).relu
+    r * s
   }
 
 }
@@ -142,7 +147,7 @@ object NnrfCell {
     val f = param(parameters(0))
     val w = param(parameters(1))
     val b = param(parameters(2))
-    m.copy(weights = w, bias = b, features = f)
+    m.copy(weights = w, biases = b, features = f)
   }
   case object Weights extends LeafTag
   case object Bias extends LeafTag
@@ -151,6 +156,7 @@ object NnrfCell {
     def updateDuringOptimization: Boolean = false
   }
   def apply(
+      nodes: Int,
       numFeatures: Int,
       totalDataFeatures: Int,
       tOpt: TensorOptions
@@ -159,21 +165,23 @@ object NnrfCell {
     val out = 2
     NnrfCell(
       weights = param(
-        ATen.normal_3(0d, math.sqrt(2d / in), Array(in, out), tOpt)
+        ATen.normal_3(0d, math.sqrt(2d / in), Array(nodes, in, out), tOpt)
       ),
-      bias = param(ATen.zeros(Array(1, out), tOpt)),
+      biases = param(ATen.zeros(Array(nodes, 1, out), tOpt)),
       features = param(
         TensorHelpers
           .fromVec(
-            array
-              .shuffle(array.range(0, totalDataFeatures))
-              .take(numFeatures)
-              .toVec
+            (0 until nodes flatMap (_ =>
+              array
+                .shuffle(array.range(0, totalDataFeatures))
+                .take(numFeatures)
+            )).toVec
               .map(_.toDouble),
             TensorHelpers.device(tOpt),
             DoublePrecision
           )
-      )
+      ),
+      featuresPerNode = numFeatures
     )
 
   }
