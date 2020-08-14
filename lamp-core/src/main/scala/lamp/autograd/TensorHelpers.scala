@@ -232,5 +232,10 @@ object TensorHelpers {
     else if (op.isDouble) Some(DoublePrecision)
     else None
   }
+  def precision(op: TensorOptions) = {
+    if (op.isFloat()) Some(SinglePrecision)
+    else if (op.isDouble) Some(DoublePrecision)
+    else None
+  }
 
 }

@@ -10,6 +10,7 @@ import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
 import lamp.autograd.AllocatedVariablePool
 import org.saddle._
+import aten.Tensor
 
 case class Nnrf(
     levels: IndexedSeq[NnrfCell],
@@ -40,7 +41,6 @@ case class Nnrf(
 
     }
   }
-  def setData(data: Variable) = levels.foreach(_.setData(data))
   def forward(x: Variable): Variable = {
     val ones = const(
       TensorHelpers
@@ -62,23 +62,111 @@ case class Nnrf(
 }
 
 object Nnrf {
-  implicit val trainingMode = TrainingMode.identity[Nnrf]
-  // implicit def load(implicit l: Load[NnrfCell]) = Load.make[Nnrf] {
-  //   m => parameters =>
-  //     implicit val pool = m.cells.head.weights.pool
-  //     val groups = parameters.grouped(3).toList
-  //     val loadedCells = (groups zip m.cells).map {
-  //       case (params, cell) => cell.load(params)
-  //     }
 
-  //     m.copy(cells = loadedCells.toIndexedSeq)
-  // }
+  def predict(
+      features: Mat[Double],
+      model: Seq2[Variable, Variable, Variable, Nnrf, Fun]
+  ) = {
+    implicit val pool = model.m1.heads.head.pool
+    val device = TensorHelpers.device(model.m1.biases.head.value)
+    val precision = TensorHelpers.precision(model.m1.biases.head.value).get
+    val x =
+      const(
+        TensorHelpers
+          .fromMat(features, device, precision)
+      ).releasable
+    val output = model.forward(x)
+    val outputJ = output.toMat
+    output.releaseAll()
+    pool.releaseAll
+    outputJ
+  }
+
+  def trainClassification(
+      features: Mat[Double],
+      target: Vec[Long],
+      numClasses: Int,
+      classWeights: Vec[Double],
+      device: Device,
+      precision: FloatingPointPrecision = SinglePrecision,
+      learningRate: Double = 0.001,
+      epochs: Int = 300,
+      logger: Option[scribe.Logger] = None
+  ) = {
+    implicit val pool = new AllocatedVariablePool
+    val targetT = ATen.squeeze_0(
+      TensorHelpers.fromLongMat(
+        Mat(target),
+        device
+      )
+    )
+    val x =
+      const(
+        TensorHelpers
+          .fromMat(features, device, precision)
+      )
+    val tOpt = device.options(precision)
+    val model = Seq2(
+      Nnrf.apply(
+        levels = 5,
+        numFeatures = 32,
+        totalDataFeatures = 784,
+        out = 10,
+        tOpt = tOpt,
+        fullBatchData = Some(x)
+      ),
+      Fun(_.logSoftMax(dim = 1))
+    )
+    val optim = AdamW(
+      model.parameters.map(v => (v._1.value, v._2)),
+      learningRate = simple(0.001),
+      weightDecay = simple(0.0d)
+    )
+    val cw = TensorHelpers.fromVec(classWeights, device, precision)
+
+    var i = 0
+    var lastLoss = Double.MaxValue
+    while (i < epochs) {
+      val output = model.forward(x)
+      val loss: Variable = output.nllLoss(targetT, numClasses, cw)
+      logger.foreach(_.info(s"$i - ${loss.toMat.raw(0)}"))
+      lastLoss = loss.toMat.raw(0)
+      val gradients = model.gradients(loss)
+      optim.step(gradients)
+      i += 1
+    }
+
+    x.value.release
+    targetT.release
+    cw.release
+    optim.release()
+    pool.releaseAll()
+    (model.asEval, lastLoss)
+  }
+
+  implicit val trainingMode: TrainingMode[Nnrf] = {
+    TrainingMode.make[Nnrf](
+      m => m.copy(levels = m.levels.map(_.asEval)),
+      m => m.copy(levels = m.levels.map(_.asTraining))
+    )
+  }
+  implicit def load(implicit l: Load[NnrfCell]) = Load.make[Nnrf] {
+    m => parameters =>
+      implicit val pool = m.levels.head.weights.pool
+      val groups = parameters.grouped(3).toList
+      val loadedlevels = (groups zip m.levels).map {
+        case (params, cell) => cell.load(params)
+      }
+
+      m.copy(levels = loadedlevels.toIndexedSeq)
+  }
   def apply(
       levels: Int,
       numFeatures: Int,
       totalDataFeatures: Int,
       out: Int,
-      tOpt: TensorOptions
+      tOpt: TensorOptions,
+      fullBatchData: Option[Variable]
   )(implicit pool: AllocatedVariablePool): Nnrf =
     Nnrf(
       0 until levels.toInt map (i =>
@@ -86,7 +174,8 @@ object Nnrf {
           math.pow(2d, i).toInt,
           numFeatures,
           totalDataFeatures,
-          tOpt
+          tOpt,
+          fullBatchData
         )
       ),
       0 until levels map { i =>
@@ -104,7 +193,9 @@ case class NnrfCell(
     weights: Variable,
     biases: Variable,
     features: Variable,
-    featuresPerNode: Int
+    featuresPerNode: Int,
+    train: Boolean,
+    fullBatchData: Option[Variable]
 ) extends GenericModule[
       (Variable, Variable),
       (Variable)
@@ -116,7 +207,9 @@ case class NnrfCell(
     biases -> NnrfCell.Bias
   )
 
-  var subsetX: Option[Variable] = None
+  val subsetX: Option[Variable] = {
+    fullBatchData.map(v => subsetData(v))
+  }
   def subsetData(data: Variable) = {
     val fLong =
       const(ATen._cast_Long(features.value, false))(features.pool).releasable
@@ -125,9 +218,12 @@ case class NnrfCell(
       .releaseWithVariable(fLong)
       .view(List(data.shape(0).toInt, -1, featuresPerNode))
       .transpose(0, 1)
+      .keep
   }
-  def setData(data: Variable) = {
-    subsetX = Some(subsetData(data).keep)
+
+  def asEval = {
+    subsetX.foreach(_.value.release)
+    copy(train = false, fullBatchData = None)
   }
 
   def forward(tuple: (Variable, Variable)) = {
@@ -141,7 +237,11 @@ case class NnrfCell(
 
 object NnrfCell {
 
-  implicit val trainingMode = TrainingMode.identity[NnrfCell]
+  implicit val trainingMode: TrainingMode[NnrfCell] =
+    TrainingMode.make[NnrfCell](
+      m => m.asEval,
+      m => m.copy(train = true)
+    )
   implicit val load = Load.make[NnrfCell] { m => parameters =>
     implicit val pool = m.weights.pool
     val f = param(parameters(0))
@@ -159,11 +259,13 @@ object NnrfCell {
       nodes: Int,
       numFeatures: Int,
       totalDataFeatures: Int,
-      tOpt: TensorOptions
+      tOpt: TensorOptions,
+      fullBatchData: Option[Variable]
   )(implicit pool: AllocatedVariablePool): NnrfCell = {
     val in = numFeatures
     val out = 2
     NnrfCell(
+      train = true,
       weights = param(
         ATen.normal_3(0d, math.sqrt(2d / in), Array(nodes, in, out), tOpt)
       ),
@@ -178,10 +280,11 @@ object NnrfCell {
             )).toVec
               .map(_.toDouble),
             TensorHelpers.device(tOpt),
-            DoublePrecision
+            TensorHelpers.precision(tOpt).get
           )
       ),
-      featuresPerNode = numFeatures
+      featuresPerNode = numFeatures,
+      fullBatchData = fullBatchData
     )
 
   }

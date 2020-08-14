@@ -103,71 +103,6 @@ class NnrfSuite extends AnyFunSuite {
     test(id + "/CUDA", CudaTest) { fun(true) }
   }
 
-  // test1("mnist tabular mlp") { cuda =>
-  //   implicit val pool = new AllocatedVariablePool
-  //   val data = org.saddle.csv.CsvParser
-  //     .parseSourceWithHeader[Double](
-  //       scala.io.Source
-  //         .fromInputStream(
-  //           new java.util.zip.GZIPInputStream(
-  //             getClass.getResourceAsStream("/mnist_test.csv.gz")
-  //           )
-  //         )
-  //     )
-  //     .right
-  //     .get
-  //   val target = ATen.squeeze_0(
-  //     TensorHelpers.fromLongMat(
-  //       Mat(data.firstCol("label").toVec.map(_.toLong)),
-  //       cuda
-  //     )
-  //   )
-  //   val x =
-  //     const(TensorHelpers.fromMat(data.filterIx(_ != "label").toMat, cuda))
-
-  //   val tOpt = if (cuda) TensorOptions.d.cuda else TensorOptions.d.cpu
-  //   val model = Seq2(
-  //     lamp.nn.MLP(784, 10, List(4, 4), tOpt),
-  //     Fun(_.logSoftMax(dim = 1))
-  //   )
-
-  //   println(model.learnableParameters)
-  //   // model.m1.setData(x)
-
-  //   val optim = AdamW(
-  //     model.parameters.map(v => (v._1.value, v._2)),
-  //     learningRate = simple(0.001),
-  //     weightDecay = simple(0.0d)
-  //   )
-
-  //   var lastAccuracy = 0d
-  //   var lastLoss = 1000000d
-  //   var i = 0
-  //   while (i < 500) {
-  //     val output = model.forward(x)
-  //     val prediction = {
-  //       val argm = ATen.argmax(output.value, 1, false)
-  //       val r = TensorHelpers.toLongMat(argm).toVec
-  //       argm.release
-  //       r
-  //     }
-  //     val correct = prediction.zipMap(data.firstCol("label").toVec)((a, b) =>
-  //       if (a == b) 1d else 0d
-  //     )
-  //     val classWeights = ATen.ones(Array(10), x.options)
-  //     val loss: Variable = output.nllLoss(target, 10, classWeights)
-  //     lastAccuracy = correct.mean2
-  //     lastLoss = TensorHelpers.toMat(loss.value).raw(0)
-  //     println((i, lastLoss, lastAccuracy))
-  //     val gradients = model.gradients(loss)
-  //     optim.step(gradients)
-  //     i += 1
-  //   }
-  //   println(lastAccuracy)
-  //   assert(lastAccuracy > 0.6)
-  //   assert(lastLoss < 100d)
-
-  // }
   test1("mnist tabular") { cuda =>
     implicit val pool = new AllocatedVariablePool
     val data = org.saddle.csv.CsvParser
@@ -181,62 +116,33 @@ class NnrfSuite extends AnyFunSuite {
       )
       .right
       .get
-    val target = ATen.squeeze_0(
-      TensorHelpers.fromLongMat(
-        Mat(data.firstCol("label").toVec.map(_.toLong)),
-        cuda
-      )
-    )
-    val x =
-      const(TensorHelpers.fromMat(data.filterIx(_ != "label").toMat, cuda))
+    val target = data.firstCol("label").toVec.map(_.toLong)
+    val device = if (cuda) CudaDevice(0) else CPU
+    val precision = SinglePrecision
+    val x = data.filterIx(_ != "label").toMat
 
-    val tOpt = if (cuda) TensorOptions.d.cuda else TensorOptions.d.cpu
-    val model = Seq2(
-      Nnrf.apply(
-        levels = 5,
-        numFeatures = 32,
-        totalDataFeatures = 784,
-        out = 10,
-        tOpt = tOpt
-      ),
-      Fun(_.logSoftMax(dim = 1))
+    val tOpt = if (cuda) TensorOptions.f.cuda else TensorOptions.f.cpu
+    val (trained, lastLoss) = Nnrf.trainClassification(
+      features = x,
+      target = target,
+      device = device,
+      precision = precision,
+      numClasses = 10,
+      classWeights = vec.ones(10)
+      // logger = Some(scribe.Logger("test"))
     )
 
-    println(model.learnableParameters)
-    model.m1.setData(x)
+    val output = Nnrf.predict(x, trained)
+    val prediction = output.reduceRows((v, _) => v.argmax)
 
-    val optim = AdamW(
-      model.parameters.map(v => (v._1.value, v._2)),
-      learningRate = simple(0.001),
-      weightDecay = simple(0.0d)
+    val correct = prediction.zipMap(data.firstCol("label").toVec)((a, b) =>
+      if (a == b) 1d else 0d
     )
 
-    var lastAccuracy = 0d
-    var lastLoss = 1000000d
-    var i = 0
-    while (i < 500) {
-      val output = model.forward(x)
-      val prediction = {
-        val argm = ATen.argmax(output.value, 1, false)
-        val r = TensorHelpers.toLongMat(argm).toVec
-        argm.release
-        r
-      }
-      val correct = prediction.zipMap(data.firstCol("label").toVec)((a, b) =>
-        if (a == b) 1d else 0d
-      )
-      val classWeights = ATen.ones(Array(10), x.options)
-      val loss: Variable = output.nllLoss(target, 10, classWeights)
-      lastAccuracy = correct.mean2
-      lastLoss = TensorHelpers.toMat(loss.value).raw(0)
-      println((i, lastLoss, lastAccuracy))
-      val gradients = model.gradients(loss)
-      optim.step(gradients)
-      i += 1
-    }
-    println(lastAccuracy)
+    val lastAccuracy = correct.mean2
+
     assert(lastAccuracy > 0.6)
-    assert(lastLoss < 100d)
+    assert(lastLoss < 0.6)
 
   }
 }
