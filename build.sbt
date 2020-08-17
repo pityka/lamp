@@ -137,6 +137,7 @@ lazy val e2etest = project
     testOptions in AllTest := Nil
   )
   .dependsOn(data)
+  .dependsOn(forest)
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val tabular = project

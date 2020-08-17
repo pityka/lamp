@@ -162,7 +162,96 @@ class EndToEndClassificationSuite extends AnyFunSuite {
     trainFeaturesTensor.release
     accuracy
   }
+  def trainAndPredictExtraTrees(
+      target: Series[Int, Double],
+      features: Frame[Int, String, Double]
+  ) = {
+    val numExamples = target.length
 
+    val testFeatures = features.row(0 -> numExamples / 3)
+    val trainFeatures = features.row(numExamples / 3 + 1 -> *)
+    val testTarget = Frame(target).row(0 -> numExamples / 3).colAt(0)
+    val trainTarget = Frame(target).row(numExamples / 3 + 1 -> *).colAt(0)
+
+    val numClasses = target.toVec.toSeq.distinct.max.toInt + 1
+    val numFeatures = features.numCols
+
+    val trainedModel = lamp.extratrees.buildForestClassification(
+      data = trainFeatures.toMat,
+      target = trainTarget.toVec.map(_.toInt),
+      numClasses = numClasses,
+      nMin = 2,
+      k = math.sqrt(numFeatures).toInt + 1,
+      m = 30
+    )
+
+    val output =
+      lamp.extratrees.predictClassification(trainedModel, testFeatures.toMat)
+    val prediction = output.rows.map(_.argmax).toVec
+    val accuracy = prediction
+      .zipMap(testTarget.toVec)((a, b) => if (a.toInt == b.toInt) 1d else 0d)
+      .mean2
+
+    accuracy
+  }
+
+  test("e2e - extratrees", SlowTest) {
+    val accuracies = datasets.toList
+      .map {
+        case (dsName, dsFile) =>
+          val (target, features) = parseDataset(dsFile)
+          val inbalance = target.toVec.toSeq
+            .groupBy(identity)
+            .toSeq
+            .map(v => (v._1, v._2.size.toDouble / target.count))
+            .sortBy(_._2)
+            .reverse
+            .head
+            ._2
+          (dsName, inbalance, target.count, features.numCols, target, dsFile)
+      }
+      .filter {
+        case (_, inbalance, length, numFeatures, target, _) =>
+          inbalance < 0.6 && length > 300 && length < 20000 && numFeatures > 5 && numFeatures < 1000 && target.toVec.toSeq
+            .forall(_ >= 0d)
+      }
+      // .take(10)
+      .map {
+        case (dsName, _, _, _, _, dsFile) =>
+          val (target, features) = parseDataset(dsFile)
+          val t1 = System.nanoTime()
+          val extraTreesAccuracy =
+            trainAndPredictExtraTrees(target, features)
+          val t2 = System.nanoTime
+
+          val inbalance = target.toVec.toSeq
+            .groupBy(identity)
+            .toSeq
+            .map(v => (v._1, v._2.size.toDouble / target.count))
+            .sortBy(_._2)
+            .reverse
+            .head
+            ._2
+
+          val r = (
+            dsName,
+            Series(
+              "majority-class-frequency" -> inbalance,
+              "extratrees-accuracy" -> extraTreesAccuracy,
+              "extratrees-time" -> (t2 - t1) / 1e9
+            )
+          )
+          // ???
+          r
+      }
+      .toFrame
+      .T
+      .sortedRIx
+
+    println(new String(org.saddle.csv.CsvWriter.writeFrameToArray(accuracies)))
+    println(accuracies.stringify(100, 100))
+
+  }
   test("e2e", SlowTest) {
     val accuracies = datasets.toList
       .map {
