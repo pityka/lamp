@@ -100,22 +100,6 @@ package object extratrees {
 
     trees
   }
-  // // data: samples x features
-  // def buildForestRegression(
-  //     data: Tensor,
-  //     target: Tensor,
-  //     nMin: Int,
-  //     k: Int,
-  //     m: Int
-  // ): Seq[RegressionTree] = {
-  //   val subset = {
-  //     val s = array.range(0, data.sizes.apply(0).toInt).toVec.map(_.toLong)
-  //     TensorHelpers.fromLongVec(s, TensorHelpers.device(data))
-  //   }
-  //   val trees =
-  //     0 until m map (_ => buildTreeRegression(data, subset, target, nMin, k))
-  //   trees
-  // }
 
   def buildForestRegression(
       data: Mat[Double],
@@ -193,110 +177,6 @@ package object extratrees {
     }
   }
 
-  // // data: samples x features
-  // // subset: long tensor 1D
-  // // attributes: long tensor 1D
-  // // target: double tensor 1D
-  // def buildTreeRegression(
-  //     data: Tensor,
-  //     subset: Tensor,
-  //     target: Tensor,
-  //     nMin: Int,
-  //     k: Int
-  // ): RegressionTree = {
-  //   def makeLeaf = {
-  //     {
-  //       val t = ATen.index_select(target, 0, subset)
-  //       val mean = ATen.mean_0(t)
-  //       val r = mean.getScalarDouble
-  //       t.release
-  //       mean.release
-  //       RegressionLeaf(r)
-  //     }
-
-  //   }
-  //   def makeNonLeaf(
-  //       leftTree: RegressionTree,
-  //       rightTree: RegressionTree,
-  //       splitFeatureIdx: Int,
-  //       splitCutpoint: Double
-  //   ) =
-  //     RegressionNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
-
-  //   def targetIsConstant = {
-  //     val t = ATen.index_select(target, 0, subset)
-  //     val v = ATen.var_0(t, false)
-  //     val r = v.getScalarDouble == 0d
-  //     v.release
-  //     t.release
-  //     r
-  //   }
-  //   if (subset.sizes.apply(0) < nMin) makeLeaf
-  //   else if (targetIsConstant) makeLeaf
-  //   else {
-  //     val nonConstantFeatures = {
-  //       val data1 = ATen.index_select(data, 0, subset)
-  //       val v = ATen.var_1(data1, Array(0), false, false)
-  //       val idx = ATen.nonzero(v)
-  //       v.release
-  //       data1.release
-  //       idx
-  //     }
-  //     if (nonConstantFeatures.sizes.apply(0) == 0) {
-  //       val r = makeLeaf
-  //       nonConstantFeatures.release
-  //       r
-  //     } else {
-
-  //       val candidateFeatures = {
-  //         val p = ATen.randperm_0(
-  //           nonConstantFeatures.sizes.apply(0),
-  //           nonConstantFeatures.options()
-  //         )
-
-  //         val p1 = ATen.index_select(nonConstantFeatures, 0, p)
-  //         val r = ATen.slice(p1, 0, 0, k, 1)
-  //         p.release
-  //         p1.release
-  //         r
-  //       }
-
-  //       val (splitFeatureIdx, splitCutpoint) =
-  //         splitRegression(data, subset, candidateFeatures, target)
-
-  //       nonConstantFeatures.release
-  //       candidateFeatures.release
-
-  //       val splitFeatureIdxTensor = TensorHelpers.fromLongVec(
-  //         Vec(splitFeatureIdx),
-  //         TensorHelpers.device(data)
-  //       )
-  //       val splitFeature =
-  //         ATen.index(data, Array(subset, splitFeatureIdxTensor))
-
-  //       val leftSubset = {
-  //         val p = ATen.lt_0(splitFeature, splitCutpoint)
-  //         val r = ATen.masked_select(subset, p)
-  //         p.release
-  //         r
-  //       }
-  //       val rightSubset = {
-  //         val p = ATen.ge_0(splitFeature, splitCutpoint)
-  //         val r = ATen.masked_select(subset, p)
-  //         p.release
-  //         r
-  //       }
-  //       splitFeature.release
-  //       splitFeatureIdxTensor.release
-
-  //       val leftTree =
-  //         buildTreeRegression(data, leftSubset, target, nMin, k)
-  //       val rightTree =
-  //         buildTreeRegression(data, rightSubset, target, nMin, k)
-  //       makeNonLeaf(leftTree, rightTree, splitFeatureIdx.toInt, splitCutpoint)
-  //     }
-  //   }
-  // }
   def buildTreeClassification(
       data: Mat[Double],
       subset: Vec[Int],
@@ -438,91 +318,6 @@ package object extratrees {
     (splitAttribute, splitCutpoint)
   }
 
-  // // data: samples x features
-  // // subset: long tensor 1D
-  // // attributes: long tensor 1D
-  // // target: double tensor 1D
-  // def splitRegression(
-  //     data: Tensor,
-  //     subset: Tensor,
-  //     attributes: Tensor,
-  //     target: Tensor
-  // ) = {
-  //   val numFeatures = attributes.sizes.apply(0)
-  //   val numSamples = subset.sizes.apply(0)
-  //   val data1 = ATen.index(data, Array(subset, attributes))
-
-  //   val min = ATen.min_values(data1, Array(1), false)
-  //   val max = ATen.max_values(data1, Array(1), false)
-
-  //   val cutpoints = {
-  //     val r1 = ATen.rand(Array(numFeatures), data1.options())
-  //     val r2 = ATen.sub_0(max, min, 1d)
-  //     ATen.mul_out(r1, r1, r2)
-  //     ATen.add_out(r1, r1, min, 1d)
-  //     r2.release
-  //     r1
-  //   }
-
-  //   val targetNoSplit = ATen.index_select(target, 0, subset)
-  //   val varianceNoSplit = {
-  //     val t = ATen.var_0(targetNoSplit, false)
-  //     val r = t.getScalarDouble
-  //     t.release
-  //     r
-  //   }
-  //   val cutpointsVec = cutpoints.toMat.toVec
-  //   val scores = cutpointsVec.toSeq.zipWithIndex.map {
-  //     case (cutpoint, colIdx) =>
-  //       val samplesInSplit = {
-  //         val slice = ATen.slice(data1, 0, colIdx.toInt, colIdx.toInt + 1, 1)
-  //         val p = ATen.lt_0(slice, cutpoint)
-  //         val r = ATen.masked_select(subset, p)
-  //         p.release
-  //         slice.release
-  //         r
-  //       }
-
-  //       val samplesOutSplit = {
-  //         val slice = ATen.slice(data1, 0, colIdx.toInt, colIdx.toInt + 1, 1)
-  //         val p = ATen.ge_0(slice, cutpoint)
-  //         val r = ATen.masked_select(subset, p)
-  //         p.release
-  //         slice.release
-  //         r
-  //       }
-
-  //       val score = computeVarianceReduction(
-  //         target,
-  //         samplesInSplit,
-  //         samplesOutSplit,
-  //         varianceNoSplit
-  //       )
-
-  //       samplesInSplit.release
-  //       samplesOutSplit.release
-
-  //       score
-  //   }.toVec
-
-  //   val sidx = scores.argmax
-  //   val splitAttribute = {
-  //     val t = ATen.select(attributes, 0, sidx)
-  //     val r = t.toLongMat.raw(0)
-  //     t.release
-  //     r
-  //   }
-  //   val splitCutpoint = cutpointsVec.raw(sidx)
-
-  //   cutpoints.release
-  //   targetNoSplit.release
-  //   min.release
-  //   max.release
-  //   data1.release
-
-  //   (splitAttribute, splitCutpoint)
-  // }
-
   def computeVarianceReduction(
       target: Vec[Double],
       samplesInSplit: Vec[Int],
@@ -547,42 +342,5 @@ package object extratrees {
       (samplesInSplit.length.toDouble / numSamplesNoSplit.toDouble) * varianceInSplit -
       (samplesOutSplit.length.toDouble / numSamplesNoSplit.toDouble) * varianceOutSplit) / varianceNoSplit
   }
-  // def computeVarianceReduction(
-  //     target: Tensor,
-  //     samplesInSplit: Tensor,
-  //     samplesOutSplit: Tensor,
-  //     varianceNoSplit: Double
-  // ) = {
-  //   val nIn = samplesInSplit.sizes.apply(0)
-  //   val nOut = samplesOutSplit.sizes.apply(0)
-  //   val targetInSplit = ATen.index_select(target, 0, samplesInSplit) //target.take(samplesInSplit.toArray)
-  //   val targetOutSplit = ATen.index_select(target, 0, samplesOutSplit) //target.take(samplesOutSplit.toArray)
-  //   val varianceInSplit =
-  //     if (nIn == 1) 0d
-  //     else {
-  //       val t = ATen.var_0(targetInSplit, false)
-  //       val r = t.getScalarDouble
-  //       t.release
-  //       r
-  //     }
-  //   val varianceOutSplit =
-  //     if (nOut == 1) 0d
-  //     else {
-  //       val t = ATen.var_0(targetOutSplit, false)
-  //       val r = t.getScalarDouble
-  //       t.release
-  //       r
-  //     }
-
-  //   val numSamplesNoSplit = nIn + nOut.toDouble
-
-  //   val r = (varianceNoSplit -
-  //     (nIn / numSamplesNoSplit) * varianceInSplit -
-  //     (nOut / numSamplesNoSplit) * varianceOutSplit) / varianceNoSplit
-
-  //   targetInSplit.release
-  //   targetOutSplit.release
-  //   r
-  // }
 
 }
