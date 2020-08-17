@@ -75,6 +75,8 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
+val saddleVersion = "2.0.0-M26+5-a2e2f63c+20200817-2057-SNAPSHOT"
+
 lazy val core = project
   .in(file("lamp-core"))
   .configs(Cuda)
@@ -84,7 +86,7 @@ lazy val core = project
     name := "lamp-core",
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "aten-scala-core" % "0.0.0+48-4b33362b",
-      "io.github.pityka" %% "saddle-core" % "2.0.0-M26",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
       "org.typelevel" %% "cats-core" % "2.1.1",
       "org.typelevel" %% "cats-effect" % "2.1.3",
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
@@ -166,7 +168,7 @@ lazy val umap = project
     name := "lamp-umap",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.1.2" % "test",
-      "io.github.pityka" %% "saddle-linalg" % "2.0.0-M26",
+      "io.github.pityka" %% "saddle-linalg" % saddleVersion,
       "io.github.pityka" %% "nspl-awt" % "0.0.22" % "test",
       "io.github.pityka" %% "nspl-saddle" % "0.0.22" % "test"
     ),
@@ -179,6 +181,18 @@ lazy val umap = project
   .dependsOn(data, knn)
   .dependsOn(core % "test->test;compile->compile")
 
+lazy val forest = project
+  .in(file("extratrees"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-extratrees",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.1.2" % "test",
+      "io.github.pityka" %% "saddle-linalg" % saddleVersion
+    )
+  )
+  .dependsOn(core % "test->test")
+
 lazy val knn = project
   .in(file("lamp-knn"))
   .configs(Cuda)
@@ -188,7 +202,7 @@ lazy val knn = project
     name := "lamp-knn",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.1.2" % "test",
-      "io.github.pityka" %% "saddle-linalg" % "2.0.0-M26"
+      "io.github.pityka" %% "saddle-linalg" % saddleVersion
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
