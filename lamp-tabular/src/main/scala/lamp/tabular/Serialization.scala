@@ -79,7 +79,7 @@ object Serialization {
         )
         channel.close
         tensors.map(v => KnnBase(k, v.head, v.drop(2), v(1)))
-      case NNDto(hiddenSize, num, file, dataTypes) =>
+      case NNDto(hiddenSize, _, file, dataTypes) =>
         val channel = new FileInputStream(new File(file)).getChannel()
         val tensors = lamp.data.Reader.readTensorsFromChannel(
           types = dataTypes.map(scalarTag),
@@ -95,7 +95,7 @@ object Serialization {
           .sequence(files.map {
             case ExtratreesDto(trees) =>
               Right(ExtratreesBase(trees))
-            case NNDto(hiddenSize, num, file, dataTypes) =>
+            case NNDto(hiddenSize, _, file, dataTypes) =>
               val channel = new FileInputStream(new File(file)).getChannel()
               val tensors = lamp.data.Reader.readTensorsFromChannel(
                 types = dataTypes.map(scalarTag),
@@ -141,7 +141,7 @@ object Serialization {
       case 4 => "long"
     }
     val selectionFiles = model.selectionModels.zipWithIndex.map {
-      case (ExtratreesBase(trees), idx) =>
+      case (ExtratreesBase(trees), _) =>
         ExtratreesDto(trees)
       case (NNBase(hiddenSize, tensors), idx) =>
         val path = outPath + ".selection.nn." + idx
@@ -171,7 +171,7 @@ object Serialization {
     val baseFiles = model.baseModels.zipWithIndex.map {
       case (listOfModels, idx0) =>
         val paths = listOfModels.zipWithIndex.map {
-          case (ExtratreesBase(trees), idx) =>
+          case (ExtratreesBase(trees), _) =>
             ExtratreesDto(trees)
           case (KnnBase(k, tensor1, tensors, tensor2), idx1) =>
             val path = outPath + ".base.knn." + idx0 + "." + idx1

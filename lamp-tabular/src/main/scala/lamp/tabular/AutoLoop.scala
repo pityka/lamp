@@ -206,8 +206,7 @@ case class EnsembleModel(
                     dataLayout = dataLayout,
                     device = device,
                     precision = precision,
-                    minibatchSize = 100,
-                    logger = None
+                    minibatchSize = 100
                   )
                   .unsafeRunSync
                 prediction
@@ -280,8 +279,7 @@ case class EnsembleModel(
                 dataLayout = dataLayout,
                 device = device,
                 precision = precision,
-                minibatchSize = 100,
-                logger = None
+                minibatchSize = 100
               )
               .unsafeRunSync
             prediction
@@ -487,11 +485,9 @@ object AutoLoop {
       dataLayout: Seq[Metadata],
       device: Device,
       precision: FloatingPointPrecision,
-      minibatchSize: Int,
-      logger: Option[Logger]
+      minibatchSize: Int
   ) =
     IO {
-      val modelTensorOptions = device.options(precision)
 
       val trainingFeatures = makeFusedFeatureMatrix(
         data,
@@ -581,8 +577,7 @@ object AutoLoop {
       predictablesPredictionsOnBasemodels: Seq[Tensor],
       target: Tensor,
       targetType: TargetType,
-      dataLayout: Seq[Metadata],
-      logger: Option[Logger]
+      dataLayout: Seq[Metadata]
   ) =
     IO {
       import lamp.syntax
@@ -943,7 +938,7 @@ object AutoLoop {
       targetType: TargetType,
       dataLayout: Seq[Metadata],
       logger: Option[Logger]
-  )(implicit pool: AllocatedVariablePool) = {
+  ) = {
     val trainedFolds = folds.zipWithIndex
       .map {
         case ((trainIdx, predictIdx), foldIdx) =>
@@ -985,8 +980,7 @@ object AutoLoop {
               predictablesPredictionsOnBasemodels = predictablePredictions,
               target = trainTarget,
               targetType = targetType,
-              dataLayout = dataLayout,
-              logger = logger
+              dataLayout = dataLayout
             ).map {
               case (prediction, model) =>
                 (
@@ -1045,7 +1039,7 @@ object AutoLoop {
       precision: FloatingPointPrecision,
       minibatchSize: Int,
       logger: Option[Logger]
-  )(implicit pool: AllocatedVariablePool) = {
+  ) = {
     val trainedFolds = folds.zipWithIndex
       .map {
         case ((trainIdx, predictIdx), foldIdx) =>
@@ -1087,8 +1081,7 @@ object AutoLoop {
               dataLayout = dataLayout,
               device = device,
               precision = precision,
-              minibatchSize = minibatchSize,
-              logger = logger
+              minibatchSize = minibatchSize
             ).map { prediction =>
               (
                 0,
@@ -1464,7 +1457,7 @@ object AutoLoop {
 
               withValidationErrors <- IO {
                 trainedEnsembleFolds.map {
-                  case (epoch, pred, models) =>
+                  case (_, pred, models) =>
                     assert(pred.options.isCPU())
                     assert(models.forall(_.state.forall(_.options.isCPU)))
                     val lossM = computeValidationErrorsAndReleasePrediction(
@@ -1503,7 +1496,7 @@ object AutoLoop {
 
             withValidationErrors <- IO {
               trainedEnsembleFolds.map {
-                case (epoch, pred, models) =>
+                case (_, pred, models) =>
                   assert(pred.options.isCPU())
                   assert(models.forall(_.features.options.isCPU))
                   assert(models.forall(_.target.options.isCPU))
@@ -1544,7 +1537,7 @@ object AutoLoop {
 
               withValidationErrors <- IO {
                 trainedEnsembleFolds.map {
-                  case (epoch, pred, models) =>
+                  case (_, pred, models) =>
                     assert(pred.options.isCPU())
                     val lossM = computeValidationErrorsAndReleasePrediction(
                       pred,
@@ -1601,8 +1594,6 @@ object AutoLoop {
                 .map(_._1)}"
             )
           )
-          println(accept)
-          println(reject)
           accept.map(_._2)
         }
       }
