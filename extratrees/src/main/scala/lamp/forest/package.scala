@@ -2,16 +2,34 @@ package lamp
 
 import org.saddle._
 import org.saddle.macros.BinOps._
+import java.util.concurrent.ForkJoinPool
+import scala.concurrent.ExecutionContext
+import cats.effect.IO
+import cats.syntax.parallel._
+import cats.data.NonEmptyList
 
 sealed trait ClassificationTree
-case class ClassificationLeaf(targetDistribution: Vec[Double])
+case class ClassificationLeaf(targetDistribution: Seq[Double])
     extends ClassificationTree
+object ClassificationLeaf {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[ClassificationLeaf] = macroRW
+}
 case class ClassificationNonLeaf(
     left: ClassificationTree,
     right: ClassificationTree,
     splitFeature: Int,
     cutpoint: Double
 ) extends ClassificationTree
+object ClassificationNonLeaf {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[ClassificationNonLeaf] = macroRW
+}
+
+object ClassificationTree {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[ClassificationTree] = macroRW
+}
 
 sealed trait RegressionTree
 case class RegressionLeaf(targetMean: Double) extends RegressionTree
@@ -21,6 +39,20 @@ case class RegressionNonLeaf(
     splitFeature: Int,
     cutpoint: Double
 ) extends RegressionTree
+object RegressionLeaf {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[RegressionLeaf] = macroRW
+}
+
+object RegressionNonLeaf {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[RegressionNonLeaf] = macroRW
+}
+
+object RegressionTree {
+  import upickle.default.{ReadWriter => RW, macroRW}
+  implicit val rw: RW[RegressionTree] = macroRW
+}
 
 package object extratrees {
 
@@ -29,7 +61,7 @@ package object extratrees {
       sample: Vec[Double]
   ): Vec[Double] = {
     def traverse(root: ClassificationTree): Vec[Double] = root match {
-      case ClassificationLeaf(targetDistribution) => targetDistribution
+      case ClassificationLeaf(targetDistribution) => targetDistribution.toVec
       case ClassificationNonLeaf(left, right, splitFeature, cutpoint) =>
         if (sample.raw(splitFeature) < cutpoint) traverse(left)
         else traverse(right)
@@ -91,12 +123,31 @@ package object extratrees {
       numClasses: Int,
       nMin: Int,
       k: Int,
-      m: Int
+      m: Int,
+      parallelism: Int
   ): Seq[ClassificationTree] = {
     val oh = oneHot(target, numClasses)
     val subset = array.range(0, data.numRows).toVec
-    val trees =
+    val trees = if (parallelism <= 1) {
       0 until m map (_ => buildTreeClassification(data, subset, oh, nMin, k))
+    } else {
+      val fjp = new ForkJoinPool(parallelism)
+      val ec = ExecutionContext.fromExecutorService(fjp)
+      implicit val cs = IO.contextShift(ec)
+      val trees = NonEmptyList
+        .fromList(
+          (0 until m).toList map (_ =>
+            IO { buildTreeClassification(data, subset, oh, nMin, k) }
+          )
+        )
+        .get
+        .parSequence
+        .unsafeRunSync
+      fjp.shutdown()
+      ec.shutdown()
+
+      trees.toList
+    }
 
     trees
   }
@@ -106,11 +157,31 @@ package object extratrees {
       target: Vec[Double],
       nMin: Int,
       k: Int,
-      m: Int
+      m: Int,
+      parallelism: Int
   ): Seq[RegressionTree] = {
     val subset = array.range(0, data.numRows).toVec
-    val trees =
+
+    val trees = if (parallelism <= 1) {
       0 until m map (_ => buildTreeRegression(data, subset, target, nMin, k))
+    } else {
+      val fjp = new ForkJoinPool(parallelism)
+      val ec = ExecutionContext.fromExecutorService(fjp)
+      implicit val cs = IO.contextShift(ec)
+      val trees = NonEmptyList
+        .fromList(
+          (0 until m).toList map (_ =>
+            IO { buildTreeRegression(data, subset, target, nMin, k) }
+          )
+        )
+        .get
+        .parSequence
+        .unsafeRunSync
+      fjp.shutdown()
+      ec.shutdown()
+
+      trees.toList
+    }
 
     trees
   }
@@ -188,7 +259,7 @@ package object extratrees {
     val targetInSubset = target.row(subset.toArray)
     def makeLeaf = {
       val targetDistribution = targetInSubset.reduceCols((col, _) => col.mean2)
-      ClassificationLeaf(targetDistribution)
+      ClassificationLeaf(targetDistribution.toSeq)
     }
     def makeNonLeaf(
         leftTree: ClassificationTree,
@@ -198,15 +269,27 @@ package object extratrees {
     ) =
       ClassificationNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
     val targetIsConstant = {
-      targetInSubset.reduceCols((col, _) => col.sum).countif(_ > 0d) == 1
+      targetInSubset.reduceCols((col, _) => col.sum2).countif(_ > 0d) == 1
     }
     if (subset.length < nMin) makeLeaf
     else if (targetIsConstant) makeLeaf
     else {
       val nonConstantFeatures = data
         .row(subset.toArray)
-        .reduceCols((col, _) => col.sampleVariance)
-        .find(_ != 0d)
+        .reduceCols { (col, _) =>
+          val head = col.raw(0)
+          var i = 1
+          val n = col.length
+          var uniform = true
+          while (i < n && uniform) {
+            if (col.raw(i) != head) {
+              uniform = false
+            }
+            i += 1
+          }
+          uniform
+        }
+        .find(uniform => !uniform)
       if (nonConstantFeatures.isEmpty) makeLeaf
       else {
         val candidateFeatures =
@@ -239,20 +322,22 @@ package object extratrees {
       target: Mat[Double],
       rng: org.saddle.spire.random.Generator
   ) = {
-    val data1 = data.row(subset.toArray)
+    val data1 =
+      if (subset.length < data.numRows) data.row(subset.toArray) else data
     val min = attributes.map(i => data1.col(i).min2)
     val max = attributes.map(i => data1.col(i).max2)
     val cutpoints =
       min.zipMap(max)((min, max) => rng.nextDouble(from = min, until = max))
     val giniTotal = giniImpurity(subset, target)
-    val scores = cutpoints.toSeq.zipWithIndex.map {
-      case (cutpoint, colIdx) =>
+    val scores = cutpoints
+      .zipMapIdx { (cutpoint, colIdx) =>
         val c2 = attributes.raw(colIdx)
-        val samplesInSplit = subset.filter(s => data.raw(s, c2) < cutpoint)
-        val samplesOutSplit = subset.filter(s => data.raw(s, c2) >= cutpoint)
+        val take = data1.col(c2) < cutpoint
+        val samplesInSplit = subset.where(take)
+        val samplesOutSplit = subset.where(take.map(b => !b))
 
         giniScore(target, samplesInSplit, samplesOutSplit, giniTotal)
-    }.toVec
+      }
 
     val sidx = scores.argmax
     val splitAttribute = attributes.raw(sidx)
@@ -287,7 +372,8 @@ package object extratrees {
       target: Vec[Double],
       rng: org.saddle.spire.random.Generator
   ) = {
-    val data1 = data.row(subset.toArray)
+    val data1 =
+      if (subset.length < data.numRows) data.row(subset.toArray) else data
     val min = attributes.map(i => data1.col(i).min2)
     val max = attributes.map(i => data1.col(i).max2)
 
@@ -296,11 +382,12 @@ package object extratrees {
     val targetNoSplit = target.take(subset.toArray)
     val varianceNoSplit =
       targetNoSplit.sampleVariance * (targetNoSplit.length - 1d) / targetNoSplit.length
-    val scores = cutpoints.toSeq.zipWithIndex.map {
-      case (cutpoint, colIdx) =>
+    val scores = cutpoints
+      .zipMapIdx { (cutpoint, colIdx) =>
         val c2 = attributes.raw(colIdx)
-        val samplesInSplit = subset.filter(s => data.raw(s, c2) < cutpoint)
-        val samplesOutSplit = subset.filter(s => data.raw(s, c2) >= cutpoint)
+        val take = data1.col(c2) < cutpoint
+        val samplesInSplit = subset.where(take)
+        val samplesOutSplit = subset.where(take.map(b => !b))
         val score = computeVarianceReduction(
           target,
           samplesInSplit,
@@ -309,7 +396,7 @@ package object extratrees {
         )
 
         score
-    }.toVec
+      }
 
     val sidx = scores.argmax
     val splitAttribute = attributes.raw(sidx)

@@ -12,6 +12,8 @@ import org.saddle.scalar.ScalarTagDouble
 import java.io.FileInputStream
 import org.saddle.scalar.ScalarTagLong
 import aten.TensorOptions
+import lamp.ClassificationTree
+import lamp.RegressionTree
 
 object Serialization {
 
@@ -19,6 +21,13 @@ object Serialization {
   object BaseModelDTO {
     import upickle.default.{ReadWriter => RW, macroRW}
     implicit val rw: RW[BaseModelDTO] = macroRW
+  }
+  case class ExtratreesDto(
+      trees: Either[Seq[ClassificationTree], Seq[RegressionTree]]
+  ) extends BaseModelDTO
+  object ExtratreesDto {
+    import upickle.default.{ReadWriter => RW, macroRW}
+    implicit val rw: RW[ExtratreesDto] = macroRW
   }
   case class KnnDto(k: Int, path: String, dataTypes: Seq[String])
       extends BaseModelDTO
@@ -58,6 +67,9 @@ object Serialization {
       case "long"   => ScalarTagLong
     }
     val selectionModels = lamp.data.Reader.sequence(dto.selectionModels.map {
+
+      case ExtratreesDto(trees) =>
+        Right(ExtratreesBase(trees))
       case KnnDto(k, file, dataTypes) =>
         val channel = new FileInputStream(new File(file)).getChannel()
         val tensors = lamp.data.Reader.readTensorsFromChannel(
@@ -81,6 +93,8 @@ object Serialization {
       case files =>
         lamp.data.Reader
           .sequence(files.map {
+            case ExtratreesDto(trees) =>
+              Right(ExtratreesBase(trees))
             case NNDto(hiddenSize, num, file, dataTypes) =>
               val channel = new FileInputStream(new File(file)).getChannel()
               val tensors = lamp.data.Reader.readTensorsFromChannel(
@@ -127,6 +141,8 @@ object Serialization {
       case 4 => "long"
     }
     val selectionFiles = model.selectionModels.zipWithIndex.map {
+      case (ExtratreesBase(trees), idx) =>
+        ExtratreesDto(trees)
       case (NNBase(hiddenSize, tensors), idx) =>
         val path = outPath + ".selection.nn." + idx
         val channel =
@@ -155,6 +171,8 @@ object Serialization {
     val baseFiles = model.baseModels.zipWithIndex.map {
       case (listOfModels, idx0) =>
         val paths = listOfModels.zipWithIndex.map {
+          case (ExtratreesBase(trees), idx) =>
+            ExtratreesDto(trees)
           case (KnnBase(k, tensor1, tensors, tensor2), idx1) =>
             val path = outPath + ".base.knn." + idx0 + "." + idx1
             val channel =

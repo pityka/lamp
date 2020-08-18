@@ -182,7 +182,8 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       numClasses = numClasses,
       nMin = 2,
       k = math.sqrt(numFeatures).toInt + 1,
-      m = 30
+      m = 30,
+      parallelism = 4
     )
 
     val output =
