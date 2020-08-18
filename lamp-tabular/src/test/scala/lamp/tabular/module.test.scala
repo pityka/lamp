@@ -168,7 +168,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         precision = precision,
         minibatchSize = minibatchSize,
         logFrequency = logFrequency,
-        logger = Some(scribe.Logger("sdfs")),
+        logger = None,
         ensembleFolds = ensembleFolds,
         learningRate = 0.0001,
         prescreenHyperparameters = true,
