@@ -76,6 +76,7 @@ lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "2.0.0-M26+5-a2e2f63c+20200817-2057-SNAPSHOT"
+val upickleVersion = "1.2.0"
 
 lazy val core = project
   .in(file("lamp-core"))
@@ -148,7 +149,7 @@ lazy val tabular = project
   .settings(
     name := "lamp-tabular",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % "1.2.0",
+      "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
@@ -157,7 +158,7 @@ lazy val tabular = project
     testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil
   )
-  .dependsOn(data, knn)
+  .dependsOn(data, knn, forest)
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val umap = project
@@ -188,7 +189,9 @@ lazy val forest = project
   .settings(
     name := "lamp-extratrees",
     libraryDependencies ++= Seq(
+      "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % "3.1.2" % "test",
+      "org.typelevel" %% "cats-effect" % "2.1.3",
       "io.github.pityka" %% "saddle-linalg" % saddleVersion
     )
   )
@@ -278,6 +281,7 @@ lazy val root = project
     data,
     tabular,
     knn,
+    forest,
     umap,
     docs,
     example_cifar100,

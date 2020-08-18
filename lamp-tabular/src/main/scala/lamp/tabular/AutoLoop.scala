@@ -23,6 +23,8 @@ import lamp.SinglePrecision
 import org.saddle.index.IndexIntRange
 import lamp.DoublePrecision
 import lamp.CudaDevice
+import lamp.RegressionTree
+import _root_.lamp.ClassificationTree
 
 sealed trait BaseModel
 case class KnnBase(
@@ -30,6 +32,9 @@ case class KnnBase(
     features: Tensor,
     predictedFeatures: Seq[Tensor],
     target: Tensor
+) extends BaseModel
+case class ExtratreesBase(
+    trees: Either[Seq[ClassificationTree], Seq[RegressionTree]]
 ) extends BaseModel
 case class NNBase(hiddenSize: Int, state: Seq[Tensor]) extends BaseModel
 
@@ -104,6 +109,10 @@ object EnsembleModel {
       weighDecays = Seq(0.0001, 0.001, 0.005),
       dropouts = Seq(0.01d, 0.1, 0.5, 0.95),
       knnK = Seq(5, 25),
+      extratreesK = Seq(50),
+      extratreesM = Seq(50),
+      extratreesNMin = Seq(2, 5),
+      extratreeParallelism = 8,
       learningRate = learningRate,
       hiddenSizes = Seq(32, 128),
       device = device,
@@ -126,6 +135,7 @@ case class EnsembleModel(
     precision: FloatingPointPrecision,
     validationLosses: Seq[Double]
 ) {
+
   def predict(data: Tensor)(
       implicit pool: AllocatedVariablePool
   ): Resource[IO, Tensor] = {
@@ -135,6 +145,7 @@ case class EnsembleModel(
           val t = selectionModels.head match {
             case NNBase(_, state)        => state.head.options
             case KnnBase(_, state, _, _) => state.options
+            case _                       => TensorOptions.d
           }
           if (t.isCPU) CPU
           else CudaDevice(t.deviceIndex())
@@ -161,6 +172,26 @@ case class EnsembleModel(
         val basePredictions = baseModels.map {
           case averagableModels =>
             val averagablePredictions = averagableModels.map {
+              case ExtratreesBase(trees) =>
+                import lamp.syntax
+                val features = AutoLoop.makeFusedFeatureMatrix(
+                  data,
+                  dataLayout,
+                  Nil,
+                  precision
+                )
+                val featuresJ = features.toMat
+                features.release
+                val predicted = trees match {
+                  case Left(trees) =>
+                    lamp.extratrees
+                      .predictClassification(trees, featuresJ)
+                      .map(v => math.log(v + 1e-6))
+                  case Right(trees) =>
+                    Mat(lamp.extratrees.predictRegression(trees, featuresJ))
+                }
+                TensorHelpers.fromMat(predicted, device, precision)
+
               case KnnBase(k, features, predictedFeatures, target) =>
                 assert(predictedFeatures.isEmpty)
                 val prediction = AutoLoop
@@ -217,6 +248,25 @@ case class EnsembleModel(
         numerical.release
 
         val averagablePredictions = selectionModels.map {
+          case ExtratreesBase(trees) =>
+            import lamp.syntax
+            val features = AutoLoop.makeFusedFeatureMatrix(
+              data,
+              dataLayout,
+              basePredictions,
+              precision
+            )
+            val featuresJ = features.toMat
+            features.release
+            val predicted = trees match {
+              case Left(trees) =>
+                lamp.extratrees
+                  .predictClassification(trees, featuresJ)
+                  .map(v => math.log(v + 1e-6))
+              case Right(trees) =>
+                Mat(lamp.extratrees.predictRegression(trees, featuresJ))
+            }
+            TensorHelpers.fromMat(predicted, device, precision)
           case KnnBase(k, features, predictedFeatures, target) =>
             val prediction = AutoLoop
               .trainAndPredictKnn(
@@ -443,62 +493,18 @@ object AutoLoop {
     IO {
       val modelTensorOptions = device.options(precision)
 
-      val trainingFeatures = {
-        val (num, cat) = separateFeatures(data, dataLayout)
-        val (trainNumerical, trainCategorical) =
-          if (predictionsOnBasemodels.isEmpty) (num, cat)
-          else {
-            val numWithPredictions =
-              ATen.cat(num +: predictionsOnBasemodels.toArray, 1)
-            num.release
-            (numWithPredictions, cat)
-          }
-        val categoricalOneHot = trainCategorical.map {
-          case (t, numClasses) =>
-            val t2 = ATen.one_hot(t, numClasses)
-            val t3 = precision match {
-              case SinglePrecision => ATen._cast_Float(t2, false)
-              case DoublePrecision => ATen._cast_Double(t2, false)
-            }
-
-            t.release
-            t2.release
-            t3
-        }
-        val catted = ATen.cat((categoricalOneHot :+ trainNumerical).toArray, 1)
-        trainNumerical.release
-        categoricalOneHot.foreach(_.release)
-        catted
-      }
-
-      val predictableFeatures = {
-        val (num, cat) = separateFeatures(predictables, dataLayout)
-        val (predictNumerical, predictCategorical) =
-          if (predictablesPredictionsOnBasemodels.isEmpty) (num, cat)
-          else {
-            val numWithPredictions =
-              ATen.cat(num +: predictablesPredictionsOnBasemodels.toArray, 1)
-            num.release
-            (numWithPredictions, cat)
-          }
-        val categoricalOneHot = predictCategorical.map {
-          case (t, numClasses) =>
-            val t2 = ATen.one_hot(t, numClasses)
-            val t3 = precision match {
-              case SinglePrecision => ATen._cast_Float(t2, false)
-              case DoublePrecision => ATen._cast_Double(t2, false)
-            }
-
-            t.release
-            t2.release
-            t3
-        }
-        val catted =
-          ATen.cat((categoricalOneHot :+ predictNumerical).toArray, 1)
-        predictNumerical.release
-        categoricalOneHot.foreach(_.release)
-        catted
-      }
+      val trainingFeatures = makeFusedFeatureMatrix(
+        data,
+        dataLayout,
+        predictionsOnBasemodels,
+        precision
+      )
+      val predictableFeatures = makeFusedFeatureMatrix(
+        predictables,
+        dataLayout,
+        predictablesPredictionsOnBasemodels,
+        precision
+      )
 
       val predicteds = {
         val indices = lamp.knn.knnMinibatched(
@@ -527,6 +533,116 @@ object AutoLoop {
       }
 
       predicteds
+
+    }
+
+  private[lamp] def makeFusedFeatureMatrix(
+      data: Tensor,
+      dataLayout: Seq[Metadata],
+      predictionsOnBasemodels: Seq[Tensor],
+      precision: FloatingPointPrecision
+  ) = {
+
+    val (num, cat) = separateFeatures(data, dataLayout)
+    val (trainNumerical, trainCategorical) =
+      if (predictionsOnBasemodels.isEmpty) (num, cat)
+      else {
+        val numWithPredictions =
+          ATen.cat(num +: predictionsOnBasemodels.toArray, 1)
+        num.release
+        (numWithPredictions, cat)
+      }
+    val categoricalOneHot = trainCategorical.map {
+      case (t, numClasses) =>
+        val t2 = ATen.one_hot(t, numClasses)
+        val t3 = precision match {
+          case SinglePrecision => ATen._cast_Float(t2, false)
+          case DoublePrecision => ATen._cast_Double(t2, false)
+        }
+
+        t.release
+        t2.release
+        t3
+    }
+    val catted = ATen.cat((categoricalOneHot :+ trainNumerical).toArray, 1)
+    trainNumerical.release
+    categoricalOneHot.foreach(_.release)
+    catted
+
+  }
+  private[lamp] def trainAndPredictExtratrees(
+      k: Int,
+      m: Int,
+      nMin: Int,
+      parallelism: Int,
+      data: Tensor,
+      predictables: Tensor,
+      predictionsOnBasemodels: Seq[Tensor],
+      predictablesPredictionsOnBasemodels: Seq[Tensor],
+      target: Tensor,
+      targetType: TargetType,
+      dataLayout: Seq[Metadata],
+      logger: Option[Logger]
+  ) =
+    IO {
+      import lamp.syntax
+      val precision = TensorHelpers.precision(data).get
+      val device = TensorHelpers.device(data)
+      val trainingFeatures = makeFusedFeatureMatrix(
+        data,
+        dataLayout,
+        predictionsOnBasemodels,
+        precision
+      )
+      val trainingFeaturesJvm = trainingFeatures.toMat
+      trainingFeatures.release
+
+      val predictableFeatures = makeFusedFeatureMatrix(
+        predictables,
+        dataLayout,
+        predictablesPredictionsOnBasemodels,
+        precision
+      )
+      val predictableFeaturesJvm = predictableFeatures.toMat
+      predictableFeatures.release
+
+      targetType match {
+        case Classification(classes, _) =>
+          val targetVec =
+            TensorHelpers.toLongMat(target).toVec.map(_.toInt)
+          val trained = lamp.extratrees.buildForestClassification(
+            data = trainingFeaturesJvm,
+            target = targetVec,
+            numClasses = classes,
+            nMin = nMin,
+            k = k,
+            m = m,
+            parallelism = parallelism
+          )
+          val prediction = lamp.extratrees
+            .predictClassification(trained, predictableFeaturesJvm)
+            .map(v => math.log(v + 1e-6))
+          val predictionT = TensorHelpers.fromMat(prediction, device, precision)
+          (predictionT, Left(trained))
+
+        case Regression | ECDFRegression =>
+          import lamp.syntax
+          val targetVec = target.toMat.toVec
+          val trained = lamp.extratrees.buildForestRegression(
+            data = trainingFeaturesJvm,
+            target = targetVec,
+            nMin = nMin,
+            k = k,
+            m = m,
+            parallelism = parallelism
+          )
+          val prediction = Mat(
+            lamp.extratrees
+              .predictRegression(trained, predictableFeaturesJvm)
+          )
+          val predictionT = TensorHelpers.fromMat(prediction, device, precision)
+          (predictionT, Right(trained))
+      }
 
     }
 
@@ -815,6 +931,108 @@ object AutoLoop {
     )
   }
 
+  def trainAndAverageFoldsExtratrees(
+      k: Int,
+      m: Int,
+      nMin: Int,
+      parallelism: Int,
+      dataFullbatch: Tensor,
+      targetFullbatch: Tensor,
+      predictions: Seq[Tensor],
+      folds: Seq[(Seq[Int], Seq[Int])],
+      targetType: TargetType,
+      dataLayout: Seq[Metadata],
+      logger: Option[Logger]
+  )(implicit pool: AllocatedVariablePool) = {
+    val trainedFolds = folds.zipWithIndex
+      .map {
+        case ((trainIdx, predictIdx), foldIdx) =>
+          assert((trainIdx.toSet & predictIdx.toSet).size == 0)
+
+          for {
+            sliced <- IO {
+              slice(
+                dataFullbatch = dataFullbatch,
+                targetFullbatch = targetFullbatch,
+                predictions = predictions,
+                trainIdx = trainIdx,
+                predictIdx = predictIdx
+              )
+            }
+            (
+              trainFeatures,
+              trainPredictions,
+              trainTarget,
+              predictableFeatures,
+              predictablePredictions
+            ) = sliced
+            _ <- IO {
+              logger.foreach(
+                _.info(
+                  s"Train KNN model, fold ${foldIdx + 1} / ${folds.size}"
+                )
+              )
+            }
+
+            result <- trainAndPredictExtratrees(
+              k = k,
+              m = m,
+              nMin = nMin,
+              parallelism = parallelism,
+              data = trainFeatures,
+              predictables = predictableFeatures,
+              predictionsOnBasemodels = trainPredictions,
+              predictablesPredictionsOnBasemodels = predictablePredictions,
+              target = trainTarget,
+              targetType = targetType,
+              dataLayout = dataLayout,
+              logger = logger
+            ).map {
+              case (prediction, model) =>
+                (
+                  0,
+                  prediction,
+                  model,
+                  predictIdx
+                )
+            }
+          } yield {
+            trainFeatures.release
+            predictableFeatures.release
+            trainTarget.release
+            predictablePredictions.foreach(_.release)
+            trainPredictions.foreach(_.release)
+            result
+          }
+      }
+      .toList
+      .sequence
+
+    for {
+      trainedFolds <- trainedFolds
+      aggregatedByEpochs <- IO {
+        logger.foreach(
+          _.info(
+            s"Folds done. Aggregating predictions.."
+          )
+        )
+        val byEpoch = trainedFolds.groupBy {
+          case (epoch, _, _, _) => epoch
+        }.toSeq
+
+        aggregatePredictionsAndModelsPerEpoch(
+          byEpoch,
+          dataFullbatch.sizes.head
+        ).map {
+          case (epoch, prediction, models) =>
+            (epoch, prediction, models.map {
+              case trees =>
+                ExtratreesBase(trees)
+            })
+        }
+      }
+    } yield aggregatedByEpochs
+  }
   def trainAndAverageFoldsKnn(
       k: Int,
       dataFullbatch: Tensor,
@@ -1064,6 +1282,10 @@ object AutoLoop {
       hiddenSizes: Seq[Int],
       knnK: Seq[Int],
       knnMinibatchSize: Int,
+      extratreesK: Seq[Int],
+      extratreesM: Seq[Int],
+      extratreesNMin: Seq[Int],
+      extratreeParallelism: Int,
       learningRate: Double,
       device: Device,
       precision: FloatingPointPrecision,
@@ -1082,6 +1304,10 @@ object AutoLoop {
         .distinct
 
     val knnHyperparameters = knnK
+
+    val extratreesHyperparameters = (extratreesK.flatMap { k =>
+      extratreesM.flatMap { m => extratreesNMin.map { nMin => (k, m, nMin) } }
+    }).distinct
 
     val firstpass =
       if (hyperparameters.size > 1 && prescreenHyperparameters)
@@ -1178,10 +1404,37 @@ object AutoLoop {
         .sequence
         .map(_.flatten)
 
+      val extratrees = extratreesHyperparameters
+        .map {
+          case (k, m, nMin) =>
+            val predictionsInFolds = trainAndAverageFoldsExtratrees(
+              k = k,
+              m = m,
+              nMin = nMin,
+              parallelism = extratreeParallelism,
+              dataFullbatch = dataFullbatch,
+              targetFullbatch = targetFullbatch,
+              predictions = Nil,
+              folds = folds,
+              targetType = targetType,
+              dataLayout = dataLayout,
+              logger = logger
+            )
+            predictionsInFolds.map(_.map {
+              case (epoch, prediction, models) =>
+                assert(prediction.options.isCPU())
+                (epoch, prediction, models)
+            })
+        }
+        .toList
+        .sequence
+        .map(_.flatten)
+
       for {
+        extratrees <- extratrees
         nn <- nn
         knn <- knn
-      } yield knn ++ nn
+      } yield extratrees ++ knn ++ nn
 
     }
 
@@ -1271,10 +1524,50 @@ object AutoLoop {
         .sequence
         .map(_.flatten)
 
+      val extratrees = extratreesHyperparameters
+        .map {
+          case (k, m, nMin) =>
+            for {
+              trainedEnsembleFolds <- trainAndAverageFoldsExtratrees(
+                k = k,
+                m = m,
+                nMin = nMin,
+                parallelism = extratreeParallelism,
+                dataFullbatch = dataFullbatch,
+                targetFullbatch = targetFullbatch,
+                predictions = predictions,
+                folds = ensembleFolds,
+                targetType = targetType,
+                dataLayout = dataLayout,
+                logger = logger
+              )
+
+              withValidationErrors <- IO {
+                trainedEnsembleFolds.map {
+                  case (epoch, pred, models) =>
+                    assert(pred.options.isCPU())
+                    val lossM = computeValidationErrorsAndReleasePrediction(
+                      pred,
+                      targetType,
+                      precision,
+                      targetFullbatch
+                    )
+                    (lossM, models)
+
+                }
+              }
+
+            } yield withValidationErrors
+        }
+        .toList
+        .sequence
+        .map(_.flatten)
+
       for {
+        xt <- extratrees
         nn <- nn
         knn <- knn
-      } yield knn ++ nn
+      } yield xt ++ knn ++ nn
 
     }
 
@@ -1308,6 +1601,8 @@ object AutoLoop {
                 .map(_._1)}"
             )
           )
+          println(accept)
+          println(reject)
           accept.map(_._2)
         }
       }
@@ -1341,6 +1636,7 @@ object AutoLoop {
           case NNBase(_, state) => state
           case KnnBase(_, features, predictedFeatures, target) =>
             List(features, target) ++ predictedFeatures
+          case _ => Nil
         })
         .foreach(_.release)
       EnsembleModel(
