@@ -82,7 +82,7 @@ class ExtraTreesSuite extends AnyFunSuite {
     val accuracy = correct.mean2
     assert(accuracy == 1.0)
   }
-  test("mnist 2 ") {
+  ignore("mnist full, slow ") {
     val data = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source
@@ -167,39 +167,5 @@ class ExtraTreesSuite extends AnyFunSuite {
     val accuracy = correct.mean2
     assert(accuracy == 1.0)
   }
-  // test("mnist regression tensors") {
-  //   val data = org.saddle.csv.CsvParser
-  //     .parseSourceWithHeader[Double](
-  //       scala.io.Source
-  //         .fromInputStream(
-  //           new java.util.zip.GZIPInputStream(
-  //             getClass.getResourceAsStream("/mnist_test.csv.gz")
-  //           )
-  //         )
-  //     )
-  //     .right
-  //     .get
-  //   val target =
-  //     Mat(data.firstCol("label").toVec.map(_.toLong)).toVec.map(_.toDouble)
-  //   val features = data.filterIx(_ != "label").toMat
-  //   val t1 = System.nanoTime()
-  //   val trees = buildForestRegression(
-  //     data = TensorHelpers.fromMat(features, false),
-  //     target = TensorHelpers.fromVec(target, false),
-  //     nMin = 2,
-  //     k = 32,
-  //     m = 1
-  //   )
-  //   println((System.nanoTime - t1) * 1e-9)
-  //   val output = predictRegression(trees, features)
-  //   val prediction = {
-  //     output.map(_.toInt)
-  //   }
-  //   val correct =
-  //     prediction.zipMap(data.firstCol("label").toVec.map(_.toInt))((a, b) =>
-  //       if (a == b) 1d else 0d
-  //     )
-  //   val accuracy = correct.mean2
-  //   assert(accuracy == 1.0)
-  // }
+
 }
