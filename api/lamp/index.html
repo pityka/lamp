@@ -202,6 +202,18 @@
                         <a class="object" href="CPU$.html" title=""></a>
                         <a href="CPU$.html" title="">CPU</a>
                       </li><li class="current-entities indented1">
+                        <a class="object" href="ClassificationLeaf$.html" title=""></a>
+                        <a class="class" href="ClassificationLeaf.html" title=""></a>
+                        <a href="ClassificationLeaf.html" title="">ClassificationLeaf</a>
+                      </li><li class="current-entities indented1">
+                        <a class="object" href="ClassificationNonLeaf$.html" title=""></a>
+                        <a class="class" href="ClassificationNonLeaf.html" title=""></a>
+                        <a href="ClassificationNonLeaf.html" title="">ClassificationNonLeaf</a>
+                      </li><li class="current-entities indented1">
+                        <a class="object" href="ClassificationTree$.html" title=""></a>
+                        <a class="trait" href="ClassificationTree.html" title=""></a>
+                        <a href="ClassificationTree.html" title="">ClassificationTree</a>
+                      </li><li class="current-entities indented1">
                         <span class="separator"></span>
                         <a class="class" href="CudaDevice.html" title=""></a>
                         <a href="CudaDevice.html" title="">CudaDevice</a>
@@ -217,6 +229,18 @@
                         <span class="separator"></span>
                         <a class="trait" href="FloatingPointPrecision.html" title=""></a>
                         <a href="FloatingPointPrecision.html" title="">FloatingPointPrecision</a>
+                      </li><li class="current-entities indented1">
+                        <a class="object" href="RegressionLeaf$.html" title=""></a>
+                        <a class="class" href="RegressionLeaf.html" title=""></a>
+                        <a href="RegressionLeaf.html" title="">RegressionLeaf</a>
+                      </li><li class="current-entities indented1">
+                        <a class="object" href="RegressionNonLeaf$.html" title=""></a>
+                        <a class="class" href="RegressionNonLeaf.html" title=""></a>
+                        <a href="RegressionNonLeaf.html" title="">RegressionNonLeaf</a>
+                      </li><li class="current-entities indented1">
+                        <a class="object" href="RegressionTree$.html" title=""></a>
+                        <a class="trait" href="RegressionTree.html" title=""></a>
+                        <a href="RegressionTree.html" title="">RegressionTree</a>
                       </li><li class="current-entities indented1">
                         <span class="separator"></span>
                         <a class="object" href="SinglePrecision$.html" title=""></a>
@@ -309,7 +333,55 @@
 
         <div id="types" class="types members">
               <h3>Type Members</h3>
-              <ol><li name="lamp.CudaDevice" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+              <ol><li name="lamp.ClassificationLeaf" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ClassificationLeafextendsClassificationTreewithProductwithSerializable"></a><a id="ClassificationLeaf:ClassificationLeaf"></a>
+      <span class="permalink">
+      <a href="../lamp/ClassificationLeaf.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="ClassificationLeaf.html"><span class="name">ClassificationLeaf</span></a><span class="params">(<span name="targetDistribution">targetDistribution: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Double">Double</span>]</span>)</span><span class="result"> extends <a href="ClassificationTree.html" class="extype" name="lamp.ClassificationTree">ClassificationTree</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.ClassificationNonLeaf" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ClassificationNonLeafextendsClassificationTreewithProductwithSerializable"></a><a id="ClassificationNonLeaf:ClassificationNonLeaf"></a>
+      <span class="permalink">
+      <a href="../lamp/ClassificationNonLeaf.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="ClassificationNonLeaf.html"><span class="name">ClassificationNonLeaf</span></a><span class="params">(<span name="left">left: <a href="ClassificationTree.html" class="extype" name="lamp.ClassificationTree">ClassificationTree</a></span>, <span name="right">right: <a href="ClassificationTree.html" class="extype" name="lamp.ClassificationTree">ClassificationTree</a></span>, <span name="splitFeature">splitFeature: <span class="extype" name="scala.Int">Int</span></span>, <span name="cutpoint">cutpoint: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="ClassificationTree.html" class="extype" name="lamp.ClassificationTree">ClassificationTree</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.ClassificationTree" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="ClassificationTreeextendsAnyRef"></a><a id="ClassificationTree:ClassificationTree"></a>
+      <span class="permalink">
+      <a href="../lamp/ClassificationTree.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">sealed </span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="ClassificationTree.html"><span class="name">ClassificationTree</span></a><span class="result"> extends <a href="../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.CudaDevice" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="CudaDeviceextendsDevicewithProductwithSerializable"></a><a id="CudaDevice:CudaDevice"></a>
       <span class="permalink">
       <a href="../lamp/CudaDevice.html" title="Permalink">
@@ -354,6 +426,54 @@
       </span>
       <span class="symbol">
         <a title="" href="FloatingPointPrecision.html"><span class="name">FloatingPointPrecision</span></a><span class="result"> extends <a href="../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.RegressionLeaf" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="RegressionLeafextendsRegressionTreewithProductwithSerializable"></a><a id="RegressionLeaf:RegressionLeaf"></a>
+      <span class="permalink">
+      <a href="../lamp/RegressionLeaf.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="RegressionLeaf.html"><span class="name">RegressionLeaf</span></a><span class="params">(<span name="targetMean">targetMean: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="RegressionTree.html" class="extype" name="lamp.RegressionTree">RegressionTree</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.RegressionNonLeaf" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="RegressionNonLeafextendsRegressionTreewithProductwithSerializable"></a><a id="RegressionNonLeaf:RegressionNonLeaf"></a>
+      <span class="permalink">
+      <a href="../lamp/RegressionNonLeaf.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="RegressionNonLeaf.html"><span class="name">RegressionNonLeaf</span></a><span class="params">(<span name="left">left: <a href="RegressionTree.html" class="extype" name="lamp.RegressionTree">RegressionTree</a></span>, <span name="right">right: <a href="RegressionTree.html" class="extype" name="lamp.RegressionTree">RegressionTree</a></span>, <span name="splitFeature">splitFeature: <span class="extype" name="scala.Int">Int</span></span>, <span name="cutpoint">cutpoint: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="RegressionTree.html" class="extype" name="lamp.RegressionTree">RegressionTree</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.RegressionTree" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="RegressionTreeextendsAnyRef"></a><a id="RegressionTree:RegressionTree"></a>
+      <span class="permalink">
+      <a href="../lamp/RegressionTree.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">sealed </span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="RegressionTree.html"><span class="name">RegressionTree</span></a><span class="result"> extends <a href="../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
       
@@ -429,6 +549,54 @@
       </span>
       
       
+    </li><li name="lamp.ClassificationLeaf" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ClassificationLeaf"></a><a id="ClassificationLeaf:ClassificationLeaf"></a>
+      <span class="permalink">
+      <a href="../lamp/ClassificationLeaf$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="ClassificationLeaf$.html"><span class="name">ClassificationLeaf</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.ClassificationNonLeaf" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ClassificationNonLeaf"></a><a id="ClassificationNonLeaf:ClassificationNonLeaf"></a>
+      <span class="permalink">
+      <a href="../lamp/ClassificationNonLeaf$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="ClassificationNonLeaf$.html"><span class="name">ClassificationNonLeaf</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.ClassificationTree" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="ClassificationTree"></a><a id="ClassificationTree:ClassificationTree"></a>
+      <span class="permalink">
+      <a href="../lamp/ClassificationTree$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="ClassificationTree$.html"><span class="name">ClassificationTree</span></a>
+      </span>
+      
+      
     </li><li name="lamp.DoublePrecision" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="DoublePrecision"></a><a id="DoublePrecision:DoublePrecision"></a>
       <span class="permalink">
@@ -442,6 +610,54 @@
       </span>
       <span class="symbol">
         <a title="" href="DoublePrecision$.html"><span class="name">DoublePrecision</span></a><span class="result"> extends <a href="FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.RegressionLeaf" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="RegressionLeaf"></a><a id="RegressionLeaf:RegressionLeaf"></a>
+      <span class="permalink">
+      <a href="../lamp/RegressionLeaf$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="RegressionLeaf$.html"><span class="name">RegressionLeaf</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.RegressionNonLeaf" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="RegressionNonLeaf"></a><a id="RegressionNonLeaf:RegressionNonLeaf"></a>
+      <span class="permalink">
+      <a href="../lamp/RegressionNonLeaf$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="RegressionNonLeaf$.html"><span class="name">RegressionNonLeaf</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.RegressionTree" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="RegressionTree"></a><a id="RegressionTree:RegressionTree"></a>
+      <span class="permalink">
+      <a href="../lamp/RegressionTree$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="RegressionTree$.html"><span class="name">RegressionTree</span></a>
       </span>
       
       
