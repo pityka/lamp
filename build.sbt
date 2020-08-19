@@ -187,7 +187,7 @@ lazy val forest = project
   .in(file("extratrees"))
   .settings(commonSettings: _*)
   .settings(
-    name := "lamp-extratrees",
+    name := "extratrees",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % "3.1.2" % "test",
