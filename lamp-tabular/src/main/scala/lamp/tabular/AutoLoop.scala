@@ -327,15 +327,22 @@ case class EnsembleModel(
 object AutoLoop {
 
   private[lamp] def makeCVFolds(length: Int, k: Int, repeat: Int) = {
-    val all = IndexIntRange(length).toVec.toSeq
+    val all = IndexIntRange(length).toVec.toArray
     0 until repeat flatMap { _ =>
-      val shuffled = scala.util.Random.shuffle(all)
-      val groups = shuffled.grouped(length / k + 1).take(k).toList
+      val shuffled = org.saddle.array.shuffle(all)
+      val folds = 0 until k map (_ => org.saddle.Buffer.empty[Int]) toArray
+      var i = 0
+      val n = shuffled.length
+      while (i < n) {
+        folds(i % k).+=(shuffled(i))
+        i += 1
+      }
+      val groups = folds.map(_.toArray)
       assert(all.toSet == groups.flatten.toSet)
       groups.map { holdout =>
         val set = holdout.toSet
         val training = all.filterNot(i => set.contains(i))
-        (training, holdout)
+        (training.toSeq, holdout.toSeq)
       }
     }
   }
