@@ -208,6 +208,25 @@ case class CastToPrecision(a: Variable, precision: FloatingPointPrecision)
   }, a.pool).releasable
 }
 
+case class ScatterAdd(src: Variable, index: Variable, dim: Int) extends Op {
+  assert(src.pool == src.pool)
+  assert(src.shape(dim) == index.shape(dim))
+  val params = List(
+    src.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) }
+  )
+  val value = {
+    val max = ATen.max_2(index.value)
+    val maxi = max.toLongMat.raw(0) + 1
+    max.release
+    val shape = src.sizes.toArray
+    shape(dim) = maxi
+    val zeros = ATen.zeros(shape, src.options)
+    val result = ATen.scatter_add(zeros, dim, index.value, src.value)
+    zeros.release
+    Variable(this, result, src.pool).releasable
+  }
+}
+
 case class Add(a: Variable, b: Variable) extends Op {
   assert(a.pool == b.pool)
   val params = List(
