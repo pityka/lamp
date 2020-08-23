@@ -178,7 +178,8 @@ case class EnsembleModel(
                   data,
                   dataLayout,
                   Nil,
-                  precision
+                  precision,
+                  device
                 )
                 val featuresJ = features.toMat
                 features.release
@@ -253,7 +254,8 @@ case class EnsembleModel(
               data,
               dataLayout,
               basePredictions,
-              precision
+              precision,
+              CPU
             )
             val featuresJ = features.toMat
             features.release
@@ -500,13 +502,15 @@ object AutoLoop {
         data,
         dataLayout,
         predictionsOnBasemodels,
-        precision
+        precision,
+        device
       )
       val predictableFeatures = makeFusedFeatureMatrix(
         predictables,
         dataLayout,
         predictablesPredictionsOnBasemodels,
-        precision
+        precision,
+        device
       )
 
       val predicteds = {
@@ -531,7 +535,7 @@ object AutoLoop {
             Mat(lamp.knn.regression(targetVec, indicesJvm))
         }
 
-        TensorHelpers.fromMat(prediction, device, precision),
+        TensorHelpers.fromMat(prediction, CPU, precision),
 
       }
 
@@ -543,7 +547,8 @@ object AutoLoop {
       data: Tensor,
       dataLayout: Seq[Metadata],
       predictionsOnBasemodels: Seq[Tensor],
-      precision: FloatingPointPrecision
+      precision: FloatingPointPrecision,
+      device: Device
   ) = {
 
     val (num, cat) = separateFeatures(data, dataLayout)
@@ -570,7 +575,9 @@ object AutoLoop {
     val catted = ATen.cat((categoricalOneHot :+ trainNumerical).toArray, 1)
     trainNumerical.release
     categoricalOneHot.foreach(_.release)
-    catted
+    val onDevice = device.to(catted)
+    catted.release
+    onDevice
 
   }
   private[lamp] def trainAndPredictExtratrees(
@@ -589,12 +596,12 @@ object AutoLoop {
     IO {
       import lamp.syntax
       val precision = TensorHelpers.precision(data).get
-      val device = TensorHelpers.device(data)
       val trainingFeatures = makeFusedFeatureMatrix(
         data,
         dataLayout,
         predictionsOnBasemodels,
-        precision
+        precision,
+        CPU
       )
       val trainingFeaturesJvm = trainingFeatures.toMat
       trainingFeatures.release
@@ -603,7 +610,8 @@ object AutoLoop {
         predictables,
         dataLayout,
         predictablesPredictionsOnBasemodels,
-        precision
+        precision,
+        CPU
       )
       val predictableFeaturesJvm = predictableFeatures.toMat
       predictableFeatures.release
@@ -624,7 +632,7 @@ object AutoLoop {
           val prediction = lamp.extratrees
             .predictClassification(trained, predictableFeaturesJvm)
             .map(v => math.log(v + 1e-6))
-          val predictionT = TensorHelpers.fromMat(prediction, device, precision)
+          val predictionT = TensorHelpers.fromMat(prediction, CPU, precision)
           (predictionT, Left(trained))
 
         case Regression | ECDFRegression =>
@@ -642,7 +650,7 @@ object AutoLoop {
             lamp.extratrees
               .predictRegression(trained, predictableFeaturesJvm)
           )
-          val predictionT = TensorHelpers.fromMat(prediction, device, precision)
+          val predictionT = TensorHelpers.fromMat(prediction, CPU, precision)
           (predictionT, Right(trained))
       }
 
