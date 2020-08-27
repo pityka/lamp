@@ -328,7 +328,7 @@ case class EnsembleModel(
 
 object AutoLoop {
 
-  private[lamp] def makeCVFolds(length: Int, k: Int, repeat: Int) = {
+  def makeCVFolds(length: Int, k: Int, repeat: Int) = {
     val all = IndexIntRange(length).toVec.toArray
     0 until repeat flatMap { _ =>
       val shuffled = org.saddle.array.shuffle(all)
