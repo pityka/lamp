@@ -40,8 +40,8 @@ case object CPU extends Device {
 }
 case class CudaDevice(i: Int) extends Device {
   assert(
-    i == 0,
-    "Multi gpu not implemented. Implement Tensor.to(TensorOptions)."
+    i >= 0 && i < Tensor.getNumGPUs,
+    s"Device number is wrong. Got $i. Available gpus: ${Tensor.getNumGPUs}."
   )
   def to(t: Tensor): Tensor = t.cuda
   def options(precision: FloatingPointPrecision): TensorOptions =

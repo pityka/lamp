@@ -9,6 +9,8 @@ import lamp.nn.AdamW
 import lamp.nn.simple
 import lamp.nn.NoTag
 import scribe.Logger
+import aten.ATen
+import aten.Tensor
 
 object Umap {
 
@@ -123,7 +125,6 @@ object Umap {
 
   private[lamp] def optimize(
       edgeWeights: Mat[Double],
-      edgeWeightsSparseMat: Array[Array[Int]],
       total: Int,
       lr: Double,
       iterations: Int,
@@ -177,29 +178,22 @@ object Umap {
     }
 
     val indexI = edgeWeights.col(0).map(_.toLong)
-
+    val indexIT = TensorHelpers.fromLongVec(indexI, device)
     val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(randomSeed)
-    def sampleRepulsivePairs(n: Int) = {
-      val ii = 0 until n map (_ => indexI) reduce (_ concat _)
-      var k = 0
-      val m = ii.length
-      val buffer = org.saddle.Buffer.empty[Long]
-      while (k < m) {
-        val i = ii.raw(k).toInt
-        var candidate = rng.nextInt(0, total - 1)
-        def accept =
-          (i != candidate) && !edgeWeightsSparseMat(i)
-            .contains(candidate) && !edgeWeightsSparseMat(candidate).contains(
-            i
-          )
-        while (!accept) {
-          candidate = rng.nextInt(0, total - 1)
-        }
-        buffer += candidate.toLong
-        k += 1
-      }
-      val j = buffer.toArray.toVec
-      (ii, j)
+    Tensor.manual_seed(randomSeed)
+
+    def sampleRepulsivePairsT(n: Int) = {
+      val ii = ATen.repeat_interleave_2(indexIT, n, 0)
+
+      val m = ii.sizes.apply(0)
+      val jj = ATen.randint_2(0, total - 1, Array(m), ii.options)
+      val mask = ATen.ne_1(ii, jj)
+      val ri = ATen.masked_select(ii, mask)
+      val rj = ATen.masked_select(jj, mask)
+      ii.release
+      jj.release
+      mask.release
+      (ri, rj)
     }
 
     implicit val pool = new AllocatedVariablePool
@@ -211,7 +205,7 @@ object Umap {
       )
     )
     val index1 = const(
-      TensorHelpers.fromLongVec(indexI, device)
+      indexIT
     )
     val index2 = {
       val indexJ = edgeWeights.col(1).map(_.toLong)
@@ -235,15 +229,13 @@ object Umap {
     while (i < iterations) {
 
       val (index3T, index4T) = {
-        var (index3, index4) = sampleRepulsivePairs(negativeSampleSize)
+        var (index3, index4) = sampleRepulsivePairsT(negativeSampleSize)
         val i3 = const(
-          TensorHelpers.fromLongVec(index3, device)
+          index3
         ).releasable
-        index3 = null
         val i4 = const(
-          TensorHelpers.fromLongVec(index4, device)
+          index4
         ).releasable
-        index4 = null
         (i3, i4)
       }
 
@@ -361,20 +353,9 @@ object Umap {
 
     logger.foreach(_.info(s"${b.numRows} edge weights computed"))
 
-    val bSparseMat = {
-      val buffer = Array.fill(data.numRows)(org.saddle.Buffer.empty[Int])
-      b.rows.foreach { row =>
-        if (row(2) > 0d) {
-          buffer(row(0).toInt).+=(row(1).toInt)
-        }
-      }
-      buffer.map(_.toArray)
-    }
-
     val (layout, loss) =
       optimize(
         b,
-        bSparseMat,
         data.numRows,
         lr = lr,
         iterations = iterations,

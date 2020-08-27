@@ -13,3 +13,5 @@ saddle-core/
 spire-prng/
 lamp-tabular/predicted.csv
 .vscode/settings.json
+project/project/metals.sbt
+project/project/project/metals.sbt

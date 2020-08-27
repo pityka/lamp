@@ -55,7 +55,7 @@ class UmapSuite extends AnyFunSuite {
       numDim = 2
     )
 
-    assert(loss < 0.6)
+    assert(loss < 0.7)
     val _ = locs
     // println(
     //   pdfToFile(
