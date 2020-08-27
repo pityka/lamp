@@ -41,4 +41,4 @@ jobs:
         publish_branch: gh-pages
         publish_dir: ./website/public
     - name: Publish
-      run: sbt -mem 3000 publish
+      run: sbt -mem 3000 clean publish
