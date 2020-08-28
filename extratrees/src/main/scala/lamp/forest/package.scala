@@ -124,12 +124,23 @@ package object extratrees {
       nMin: Int,
       k: Int,
       m: Int,
-      parallelism: Int
+      parallelism: Int,
+      seed: Long = java.time.Instant.now.toEpochMilli
   ): Seq[ClassificationTree] = {
-    val oh = oneHot(target, numClasses)
+    val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(seed)
     val subset = array.range(0, data.numRows).toVec
     val trees = if (parallelism <= 1) {
-      0 until m map (_ => buildTreeClassification(data, subset, oh, nMin, k))
+      0 until m map (_ =>
+        buildTreeClassification(
+          data,
+          subset,
+          target,
+          nMin,
+          k,
+          rng,
+          numClasses
+        )
+      )
     } else {
       val fjp = new ForkJoinPool(parallelism)
       val ec = ExecutionContext.fromExecutorService(fjp)
@@ -137,7 +148,17 @@ package object extratrees {
       val trees = NonEmptyList
         .fromList(
           (0 until m).toList map (_ =>
-            IO { buildTreeClassification(data, subset, oh, nMin, k) }
+            IO {
+              buildTreeClassification(
+                data,
+                subset,
+                target,
+                nMin,
+                k,
+                rng,
+                numClasses
+              )
+            }
           )
         )
         .get
@@ -248,17 +269,35 @@ package object extratrees {
     }
   }
 
+  def distribution(v: Vec[Int], numClasses: Int) = {
+    val ar = Array.ofDim[Double](numClasses)
+    var i = 0
+    val n = v.length
+    val s = n.toDouble
+    while (i < n) {
+      val j = v.raw(i)
+      ar(j) += 1d / s
+      i += 1
+    }
+    ar.toVec
+  }
+
+  def takeCol(data: Mat[Double], rows: Vec[Int], col: Int): Vec[Double] = {
+    data.toVec.slice(col, data.length, data.numCols).view(rows.toArray)
+  }
+
   def buildTreeClassification(
       data: Mat[Double],
       subset: Vec[Int],
-      target: Mat[Double],
+      target: Vec[Int],
       nMin: Int,
-      k: Int
+      k: Int,
+      rng: org.saddle.spire.random.Generator,
+      numClasses: Int
   ): ClassificationTree = {
-    val rng = org.saddle.spire.random.rng.Cmwc5.fromTime()
-    val targetInSubset = target.row(subset.toArray)
+    val targetInSubset = target.take(subset.toArray)
     def makeLeaf = {
-      val targetDistribution = targetInSubset.reduceCols((col, _) => col.mean2)
+      val targetDistribution = distribution(targetInSubset, numClasses)
       ClassificationLeaf(targetDistribution.toSeq)
     }
     def makeNonLeaf(
@@ -269,14 +308,27 @@ package object extratrees {
     ) =
       ClassificationNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
     val targetIsConstant = {
-      targetInSubset.reduceCols((col, _) => col.sum2).countif(_ > 0d) == 1
+      val col = targetInSubset
+      val head = col.raw(0)
+      var i = 1
+      val n = col.length
+      var uniform = true
+      while (i < n && uniform) {
+        if (col.raw(i) != head) {
+          uniform = false
+        }
+        i += 1
+      }
+      uniform
     }
-    if (subset.length < nMin) makeLeaf
+    if (data.numRows < nMin) makeLeaf
     else if (targetIsConstant) makeLeaf
     else {
-      val nonConstantFeatures = data
-        .row(subset.toArray)
-        .reduceCols { (col, _) =>
+      val shuffled =
+        array.shuffle(array.range(0, data.numCols), rng)
+      val candidateFeatures = shuffled.iterator
+        .filter { colIdx =>
+          val col = takeCol(data, subset, colIdx)
           val head = col.raw(0)
           var i = 1
           val n = col.length
@@ -287,29 +339,49 @@ package object extratrees {
             }
             i += 1
           }
-          uniform
+          !uniform
         }
-        .find(uniform => !uniform)
-      if (nonConstantFeatures.isEmpty) makeLeaf
+        .take(k)
+        .toArray
+
+      if (candidateFeatures.isEmpty) makeLeaf
       else {
-        val candidateFeatures =
-          array.shuffle(nonConstantFeatures.toArray, rng).take(k)
+
         val (splitFeatureIdx, splitCutpoint) =
           splitClassification(
             data,
             subset,
             candidateFeatures.toVec,
-            target,
-            rng
+            targetInSubset,
+            rng,
+            numClasses
           )
         val splitFeature = data.col(splitFeatureIdx)
-        val leftSubset = subset.filter(s => splitFeature.raw(s) < splitCutpoint)
+        val leftSubset =
+          subset.filter(s => splitFeature.raw(s) < splitCutpoint)
         val rightSubset =
           subset.filter(s => splitFeature.raw(s) >= splitCutpoint)
+
         val leftTree =
-          buildTreeClassification(data, leftSubset, target, nMin, k)
+          buildTreeClassification(
+            data,
+            leftSubset,
+            target,
+            nMin,
+            k,
+            rng,
+            numClasses
+          )
         val rightTree =
-          buildTreeClassification(data, rightSubset, target, nMin, k)
+          buildTreeClassification(
+            data,
+            rightSubset,
+            target,
+            nMin,
+            k,
+            rng,
+            numClasses
+          )
         makeNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
       }
     }
@@ -319,24 +391,26 @@ package object extratrees {
       data: Mat[Double],
       subset: Vec[Int],
       attributes: Vec[Int],
-      target: Mat[Double],
-      rng: org.saddle.spire.random.Generator
+      targetAtSubset: Vec[Int],
+      rng: org.saddle.spire.random.Generator,
+      numClasses: Int
   ) = {
-    val data1 =
-      if (subset.length < data.numRows) data.row(subset.toArray) else data
-    val min = attributes.map(i => data1.col(i).min2)
-    val max = attributes.map(i => data1.col(i).max2)
+    val min = attributes.map(i => takeCol(data, subset, i).min2)
+    val max = attributes.map(i => takeCol(data, subset, i).max2)
     val cutpoints =
       min.zipMap(max)((min, max) => rng.nextDouble(from = min, until = max))
-    val giniTotal = giniImpurity(subset, target)
+    val giniTotal = giniImpurity(targetAtSubset, numClasses)
     val scores = cutpoints
       .zipMapIdx { (cutpoint, colIdx) =>
         val c2 = attributes.raw(colIdx)
-        val take = data1.col(c2) < cutpoint
-        val samplesInSplit = subset.where(take)
-        val samplesOutSplit = subset.where(take.map(b => !b))
+        val take = takeCol(data, subset, c2) < cutpoint
 
-        giniScore(target, samplesInSplit, samplesOutSplit, giniTotal)
+        giniScore(
+          targetAtSubset,
+          take,
+          giniTotal,
+          numClasses
+        )
       }
 
     val sidx = scores.argmax
@@ -346,24 +420,43 @@ package object extratrees {
     (splitAttribute, splitCutpoint)
   }
 
-  def giniScore(
-      target: Mat[Double],
-      samplesInSplit: Vec[Int],
-      samplesOutSplit: Vec[Int],
-      giniImpurityNoSplit: Double
-  ) = {
-    val numSamplesNoSplit =
-      samplesInSplit.length + samplesOutSplit.length.toDouble
-    val gIn = giniImpurity(samplesInSplit, target)
-    val gOut = giniImpurity(samplesOutSplit, target)
-    giniImpurityNoSplit - gIn * samplesInSplit.length / numSamplesNoSplit - gOut * samplesOutSplit.length / numSamplesNoSplit
+  def partition(
+      vec: Vec[Int]
+  )(pred: Array[Boolean]): (Vec[Int], Vec[Int]) = {
+    var i = 0
+    val n = vec.length
+    val m = n / 2 + 1
+    val bufT = new Buffer(new Array[Int](m), 0)
+    val bufF = new Buffer(new Array[Int](m), 0)
+    while (i < n) {
+      val v: Int = vec.raw(i)
+      if (pred(i)) bufT.+=(v)
+      else bufF.+=(v)
+      i += 1
+    }
+    (Vec(bufT.toArray), Vec(bufF.toArray))
   }
-  def giniImpurity(samplesInSplit: Vec[Int], target: Mat[Double]) = {
-    val targetInSplit = target.row(samplesInSplit.toArray)
-    val p = targetInSplit.reduceCols((col, _) => col.mean2)
+
+  def giniScore(
+      target: Vec[Int],
+      samplesInSplit: Vec[Boolean],
+      giniImpurityNoSplit: Double,
+      numClasses: Int
+  ) = {
+    val numSamplesNoSplit = samplesInSplit.length
+    val (targetIn, targetOut) = partition(target)(samplesInSplit.toArray)
+    val gIn = giniImpurity(targetIn, numClasses)
+    val gOut =
+      giniImpurity(targetOut, numClasses)
+    giniImpurityNoSplit - gIn * targetIn.length / numSamplesNoSplit - gOut * targetOut.length / numSamplesNoSplit
+  }
+  def giniImpurity(
+      target: Vec[Int],
+      numClasses: Int
+  ): Double = {
+    val p = distribution(target, numClasses)
     val p2 = p * p
     1d - p2.sum
-
   }
   def splitRegression(
       data: Mat[Double],

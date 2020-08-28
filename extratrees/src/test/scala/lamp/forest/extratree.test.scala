@@ -15,14 +15,14 @@ class ExtraTreesSuite extends AnyFunSuite {
     assert(r == 0.999999495454448)
   }
   test("gini impurity") {
-    val t = Mat(Vec(0d, 1d), Vec(0d, 1d), Vec(1d, 0d), Vec(1d, 0d)).T
-    val gt = giniImpurity(Vec(0, 1, 2, 3), t)
+    val t = Vec(1, 1, 0, 0)
+    val gt = giniImpurity(t, 2)
     assert(
       giniScore(
         target = t,
-        samplesInSplit = Vec(0, 1),
-        samplesOutSplit = Vec(2, 3),
-        giniImpurityNoSplit = gt
+        samplesInSplit = Vec(true, true, false, false),
+        giniImpurityNoSplit = gt,
+        2
       ) == 0.5
     )
   }
@@ -41,9 +41,9 @@ class ExtraTreesSuite extends AnyFunSuite {
       data = Mat(Vec(0d, 2d, 3d, 4d, 5d), Vec(100d, 99d, 98d, 97d, 96d)),
       subset = Vec(0, 1, 2, 3, 4),
       attributes = Vec(0, 1),
-      target =
-        Mat(Vec(0d, 1d), Vec(0d, 1d), Vec(1d, 0d), Vec(1d, 0d), Vec(1d, 0d)).T,
-      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
+      targetAtSubset = Vec(1, 1, 0, 0, 0),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L),
+      2
     )
     assert(r == ((1, 98.739216819089)))
   }
@@ -62,6 +62,7 @@ class ExtraTreesSuite extends AnyFunSuite {
     val target =
       Mat(data.firstCol("label").toVec.map(_.toLong))
     val features = data.filterIx(_ != "label").toMat
+    val t1 = System.nanoTime
     val trees = buildForestClassification(
       data = features,
       target = target.col(0).map(_.toInt),
@@ -71,6 +72,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       m = 1,
       parallelism = 1
     )
+    println((System.nanoTime() - t1) * 1e-9)
     val output = predictClassification(trees, features)
     val prediction = {
       output.rows.map(_.argmax).toVec
