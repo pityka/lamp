@@ -1,5 +1,4 @@
 package lamp
-import scala.language.implicitConversions
 import lamp.autograd.Variable
 import aten.Tensor
 import aten.ATen
@@ -9,7 +8,7 @@ package object nn {
   type Module = GenericModule[Variable, Variable]
   type StatefulModule[A, B, C] = GenericModule[(A, C), (B, C)]
   type StatefulModule2[A, B, C, D] = GenericModule[(A, C), (B, D)]
-  implicit def funToModule(fun: Variable => Variable) = Fun(fun)
+  type GraphModule = GenericModule[(Variable, Variable), (Variable, Variable)]
 
   implicit class TrainingModeSyntax[M: TrainingMode](m: M) {
     def asEval: M = implicitly[TrainingMode[M]].asEval(m)

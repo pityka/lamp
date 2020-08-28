@@ -56,6 +56,15 @@ object Fun {
   implicit val load = Load.identity[Fun]
 }
 
+case class GenericFun[A, B](fun: A => B) extends GenericModule[A, B] {
+  def state = Nil
+  def forward(x: A): B = fun(x)
+}
+object GenericFun {
+  implicit def trainingMode[A, B] = TrainingMode.identity[GenericFun[A, B]]
+  implicit def load[A, B] = Load.identity[GenericFun[A, B]]
+}
+
 case class LiftedModule[M <: Module](mod: M with Module)
     extends StatefulModule[Variable, Variable, Unit] {
   def state = mod.state
