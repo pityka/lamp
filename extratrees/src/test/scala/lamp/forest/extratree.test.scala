@@ -8,8 +8,7 @@ class ExtraTreesSuite extends AnyFunSuite {
     val t = Vec(0d, 0.01, 100d, 100.1)
     val r = computeVarianceReduction(
       target = t,
-      samplesInSplit = Vec(0, 1),
-      samplesOutSplit = Vec(2, 3),
+      samplesInSplit = Vec(true, true, false, false),
       varianceNoSplit = t.sampleVariance * (t.length - 1d) / t.length
     )
     assert(r == 0.999999495454448)
