@@ -919,6 +919,29 @@ class GradientSuite extends AnyFunSuite {
       input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
     )
   }
+  testGradientAndValueND("expand as")(nd1x2x2, 16d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
+    val input =
+      param(NDArray.tensorFromNDArray(m, cuda))
+    val other =
+      NDArray.tensorFromNDArray(
+        NDArray(
+          org.saddle.vec.zeros(16).toArray,
+          List(2, 2, 2, 2)
+        ),
+        cuda
+      )
+    val output = input.expandAs(other)
+    assert(output.shape == other.shape)
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+    )
+  }
   testGradientAndValue("scatter sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     implicit val pool = selectPool(cuda)
     val input =
@@ -933,7 +956,7 @@ class GradientSuite extends AnyFunSuite {
           cuda
         )
       )
-    val output = input.scatterAdd(index, 0)
+    val output = input.scatterAdd(index, 0, 2)
     val L = output.sum
     if (doBackprop) {
       L.backprop()

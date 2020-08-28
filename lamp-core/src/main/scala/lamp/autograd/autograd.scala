@@ -167,8 +167,10 @@ case class Variable(
   def gelu = Gelu(this).value
   def sigmoid = Sigmoid(this).value
   def dropout(prob: Double, train: Boolean) = Dropout(this, prob, train).value
-  def scatterAdd(index: Variable, dim: Int) = ScatterAdd(this, index, dim).value
+  def scatterAdd(index: Variable, dim: Int, maxIndex: Long) =
+    ScatterAdd(this, index, dim, maxIndex).value
   def sum = Sum(this).value
+  def expandAs(other: Tensor) = ExpandAs(this, other).value
   def rowSum = RowSum(this).value
   def colSum = ColSum(this).value
   def exp = Exp(this).value

@@ -208,18 +208,20 @@ case class CastToPrecision(a: Variable, precision: FloatingPointPrecision)
   }, a.pool).releasable
 }
 
-case class ScatterAdd(src: Variable, index: Variable, dim: Int) extends Op {
-  assert(src.pool == src.pool)
+case class ScatterAdd(src: Variable, index: Variable, dim: Int, maxIndex: Long)
+    extends Op {
+  assert(src.pool == index.pool)
   assert(src.shape(dim) == index.shape(dim))
   val params = List(
-    src.zipBackward { (p, out) => ATen.add_out(out, out, p, 1d) }
+    src.zipBackward { (p, out) =>
+      val tmp = ATen.gather(p, dim, index.value, false)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+    }
   )
   val value = {
-    val max = ATen.max_2(index.value)
-    val maxi = max.toLongMat.raw(0) + 1
-    max.release
     val shape = src.sizes.toArray
-    shape(dim) = maxi
+    shape(dim) = maxIndex
     val zeros = ATen.zeros(shape, src.options)
     val result = ATen.scatter_add(zeros, dim, index.value, src.value)
     zeros.release
@@ -353,6 +355,15 @@ case class RowSum(a: Variable) extends Op {
   val value =
     Variable(this, ATen.sum_1(a.value, Array(1), true), a.pool).releasable
 
+}
+case class ExpandAs(a: Variable, as: Tensor) extends Op {
+  val params = List(a.zipBackward { (p, out) =>
+    val tmp = ub(p, a.shape)
+    ATen.add_out(out, out, tmp, 1d)
+    tmp.release
+  })
+  val value =
+    Variable(this, a.value.expand_as(as), a.pool).releasable
 }
 
 // http://cs231n.stanford.edu/handouts/derivatives.pdf
