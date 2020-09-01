@@ -279,7 +279,7 @@ package object extratrees {
             targetInSubset,
             rng
           )
-        val splitFeature = data.col(splitFeatureIdx)
+        val splitFeature = col(data, splitFeatureIdx)
         val leftSubset = subset.filter(s => splitFeature.raw(s) < splitCutpoint)
         val rightSubset =
           subset.filter(s => splitFeature.raw(s) >= splitCutpoint)
@@ -307,6 +307,10 @@ package object extratrees {
 
   def takeCol(data: Mat[Double], rows: Vec[Int], col: Int): Vec[Double] = {
     data.toVec.slice(col, data.length, data.numCols).view(rows.toArray)
+  }
+
+  def col(data: Mat[Double], col: Int): Vec[Double] = {
+    data.toVec.slice(col, data.length, data.numCols)
   }
 
   def buildTreeClassification(
@@ -379,7 +383,7 @@ package object extratrees {
             rng,
             numClasses
           )
-        val splitFeature = data.col(splitFeatureIdx)
+        val splitFeature = col(data, splitFeatureIdx)
         val leftSubset =
           subset.filter(s => splitFeature.raw(s) < splitCutpoint)
         val rightSubset =
@@ -423,6 +427,8 @@ package object extratrees {
     val cutpoints =
       min.zipMap(max)((min, max) => rng.nextDouble(from = min, until = max))
     val giniTotal = giniImpurity(targetAtSubset, numClasses)
+    val buf1 = Array.ofDim[Double](numClasses)
+    val buf2 = Array.ofDim[Double](numClasses)
     val scores = cutpoints
       .zipMapIdx { (cutpoint, colIdx) =>
         val c2 = attributes.raw(colIdx)
@@ -432,7 +438,9 @@ package object extratrees {
           targetAtSubset,
           take,
           giniTotal,
-          numClasses
+          numClasses,
+          buf1,
+          buf2
         )
       }
 
@@ -464,15 +472,44 @@ package object extratrees {
       target: Vec[Int],
       samplesInSplit: Vec[Boolean],
       giniImpurityNoSplit: Double,
-      numClasses: Int
+      numClasses: Int,
+      buf1: Array[Double],
+      buf2: Array[Double]
   ) = {
-    val numSamplesNoSplit = samplesInSplit.length
-    val (targetIn, targetOut) = partition(target)(samplesInSplit.toArray)
-    val gIn = giniImpurity(targetIn, numClasses)
-    val gOut =
-      giniImpurity(targetOut, numClasses)
-    giniImpurityNoSplit - gIn * targetIn.length / numSamplesNoSplit - gOut * targetOut.length / numSamplesNoSplit
+    val numSamplesNoSplit = samplesInSplit.length.toDouble
+    var i = 0
+    var targetInCount = 0
+    var targetOutCount = 0
+    val n = target.length
+    val os = 1d / n.toDouble
+
+    val distributionIn = buf1 //Array.ofDim[Double](numClasses)
+    val distributionOut = buf2 //Array.ofDim[Double](numClasses)
+
+    while (i < n) {
+      val v: Int = target.raw(i)
+      if (samplesInSplit.raw(i)) {
+        targetInCount += 1
+        distributionIn(v) += 1d
+      } else {
+        targetOutCount += 1
+        distributionOut(v) += 1d
+      }
+      i += 1
+    }
+    i = 0
+    while (i < numClasses) {
+      distributionIn(i) /= targetInCount
+      distributionOut(i) /= targetOutCount
+      i += 1
+    }
+
+    val gIn = giniImpurityFromDistribution(distributionIn)
+    val gOut = giniImpurityFromDistribution(distributionOut)
+
+    giniImpurityNoSplit - gIn * targetInCount / numSamplesNoSplit - gOut * targetOutCount / numSamplesNoSplit
   }
+
   def giniImpurity(
       target: Vec[Int],
       numClasses: Int
@@ -480,6 +517,20 @@ package object extratrees {
     val p = distribution(target, numClasses)
     val p2 = p * p
     1d - p2.sum
+  }
+  def giniImpurityFromDistribution(
+      distribution: Array[Double]
+  ): Double = {
+    var s = 0d
+    val n = distribution.length
+    var i = 0
+    while (i < n) {
+      val k = distribution(i)
+      distribution(i) = 0d
+      s += k * k
+      i += 1
+    }
+    1d - s
   }
   def splitRegression(
       data: Mat[Double],

@@ -21,7 +21,9 @@ class ExtraTreesSuite extends AnyFunSuite {
         target = t,
         samplesInSplit = Vec(true, true, false, false),
         giniImpurityNoSplit = gt,
-        2
+        2,
+        Array.ofDim[Double](2),
+        Array.ofDim[Double](2)
       ) == 0.5
     )
   }
@@ -83,7 +85,7 @@ class ExtraTreesSuite extends AnyFunSuite {
     val accuracy = correct.mean2
     assert(accuracy == 1.0)
   }
-  ignore("mnist full, slow ") {
+  test("mnist full, slow ") {
     val data = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source
