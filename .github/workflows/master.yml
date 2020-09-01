@@ -40,5 +40,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
         publish_dir: ./website/public
+    - name: git status
+      run: git status
     - name: Publish
       run: sbt -mem 3000 clean publish
