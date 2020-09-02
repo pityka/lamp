@@ -17,7 +17,7 @@ Lamp implements generic automatic reverse mode differentiation (also known as au
 
 On top of that it provides a small set of components to build neural networks:
 
-- fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM layers
+- fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM, GCN layers
 - various nonlinearities
 - batch normalization and weight normalization
 - seq2seq
@@ -25,6 +25,11 @@ On top of that it provides a small set of components to build neural networks:
 - SgdW and AdamW optimizers (see [here](https://arxiv.org/abs/1711.05101))
 - training loop and data loaders on top of cats-effect
 - checkpointing
+
+This repository also hosts some other loosely related libraries. 
+
+- an implementation of UMAP ([see](https://arxiv.org/abs/1802.03426))
+- an implementation of extratrees ([see](https://hal.archives-ouvertes.fr/hal-00341932))
 
 # Platforms
 
