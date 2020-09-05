@@ -57,6 +57,141 @@ object RegressionTree {
 
 package object extratrees {
 
+  def minmax(self: Vec[Double]) = {
+    var sMin = Double.MaxValue
+    var sMax = Double.MinValue
+    var i = 0
+    val n = self.length
+    while (i < n) {
+      val v = self.raw(i)
+      if (v < sMin) {
+        sMin = v
+      }
+      if (v > sMax) {
+        sMax = v
+      }
+      i += 1
+    }
+    (sMin, sMax)
+  }
+
+  def splitClassification(
+      data: Mat[Double],
+      subset: Vec[Int],
+      attributes: Array[Int],
+      numConstant: Int,
+      k: Int,
+      targetAtSubset: Vec[Int],
+      rng: org.saddle.spire.random.Generator,
+      numClasses: Int
+  ) = {
+    val giniTotal = giniImpurity(targetAtSubset, numClasses)
+    val buf1 = Array.ofDim[Double](numClasses)
+    val buf2 = Array.ofDim[Double](numClasses)
+
+    var low = numConstant
+    var high = attributes.length
+    val N = attributes.length
+    def swap(i: Int, j: Int) = {
+      val t = attributes(i)
+      attributes(i) = attributes(j)
+      attributes(j) = t
+    }
+
+    var bestScore = Double.NegativeInfinity
+    var bestFeature = -1
+    var bestCutpoint = Double.NaN
+    var visited = 0
+    while (N - high < k && high - low > 0) {
+      val r = rng.nextInt(low, high - 1)
+      val attr = attributes(r)
+      val (min, max) = minmax(takeCol(data, subset, attr))
+      if (max <= min) {
+        swap(r, low)
+        low += 1
+      } else {
+        val cutpoint = rng.nextDouble(min, max)
+
+        val take = takeCol(data, subset, attr) < cutpoint
+        visited += 1
+        val score = giniScore(
+          targetAtSubset,
+          take,
+          giniTotal,
+          numClasses,
+          buf1,
+          buf2
+        )
+        if (score > bestScore) {
+          bestScore = score
+          bestFeature = attr
+          bestCutpoint = cutpoint
+        }
+        swap(r, high - 1)
+        high -= 1
+      }
+    }
+    if (visited == 0) (-1, bestCutpoint, low)
+    else
+      (bestFeature, bestCutpoint, low)
+  }
+  def splitRegression(
+      data: Mat[Double],
+      subset: Vec[Int],
+      attributes: Array[Int],
+      numConstant: Int,
+      k: Int,
+      targetAtSubset: Vec[Double],
+      rng: org.saddle.spire.random.Generator
+  ) = {
+    val varianceNoSplit =
+      targetAtSubset.sampleVariance * (targetAtSubset.length - 1d) / targetAtSubset.length
+
+    var low = numConstant
+    var high = attributes.length
+    val N = attributes.length
+    def swap(i: Int, j: Int) = {
+      val t = attributes(i)
+      attributes(i) = attributes(j)
+      attributes(j) = t
+    }
+
+    var bestScore = Double.NegativeInfinity
+    var bestFeature = -1
+    var bestCutpoint = Double.NaN
+    var visited = 0
+    while (N - high < k && high - low > 0) {
+      val r = rng.nextInt(low, high - 1)
+      val attr = attributes(r)
+      val (min, max) = minmax(takeCol(data, subset, attr))
+      if (max <= min) {
+        swap(r, low)
+        low += 1
+      } else {
+        val cutpoint = rng.nextDouble(min, max)
+
+        val take = takeCol(data, subset, attr) < cutpoint
+        visited += 1
+        val score = computeVarianceReduction(
+          targetAtSubset,
+          take,
+          varianceNoSplit
+        )
+
+        if (score > bestScore) {
+          bestScore = score
+          bestFeature = attr
+          bestCutpoint = cutpoint
+        }
+        swap(r, high - 1)
+        high -= 1
+      }
+    }
+    if (visited == 0) (-1, bestCutpoint, low)
+    else
+      (bestFeature, bestCutpoint, low)
+  }
+
   def predictClassification(
       root: ClassificationTree,
       sample: Vec[Double]
@@ -106,18 +241,6 @@ package object extratrees {
     }.toVec
   }
 
-  private[extratrees] def oneHot(v: Vec[Int], classes: Int): Mat[Double] = {
-    val zeros = 0 until classes map (_ => vec.zeros(v.length)) toArray
-    var i = 0
-    val n = v.length
-    while (i < n) {
-      val level = v.raw(i)
-      zeros(level)(i) = 1d
-      i += 1
-    }
-    Mat(zeros: _*)
-  }
-
   def buildForestClassification(
       data: Mat[Double],
       target: Vec[Int],
@@ -139,7 +262,9 @@ package object extratrees {
           nMin,
           k,
           rng,
-          numClasses
+          numClasses,
+          array.range(0, data.numCols),
+          0
         )
       )
     } else {
@@ -157,7 +282,9 @@ package object extratrees {
                 nMin,
                 k,
                 rng,
-                numClasses
+                numClasses,
+                array.range(0, data.numCols),
+                0
               )
             }
           )
@@ -187,7 +314,16 @@ package object extratrees {
     val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(seed)
     val trees = if (parallelism <= 1) {
       0 until m map (_ =>
-        buildTreeRegression(data, subset, target, nMin, k, rng)
+        buildTreeRegression(
+          data,
+          subset,
+          target,
+          nMin,
+          k,
+          rng,
+          array.range(0, data.numCols),
+          0
+        )
       )
     } else {
       val fjp = new ForkJoinPool(parallelism)
@@ -196,7 +332,18 @@ package object extratrees {
       val trees = NonEmptyList
         .fromList(
           (0 until m).toList map (_ =>
-            IO { buildTreeRegression(data, subset, target, nMin, k, rng) }
+            IO {
+              buildTreeRegression(
+                data,
+                subset,
+                target,
+                nMin,
+                k,
+                rng,
+                array.range(0, data.numCols),
+                0
+              )
+            }
           )
         )
         .get
@@ -217,7 +364,9 @@ package object extratrees {
       target: Vec[Double],
       nMin: Int,
       k: Int,
-      rng: org.saddle.spire.random.Generator
+      rng: org.saddle.spire.random.Generator,
+      attributes: Array[Int],
+      numConstant: Int
   ): RegressionTree = {
 
     val targetInSubset = target.take(subset.toArray)
@@ -249,44 +398,46 @@ package object extratrees {
     if (subset.length < nMin) makeLeaf
     else if (targetIsConstant) makeLeaf
     else {
-      val shuffled =
-        array.shuffle(array.range(0, data.numCols), rng)
-      val candidateFeatures = shuffled.iterator
-        .filter { colIdx =>
-          val col = takeCol(data, subset, colIdx)
-          val head = col.raw(0)
-          var i = 1
-          val n = col.length
-          var uniform = true
-          while (i < n && uniform) {
-            if (col.raw(i) != head) {
-              uniform = false
-            }
-            i += 1
-          }
-          !uniform
-        }
-        .take(k)
-        .toArray
 
-      if (candidateFeatures.isEmpty) makeLeaf
+      val (splitFeatureIdx, splitCutpoint, nConstant2) =
+        splitRegression(
+          data,
+          subset,
+          attributes,
+          numConstant,
+          k,
+          targetInSubset,
+          rng
+        )
+      if (splitFeatureIdx == -1) makeLeaf
       else {
-        val (splitFeatureIdx, splitCutpoint) =
-          splitRegression(
-            data,
-            subset,
-            candidateFeatures.toVec,
-            targetInSubset,
-            rng
-          )
+
         val splitFeature = col(data, splitFeatureIdx)
         val leftSubset = subset.filter(s => splitFeature.raw(s) < splitCutpoint)
         val rightSubset =
           subset.filter(s => splitFeature.raw(s) >= splitCutpoint)
         val leftTree =
-          buildTreeRegression(data, leftSubset, target, nMin, k, rng)
+          buildTreeRegression(
+            data,
+            leftSubset,
+            target,
+            nMin,
+            k,
+            rng,
+            attributes,
+            nConstant2
+          )
         val rightTree =
-          buildTreeRegression(data, rightSubset, target, nMin, k, rng)
+          buildTreeRegression(
+            data,
+            rightSubset,
+            target,
+            nMin,
+            k,
+            rng,
+            attributes,
+            nConstant2
+          )
         makeNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
       }
     }
@@ -320,7 +471,9 @@ package object extratrees {
       nMin: Int,
       k: Int,
       rng: org.saddle.spire.random.Generator,
-      numClasses: Int
+      numClasses: Int,
+      attributes: Array[Int],
+      numConstant: Int
   ): ClassificationTree = {
     val targetInSubset = target.take(subset.toArray)
     def makeLeaf = {
@@ -351,38 +504,20 @@ package object extratrees {
     if (data.numRows < nMin) makeLeaf
     else if (targetIsConstant) makeLeaf
     else {
-      val shuffled =
-        array.shuffle(array.range(0, data.numCols), rng)
-      val candidateFeatures = shuffled.iterator
-        .filter { colIdx =>
-          val col = takeCol(data, subset, colIdx)
-          val head = col.raw(0)
-          var i = 1
-          val n = col.length
-          var uniform = true
-          while (i < n && uniform) {
-            if (col.raw(i) != head) {
-              uniform = false
-            }
-            i += 1
-          }
-          !uniform
-        }
-        .take(k)
-        .toArray
 
-      if (candidateFeatures.isEmpty) makeLeaf
+      val (splitFeatureIdx, splitCutpoint, numConstant2) =
+        splitClassification(
+          data,
+          subset,
+          attributes,
+          numConstant,
+          k,
+          targetInSubset,
+          rng,
+          numClasses
+        )
+      if (splitFeatureIdx < 0) makeLeaf
       else {
-
-        val (splitFeatureIdx, splitCutpoint) =
-          splitClassification(
-            data,
-            subset,
-            candidateFeatures.toVec,
-            targetInSubset,
-            rng,
-            numClasses
-          )
         val splitFeature = col(data, splitFeatureIdx)
         val leftSubset =
           subset.filter(s => splitFeature.raw(s) < splitCutpoint)
@@ -397,7 +532,9 @@ package object extratrees {
             nMin,
             k,
             rng,
-            numClasses
+            numClasses,
+            attributes,
+            numConstant2
           )
         val rightTree =
           buildTreeClassification(
@@ -407,48 +544,13 @@ package object extratrees {
             nMin,
             k,
             rng,
-            numClasses
+            numClasses,
+            attributes,
+            numConstant2
           )
         makeNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
       }
     }
-  }
-
-  def splitClassification(
-      data: Mat[Double],
-      subset: Vec[Int],
-      attributes: Vec[Int],
-      targetAtSubset: Vec[Int],
-      rng: org.saddle.spire.random.Generator,
-      numClasses: Int
-  ) = {
-    val min = attributes.map(i => takeCol(data, subset, i).min2)
-    val max = attributes.map(i => takeCol(data, subset, i).max2)
-    val cutpoints =
-      min.zipMap(max)((min, max) => rng.nextDouble(from = min, until = max))
-    val giniTotal = giniImpurity(targetAtSubset, numClasses)
-    val buf1 = Array.ofDim[Double](numClasses)
-    val buf2 = Array.ofDim[Double](numClasses)
-    val scores = cutpoints
-      .zipMapIdx { (cutpoint, colIdx) =>
-        val c2 = attributes.raw(colIdx)
-        val take = takeCol(data, subset, c2) < cutpoint
-
-        giniScore(
-          targetAtSubset,
-          take,
-          giniTotal,
-          numClasses,
-          buf1,
-          buf2
-        )
-      }
-
-    val sidx = scores.argmax
-    val splitAttribute = attributes.raw(sidx)
-    val splitCutpoint = cutpoints.raw(sidx)
-
-    (splitAttribute, splitCutpoint)
   }
 
   def partition[@specialized(Int, Double) T: ClassTag](
@@ -483,8 +585,8 @@ package object extratrees {
     val n = target.length
     val os = 1d / n.toDouble
 
-    val distributionIn = buf1 //Array.ofDim[Double](numClasses)
-    val distributionOut = buf2 //Array.ofDim[Double](numClasses)
+    val distributionIn = buf1
+    val distributionOut = buf2
 
     while (i < n) {
       val v: Int = target.raw(i)
@@ -531,39 +633,6 @@ package object extratrees {
       i += 1
     }
     1d - s
-  }
-  def splitRegression(
-      data: Mat[Double],
-      subset: Vec[Int],
-      attributes: Vec[Int],
-      target: Vec[Double],
-      rng: org.saddle.spire.random.Generator
-  ) = {
-    val min = attributes.map(i => takeCol(data, subset, i).min2)
-    val max = attributes.map(i => takeCol(data, subset, i).max2)
-    val cutpoints =
-      min.zipMap(max)((min, max) => rng.nextDouble(from = min, until = max))
-    val varianceNoSplit =
-      target.sampleVariance * (target.length - 1d) / target.length
-    val scores = cutpoints
-      .zipMapIdx { (cutpoint, colIdx) =>
-        val c2 = attributes.raw(colIdx)
-        val take = takeCol(data, subset, c2) < cutpoint
-
-        val score = computeVarianceReduction(
-          target,
-          take,
-          varianceNoSplit
-        )
-
-        score
-      }
-
-    val sidx = scores.argmax
-    val splitAttribute = attributes.raw(sidx)
-    val splitCutpoint = cutpoints.raw(sidx)
-
-    (splitAttribute, splitCutpoint)
   }
 
   def computeVarianceReduction(

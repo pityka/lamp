@@ -28,26 +28,144 @@ class ExtraTreesSuite extends AnyFunSuite {
     )
   }
   test("splitRegression 1") {
+    val attr = Array(0, 1)
     val r = splitRegression(
       data = Mat(Vec(0d, 2d, 3d, 4d, 5d), Vec(100d, 99d, 98d, 97d, 96d)),
       subset = Vec(0, 1, 2, 3, 4),
-      attributes = Vec(0, 1),
-      target = Vec(0d, 0.1d, 100d, 100.1, 100.2),
+      attributes = attr,
+      numConstant = 0,
+      k = 2,
+      targetAtSubset = Vec(0d, 0.1d, 100d, 100.1, 100.2),
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(r == ((1, 98.739216819089)))
+    assert(r == ((0, 3.424021023861243, 0)))
   }
   test("splitClassification 1") {
+    val attr = Array(0, 1)
     val r = splitClassification(
       data = Mat(Vec(0d, 2d, 3d, 4d, 5d), Vec(100d, 99d, 98d, 97d, 96d)),
       subset = Vec(0, 1, 2, 3, 4),
-      attributes = Vec(0, 1),
+      attributes = attr,
+      numConstant = 0,
+      k = 2,
+      numClasses = 2,
       targetAtSubset = Vec(1, 1, 0, 0, 0),
-      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L),
-      2
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(r == ((1, 98.739216819089)))
+    assert(attr.deep == Vector(1, 0))
+    assert(r == ((0, 3.424021023861243, 0)))
   }
+  test("splitClassification 2") {
+    val attr = Array(0, 1)
+    val r = splitClassification(
+      data = Mat(Vec(0d, 0d, 3d, 3d, 3d), Vec(100d, 99d, 98d, 97d, 96d)),
+      subset = Vec(2, 3, 4),
+      attributes = attr,
+      numConstant = 0,
+      k = 2,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 0),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
+    )
+    assert(r == ((1, 97.54668482609304, 1)))
+    assert(attr.deep == Vector(0, 1))
+  }
+  test("splitClassification 3") {
+    val attr = Array(2, 1, 0)
+    val r = splitClassification(
+      data = Mat(
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(100d, 99d, 98d, 97d, 96d)
+      ),
+      subset = Vec(2, 3, 4),
+      attributes = attr,
+      numConstant = 0,
+      k = 2,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 0),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
+    )
+    assert(r == ((2, 97.54668482609304, 2)))
+    assert(attr.deep == Vector(0, 1, 2))
+  }
+  test("splitClassification 4") {
+    val attr = Array(2, 0, 1)
+    val r = splitClassification(
+      data = Mat(
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(100d, 99d, 98d, 97d, 96d)
+      ),
+      subset = Vec(2, 3, 4),
+      attributes = attr,
+      numConstant = 0,
+      k = 1,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 0),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
+    )
+    assert(r == ((2, 97.54668482609304, 1)))
+    assert(attr.deep == Vector(1, 0, 2))
+  }
+  test("splitClassification 5") {
+    val attr = Array(0, 2, 1)
+    val r = splitClassification(
+      data = Mat(
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(100d, 99d, 98d, 97d, 96d)
+      ),
+      subset = Vec(2, 3, 4),
+      attributes = attr,
+      numConstant = 1,
+      k = 1,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 0),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(1L)
+    )
+    assert(r == ((2, 97.84900936098786, 1)))
+    assert(attr.deep == Vector(0, 1, 2))
+  }
+  test("splitClassification 6") {
+    val attr = Array(0, 2, 1)
+    val r = splitClassification(
+      data = Mat(
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(100d, 99d, 98d, 97d, 96d)
+      ),
+      subset = Vec(2, 3, 4),
+      attributes = attr,
+      numConstant = 1,
+      k = 1,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 0),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(123L)
+    )
+    assert(r == ((2, 96.07259095141863, 2)))
+    assert(attr.deep == Vector(0, 1, 2))
+  }
+  test("splitClassification 7") {
+    val attr = Array(1, 2, 0)
+    val r = splitClassification(
+      data = Mat(
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(0d, 0d, 3d, 3d, 3d),
+        Vec(100d, 99d, 98d, 97d, 96d)
+      ),
+      subset = Vec(2, 3, 4),
+      attributes = attr,
+      numConstant = 1,
+      k = 1,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 0),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(123L)
+    )
+    assert(r == ((2, 96.07259095141863, 2)))
+    assert(attr.deep == Vector(1, 0, 2))
+  }
+
   test("mnist") {
     val data = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
@@ -120,7 +238,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 2,
       k = 32,
       m = 10,
-      parallelism = 4
+      parallelism = 1
     )
     println((System.nanoTime() - t1) * 1e-9)
     val output = predictClassification(trees, testfeatures)
@@ -132,7 +250,7 @@ class ExtraTreesSuite extends AnyFunSuite {
         if (a == b) 1d else 0d
       )
     val accuracy = correct.mean2
-    assert(accuracy > 0.93)
+    assert(accuracy > 0.95)
   }
   test("mnist regression") {
     val data = org.saddle.csv.CsvParser
