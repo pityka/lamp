@@ -583,7 +583,6 @@ package object extratrees {
     var targetInCount = 0
     var targetOutCount = 0
     val n = target.length
-    val os = 1d / n.toDouble
 
     val distributionIn = buf1
     val distributionOut = buf2
