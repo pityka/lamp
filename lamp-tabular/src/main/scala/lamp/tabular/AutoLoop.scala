@@ -25,6 +25,7 @@ import lamp.DoublePrecision
 import lamp.CudaDevice
 import lamp.RegressionTree
 import _root_.lamp.ClassificationTree
+import lamp.autograd.Mean
 
 sealed trait BaseModel
 case class KnnBase(
@@ -1270,7 +1271,8 @@ object AutoLoop {
     val (loss, _) =
       lossFunction.apply(
         const(pred).releasable,
-        targetFullbatch
+        targetFullbatch,
+        Mean
       )
     val lossM = loss.toMat.raw(0)
     loss.releaseAll

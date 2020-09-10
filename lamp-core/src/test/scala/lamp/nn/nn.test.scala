@@ -502,7 +502,7 @@ class NNSuite extends AnyFunSuite {
       .SequenceNLL(
         4,
         ATen.ones(Array(4), TensorOptions.dtypeDouble())
-      )(const(output), target)
+      )(const(output), target, NoReduction)
       ._1
       .value
     assert(TensorHelpers.toMat(loss).raw(0) == -0.9940025479340507)

@@ -13,29 +13,42 @@ trait LossFunction {
   /**
     * Returns the loss averaged over examples and the number of examples
     */
-  def apply(output: Variable, target: Tensor): (Variable, Long)
+  def apply(
+      output: Variable,
+      target: Tensor,
+      reduction: Reduction
+  ): (Variable, Long)
+
 }
 
 object LossFunctions {
+  // case class InputGradientRegularizedLoss[M <: Module](
+  //     module: M with Module,
+  //     lossFunction: LossFunction
+  // )(
+  //     input: Variable,
+  //     target: Tensor,
+  //     h: Double,
+  //     lambda: Double
+  // ) extends
   case object MSE extends LossFunction {
-    def apply(out: Variable, target: Tensor) = {
-      val v = out.mseLoss(target)
+    def apply(out: Variable, target: Tensor, reduction: Reduction) = {
+      val v = out.mseLoss(target, reduction)
       (v, out.shape(0))
     }
   }
   case object L1Loss extends LossFunction {
-    def apply(out: Variable, target: Tensor) = {
-      val v = out.l1Loss(target)
+    def apply(out: Variable, target: Tensor, reduction: Reduction) = {
+      val v = out.l1Loss(target, reduction)
       (v, out.shape(0))
     }
   }
   case class NLL(
       numClasses: Int,
       classWeights: Tensor,
-      reduction: Reduction = Mean,
       ignore: Long = -100L
   ) extends LossFunction {
-    def apply(out: Variable, target: Tensor) = {
+    def apply(out: Variable, target: Tensor, reduction: Reduction) = {
       val v = out.nllLoss(target, numClasses, classWeights, reduction, ignore)
       (v, out.shape(0))
     }
@@ -52,7 +65,11 @@ object LossFunctions {
       ignore: Long = -100L
   ) extends LossFunction {
     val ignoreScalar = Tensor.scalarLong(ignore, classWeights.options)
-    def apply(out: Variable, target: Tensor) = {
+    def apply(out: Variable, target: Tensor, reduction: Reduction) = {
+      assert(
+        reduction == Mean,
+        "Only Mean reduction is implemented for SequenceNLL"
+      )
       val timeSteps = out.shape(0)
       val batches = out.shape(1)
       val lossesAtTimeSteps = (0 until timeSteps.toInt).map { t =>
