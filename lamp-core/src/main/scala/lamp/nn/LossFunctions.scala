@@ -22,15 +22,7 @@ trait LossFunction {
 }
 
 object LossFunctions {
-  // case class InputGradientRegularizedLoss[M <: Module](
-  //     module: M with Module,
-  //     lossFunction: LossFunction
-  // )(
-  //     input: Variable,
-  //     target: Tensor,
-  //     h: Double,
-  //     lambda: Double
-  // ) extends
+
   case object MSE extends LossFunction {
     def apply(out: Variable, target: Tensor, reduction: Reduction) = {
       val v = out.mseLoss(target, reduction)
