@@ -16,6 +16,7 @@ class GradientSuite extends AnyFunSuite {
   val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
     4d, 5d, 6d)
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
+  val mat3x3 = Mat(Vec(299d, 2d, 4d), Vec(3d, 4d, 1d), Vec(5d, 6d, 0d))
   val ndx1 = NDArray(Array(1d), List(1))
   val ndx2 = NDArray(Array(1d, 1d), List(2))
   val ndx3 = NDArray(Array(1d, 2d, 3d), List(3))
@@ -1315,12 +1316,12 @@ class GradientSuite extends AnyFunSuite {
       )
   }
 
-  testGradientAndValue("batch norm 1d - wrt to input")(mat2x3, 0d) {
+  testGradientAndValue("batch norm 1d - wrt to input")(mat3x3, 1414.1894d) {
     (m, doBackprop, cuda) =>
       implicit val pool = selectPool(cuda)
       val input =
         param(TensorHelpers.fromMat(m, cuda))
-      val weight = param(TensorHelpers.fromVec(Vec(1d, 2d, 3d), cuda))
+      val weight = param(TensorHelpers.fromVec(Vec(1000d, 2d, 3d), cuda))
 
       val bias = param(TensorHelpers.fromVec(vec.zeros(3), cuda))
       val runningMean = TensorHelpers.fromVec(vec.ones(3), cuda)
@@ -1338,7 +1339,7 @@ class GradientSuite extends AnyFunSuite {
           eps = 1e-5
         ).value
 
-      val L = output.sum
+      val L = output.select(0, 0).select(0, 0).view(List(1))
       if (doBackprop) {
         L.backprop()
       }

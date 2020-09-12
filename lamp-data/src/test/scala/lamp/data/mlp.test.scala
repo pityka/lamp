@@ -9,6 +9,7 @@ import aten.ATen
 import aten.TensorOptions
 import scribe.Level
 import lamp.autograd.AllocatedVariablePool
+import lamp.autograd.Mean
 
 class MLPSuite extends AnyFunSuite {
 
@@ -71,7 +72,8 @@ class MLPSuite extends AnyFunSuite {
 
     val model = SupervisedModel(
       mlp(784, 10, device.options(DoublePrecision)),
-      LossFunctions.NLL(10, classWeights)
+      LossFunctions.NLL(10, classWeights),
+      InputGradientRegularizer(h = 0.01, lambda = 0.001)
     )
 
     assert(model.module.state.size == 18)
@@ -101,27 +103,46 @@ class MLPSuite extends AnyFunSuite {
     val validationCallback =
       ValidationCallback.logAccuracy(logger)
 
-    val trainedModel = IOLoops.epochs(
-      model = model,
-      optimizerFactory = SGDW
-        .factory(
-          learningRate = simple(0.0001),
-          weightDecay = simple(0.001d)
-        ),
-      trainBatchesOverEpoch = makeTrainingBatch,
-      validationBatchesOverEpoch = Some(makeValidationBatch),
-      epochs = 10,
-      trainingCallback = TrainingCallback.noop,
-      validationCallback = validationCallback,
-      checkpointFile = None,
-      minimumCheckpointFile = None
-    )
-    val (loss, _, _) = trainedModel
-      .flatMap(
-        _.lossAndOutput(const(testDataTensor), testTarget).allocated.map(_._1)
+    val trainedModel = IOLoops
+      .epochs(
+        model = model,
+        optimizerFactory = AdamW
+          .factory(
+            learningRate = simple(0.001),
+            weightDecay = simple(0.0001d)
+          ),
+        trainBatchesOverEpoch = makeTrainingBatch,
+        validationBatchesOverEpoch = Some(makeValidationBatch),
+        epochs = 10,
+        validationCallback = validationCallback
+        // logger = Some(logger)
       )
-      .unsafeRunSync
-    assert(loss < 3)
+      .unsafeRunSync()
+    val (_, output, _) = trainedModel.asEval
+      .lossAndOutput(const(testDataTensor), testTarget)
+      .allocated
+      .map(_._1)
+      .unsafeRunSync()
 
+    val loss =
+      LossFunctions
+        .NLL(10, classWeights)(const(output), testTarget, Mean)
+        ._1
+        .toMat
+        .raw(0)
+
+    val prediction = {
+      val t = ATen.argmax(output, 1, false)
+      val r = TensorHelpers
+        .toLongMat(t)
+        .toVec
+      t.release
+      r
+    }
+    val corrects = prediction.zipMap(
+      TensorHelpers.toLongMat(testTarget).toVec
+    )((a, b) => if (a == b) 1d else 0d)
+    assert(corrects.mean2 > 0.93)
+    assert(loss < 2.0)
   }
 }
