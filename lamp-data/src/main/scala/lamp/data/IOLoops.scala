@@ -33,6 +33,7 @@ object IOLoops {
     ): IO[SupervisedModel[I, M]] =
       if (epoch >= epochs)
         IO.pure {
+          modelWithOptimizer.optimizer.release()
           minValidationLossModel match {
             case None => modelWithOptimizer.model
             case Some(state) =>
