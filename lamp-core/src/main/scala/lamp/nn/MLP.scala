@@ -21,17 +21,28 @@ object MLP {
       tOpt: TensorOptions,
       dropout: Double = 0d
   )(implicit pool: AllocatedVariablePool) =
-    Sequential(
-      (List(in) ++ hidden ++ List(out)).sliding(2).toList.map { group =>
-        val in = group(0)
-        val out = group(1)
-        sequence(
-          Linear(in = in, out = out, tOpt = tOpt, bias = true),
-          BatchNorm(out, tOpt = tOpt),
-          Fun(_.gelu),
-          Dropout(dropout, training = true)
-        )
-      }: _*
+    sequence(
+      Sequential(
+        (List(in) ++ hidden).sliding(2).toList.map { group =>
+          val in = group(0)
+          val out = group(1)
+          sequence(
+            Linear(in = in, out = out, tOpt = tOpt, bias = false),
+            BatchNorm(out, tOpt = tOpt),
+            Fun(_.gelu),
+            Dropout(dropout, training = true)
+          )
+        }: _*
+      ),
+      sequence(
+        Linear(
+          in = (List(in) ++ hidden).last,
+          out = out,
+          tOpt = tOpt,
+          bias = true
+        ),
+        BatchNorm(out, tOpt = tOpt)
+      )
     )
 
 }
