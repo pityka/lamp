@@ -47,6 +47,35 @@ case class InputGradientRegularizer(h: Double, lambda: Double)
   }
 }
 
+object InputGradient {
+  def computeInputGradient[M <: GenericModule[Variable, Variable]](
+      model: SupervisedModel[Variable, M],
+      input: Variable,
+      target: Tensor
+  ) = {
+    val inputWithNeedGrad = input.copy(needsGrad = true)
+
+    val (_, loss, _) = (new SimpleComputeLoss[Variable])
+      .computeOutputAndLoss(
+        model.module,
+        model.lossFunction,
+        inputWithNeedGrad,
+        target
+      )
+
+    model.module.parameters.foreach {
+      case (param, _) =>
+        param.zeroGrad()
+    }
+    inputWithNeedGrad.zeroGrad()
+
+    loss.backprop()
+    val g = inputWithNeedGrad.partialDerivative.get
+    loss.releaseAll
+    g
+  }
+}
+
 object SupervisedModel {
   def apply[I, M <: GenericModule[I, Variable]](
       module: M with GenericModule[I, Variable],
@@ -60,6 +89,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     lossFunction: LossFunction,
     computeLoss: ComputeLoss[I]
 )(implicit tm: TrainingMode[M]) {
+
   def asEval = copy(module = module.asEval)
   def asTraining = copy(module = module.asTraining)
   def lossAndOutput(

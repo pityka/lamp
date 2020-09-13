@@ -73,7 +73,7 @@ class MLPSuite extends AnyFunSuite {
     val model = SupervisedModel(
       mlp(784, 10, device.options(DoublePrecision)),
       LossFunctions.NLL(10, classWeights),
-      InputGradientRegularizer(h = 0.01, lambda = 0.001)
+      InputGradientRegularizer(h = 0.01, lambda = 0.01)
     )
 
     assert(model.module.state.size == 18)
@@ -142,7 +142,15 @@ class MLPSuite extends AnyFunSuite {
     val corrects = prediction.zipMap(
       TensorHelpers.toLongMat(testTarget).toVec
     )((a, b) => if (a == b) 1d else 0d)
+
+    import lamp.syntax
+    import org.saddle.ops.BinOps._
+    val inputGrad =
+      InputGradient
+        .computeInputGradient(trainedModel, const(testDataTensor), testTarget)
+        .toMat
+    assert(inputGrad.toVec.map(math.abs).sum < 0.02)
     assert(corrects.mean2 > 0.93)
-    assert(loss < 2.0)
+    assert(loss < 2.2)
   }
 }
