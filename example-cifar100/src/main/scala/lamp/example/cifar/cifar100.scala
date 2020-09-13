@@ -174,14 +174,15 @@ object Train extends App {
       scribe.info(
         s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
       )
-
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply
       val trainEpochs = () =>
         BatchStream.minibatchesFromFull(
           config.trainBatchSize,
           true,
           trainFullbatch,
           trainTarget,
-          device
+          device,
+          rng
         )
       val testEpochs = () =>
         BatchStream.minibatchesFromFull(
@@ -189,7 +190,8 @@ object Train extends App {
           true,
           testFullbatch,
           testTarget,
-          device
+          device,
+          rng
         )
 
       val optimizer = AdamW.factory(

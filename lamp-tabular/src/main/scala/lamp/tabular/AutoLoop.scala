@@ -75,7 +75,8 @@ object EnsembleModel {
       logFrequency: Int,
       learningRate: Double = 0.0001,
       minibatchSize: Int = 512,
-      knnMinibatchSize: Int = 512
+      knnMinibatchSize: Int = 512,
+      rng: org.saddle.spire.random.Generator
   ) = {
     implicit val pool = new AllocatedVariablePool
     val precision =
@@ -88,11 +89,12 @@ object EnsembleModel {
       AutoLoop.makeCVFolds(
         numInstances,
         k = 10,
-        5
+        5,
+        rng
       )
     val ensembleFolds =
       AutoLoop
-        .makeCVFolds(numInstances, k = 10, 5)
+        .makeCVFolds(numInstances, k = 10, 5, rng)
 
     logger.foreach(
       _.info(
@@ -122,7 +124,8 @@ object EnsembleModel {
       logFrequency = logFrequency,
       logger = logger,
       ensembleFolds = ensembleFolds,
-      prescreenHyperparameters = true
+      prescreenHyperparameters = true,
+      rng = rng
     )
   }
 }
@@ -328,10 +331,15 @@ case class EnsembleModel(
 
 object AutoLoop {
 
-  def makeCVFolds(length: Int, k: Int, repeat: Int) = {
+  def makeCVFolds(
+      length: Int,
+      k: Int,
+      repeat: Int,
+      rng: org.saddle.spire.random.Generator
+  ) = {
     val all = IndexIntRange(length).toVec.toArray
     0 until repeat flatMap { _ =>
-      val shuffled = org.saddle.array.shuffle(all)
+      val shuffled = org.saddle.array.shuffle(all, rng)
       val folds = 0 until k map (_ => org.saddle.Buffer.empty[Int]) toArray
       var i = 0
       val n = shuffled.length
@@ -358,7 +366,8 @@ object AutoLoop {
       numericalFeatures: Tensor,
       categoricalFeatures: Seq[Tensor],
       target: Tensor,
-      device: Device
+      device: Device,
+      rng: org.saddle.spire.random.Generator
   )(implicit pool: AllocatedVariablePool) = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make(IO {
@@ -392,7 +401,7 @@ object AutoLoop {
 
     val idx = {
       val t = array
-        .shuffle(array.range(0, numericalFeatures.sizes.head.toInt))
+        .shuffle(array.range(0, numericalFeatures.sizes.head.toInt), rng)
         .grouped(minibatchSize)
         .toList
       if (dropLast) t.dropRight(1)
@@ -673,7 +682,8 @@ object AutoLoop {
       precision: FloatingPointPrecision,
       minibatchSize: Int,
       logFrequency: Int,
-      logger: Option[Logger]
+      logger: Option[Logger],
+      rng: org.saddle.spire.random.Generator
   )(implicit pool: AllocatedVariablePool) =
     IO {
       val modelTensorOptions = device.options(precision)
@@ -741,7 +751,8 @@ object AutoLoop {
           numericalFeatures = trainNumerical,
           categoricalFeatures = trainCategorical,
           target = target,
-          device = device
+          device = device,
+          rng
         )
 
       val batchesInEpoch = miniBatches._2
@@ -1155,7 +1166,8 @@ object AutoLoop {
       precision: FloatingPointPrecision,
       minibatchSize: Int,
       logFrequency: Int,
-      logger: Option[Logger]
+      logger: Option[Logger],
+      rng: org.saddle.spire.random.Generator
   )(implicit pool: AllocatedVariablePool) = {
     val trainedFolds = folds.zipWithIndex
       .map {
@@ -1204,7 +1216,8 @@ object AutoLoop {
               precision = precision,
               minibatchSize = minibatchSize,
               logFrequency = logFrequency,
-              logger = logger
+              logger = logger,
+              rng = rng
             ).map(_.map(v => (v._1, v._2, v._3, predictIdx)))
           } yield {
             trainFeatures.release
@@ -1301,7 +1314,8 @@ object AutoLoop {
       logFrequency: Int,
       logger: Option[Logger],
       ensembleFolds: Seq[(Seq[Int], Seq[Int])],
-      prescreenHyperparameters: Boolean
+      prescreenHyperparameters: Boolean,
+      rng: org.saddle.spire.random.Generator
   )(implicit pool: AllocatedVariablePool) = {
 
     val hyperparameters =
@@ -1326,7 +1340,8 @@ object AutoLoop {
                 dataFullbatch = dataFullbatch,
                 targetFullbatch = targetFullbatch,
                 predictions = Nil,
-                folds = makeCVFolds(dataFullbatch.sizes.apply(0).toInt, 2, 1),
+                folds =
+                  makeCVFolds(dataFullbatch.sizes.apply(0).toInt, 2, 1, rng),
                 targetType = targetType,
                 dataLayout = dataLayout,
                 epochs = epochs,
@@ -1338,7 +1353,8 @@ object AutoLoop {
                 precision = precision,
                 minibatchSize = minibatchSize,
                 logFrequency = logFrequency,
-                logger = logger
+                logger = logger,
+                rng = rng
               )
               predictionsInFolds.map(_.map {
                 case (epoch, prediction, models) =>
@@ -1372,7 +1388,8 @@ object AutoLoop {
               precision = precision,
               minibatchSize = minibatchSize,
               logFrequency = logFrequency,
-              logger = logger
+              logger = logger,
+              rng = rng
             )
             predictionsInFolds.map(_.map {
               case (epoch, prediction, models) =>
@@ -1467,7 +1484,8 @@ object AutoLoop {
                 precision = precision,
                 minibatchSize = minibatchSize,
                 logFrequency = logFrequency,
-                logger = logger
+                logger = logger,
+                rng = rng
               )
 
               withValidationErrors <- IO {
