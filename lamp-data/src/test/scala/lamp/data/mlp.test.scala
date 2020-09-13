@@ -74,7 +74,6 @@ class MLPSuite extends AnyFunSuite {
       LossFunctions.NLL(10, classWeights)
     )
 
-    assert(model.module.state.size == 18)
     val rng = org.saddle.spire.random.rng.Cmwc5.apply()
     val makeValidationBatch = () =>
       BatchStream.minibatchesFromFull(
