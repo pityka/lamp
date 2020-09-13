@@ -75,14 +75,15 @@ class MLPSuite extends AnyFunSuite {
     )
 
     assert(model.module.state.size == 18)
-
+    val rng = org.saddle.spire.random.rng.Cmwc5.apply()
     val makeValidationBatch = () =>
       BatchStream.minibatchesFromFull(
         200,
         true,
         testDataTensor,
         testTarget,
-        device
+        device,
+        rng
       )
     val makeTrainingBatch = () =>
       BatchStream.minibatchesFromFull(
@@ -90,7 +91,8 @@ class MLPSuite extends AnyFunSuite {
         true,
         trainDataTensor,
         trainTarget,
-        device
+        device,
+        rng
       )
 
     val logger = scribe

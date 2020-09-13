@@ -32,16 +32,18 @@ object TestTrain {
     val numInstances = features.sizes.apply(0).toInt
 
     val minibatchSize = 1024
+    val rng = org.saddle.spire.random.rng.Cmwc5.apply
     val cvFolds =
       AutoLoop.makeCVFolds(
         numInstances,
         k = 4,
-        2
+        2,
+        rng
       )
 
     val ensembleFolds =
       AutoLoop
-        .makeCVFolds(numInstances, k = 4, 2)
+        .makeCVFolds(numInstances, k = 4, 2, rng)
     AutoLoop.train(
       dataFullbatch = features,
       targetFullbatch = target,
@@ -65,7 +67,8 @@ object TestTrain {
       ensembleFolds = ensembleFolds,
       learningRate = 0.001,
       prescreenHyperparameters = true,
-      knnMinibatchSize = 512
+      knnMinibatchSize = 512,
+      rng = rng
     )
   }
 }

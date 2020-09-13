@@ -32,7 +32,8 @@ object BatchStream {
       dropLast: Boolean,
       features: Tensor,
       target: Tensor,
-      device: Device
+      device: Device,
+      rng: org.saddle.spire.random.Generator
   )(implicit pool: AllocatedVariablePool) = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make(IO {
@@ -57,7 +58,7 @@ object BatchStream {
 
     val idx = {
       val t = array
-        .shuffle(array.range(0, features.sizes.head.toInt))
+        .shuffle(array.range(0, features.sizes.head.toInt), rng)
         .grouped(minibatchSize)
         .toList
       if (dropLast) t.dropRight(1)

@@ -263,7 +263,7 @@ object Train extends App {
             .SequenceNLL(vocabularSize, classWeights, ignore = vocab('#'))
         )
       }
-
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply
       val trainEpochs = () =>
         Text
           .minibatchesForSeq2Seq(
@@ -271,7 +271,8 @@ object Train extends App {
             config.trainBatchSize,
             lookAhead,
             vocab('#'),
-            device
+            device,
+            rng
           )
       val testEpochs = testTokenized.map { t => () =>
         Text
@@ -280,7 +281,8 @@ object Train extends App {
             config.validationBatchSize,
             lookAhead,
             vocab('#'),
-            device
+            device,
+            rng
           )
       }
 

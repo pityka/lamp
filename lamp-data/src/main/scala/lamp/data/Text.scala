@@ -215,7 +215,8 @@ object Text {
       text: Vector[Int],
       minibatchSize: Int,
       timeSteps: Int,
-      device: Device
+      device: Device,
+      rng: org.saddle.spire.random.Generator
   )(implicit pool: AllocatedVariablePool) = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make(IO {
@@ -272,7 +273,7 @@ object Text {
     val dropped = text.drop(scala.util.Random.nextInt(timeSteps))
     val numSamples = (dropped.size - 1) / timeSteps
     val idx = array
-      .shuffle(array.range(0, numSamples * timeSteps, timeSteps))
+      .shuffle(array.range(0, numSamples * timeSteps, timeSteps), rng)
       .grouped(minibatchSize)
       .toList
       .dropRight(1)
@@ -304,7 +305,8 @@ object Text {
       minibatchSize: Int,
       timeSteps: Int,
       pad: Long,
-      device: Device
+      device: Device,
+      rng: org.saddle.spire.random.Generator
   )(implicit pool: AllocatedVariablePool): BatchStream[(Variable, Variable)] = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make {
@@ -398,7 +400,7 @@ object Text {
       Resource.pure[IO, Option[((Variable, Variable), Tensor)]](None)
 
     val idx = array
-      .shuffle(array.range(0, text.size))
+      .shuffle(array.range(0, text.size), rng)
       .grouped(minibatchSize)
       .toList
       .dropRight(1)

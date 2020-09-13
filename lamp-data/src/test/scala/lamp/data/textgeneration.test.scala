@@ -71,14 +71,15 @@ class TextGenerationSuite extends AnyFunSuite {
         LossFunctions.SequenceNLL(vocabularSize, classWeights)
       )
     }
-
+    val rng = org.saddle.spire.random.rng.Cmwc5.apply
     val trainEpochs = () =>
       Text
         .minibatchesFromText(
           trainTokenized,
           64,
           lookAhead,
-          device
+          device,
+          rng
         )
 
     val optimizer = AdamW.factory(
@@ -151,14 +152,15 @@ class TextGenerationSuite extends AnyFunSuite {
         LossFunctions.SequenceNLL(vocabularSize, classWeights)
       )
     }
-
+    val rng = org.saddle.spire.random.rng.Cmwc5.apply
     val trainEpochs = () =>
       Text
         .minibatchesFromText(
           trainTokenized,
           64,
           lookAhead,
-          device
+          device,
+          rng
         )
 
     val optimizer = AdamW.factory(

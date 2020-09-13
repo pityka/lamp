@@ -109,6 +109,8 @@ class IOLoopSuite extends AnyFunSuite {
       LossFunctions.NLL(10, classWeights)
     )
 
+    val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+
     val trainedModel = IOLoops.epochs(
       model = model,
       optimizerFactory = SGDW
@@ -116,10 +118,10 @@ class IOLoopSuite extends AnyFunSuite {
           learningRate = simple(0.0001),
           weightDecay = simple(0.001d)
         ),
-      trainBatchesOverEpoch =
-        () => BatchStream.minibatchesFromFull(200, true, x, target, device),
+      trainBatchesOverEpoch = () =>
+        BatchStream.minibatchesFromFull(200, true, x, target, device, rng),
       validationBatchesOverEpoch = Some(() =>
-        BatchStream.minibatchesFromFull(200, true, x, target, device)
+        BatchStream.minibatchesFromFull(200, true, x, target, device, rng)
       ),
       epochs = 50,
       trainingCallback = TrainingCallback.noop,

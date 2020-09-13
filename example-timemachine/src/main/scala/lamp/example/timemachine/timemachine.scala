@@ -161,14 +161,15 @@ object Train extends App {
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
-
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply
       val trainEpochs = () =>
         Text
           .minibatchesFromText(
             trainTokenized,
             config.trainBatchSize,
             lookAhead,
-            device
+            device,
+            rng
           )
       val testEpochs = () =>
         Text
@@ -176,7 +177,8 @@ object Train extends App {
             testTokenized,
             config.validationBatchSize,
             lookAhead,
-            device
+            device,
+            rng
           )
 
       val optimizer = AdamW.factory(

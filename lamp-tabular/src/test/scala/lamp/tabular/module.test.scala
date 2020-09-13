@@ -137,18 +137,19 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         else if (features.options.isFloat) SinglePrecision
         else throw new RuntimeException("Expected float or double tensor")
       val numInstances = features.sizes.apply(0).toInt
-
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply
       val minibatchSize =
         if (numInstances < 1024) 8 else if (numInstances < 4096) 64 else 256
       val cvFolds =
         AutoLoop.makeCVFolds(
           numInstances,
           k = 2,
-          1
+          1,
+          rng
         )
       val ensembleFolds =
         AutoLoop
-          .makeCVFolds(numInstances, k = 2, 1)
+          .makeCVFolds(numInstances, k = 2, 1, rng)
       AutoLoop.train(
         dataFullbatch = features,
         targetFullbatch = target,
@@ -172,7 +173,8 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         ensembleFolds = ensembleFolds,
         learningRate = 0.0001,
         prescreenHyperparameters = true,
-        knnMinibatchSize = 512
+        knnMinibatchSize = 512,
+        rng = rng
       )
     }
 

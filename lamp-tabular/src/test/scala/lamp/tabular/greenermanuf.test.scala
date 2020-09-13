@@ -40,16 +40,18 @@ class GreenerManufacturingSuite extends AnyFunSuite {
       val numInstances = features.sizes.apply(0).toInt
 
       val minibatchSize = 512
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply
       val cvFolds =
         AutoLoop.makeCVFolds(
           numInstances,
           k = 2,
-          1
+          1,
+          rng
         )
 
       val ensembleFolds =
         AutoLoop
-          .makeCVFolds(numInstances, k = 2, 1)
+          .makeCVFolds(numInstances, k = 2, 1, rng)
       AutoLoop.train(
         dataFullbatch = features,
         targetFullbatch = target,
@@ -73,7 +75,8 @@ class GreenerManufacturingSuite extends AnyFunSuite {
         ensembleFolds = ensembleFolds,
         learningRate = 0.001,
         prescreenHyperparameters = true,
-        knnMinibatchSize = 512
+        knnMinibatchSize = 512,
+        rng = rng
       )
     }
 

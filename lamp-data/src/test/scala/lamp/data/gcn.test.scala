@@ -361,9 +361,10 @@ class GCNSuite extends AnyFunSuite {
         )
       )
     )
+    val rng = org.saddle.spire.random.rng.Cmwc5.apply
     val targets = TensorHelpers.fromVec(Vec(0d, 1d), device, precision)
     val (batch, _) = GraphBatchStream
-      .smallGraphMode(2, graphs.toVec, targets, device)
+      .smallGraphMode(2, graphs.toVec, targets, device, rng)
       .nextBatch
       .allocated
       .unsafeRunSync()

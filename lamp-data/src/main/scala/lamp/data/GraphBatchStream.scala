@@ -19,7 +19,8 @@ object GraphBatchStream {
       minibatchSize: Int,
       graphNodesAndEdges: Vec[(Tensor, Tensor)],
       targetPerGraph: Tensor,
-      device: Device
+      device: Device,
+      rng: org.saddle.spire.random.Generator
   )(
       implicit pool: AllocatedVariablePool
   ): BatchStream[(Variable, Variable, Option[Variable])] = {
@@ -123,7 +124,7 @@ object GraphBatchStream {
 
     val idx =
       array
-        .shuffle(array.range(0, graphNodesAndEdges.length))
+        .shuffle(array.range(0, graphNodesAndEdges.length), rng)
         .grouped(minibatchSize)
         .toList
     new BatchStream[(Variable, Variable, Option[Variable])] {
