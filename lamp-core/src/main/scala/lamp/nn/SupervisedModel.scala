@@ -10,6 +10,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     module: M with GenericModule[I, Variable],
     lossFunction: LossFunction
 )(implicit tm: TrainingMode[M]) {
+  def release() = module.state.foreach(_._1.value.release)
   def asEval = copy(module = module.asEval)
   def asTraining = copy(module = module.asTraining)
   def lossAndOutput(
