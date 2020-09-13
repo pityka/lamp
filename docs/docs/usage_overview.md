@@ -123,7 +123,8 @@ val makeTrainingBatch = () =>
         dropLast = true,
         features = trainDataTensor,
         target =trainTarget,
-        device = device
+        device = device,
+        rng = org.saddle.spire.random.rng.Cmwc5.apply
       )
 ```
 
