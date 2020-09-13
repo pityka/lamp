@@ -169,6 +169,8 @@ case class Variable(
   def dropout(prob: Double, train: Boolean) = Dropout(this, prob, train).value
   def scatterAdd(index: Variable, dim: Int, maxIndex: Long) =
     ScatterAdd(this, index, dim, maxIndex).value
+  def indexAdd(index: Variable, dim: Int, maxIndex: Long) =
+    IndexAdd(this, index, dim, maxIndex).value
   def sum = Sum(this).value
   def expandAs(other: Tensor) = ExpandAs(this, other).value
   def rowSum = RowSum(this).value

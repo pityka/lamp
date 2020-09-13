@@ -228,6 +228,26 @@ case class ScatterAdd(src: Variable, index: Variable, dim: Int, maxIndex: Long)
     Variable(this, result, src.pool).releasable
   }
 }
+case class IndexAdd(src: Variable, index: Variable, dim: Int, maxIndex: Long)
+    extends Op {
+  assert(src.pool == index.pool)
+
+  val params = List(
+    src.zipBackward { (p, out) =>
+      val tmp = ATen.index_select(p, dim, index.value)
+      ATen.add_out(out, out, tmp, 1d)
+      tmp.release
+    }
+  )
+  val value = {
+    val shape = src.sizes.toArray
+    shape(dim) = maxIndex
+    val zeros = ATen.zeros(shape, src.options)
+    val result = ATen.index_add(zeros, dim, index.value, src.value)
+    zeros.release
+    Variable(this, result, src.pool).releasable
+  }
+}
 
 case class Add(a: Variable, b: Variable) extends Op {
   assert(a.pool == b.pool)
