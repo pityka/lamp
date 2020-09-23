@@ -632,6 +632,7 @@ object AutoLoop {
           val trained = lamp.extratrees.buildForestClassification(
             data = trainingFeaturesJvm,
             target = targetVec,
+            sampleWeights = None,
             numClasses = classes,
             nMin = nMin,
             k = k,
