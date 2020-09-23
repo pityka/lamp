@@ -15,10 +15,26 @@ class ExtraTreesSuite extends AnyFunSuite {
   }
   test("gini impurity") {
     val t = Vec(1, 1, 0, 0)
-    val gt = giniImpurity(t, 2)
+    val gt = giniImpurity(t, None, 2)
     assert(
       giniScore(
         target = t,
+        sampleWeights = None,
+        samplesInSplit = Vec(true, true, false, false),
+        giniImpurityNoSplit = gt,
+        2,
+        Array.ofDim[Double](2),
+        Array.ofDim[Double](2)
+      ) == 0.5
+    )
+  }
+  test("gini impurity weighted") {
+    val t = Vec(1, 1, 0, 0)
+    val gt = giniImpurity(t, Some(vec.ones(4)), 2)
+    assert(
+      giniScore(
+        target = t,
+        sampleWeights = None,
         samplesInSplit = Vec(true, true, false, false),
         giniImpurityNoSplit = gt,
         2,
@@ -50,6 +66,23 @@ class ExtraTreesSuite extends AnyFunSuite {
       k = 2,
       numClasses = 2,
       targetAtSubset = Vec(1, 1, 0, 0, 0),
+      weightsAtSubset = None,
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
+    )
+    assert(attr.deep == Vector(1, 0))
+    assert(r == ((0, 3.424021023861243, 0)))
+  }
+  test("splitClassification 1 weighted") {
+    val attr = Array(0, 1)
+    val r = splitClassification(
+      data = Mat(Vec(0d, 2d, 3d, 4d, 5d), Vec(100d, 99d, 98d, 97d, 96d)),
+      subset = Vec(0, 1, 2, 3, 4),
+      attributes = attr,
+      numConstant = 0,
+      k = 2,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 0, 0, 0),
+      weightsAtSubset = Some(vec.ones(5)),
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(attr.deep == Vector(1, 0))
@@ -65,6 +98,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       k = 2,
       numClasses = 2,
       targetAtSubset = Vec(1, 1, 0),
+      weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(r == ((1, 97.54668482609304, 1)))
@@ -84,6 +118,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       k = 2,
       numClasses = 2,
       targetAtSubset = Vec(1, 1, 0),
+      weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(r == ((2, 97.54668482609304, 2)))
@@ -103,6 +138,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       k = 1,
       numClasses = 2,
       targetAtSubset = Vec(1, 1, 0),
+      weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(r == ((2, 97.54668482609304, 1)))
@@ -122,6 +158,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       k = 1,
       numClasses = 2,
       targetAtSubset = Vec(1, 1, 0),
+      weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(1L)
     )
     assert(r == ((2, 97.84900936098786, 1)))
@@ -141,6 +178,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       k = 1,
       numClasses = 2,
       targetAtSubset = Vec(1, 1, 0),
+      weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(123L)
     )
     assert(r == ((2, 96.07259095141863, 2)))
@@ -160,6 +198,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       k = 1,
       numClasses = 2,
       targetAtSubset = Vec(1, 1, 0),
+      weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(123L)
     )
     assert(r == ((2, 96.07259095141863, 2)))
@@ -185,6 +224,45 @@ class ExtraTreesSuite extends AnyFunSuite {
     val trees = buildForestClassification(
       data = features,
       target = target.col(0).map(_.toInt),
+      sampleWeights = None,
+      numClasses = 10,
+      nMin = 2,
+      k = 32,
+      m = 1,
+      parallelism = 1
+    )
+    println((System.nanoTime() - t1) * 1e-9)
+    val output = predictClassification(trees, features)
+    val prediction = {
+      output.rows.map(_.argmax).toVec
+    }
+    val correct =
+      prediction.zipMap(data.firstCol("label").toVec.map(_.toInt))((a, b) =>
+        if (a == b) 1d else 0d
+      )
+    val accuracy = correct.mean2
+    assert(accuracy == 1.0)
+  }
+  test("mnist weighted") {
+    val data = org.saddle.csv.CsvParser
+      .parseSourceWithHeader[Double](
+        scala.io.Source
+          .fromInputStream(
+            new java.util.zip.GZIPInputStream(
+              getClass.getResourceAsStream("/mnist_test.csv.gz")
+            )
+          )
+      )
+      .right
+      .get
+    val target =
+      Mat(data.firstCol("label").toVec.map(_.toLong))
+    val features = data.filterIx(_ != "label").toMat
+    val t1 = System.nanoTime
+    val trees = buildForestClassification(
+      data = features,
+      target = target.col(0).map(_.toInt),
+      sampleWeights = Some(vec.ones(features.numRows)),
       numClasses = 10,
       nMin = 2,
       k = 32,
@@ -234,6 +312,7 @@ class ExtraTreesSuite extends AnyFunSuite {
     val trees = buildForestClassification(
       data = features,
       target = target.col(0).map(_.toInt),
+      sampleWeights = None,
       numClasses = 10,
       nMin = 2,
       k = 32,

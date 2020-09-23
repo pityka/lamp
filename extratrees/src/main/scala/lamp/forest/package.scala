@@ -82,10 +82,11 @@ package object extratrees {
       numConstant: Int,
       k: Int,
       targetAtSubset: Vec[Int],
+      weightsAtSubset: Option[Vec[Double]],
       rng: org.saddle.spire.random.Generator,
       numClasses: Int
   ) = {
-    val giniTotal = giniImpurity(targetAtSubset, numClasses)
+    val giniTotal = giniImpurity(targetAtSubset, weightsAtSubset, numClasses)
     val buf1 = Array.ofDim[Double](numClasses)
     val buf2 = Array.ofDim[Double](numClasses)
 
@@ -116,6 +117,7 @@ package object extratrees {
         visited += 1
         val score = giniScore(
           targetAtSubset,
+          weightsAtSubset,
           take,
           giniTotal,
           numClasses,
@@ -244,6 +246,7 @@ package object extratrees {
   def buildForestClassification(
       data: Mat[Double],
       target: Vec[Int],
+      sampleWeights: Option[Vec[Double]],
       numClasses: Int,
       nMin: Int,
       k: Int,
@@ -259,6 +262,7 @@ package object extratrees {
           data,
           subset,
           target,
+          sampleWeights,
           nMin,
           k,
           rng,
@@ -279,6 +283,7 @@ package object extratrees {
                 data,
                 subset,
                 target,
+                sampleWeights,
                 nMin,
                 k,
                 rng,
@@ -443,15 +448,36 @@ package object extratrees {
     }
   }
 
-  def distribution(v: Vec[Int], numClasses: Int) = {
+  def distribution(
+      v: Vec[Int],
+      sampleWeights: Option[Vec[Double]],
+      numClasses: Int
+  ) = {
     val ar = Array.ofDim[Double](numClasses)
     var i = 0
     val n = v.length
-    val s = n.toDouble
-    while (i < n) {
-      val j = v.raw(i)
-      ar(j) += 1d / s
-      i += 1
+    if (sampleWeights.isEmpty) {
+      val s = n.toDouble
+      while (i < n) {
+        val j = v.raw(i)
+        ar(j) += 1d / s
+        i += 1
+      }
+    } else {
+      val w = sampleWeights.get
+      var s = 0.0
+      while (i < n) {
+        val j = v.raw(i)
+        val k = w.raw(i)
+        ar(j) += k
+        s += k
+        i += 1
+      }
+      var j = 0
+      while (j < numClasses) {
+        ar(j) /= s
+        j += 1
+      }
     }
     ar.toVec
   }
@@ -468,6 +494,7 @@ package object extratrees {
       data: Mat[Double],
       subset: Vec[Int],
       target: Vec[Int],
+      sampleWeights: Option[Vec[Double]],
       nMin: Int,
       k: Int,
       rng: org.saddle.spire.random.Generator,
@@ -476,8 +503,10 @@ package object extratrees {
       numConstant: Int
   ): ClassificationTree = {
     val targetInSubset = target.take(subset.toArray)
+    val weightsInSubset = sampleWeights.map(w => w.take(subset.toArray))
     def makeLeaf = {
-      val targetDistribution = distribution(targetInSubset, numClasses)
+      val targetDistribution =
+        distribution(targetInSubset, weightsInSubset, numClasses)
       ClassificationLeaf(targetDistribution.toSeq)
     }
     def makeNonLeaf(
@@ -513,6 +542,7 @@ package object extratrees {
           numConstant,
           k,
           targetInSubset,
+          weightsInSubset,
           rng,
           numClasses
         )
@@ -529,6 +559,7 @@ package object extratrees {
             data,
             leftSubset,
             target,
+            sampleWeights,
             nMin,
             k,
             rng,
@@ -541,6 +572,7 @@ package object extratrees {
             data,
             rightSubset,
             target,
+            sampleWeights,
             nMin,
             k,
             rng,
@@ -572,31 +604,49 @@ package object extratrees {
 
   def giniScore(
       target: Vec[Int],
+      sampleWeights: Option[Vec[Double]],
       samplesInSplit: Vec[Boolean],
       giniImpurityNoSplit: Double,
       numClasses: Int,
       buf1: Array[Double],
       buf2: Array[Double]
   ) = {
-    val numSamplesNoSplit = samplesInSplit.length.toDouble
+    val numSamplesNoSplit =
+      if (sampleWeights.isEmpty) samplesInSplit.length.toDouble
+      else sampleWeights.get.sum2
     var i = 0
-    var targetInCount = 0
-    var targetOutCount = 0
+    var targetInCount = 0.0
+    var targetOutCount = 0.0
     val n = target.length
 
     val distributionIn = buf1
     val distributionOut = buf2
-
-    while (i < n) {
-      val v: Int = target.raw(i)
-      if (samplesInSplit.raw(i)) {
-        targetInCount += 1
-        distributionIn(v) += 1d
-      } else {
-        targetOutCount += 1
-        distributionOut(v) += 1d
+    if (sampleWeights.isEmpty) {
+      while (i < n) {
+        val v: Int = target.raw(i)
+        if (samplesInSplit.raw(i)) {
+          targetInCount += 1
+          distributionIn(v) += 1d
+        } else {
+          targetOutCount += 1
+          distributionOut(v) += 1d
+        }
+        i += 1
       }
-      i += 1
+    } else {
+      val weights = sampleWeights.get
+      while (i < n) {
+        val v: Int = target.raw(i)
+        val ww = weights.raw(i)
+        if (samplesInSplit.raw(i)) {
+          targetInCount += ww
+          distributionIn(v) += ww
+        } else {
+          targetOutCount += ww
+          distributionOut(v) += ww
+        }
+        i += 1
+      }
     }
     i = 0
     while (i < numClasses) {
@@ -613,9 +663,10 @@ package object extratrees {
 
   def giniImpurity(
       target: Vec[Int],
+      weights: Option[Vec[Double]],
       numClasses: Int
   ): Double = {
-    val p = distribution(target, numClasses)
+    val p = distribution(target, weights, numClasses)
     val p2 = p * p
     1d - p2.sum
   }
