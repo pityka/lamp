@@ -43,6 +43,36 @@ class ExtraTreesSuite extends AnyFunSuite {
       ) == 0.5
     )
   }
+  test("gini impurity 0-weighted") {
+    val t = Vec(1, 1, 0, 0)
+    val gt = giniImpurity(t, Some(vec.zeros(4)), 2)
+    assert(
+      giniScore(
+        target = t,
+        sampleWeights = Some(vec.zeros(4)),
+        samplesInSplit = Vec(true, true, false, false),
+        giniImpurityNoSplit = gt,
+        2,
+        Array.ofDim[Double](2),
+        Array.ofDim[Double](2)
+      ).isNaN
+    )
+  }
+  test("gini impurity 0-weighted 2") {
+    val t = Vec(1, 1, 0, 0)
+    val gt = giniImpurity(t, Some(vec.ones(4)), 2)
+    assert(
+      giniScore(
+        target = t,
+        sampleWeights = Some(Vec(1d, 1d, 0d, 0d)),
+        samplesInSplit = Vec(true, true, false, false),
+        giniImpurityNoSplit = gt,
+        2,
+        Array.ofDim[Double](2),
+        Array.ofDim[Double](2)
+      ).isNaN
+    )
+  }
   test("splitRegression 1") {
     val attr = Array(0, 1)
     val r = splitRegression(
@@ -87,6 +117,22 @@ class ExtraTreesSuite extends AnyFunSuite {
     )
     assert(attr.deep == Vector(1, 0))
     assert(r == ((0, 3.424021023861243, 0)))
+  }
+  test("splitClassification 1 0-weighted") {
+    val attr = Array(0, 1)
+    val r = splitClassification(
+      data = Mat(Vec(0d, 2d, 3d, 4d, 5d), Vec(100d, 99d, 98d, 97d, 96d)),
+      subset = Vec(0, 1, 2, 3, 4),
+      attributes = attr,
+      numConstant = 0,
+      k = 2,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 0, 0, 0),
+      weightsAtSubset = Some(Vec(1d, 1d, 0d, 0d, 0d)),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
+    )
+    assert(attr.deep == Vector(0, 1))
+    assert(r._1 == -1)
   }
   test("splitClassification 2") {
     val attr = Array(0, 1)
@@ -262,7 +308,9 @@ class ExtraTreesSuite extends AnyFunSuite {
     val trees = buildForestClassification(
       data = features,
       target = target.col(0).map(_.toInt),
-      sampleWeights = Some(vec.ones(features.numRows)),
+      sampleWeights = Some(
+        vec.ones(features.numRows / 2) concat vec.zeros(features.numRows / 2)
+      ),
       numClasses = 10,
       nMin = 2,
       k = 32,
@@ -279,7 +327,8 @@ class ExtraTreesSuite extends AnyFunSuite {
         if (a == b) 1d else 0d
       )
     val accuracy = correct.mean2
-    assert(accuracy == 1.0)
+    assert(accuracy >= 0.85)
+    assert(accuracy <= 0.9)
   }
   test("mnist full, slow ") {
     val data = org.saddle.csv.CsvParser

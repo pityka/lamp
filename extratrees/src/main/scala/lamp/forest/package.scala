@@ -114,7 +114,7 @@ package object extratrees {
         val cutpoint = rng.nextDouble(min, max)
 
         val take = takeCol(data, subset, attr) < cutpoint
-        visited += 1
+
         val score = giniScore(
           targetAtSubset,
           weightsAtSubset,
@@ -129,8 +129,14 @@ package object extratrees {
           bestFeature = attr
           bestCutpoint = cutpoint
         }
-        swap(r, high - 1)
-        high -= 1
+        if (score.isNaN) {
+          swap(r, low)
+          low += 1
+        } else {
+          visited += 1
+          swap(r, high - 1)
+          high -= 1
+        }
       }
     }
     if (visited == 0) (-1, bestCutpoint, low)
@@ -256,6 +262,9 @@ package object extratrees {
   ): Seq[ClassificationTree] = {
     val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(seed)
     val subset = array.range(0, data.numRows).toVec
+    sampleWeights.foreach(v =>
+      require(!v.exists(_ < 0d), "Negative weights not allowed.")
+    )
     val trees = if (parallelism <= 1) {
       0 until m map (_ =>
         buildTreeClassification(
