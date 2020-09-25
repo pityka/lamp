@@ -180,6 +180,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
     val trainedModel = lamp.extratrees.buildForestClassification(
       data = trainFeatures.toMat,
       target = trainTarget.toVec.map(_.toInt),
+      sampleWeights = None,
       numClasses = numClasses,
       nMin = 2,
       k = math.sqrt(numFeatures).toInt + 1,
