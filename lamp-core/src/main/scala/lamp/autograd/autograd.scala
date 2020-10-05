@@ -210,6 +210,10 @@ case class Variable(
     L1Loss(this, target, reduction).value
   def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
   def mean(dim: List[Int]) = Mean(this, dim).value
+  def variance(dim: List[Int]) = Variance(this, dim).value
+  def normalize(dim: List[Int]) = {
+    (this - this.mean(dim)) / ((this.variance(dim) + 1e-6).pow(0.5))
+  }
   def view(shape: List[Int]) = View(this, shape.map(_.toLong).toArray).value
   def flattenLastDimensions(dims: Int) = FlattenLastDimensions(this, dims).value
 

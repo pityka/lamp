@@ -3,6 +3,54 @@ package lamp.nn
 import aten.Tensor
 import lamp.autograd._
 
+case class EitherModule[
+    A,
+    B,
+    M1 <: GenericModule[A, B],
+    M2 <: GenericModule[A, B]
+](
+    members: Either[M1 with GenericModule[A, B], M2 with GenericModule[A, B]]
+) extends GenericModule[A, B] {
+  override def state =
+    members.fold(_.state, _.state)
+  def forward(x: A) =
+    members.fold(_.forward(x), _.forward(x))
+}
+object EitherModule {
+
+  implicit def trainingMode[
+      A,
+      B,
+      M1 <: GenericModule[A, B]: TrainingMode,
+      M2 <: GenericModule[A, B]: TrainingMode
+  ] =
+    TrainingMode.make[EitherModule[A, B, M1, M2]](
+      module =>
+        EitherModule(module.members.left.map(_.asEval).right.map(_.asEval)),
+      module =>
+        EitherModule(
+          module.members.left.map(_.asTraining).right.map(_.asTraining)
+        )
+    )
+
+  implicit def load[
+      A,
+      B,
+      M1 <: GenericModule[A, B]: Load,
+      M2 <: GenericModule[A, B]: Load
+  ] =
+    Load.make[EitherModule[A, B, M1, M2]] { module => tensors =>
+      EitherModule(
+        module.members.right.map(_.load(tensors)).left.map(_.load(tensors))
+      )
+    }
+
+  case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
+    def leaf = t
+    def updateDuringOptimization: Boolean = t.updateDuringOptimization
+  }
+}
+
 case class Sequential[A, M <: GenericModule[A, A]](
     members: M with GenericModule[A, A]*
 ) extends GenericModule[A, A] {

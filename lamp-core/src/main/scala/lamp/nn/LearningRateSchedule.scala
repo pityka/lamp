@@ -11,6 +11,9 @@ object LearningRateSchedule {
     startY + (endY - startY) * f
   }
   def noop = (_: Long) => 1d
+  def decrement(every: Int, decrementFraction: Double) =
+    (stepCount: Long) =>
+      math.pow(1d - decrementFraction, (stepCount / every).toDouble)
   def linear(start: Double, end: Double, maxSteps: Long) =
     (stepCount: Long) => {
       math.max(end, interpolate(start, end, maxSteps, stepCount))

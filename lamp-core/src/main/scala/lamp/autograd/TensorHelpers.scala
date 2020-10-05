@@ -142,6 +142,22 @@ object TensorHelpers {
       precision = DoublePrecision,
       device = if (cuda) CudaDevice(0) else CPU
     )
+  def fromFloatMat(
+      m: Mat[Float],
+      device: Device
+  ) = {
+    val arr = m.toArray
+    val t = ATen.zeros(
+      Array(m.numRows.toLong, m.numCols.toLong),
+      TensorOptions.dtypeFloat()
+    )
+    assert(t.copyFromFloatArray(arr))
+    if (device != CPU) {
+      val t2 = t.to(device.options(SinglePrecision), true)
+      t.release
+      t2
+    } else t
+  }
   def fromMat(
       m: Mat[Double],
       device: Device,
