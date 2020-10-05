@@ -62,6 +62,7 @@ lazy val commonSettings = Seq(
       </developers>
   },
   fork := true,
+  run / javaOptions += "-Xmx12G",
   cancelable in Global := true,
   githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
     .Environment("GITHUB_TOKEN"),
@@ -255,6 +256,22 @@ lazy val example_translation = project
   )
   .dependsOn(core, data)
 
+lazy val example_arxiv = project
+  .in(file("example-arxiv"))
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    skip in publish := true,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.outr" %% "scribe" % "2.7.3",
+      "io.github.pityka" %% "saddle-binary" % saddleVersion,
+      "com.lihaoyi" %% "requests" % "0.6.5",
+      "com.lihaoyi" %% "os-lib" % "0.7.1"
+    )
+  )
+  .dependsOn(core, data)
+
 lazy val docs = project
   .in(file("lamp-docs"))
   .dependsOn(core % "compile->test;compile->compile", data)
@@ -286,5 +303,6 @@ lazy val root = project
     docs,
     example_cifar100,
     example_timemachine,
-    example_translation
+    example_translation,
+    example_arxiv
   )

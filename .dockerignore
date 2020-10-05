@@ -4,3 +4,7 @@ test_data
 .metals
 */target
 website
+saddle-binary
+saddle-circe
+saddle-core
+spire-prng

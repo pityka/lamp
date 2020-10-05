@@ -37,6 +37,7 @@ package object lamp {
         )
     }
     def toLongMat = TensorHelpers.toLongMat(self)
+    def toLongVec = TensorHelpers.toLongMat(self).toVec
 
     def normalized = inResource {
       import autograd.const

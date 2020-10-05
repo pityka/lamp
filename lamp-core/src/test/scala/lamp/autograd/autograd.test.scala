@@ -8,6 +8,7 @@ import lamp.nn.CudaTest
 import lamp.syntax
 import lamp.util.NDArray
 import aten.Tensor
+import aten.TensorOptions
 
 class GradientSuite extends AnyFunSuite {
   val cudaPool = new AllocatedVariablePool
@@ -448,6 +449,26 @@ class GradientSuite extends AnyFunSuite {
       TensorHelpers.toMat(L.value).raw(0),
       x1.partialDerivative.map(t => TensorHelpers.toMat(t))
     )
+  }
+  testGradientAndValue("sparse mm - right")(mat2x3, 54d) {
+    (m, doBackprop, cuda) =>
+      implicit val pool = selectPool(cuda)
+      val x1 = param(TensorHelpers.fromMat(m, cuda))
+      val x2 = {
+        val idx = TensorHelpers.fromLongMat(Mat(Vec(1L, 0L), Vec(0L, 1L)), cuda)
+        val values = TensorHelpers.fromVec(Vec(2d, 3d), cuda)
+        val topt = if (cuda) TensorOptions.d.cuda() else TensorOptions.d
+        val sp = ATen.sparse_coo_tensor(idx, values, Array(3, 2), topt)
+        const(sp)
+      }
+      val L = x2.mm(x1).sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        TensorHelpers.toMat(L.value).raw(0),
+        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+      )
   }
   testGradientAndValue("mm - right")(mat2x3, 450d) { (m, doBackprop, cuda) =>
     implicit val pool = selectPool(cuda)
@@ -957,6 +978,22 @@ class GradientSuite extends AnyFunSuite {
         )
       )
     val output = input.scatterAdd(index, 0, 2)
+    val L = output.sum
+    if (doBackprop) {
+      L.backprop()
+    }
+    (
+      TensorHelpers.toMat(L.value).raw(0),
+      input.partialDerivative.map(t => t.toMat)
+    )
+  }
+
+  testGradientAndValue("variance")(mat2x3, 8d) { (m, doBackprop, cuda) =>
+    implicit val pool = selectPool(cuda)
+    val input =
+      param(TensorHelpers.fromMat(m, cuda))
+
+    val output = input.variance(List(1))
     val L = output.sum
     if (doBackprop) {
       L.backprop()

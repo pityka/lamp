@@ -646,6 +646,30 @@ case class Mean(a: Variable, dim: List[Int]) extends Op {
     ).releasable
 
 }
+case class Variance(a: Variable, dim: List[Int]) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      val s = ATen.sub_0(a.value, m, 1.0)
+      ATen.addcmul_out(
+        out,
+        out,
+        p,
+        s,
+        2d / (dim.map(l => a.sizes.apply(l.toInt)).sum - 1)
+      )
+      s.release
+    }
+  )
+  val (v, m) = ATen.var_mean_1(a.value, dim.map(_.toLong).toArray, true, true)
+  val value =
+    Variable(
+      this,
+      v,
+      a.pool
+    ).releaseWith(m).releasable
+
+}
 case class Dropout(a: Variable, prob: Double, train: Boolean) extends Op {
   val params = List(
     a.zipBackward { (p, out) => ATen.addcmul_out(out, out, p, mask, 1d) }
