@@ -4,15 +4,16 @@ import lamp.nn._
 import aten.TensorOptions
 import lamp.autograd.Variable
 import aten.Tensor
-import lamp.autograd.AllocatedVariablePool
+import lamp.Sc
 import lamp.autograd.Concatenate
+import lamp.Scope
 
 case class TabularEmbedding(
     categoricalEmbeddings: Seq[Embedding]
 ) extends GenericModule[(Seq[Variable], Variable), Variable] {
   override def state =
     categoricalEmbeddings.flatMap(_.state)
-  def forward(x: (Seq[Variable], Variable)) = {
+  def forward[S: Sc](x: (Seq[Variable], Variable)) = {
     val (categoricals, numericals) = x
     assert(
       categoricals.size == categoricalEmbeddings.size,
@@ -31,7 +32,7 @@ object TabularEmbedding {
   def make(
       categoricalClassesWithEmbeddingDimensions: Seq[(Int, Int)],
       tOpt: TensorOptions
-  )(implicit pool: AllocatedVariablePool) =
+  )(implicit scope: Scope) =
     TabularEmbedding(
       categoricalEmbeddings = categoricalClassesWithEmbeddingDimensions.map {
         case (classes, size) =>

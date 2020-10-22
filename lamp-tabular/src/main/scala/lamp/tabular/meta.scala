@@ -3,7 +3,6 @@ package lamp
 import org.saddle._
 import org.saddle.order._
 import org.saddle.scalar.ScalarTagDouble
-import lamp.autograd.TensorHelpers
 import cats.effect.Resource
 import cats.effect.IO
 import lamp.tabular.Metadata

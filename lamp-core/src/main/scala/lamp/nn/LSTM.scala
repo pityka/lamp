@@ -5,7 +5,7 @@ import aten.ATen
 import scala.collection.mutable
 import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
-import lamp.autograd.AllocatedVariablePool
+import lamp.Sc
 
 /** Inputs of size (sequence length * batch * vocab)
   * Outputs of size (sequence length * batch * output dim)
@@ -42,20 +42,22 @@ case class LSTM(
       (biasC, LSTM.BiasC)
     )
 
-  private def initHidden(batchSize: Long) = {
-    implicit val pool = weightHc.pool
+  private def initHidden[S: Sc](batchSize: Long) = {
     (
-      param(ATen.zeros(Array(batchSize, hiddenSize), weightHf.options)).releasable,
+      param(ATen.zeros(Array(batchSize, hiddenSize), weightHf.options)),
       param(
         ATen
           .zeros(Array(batchSize, hiddenSize), weightHf.options)
-      ).releasable
+      )
     )
   }
 
-  def forward(a: (Variable, Option[(Variable, Variable)])) =
+  def forward[S: Sc](a: (Variable, Option[(Variable, Variable)])) =
     forward1(a._1, a._2)
-  private def forward1(x: Variable, state: Option[(Variable, Variable)]) = {
+  private def forward1[S: Sc](
+      x: Variable,
+      state: Option[(Variable, Variable)]
+  ) = {
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
     val outputs = mutable.ArrayBuffer[Variable]()
@@ -119,11 +121,11 @@ object LSTM {
   case object BiasO extends LeafTag
   case object BiasC extends LeafTag
 
-  def apply(
+  def apply[S: Sc](
       in: Int,
       hiddenSize: Int,
       tOpt: TensorOptions
-  )(implicit pool: AllocatedVariablePool): LSTM =
+  ): LSTM =
     LSTM(
       weightXi = param(
         ATen.normal_3(

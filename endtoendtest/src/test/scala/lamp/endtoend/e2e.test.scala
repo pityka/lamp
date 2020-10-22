@@ -2,7 +2,6 @@ package lamp.tabular
 
 import org.saddle._
 import org.saddle.order._
-// import org.saddle.linalg._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
@@ -18,6 +17,8 @@ import lamp.data.BatchStream
 import lamp.data.IOLoops
 import java.io.FileOutputStream
 import org.saddle.index.InnerJoin
+import lamp.Scope
+import lamp.TensorHelpers
 
 class EndToEndClassificationSuite extends AnyFunSuite {
 
@@ -79,89 +80,88 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       features: Frame[Int, String, Double],
       cuda: Boolean
   ) = {
-    implicit val pool = new AllocatedVariablePool
-    val device = if (cuda) CudaDevice(0) else CPU
-    val numExamples = target.length
+    Scope.leak { implicit scope =>
+      val device = if (cuda) CudaDevice(0) else CPU
+      val numExamples = target.length
 
-    val testFeatures = features.row(0 -> numExamples / 3)
-    val trainFeatures = features.row(numExamples / 3 + 1 -> *)
-    val testTarget = Frame(target).row(0 -> numExamples / 3).colAt(0)
-    val trainTarget = Frame(target).row(numExamples / 3 + 1 -> *).colAt(0)
+      val testFeatures = features.row(0 -> numExamples / 3)
+      val trainFeatures = features.row(numExamples / 3 + 1 -> *)
+      val testTarget = Frame(target).row(0 -> numExamples / 3).colAt(0)
+      val trainTarget = Frame(target).row(numExamples / 3 + 1 -> *).colAt(0)
 
-    val testFeaturesTensor =
-      TensorHelpers.fromMat(testFeatures.toMat, device, SinglePrecision)
-    val testTargetTensor = ATen.squeeze_0(
-      TensorHelpers.fromLongMat(
-        Mat(testTarget.toVec.map(_.toLong)),
-        device
-      )
-    )
-
-    def mlp(dim: Int, k: Int, tOpt: TensorOptions)(
-        implicit pool: AllocatedVariablePool
-    ) =
-      sequence(
-        MLP(dim, k, List(4, 4), tOpt, dropout = 0.0),
-        Fun(_.logSoftMax(dim = 1))
+      val testFeaturesTensor =
+        TensorHelpers.fromMat(testFeatures.toMat, device, SinglePrecision)
+      val testTargetTensor = ATen.squeeze_0(
+        TensorHelpers.fromLongMat(
+          Mat(testTarget.toVec.map(_.toLong)),
+          device
+        )
       )
 
-    val trainFeaturesTensor =
-      TensorHelpers.fromMat(trainFeatures.toMat, device, SinglePrecision)
-    val trainTargetTensor = ATen.squeeze_0(
-      TensorHelpers.fromLongMat(
-        Mat(trainTarget.toVec.map(_.toLong)),
-        device
-      )
-    )
+      def mlp(dim: Int, k: Int, tOpt: TensorOptions) =
+        sequence(
+          MLP(dim, k, List(4, 4), tOpt, dropout = 0.0),
+          Fun(implicit scope => _.logSoftMax(dim = 1))
+        )
 
-    val numClasses = target.toVec.toSeq.distinct.max.toInt + 1
-    val numFeatures = features.numCols
-    val classWeights =
-      ATen.ones(Array(numClasses), device.options(SinglePrecision))
-
-    val model = SupervisedModel(
-      mlp(numFeatures, numClasses, device.options(SinglePrecision)),
-      LossFunctions.NLL(numClasses, classWeights)
-    )
-    val rng = org.saddle.spire.random.rng.Cmwc5.apply
-    val makeTrainingBatch = () =>
-      BatchStream.minibatchesFromFull(
-        1024,
-        false,
-        trainFeaturesTensor,
-        trainTargetTensor,
-        device,
-        rng
+      val trainFeaturesTensor =
+        TensorHelpers.fromMat(trainFeatures.toMat, device, SinglePrecision)
+      val trainTargetTensor = ATen.squeeze_0(
+        TensorHelpers.fromLongMat(
+          Mat(trainTarget.toVec.map(_.toLong)),
+          device
+        )
       )
 
-    val trainedModel = IOLoops.epochs(
-      model = model,
-      optimizerFactory = AdamW
-        .factory(
-          learningRate = simple(0.001),
-          weightDecay = simple(0.0001d)
-        ),
-      trainBatchesOverEpoch = makeTrainingBatch,
-      validationBatchesOverEpoch = None,
-      epochs = 50,
-      logger = None //Some(logger)
-    )
-    val (_, output, _) = trainedModel
-      .flatMap(
-        _.lossAndOutput(const(testFeaturesTensor), testTargetTensor).allocated
-          .map(_._1)
-      )
-      .unsafeRunSync
-    val prediction = TensorHelpers.toFloatMat(output).rows.map(_.argmax).toVec
-    val accuracy = prediction
-      .zipMap(testTarget.toVec)((a, b) => if (a.toInt == b.toInt) 1d else 0d)
-      .mean2
+      val numClasses = target.toVec.toSeq.distinct.max.toInt + 1
+      val numFeatures = features.numCols
+      val classWeights =
+        ATen.ones(Array(numClasses), device.options(SinglePrecision))
 
-    testTargetTensor.release
-    testFeaturesTensor.release
-    trainTargetTensor.release
-    trainFeaturesTensor.release
-    accuracy
+      val model = SupervisedModel(
+        mlp(numFeatures, numClasses, device.options(SinglePrecision)),
+        LossFunctions.NLL(numClasses, classWeights)
+      )
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply
+      val makeTrainingBatch = () =>
+        BatchStream.minibatchesFromFull(
+          1024,
+          false,
+          trainFeaturesTensor,
+          trainTargetTensor,
+          device,
+          rng
+        )
+
+      val trainedModel = IOLoops.epochs(
+        model = model,
+        optimizerFactory = AdamW
+          .factory(
+            learningRate = simple(0.001),
+            weightDecay = simple(0.0001d)
+          ),
+        trainBatchesOverEpoch = makeTrainingBatch,
+        validationBatchesOverEpoch = None,
+        epochs = 50,
+        logger = None //Some(logger)
+      )
+      val (_, output, _) = trainedModel
+        .flatMap(
+          _.lossAndOutput(const(testFeaturesTensor), testTargetTensor).allocated
+            .map(_._1)
+        )
+        .unsafeRunSync
+      val prediction = TensorHelpers.toFloatMat(output).rows.map(_.argmax).toVec
+      val accuracy = prediction
+        .zipMap(testTarget.toVec)((a, b) => if (a.toInt == b.toInt) 1d else 0d)
+        .mean2
+
+      testTargetTensor.release
+      testFeaturesTensor.release
+      trainTargetTensor.release
+      trainFeaturesTensor.release
+      accuracy
+    }
   }
   def trainAndPredictExtraTrees(
       target: Series[Int, Double],

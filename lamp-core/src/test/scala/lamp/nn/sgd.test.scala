@@ -3,7 +3,7 @@ package lamp.nn
 import org.saddle._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
-import lamp.autograd._
+import lamp.TensorHelpers
 
 class SGDSuite extends AnyFunSuite {
 

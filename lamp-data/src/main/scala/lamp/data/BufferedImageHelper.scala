@@ -5,7 +5,7 @@ import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
 import java.awt.Color
-import lamp.syntax
+import lamp.util.syntax
 
 object BufferedImageHelper {
   def fromFloatTensor(t: Tensor): BufferedImage = {

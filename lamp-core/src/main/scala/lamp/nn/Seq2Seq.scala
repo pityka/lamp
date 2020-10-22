@@ -1,6 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.Variable
+import lamp.Sc
 
 case class Seq2Seq[S0, S1, M1 <: StatefulModule2[Variable, Variable, S0, S1], M2 <: StatefulModule[
   Variable,
@@ -11,7 +12,7 @@ case class Seq2Seq[S0, S1, M1 <: StatefulModule2[Variable, Variable, S0, S1], M2
     decoder: M2 with StatefulModule[Variable, Variable, S1]
 ) extends StatefulModule2[(Variable, Variable), Variable, S0, S1] {
 
-  override def forward(x: ((Variable, Variable), S0)): (Variable, S1) = {
+  override def forward[S: Sc](x: ((Variable, Variable), S0)): (Variable, S1) = {
     val ((source, dest), state0) = x
     val (_, encoderState) = encoder.forward((source, state0))
     decoder.forward((dest, encoderState))
@@ -71,7 +72,7 @@ case class WithInit[A, B, C, M <: StatefulModule[
     init: C
 ) extends StatefulModule[A, B, C] {
 
-  override def forward(x: (A, C)): (B, C) = {
+  override def forward[S: Sc](x: (A, C)): (B, C) = {
     module.forward(x)
   }
 

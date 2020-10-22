@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.AllocatedVariablePool
+import lamp.Sc
 import aten.TensorOptions
 
 /** Factory for multilayer fully connected feed forward networks
@@ -16,14 +16,14 @@ import aten.TensorOptions
   * @param dropout dropout applied to each block
   */
 object MLP {
-  def apply(
+  def apply[S: Sc](
       in: Int,
       out: Int,
       hidden: Seq[Int],
       tOpt: TensorOptions,
       dropout: Double = 0d,
       lastNonLinearity: Boolean = false
-  )(implicit pool: AllocatedVariablePool) =
+  ) =
     sequence(
       Sequential(
         (List(in) ++ hidden)
@@ -36,7 +36,7 @@ object MLP {
             sequence(
               Linear(in = in, out = out, tOpt = tOpt, bias = false),
               BatchNorm(out, tOpt = tOpt),
-              Fun(_.gelu),
+              Fun(scope => input => input.gelu(scope)),
               Dropout(dropout, training = true)
             )
           }: _*
@@ -52,7 +52,7 @@ object MLP {
                 bias = false
               ),
               BatchNorm(out, tOpt = tOpt),
-              Fun(_.gelu),
+              Fun(scope => input => input.gelu(scope)),
               Dropout(dropout, training = true)
             )
           )

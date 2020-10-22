@@ -2,6 +2,7 @@ package lamp.nn
 
 import lamp.autograd._
 import aten.ATen
+import lamp.Sc
 
 case class GraphReadout[M <: GraphModule](
     m: M with GraphModule,
@@ -14,23 +15,23 @@ case class GraphReadout[M <: GraphModule](
   def state: Seq[(Variable, PTag)] =
     m.state
 
-  def forward(
+  def forward[S: Sc](
       x: (Variable, Variable, Variable)
   ): Variable = {
-    import lamp.syntax
+    import lamp.util.syntax
     val (nodes, edges, graphIndices) = x
-    val (mN, mE) = m.forward((nodes, edges))
+    val (mN, _) = m.forward((nodes, edges))
 
     val max = ATen.max_2(graphIndices.value)
 
     val maxi = max.toLongMat.raw(0) + 1
     max.release
-    val sum = mN.indexAdd(graphIndices, 0, maxi).releaseWithVariable(edges, mE)
+    val sum = mN.indexAdd(graphIndices, 0, maxi)
     pooling match {
       case GraphReadout.Sum => sum
       case GraphReadout.Mean =>
         val ones =
-          const(ATen.ones(Array(nodes.shape(0), 1), sum.options))(sum.pool).releasable
+          const(ATen.ones(Array(nodes.shape(0), 1), sum.options))(sum.pool)
         val counts = ones.indexAdd(graphIndices, 0, maxi)
         sum / counts
     }

@@ -2,10 +2,9 @@ package lamp.tabular
 
 import aten.Tensor
 import aten.ATen
-import lamp.autograd.TensorHelpers
+import lamp.TensorHelpers
 import org.saddle._
 import aten.TensorOptions
-import lamp.autograd.AllocatedVariablePool
 import lamp.autograd.const
 import lamp.nn._
 import lamp.Device
@@ -25,6 +24,8 @@ import lamp.DoublePrecision
 import lamp.CudaDevice
 import lamp.RegressionTree
 import _root_.lamp.ClassificationTree
+import lamp.Scope
+import lamp.STen
 
 sealed trait BaseModel
 case class KnnBase(
@@ -78,7 +79,6 @@ object EnsembleModel {
       knnMinibatchSize: Int = 512,
       rng: org.saddle.spire.random.Generator
   ) = {
-    implicit val pool = new AllocatedVariablePool
     val precision =
       if (features.options.isDouble) DoublePrecision
       else if (features.options.isFloat) SinglePrecision
@@ -139,193 +139,189 @@ case class EnsembleModel(
     validationLosses: Seq[Double]
 ) {
 
-  def predict(data: Tensor)(
-      implicit pool: AllocatedVariablePool
-  ): Resource[IO, Tensor] = {
-    Resource.make {
-      IO {
-        val device = {
-          val t = selectionModels.head match {
-            case NNBase(_, state)        => state.head.options
-            case KnnBase(_, state, _, _) => state.options
-            case _                       => TensorOptions.d
+  def predict(data: Tensor): Resource[IO, Tensor] = {
+    BatchStream.scopeInResource.flatMap { implicit scope =>
+      Resource.make {
+        IO {
+          val device = {
+            val t = selectionModels.head match {
+              case NNBase(_, state)        => state.head.options
+              case KnnBase(_, state, _, _) => state.options
+              case _                       => TensorOptions.d
+            }
+            if (t.isCPU) CPU
+            else CudaDevice(t.deviceIndex())
           }
-          if (t.isCPU) CPU
-          else CudaDevice(t.deviceIndex())
-        }
-        val dataOnDevice = device.to(data)
-        val tOpt = device.options(precision)
-        val outputSize = targetType match {
-          case Regression                 => 1
-          case ECDFRegression             => 2
-          case Classification(classes, _) => classes
-        }
-        val softmax = targetType match {
-          case Regression => false
-          case _          => true
-        }
-        val selectFirstOutputDimension = targetType match {
-          case ECDFRegression => true
-          case _              => false
-        }
+          val dataOnDevice = device.to(data)
+          val tOpt = device.options(precision)
+          val outputSize = targetType match {
+            case Regression                 => 1
+            case ECDFRegression             => 2
+            case Classification(classes, _) => classes
+          }
+          val softmax = targetType match {
+            case Regression => false
+            case _          => true
+          }
+          val selectFirstOutputDimension = targetType match {
+            case ECDFRegression => true
+            case _              => false
+          }
 
-        val (numerical, categorical) =
-          AutoLoop.separateFeatures(dataOnDevice, dataLayout)
+          val (numerical0, categorical0) =
+            AutoLoop.separateFeatures(dataOnDevice, dataLayout)
+          val numerical = const(numerical0)
+          val categorical = categorical0.map(v => const(v._1) -> v._2)
 
-        val basePredictions = baseModels.map {
-          case averagableModels =>
-            val averagablePredictions = averagableModels.map {
-              case ExtratreesBase(trees) =>
-                import lamp.syntax
-                val features = AutoLoop.makeFusedFeatureMatrix(
-                  data,
-                  dataLayout,
-                  Nil,
-                  precision,
-                  device
-                )
-                val featuresJ = features.toMat
-                features.release
-                val predicted = trees match {
-                  case Left(trees) =>
-                    lamp.extratrees
-                      .predictClassification(trees, featuresJ)
-                      .map(v => math.log(v + 1e-6))
-                  case Right(trees) =>
-                    Mat(lamp.extratrees.predictRegression(trees, featuresJ))
-                }
-                TensorHelpers.fromMat(predicted, device, precision)
-
-              case KnnBase(k, features, predictedFeatures, target) =>
-                assert(predictedFeatures.isEmpty)
-                val prediction = AutoLoop
-                  .trainAndPredictKnn(
-                    k = k,
-                    data = features,
-                    predictables = dataOnDevice,
-                    predictionsOnBasemodels = Nil,
-                    predictablesPredictionsOnBasemodels = Nil,
-                    target = target,
-                    targetType = targetType,
-                    dataLayout = dataLayout,
-                    device = device,
-                    precision = precision,
-                    minibatchSize = 100
-                  )
-                  .unsafeRunSync
-                prediction
-              case NNBase(hiddenSize, state) =>
-                val model = AutoLoop
-                  .makeModel(
+          val basePredictions = baseModels.map {
+            case averagableModels =>
+              val averagablePredictions = averagableModels.map {
+                case ExtratreesBase(trees) =>
+                  import lamp.util.syntax
+                  val features = AutoLoop.makeFusedFeatureMatrix(
+                    data,
                     dataLayout,
-                    0d,
-                    hiddenSize,
-                    outputSize,
-                    softmax,
-                    selectFirstOutputDimension,
-                    tOpt
+                    Nil,
+                    precision,
+                    device
                   )
-                  .load(state)
-                val prediction =
-                  model.asEval.forward(
-                    (
-                      categorical
-                        .map { case (tensor, _) => tensor }
-                        .map(const(_)),
-                      const(numerical)
+                  val featuresJ = features.toMat
+                  features.release
+                  val predicted = trees match {
+                    case Left(trees) =>
+                      lamp.extratrees
+                        .predictClassification(trees, featuresJ)
+                        .map(v => math.log(v + 1e-6))
+                    case Right(trees) =>
+                      Mat(lamp.extratrees.predictRegression(trees, featuresJ))
+                  }
+                  TensorHelpers.fromMat(predicted, device, precision)
+
+                case KnnBase(k, features, predictedFeatures, target) =>
+                  assert(predictedFeatures.isEmpty)
+                  val prediction = AutoLoop
+                    .trainAndPredictKnn(
+                      k = k,
+                      data = features,
+                      predictables = dataOnDevice,
+                      predictionsOnBasemodels = Nil,
+                      predictablesPredictionsOnBasemodels = Nil,
+                      target = target,
+                      targetType = targetType,
+                      dataLayout = dataLayout,
+                      device = device,
+                      precision = precision,
+                      minibatchSize = 100
                     )
-                  )
-                val copy = ATen.clone(prediction.value)
-                prediction.releaseAll
-                copy
-            }
-            val stacked = ATen.stack(averagablePredictions.toArray, 0)
-            val meaned = ATen.mean_1(stacked, Array(0), false)
-            averagablePredictions.foreach(_.release)
-            stacked.release
-            meaned
+                    .unsafeRunSync
+                  prediction
+                case NNBase(hiddenSize, state) =>
+                  val model = AutoLoop
+                    .makeModel(
+                      dataLayout,
+                      0d,
+                      hiddenSize,
+                      outputSize,
+                      softmax,
+                      selectFirstOutputDimension,
+                      tOpt
+                    )
+                    .load(state)
+                  val prediction =
+                    model.asEval.forward(
+                      (
+                        categorical
+                          .map(_._1),
+                        numerical
+                      )
+                    )
+                  val copy = ATen.clone(prediction.value)
+                  copy
+              }
+              val stacked = ATen.stack(averagablePredictions.toArray, 0)
+              val meaned = ATen.mean_1(stacked, Array(0), false)
+              averagablePredictions.foreach(_.release)
+              stacked.release
+              meaned
+          }
+
+          val numericalWithPredictions =
+            const(ATen.cat(numerical.value +: basePredictions.toArray, 1))
+
+          val averagablePredictions = selectionModels.map {
+            case ExtratreesBase(trees) =>
+              import lamp.util.syntax
+              val features = AutoLoop.makeFusedFeatureMatrix(
+                data,
+                dataLayout,
+                basePredictions,
+                precision,
+                CPU
+              )
+              val featuresJ = features.toMat
+              features.release
+              val predicted = trees match {
+                case Left(trees) =>
+                  lamp.extratrees
+                    .predictClassification(trees, featuresJ)
+                    .map(v => math.log(v + 1e-6))
+                case Right(trees) =>
+                  Mat(lamp.extratrees.predictRegression(trees, featuresJ))
+              }
+              TensorHelpers.fromMat(predicted, device, precision)
+            case KnnBase(k, features, predictedFeatures, target) =>
+              val prediction = AutoLoop
+                .trainAndPredictKnn(
+                  k = k,
+                  data = features,
+                  predictables = dataOnDevice,
+                  predictionsOnBasemodels = predictedFeatures,
+                  predictablesPredictionsOnBasemodels = basePredictions,
+                  target = target,
+                  targetType = targetType,
+                  dataLayout = dataLayout,
+                  device = device,
+                  precision = precision,
+                  minibatchSize = 100
+                )
+                .unsafeRunSync
+              prediction
+            case NNBase(hiddenSize, state) =>
+              val model = AutoLoop
+                .makeModel(
+                  dataLayout ++
+                    (0 until basePredictions
+                      .map(_.sizes.apply(1))
+                      .sum
+                      .toInt)
+                      .map(_ => Numerical),
+                  0d,
+                  hiddenSize,
+                  outputSize,
+                  softmax,
+                  selectFirstOutputDimension,
+                  tOpt
+                )
+                .load(state)
+
+              val prediction = model.asEval.forward(
+                (
+                  categorical.map(_._1),
+                  numericalWithPredictions
+                )
+              )
+              val copy = ATen.clone(prediction.value)
+              copy
+          }
+          val stacked = ATen.stack(averagablePredictions.toArray, 0)
+          val meaned = ATen.mean_1(stacked, Array(0), false)
+          averagablePredictions.foreach(_.release)
+          stacked.release
+          dataOnDevice.release
+          meaned
         }
-
-        val numericalWithPredictions =
-          ATen.cat(numerical +: basePredictions.toArray, 1)
-        numerical.release
-
-        val averagablePredictions = selectionModels.map {
-          case ExtratreesBase(trees) =>
-            import lamp.syntax
-            val features = AutoLoop.makeFusedFeatureMatrix(
-              data,
-              dataLayout,
-              basePredictions,
-              precision,
-              CPU
-            )
-            val featuresJ = features.toMat
-            features.release
-            val predicted = trees match {
-              case Left(trees) =>
-                lamp.extratrees
-                  .predictClassification(trees, featuresJ)
-                  .map(v => math.log(v + 1e-6))
-              case Right(trees) =>
-                Mat(lamp.extratrees.predictRegression(trees, featuresJ))
-            }
-            TensorHelpers.fromMat(predicted, device, precision)
-          case KnnBase(k, features, predictedFeatures, target) =>
-            val prediction = AutoLoop
-              .trainAndPredictKnn(
-                k = k,
-                data = features,
-                predictables = dataOnDevice,
-                predictionsOnBasemodels = predictedFeatures,
-                predictablesPredictionsOnBasemodels = basePredictions,
-                target = target,
-                targetType = targetType,
-                dataLayout = dataLayout,
-                device = device,
-                precision = precision,
-                minibatchSize = 100
-              )
-              .unsafeRunSync
-            prediction
-          case NNBase(hiddenSize, state) =>
-            val model = AutoLoop
-              .makeModel(
-                dataLayout ++
-                  (0 until basePredictions
-                    .map(_.sizes.apply(1))
-                    .sum
-                    .toInt)
-                    .map(_ => Numerical),
-                0d,
-                hiddenSize,
-                outputSize,
-                softmax,
-                selectFirstOutputDimension,
-                tOpt
-              )
-              .load(state)
-
-            val prediction = model.asEval.forward(
-              (
-                categorical.map(_._1).map(const(_)),
-                const(numericalWithPredictions)
-              )
-            )
-            val copy = ATen.clone(prediction.value)
-            prediction.releaseAll
-            copy
-        }
-        val stacked = ATen.stack(averagablePredictions.toArray, 0)
-        val meaned = ATen.mean_1(stacked, Array(0), false)
-        averagablePredictions.foreach(_.release)
-        stacked.release
-        categorical.map(_._1).foreach(_.release)
-        dataOnDevice.release
-        numericalWithPredictions.release
-        meaned
-      }
-    }(t => IO(t.release))
+      }(t => IO(t.release))
+    }
   }
 }
 
@@ -368,32 +364,35 @@ object AutoLoop {
       target: Tensor,
       device: Device,
       rng: org.saddle.spire.random.Generator
-  )(implicit pool: AllocatedVariablePool) = {
+  ) = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
-      Resource.make(IO {
-        val idxT = TensorHelpers.fromLongVec(idx.toVec.map(_.toLong))
-        val numCl = ATen.index(numericalFeatures, Array(idxT))
-        val catCls = categoricalFeatures.map { t =>
-          val tmp = ATen.index(t, Array(idxT))
-          val r = device.to(tmp)
-          tmp.release
-          const(r).releasable
-        }
-        val tcl = ATen.index(target, Array(idxT))
-        val d1 = device.to(numCl)
-        val d2 = device.to(tcl)
-        numCl.release
-        tcl.release
-        idxT.release
-        Some(((catCls, const(d1).releasable), d2)): Option[
-          ((Seq[Variable], Variable), Tensor)
-        ]
-      }) {
-        case None => IO.unit
-        case Some((_, b)) =>
-          IO {
-            b.release
+      BatchStream.scopeInResource.flatMap { implicit scope =>
+        Resource.make(IO {
+
+          val idxT = TensorHelpers.fromLongVec(idx.toVec.map(_.toLong))
+          val numCl = ATen.index(numericalFeatures, Array(idxT))
+          val catCls = categoricalFeatures.map { t =>
+            val tmp = ATen.index(t, Array(idxT))
+            val r = device.to(tmp)
+            tmp.release
+            const(r)
           }
+          val tcl = ATen.index(target, Array(idxT))
+          val d1 = device.to(numCl)
+          val d2 = device.to(tcl)
+          numCl.release
+          tcl.release
+          idxT.release
+          Some(((catCls, const(d1)), d2)): Option[
+            ((Seq[Variable], Variable), Tensor)
+          ]
+        }) {
+          case None => IO.unit
+          case Some((_, b)) =>
+            IO {
+              b.release
+            }
+        }
       }
     }
     val emptyResource =
@@ -456,7 +455,7 @@ object AutoLoop {
       softmax: Boolean,
       selectFirstOutputDimension: Boolean,
       modelTensorOptions: TensorOptions
-  )(implicit pool: AllocatedVariablePool) = {
+  )(implicit pool: Scope) = {
     val numericalCount = dataLayout.count {
       case Numerical => true
       case _         => false
@@ -482,10 +481,13 @@ object AutoLoop {
     val model = sequence(
       embedding,
       residual,
-      if (softmax && !selectFirstOutputDimension) Fun(_.logSoftMax(dim = 1))
+      if (softmax && !selectFirstOutputDimension)
+        Fun(implicit pool => _.logSoftMax(dim = 1))
       else if (softmax && selectFirstOutputDimension)
-        Fun(_.logSoftMax(dim = 1).select(1, 0).view(List(-1, 1)))
-      else Fun(identity)
+        Fun(implicit pool =>
+          _.logSoftMax(dim = 1).select(1, 0).view(List(-1, 1))
+        )
+      else Fun(_ => identity)
     )
 
     model
@@ -506,49 +508,57 @@ object AutoLoop {
       minibatchSize: Int
   ) =
     IO {
-
-      val trainingFeatures = makeFusedFeatureMatrix(
-        data,
-        dataLayout,
-        predictionsOnBasemodels,
-        precision,
-        device
-      )
-      val predictableFeatures = makeFusedFeatureMatrix(
-        predictables,
-        dataLayout,
-        predictablesPredictionsOnBasemodels,
-        precision,
-        device
-      )
-
-      val predicteds = {
-        val indices = lamp.knn.knnMinibatched(
-          trainingFeatures,
-          predictableFeatures,
-          k,
-          lamp.knn.squaredEuclideanDistance,
-          minibatchSize
+      Scope.leak { implicit scope =>
+        val trainingFeatures = STen.owned(
+          makeFusedFeatureMatrix(
+            data,
+            dataLayout,
+            predictionsOnBasemodels,
+            precision,
+            device
+          )
         )
-        val indicesJvm = TensorHelpers.toLongMat(indices).map(_.toInt)
-        predictableFeatures.release
-        trainingFeatures.release
-        val prediction = targetType match {
-          case Classification(classes, _) =>
-            val targetVec =
-              TensorHelpers.toLongMat(target).toVec.map(_.toInt)
-            lamp.knn.classification(targetVec, indicesJvm, classes, log = true)
-          case Regression | ECDFRegression =>
-            import lamp.syntax
-            val targetVec = target.toMat.toVec
-            Mat(lamp.knn.regression(targetVec, indicesJvm))
+        val predictableFeatures = STen.owned(
+          makeFusedFeatureMatrix(
+            predictables,
+            dataLayout,
+            predictablesPredictionsOnBasemodels,
+            precision,
+            device
+          )
+        )
+
+        val predicteds = {
+          val indices = lamp.knn.knnMinibatched(
+            trainingFeatures,
+            predictableFeatures,
+            k,
+            lamp.knn.SquaredEuclideanDistance,
+            minibatchSize
+          )
+          val indicesJvm = indices.toLongMat.map(_.toInt)
+          val prediction = targetType match {
+            case Classification(classes, _) =>
+              val targetVec =
+                TensorHelpers.toLongMat(target).toVec.map(_.toInt)
+              lamp.knn.classification(
+                targetVec,
+                indicesJvm,
+                classes,
+                log = true
+              )
+            case Regression | ECDFRegression =>
+              import lamp.util.syntax
+              val targetVec = target.toMat.toVec
+              Mat(lamp.knn.regression(targetVec, indicesJvm))
+          }
+
+          TensorHelpers.fromMat(prediction, CPU, precision),
+
         }
 
-        TensorHelpers.fromMat(prediction, CPU, precision),
-
+        predicteds
       }
-
-      predicteds
 
     }
 
@@ -603,7 +613,7 @@ object AutoLoop {
       dataLayout: Seq[Metadata]
   ) =
     IO {
-      import lamp.syntax
+      import lamp.util.syntax
       val precision = TensorHelpers.precision(data).get
       val trainingFeatures = makeFusedFeatureMatrix(
         data,
@@ -646,7 +656,7 @@ object AutoLoop {
           (predictionT, Left(trained))
 
         case Regression | ECDFRegression =>
-          import lamp.syntax
+          import lamp.util.syntax
           val targetVec = target.toMat.toVec
           val trained = lamp.extratrees.buildForestRegression(
             data = trainingFeaturesJvm,
@@ -685,169 +695,172 @@ object AutoLoop {
       logFrequency: Int,
       logger: Option[Logger],
       rng: org.saddle.spire.random.Generator
-  )(implicit pool: AllocatedVariablePool) =
-    IO {
-      val modelTensorOptions = device.options(precision)
-      val outputSize = targetType match {
-        case Regression                 => 1
-        case ECDFRegression             => 2
-        case Classification(classes, _) => classes
-      }
-      val softmax = targetType match {
-        case Regression => false
-        case _          => true
-      }
-      val selectFirstOutputDimension = targetType match {
-        case ECDFRegression => true
-        case _              => false
-      }
-      val model =
-        makeModel(
-          dataLayout ++
-            (0 until predictionsOnBasemodels
-              .map(_.sizes.apply(1))
-              .sum
-              .toInt)
-              .map(_ => Numerical),
-          dropout,
-          hiddenSize,
-          outputSize,
-          softmax,
-          selectFirstOutputDimension,
-          modelTensorOptions
-        )
-      logger.foreach(
-        _.info(s"Learnable parameters: " + model.learnableParameters)
-      )
-      val (lossFunction, classWeightsT) = targetType match {
-        case Regression     => (LossFunctions.L1Loss, None)
-        case ECDFRegression => (LossFunctions.L1Loss, None)
-        case Classification(classes, classWeights) =>
-          val classWeightsT =
-            TensorHelpers.fromVec(classWeights.toVec, device, precision)
-          (
-            LossFunctions.NLL(
-              numClasses = classes,
-              classWeights = classWeightsT
-            ),
-            Some(classWeightsT)
-          )
-      }
-
-      val (trainNumerical, trainCategorical) = {
-        val (num, cat) = separateFeatures(data, dataLayout)
-        if (predictionsOnBasemodels.isEmpty) (num, cat.map(_._1))
-        else {
-          val numWithPredictions =
-            ATen.cat(num +: predictionsOnBasemodels.toArray, 1)
-          num.release
-          (numWithPredictions, cat.map(_._1))
+  ) =
+    IO.pure(Scope.free)
+      .bracket { implicit scope =>
+        val modelTensorOptions = device.options(precision)
+        val outputSize = targetType match {
+          case Regression                 => 1
+          case ECDFRegression             => 2
+          case Classification(classes, _) => classes
         }
-      }
-
-      def miniBatches =
-        minibatchesFromFull(
-          minibatchSize = minibatchSize,
-          dropLast = false,
-          numericalFeatures = trainNumerical,
-          categoricalFeatures = trainCategorical,
-          target = target,
-          device = device,
-          rng
+        val softmax = targetType match {
+          case Regression => false
+          case _          => true
+        }
+        val selectFirstOutputDimension = targetType match {
+          case ECDFRegression => true
+          case _              => false
+        }
+        val model =
+          makeModel(
+            dataLayout ++
+              (0 until predictionsOnBasemodels
+                .map(_.sizes.apply(1))
+                .sum
+                .toInt)
+                .map(_ => Numerical),
+            dropout,
+            hiddenSize,
+            outputSize,
+            softmax,
+            selectFirstOutputDimension,
+            modelTensorOptions
+          )
+        logger.foreach(
+          _.info(s"Learnable parameters: " + model.learnableParameters)
         )
-
-      val batchesInEpoch = miniBatches._2
-      val maxEpochs = epochs.max
-
-      val modelWithOptimizer =
-        SupervisedModel(model, lossFunction).zipOptimizer(
-          AdamW.factory(
-            weightDecay = simple(weightDecay),
-            learningRate = simple(learningRate),
-            scheduler = LearningRateSchedule.stepAfter(
-              steps = (maxEpochs * batchesInEpoch * 0.8).toLong,
-              factor = 0.1
+        val (lossFunction, classWeightsT) = targetType match {
+          case Regression     => (LossFunctions.L1Loss, None)
+          case ECDFRegression => (LossFunctions.L1Loss, None)
+          case Classification(classes, classWeights) =>
+            val classWeightsT =
+              TensorHelpers.fromVec(classWeights.toVec, device, precision)
+            (
+              LossFunctions.NLL(
+                numClasses = classes,
+                classWeights = classWeightsT
+              ),
+              Some(classWeightsT)
             )
-          )
-        )
-
-      def batchStream = miniBatches._1
-
-      val trainingCallback = TrainingCallback.noop
-
-      val (predictNumerical, predictCategorical) = {
-        val (num, cat) = separateFeatures(predictables, dataLayout)
-        if (predictablesPredictionsOnBasemodels.isEmpty) (num, cat.map(_._1))
-        else {
-          val numWithPredictions =
-            ATen.cat(num +: predictablesPredictionsOnBasemodels.toArray, 1)
-          num.release
-          (numWithPredictions, cat.map(_._1))
         }
-      }
 
-      def loop(
-          epoch: Int,
-          predictedAtEpochs: Seq[(Int, Tensor, Seq[(Tensor, PTag)])]
-      ): IO[Seq[(Int, Tensor, Seq[(Tensor, PTag)])]] =
-        if (epoch > maxEpochs) {
-          IO {
-            logger.foreach(_.info(s"Max epochs ($maxEpochs) reached."))
-            predictedAtEpochs
+        val (trainNumerical, trainCategorical) = {
+          val (num, cat) = separateFeatures(data, dataLayout)
+          if (predictionsOnBasemodels.isEmpty) (num, cat.map(_._1))
+          else {
+            val numWithPredictions =
+              ATen.cat(num +: predictionsOnBasemodels.toArray, 1)
+            num.release
+            (numWithPredictions, cat.map(_._1))
           }
-        } else {
-          for {
-            _ <- IOLoops.oneEpoch(
-              modelWithOptimizer,
-              batchStream,
-              trainingCallback,
-              logger,
-              logFrequency
-            )
-            next <- loop(
-              epoch + 1, {
-                logger.foreach(_.info(s"Epoch $epoch done."))
-                if (epochs.contains(epoch)) {
-                  val predicted = modelWithOptimizer.model.module
-                    .forward(
-                      (
-                        predictCategorical.map(v =>
-                          const(device.to(v)).releasable
-                        ),
-                        const(device.to(predictNumerical)).releasable
-                      )
-                    )
-                  val copy = predicted.value.to(predictNumerical.options, true)
-                  val modelState = model.state.map { v =>
-                    val clone = ATen.clone(v._1.value)
-                    val c1 = if (!clone.options.isCPU) {
-                      val cp = CPU.to(clone)
-                      clone.release
-                      cp
-                    } else clone
-                    (c1, v._2)
-                  }
-                  predicted.releaseAll()
-                  (epoch, copy, modelState) +: predictedAtEpochs
-                } else predictedAtEpochs
-              }
-            )
-          } yield next
         }
 
-      val predicteds = loop(0, Nil).map { r =>
-        trainNumerical.release
-        trainCategorical.foreach(_.release)
-        predictNumerical.release
-        predictCategorical.foreach(_.release)
-        classWeightsT.foreach(_.release)
-        modelWithOptimizer.release
-        r
-      }
+        def miniBatches =
+          minibatchesFromFull(
+            minibatchSize = minibatchSize,
+            dropLast = false,
+            numericalFeatures = trainNumerical,
+            categoricalFeatures = trainCategorical,
+            target = target,
+            device = device,
+            rng
+          )
 
-      predicteds
+        val batchesInEpoch = miniBatches._2
+        val maxEpochs = epochs.max
 
-    }.flatMap(identity)
+        val modelWithOptimizer =
+          SupervisedModel(model, lossFunction).zipOptimizer(
+            AdamW.factory(
+              weightDecay = simple(weightDecay),
+              learningRate = simple(learningRate),
+              scheduler = LearningRateSchedule.stepAfter(
+                steps = (maxEpochs * batchesInEpoch * 0.8).toLong,
+                factor = 0.1
+              )
+            )
+          )
+
+        def batchStream = miniBatches._1
+
+        val trainingCallback = TrainingCallback.noop
+
+        val (predictNumerical, predictCategorical) = {
+          val (num, cat) = separateFeatures(predictables, dataLayout)
+          if (predictablesPredictionsOnBasemodels.isEmpty) (num, cat.map(_._1))
+          else {
+            val numWithPredictions =
+              ATen.cat(num +: predictablesPredictionsOnBasemodels.toArray, 1)
+            num.release
+            (numWithPredictions, cat.map(_._1))
+          }
+        }
+
+        def loop(
+            epoch: Int,
+            predictedAtEpochs: Seq[(Int, Tensor, Seq[(Tensor, PTag)])]
+        ): IO[Seq[(Int, Tensor, Seq[(Tensor, PTag)])]] =
+          if (epoch > maxEpochs) {
+            IO {
+              logger.foreach(_.info(s"Max epochs ($maxEpochs) reached."))
+              predictedAtEpochs
+            }
+          } else {
+            for {
+              _ <- IOLoops.oneEpoch(
+                modelWithOptimizer,
+                batchStream,
+                trainingCallback,
+                logger,
+                logFrequency
+              )
+              next <- loop(
+                epoch + 1, {
+                  logger.foreach(_.info(s"Epoch $epoch done."))
+                  if (epochs.contains(epoch)) {
+                    Scope.leak {
+                      implicit scope =>
+                        val predicted = modelWithOptimizer.model.module
+                          .forward(
+                            (
+                              predictCategorical.map(v => const(device.to(v))),
+                              const(device.to(predictNumerical))
+                            )
+                          )
+                        val copy =
+                          predicted.value.to(predictNumerical.options, true)
+                        val modelState = model.state.map { v =>
+                          val clone = ATen.clone(v._1.value)
+                          val c1 = if (!clone.options.isCPU) {
+                            val cp = CPU.to(clone)
+                            clone.release
+                            cp
+                          } else clone
+                          (c1, v._2)
+                        }
+
+                        (epoch, copy, modelState) +: predictedAtEpochs
+                    }
+                  } else predictedAtEpochs
+                }
+              )
+            } yield next
+          }
+
+        val predicteds = loop(0, Nil).map { r =>
+          trainNumerical.release
+          trainCategorical.foreach(_.release)
+          predictNumerical.release
+          predictCategorical.foreach(_.release)
+          classWeightsT.foreach(_.release)
+          modelWithOptimizer.release
+          r
+        }
+
+        predicteds
+
+      }(scope => IO { scope.release })
 
   private[lamp] def aggregatePredictionsAndModelsPerEpoch[ModelState](
       byEpoch: Seq[(Int, Seq[(Int, Tensor, ModelState, Seq[Int])])],
@@ -1169,7 +1182,7 @@ object AutoLoop {
       logFrequency: Int,
       logger: Option[Logger],
       rng: org.saddle.spire.random.Generator
-  )(implicit pool: AllocatedVariablePool) = {
+  ) = {
     val trainedFolds = folds.zipWithIndex
       .map {
         case ((trainIdx, predictIdx), foldIdx) =>
@@ -1262,7 +1275,7 @@ object AutoLoop {
       targetType: TargetType,
       precision: FloatingPointPrecision,
       targetFullbatch: Tensor
-  )(implicit pool: AllocatedVariablePool) = {
+  ) = Scope.leak { implicit scope =>
     val (lossFunction, classWeightsT) = targetType match {
       case Regression     => (LossFunctions.L1Loss, None)
       case ECDFRegression => (LossFunctions.L1Loss, None)
@@ -1283,11 +1296,10 @@ object AutoLoop {
     }
     val (loss, _) =
       lossFunction.apply(
-        const(pred).releasable,
+        const(pred),
         targetFullbatch
       )
     val lossM = loss.toMat.raw(0)
-    loss.releaseAll
     classWeightsT.foreach(_.release)
     lossM
   }
@@ -1317,7 +1329,7 @@ object AutoLoop {
       ensembleFolds: Seq[(Seq[Int], Seq[Int])],
       prescreenHyperparameters: Boolean,
       rng: org.saddle.spire.random.Generator
-  )(implicit pool: AllocatedVariablePool) = {
+  ) = {
 
     val hyperparameters =
       hiddenSizes

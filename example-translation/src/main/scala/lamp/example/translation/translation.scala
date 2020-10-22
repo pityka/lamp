@@ -24,12 +24,11 @@ import lamp.nn.LSTM
 import lamp.nn.statefulSequence
 import java.nio.charset.StandardCharsets
 import lamp.nn.Seq2SeqWithAttention
-import lamp.autograd.AllocatedVariablePool
+import lamp.Scope
 import lamp.data.Text
 import lamp.data.Reader
 import lamp.data.IOLoops
 import lamp.data.TrainingCallback
-import lamp.autograd.const
 
 case class CliConfig(
     trainData: String = "",
@@ -101,63 +100,38 @@ object Train extends App {
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) =>
       scribe.info(s"Config: $config")
-      implicit val pool = new AllocatedVariablePool
-      val charsetDecoder = StandardCharsets.UTF_8
-        .newDecoder()
-        .onMalformedInput(CodingErrorAction.REPLACE)
-        .onUnmappableCharacter(CodingErrorAction.REPLACE)
+      Scope.root { implicit scope =>
+        val charsetDecoder = StandardCharsets.UTF_8
+          .newDecoder()
+          .onMalformedInput(CodingErrorAction.REPLACE)
+          .onUnmappableCharacter(CodingErrorAction.REPLACE)
 
-      val trainText = Resource
-        .make(IO {
-          scala.io.Source.fromFile(new File(config.trainData))(
-            Codec.apply(charsetDecoder)
-          )
-        })(s => IO { s.close })
-        .use(s => IO(s.mkString))
-        .unsafeRunSync()
-
-      val testText = config.testData.map { t =>
-        Resource
+        val trainText = Resource
           .make(IO {
-            scala.io.Source.fromFile(new File(t))(
+            scala.io.Source.fromFile(new File(config.trainData))(
               Codec.apply(charsetDecoder)
             )
           })(s => IO { s.close })
           .use(s => IO(s.mkString))
           .unsafeRunSync()
-      }
 
-      val (vocab1, _) = Text.charsToIntegers(trainText + testText.getOrElse(""))
-      val vocab =
-        vocab1 + ('#' -> vocab1.size, '|' -> (vocab1.size + 1), '*' -> (vocab1.size + 2), '=' -> (vocab1.size + 3))
-      val trainTokenized = scala.io.Source
-        .fromString(trainText)
-        .getLines
-        .toVector
-        .map { line =>
-          val (feature, target) = Translation.prepare(
-            line,
-            endOfSentence = '*',
-            startOfSentence = '='
-          )
-          (
-            Text
-              .charsToIntegers(
-                feature,
-                vocab
+        val testText = config.testData.map { t =>
+          Resource
+            .make(IO {
+              scala.io.Source.fromFile(new File(t))(
+                Codec.apply(charsetDecoder)
               )
-              .map(_.toLong),
-            Text
-              .charsToIntegers(
-                target,
-                vocab
-              )
-              .map(_.toLong)
-          )
+            })(s => IO { s.close })
+            .use(s => IO(s.mkString))
+            .unsafeRunSync()
         }
-      val testTokenized = testText.map { t =>
-        scala.io.Source
-          .fromString(t)
+
+        val (vocab1, _) =
+          Text.charsToIntegers(trainText + testText.getOrElse(""))
+        val vocab =
+          vocab1 + ('#' -> vocab1.size, '|' -> (vocab1.size + 1), '*' -> (vocab1.size + 2), '=' -> (vocab1.size + 3))
+        val trainTokenized = scala.io.Source
+          .fromString(trainText)
           .getLines
           .toVector
           .map { line =>
@@ -181,207 +155,234 @@ object Train extends App {
                 .map(_.toLong)
             )
           }
-      }
-      val vocabularSize = vocab.size
-      val rvocab = vocab.map(_.swap)
-      scribe.info(
-        s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
-      )
-
-      val hiddenSize = 256
-      val lookAhead = 70
-      val embeddingDimension = 8
-      val device = if (config.cuda) CudaDevice(0) else CPU
-      val precision =
-        if (config.singlePrecision) SinglePrecision else DoublePrecision
-      val tensorOptions = device.options(precision)
-      val classWeights =
-        ATen.ones(Array(vocabularSize), tensorOptions)
-      val encoder = statefulSequence(
-        Embedding(
-          classes = vocabularSize,
-          dimensions = embeddingDimension,
-          tOpt = tensorOptions
-        ).lift,
-        LSTM(
-          in = embeddingDimension,
-          hiddenSize = hiddenSize,
-          tOpt = tensorOptions
+        val testTokenized = testText.map { t =>
+          scala.io.Source
+            .fromString(t)
+            .getLines
+            .toVector
+            .map { line =>
+              val (feature, target) = Translation.prepare(
+                line,
+                endOfSentence = '*',
+                startOfSentence = '='
+              )
+              (
+                Text
+                  .charsToIntegers(
+                    feature,
+                    vocab
+                  )
+                  .map(_.toLong),
+                Text
+                  .charsToIntegers(
+                    target,
+                    vocab
+                  )
+                  .map(_.toLong)
+              )
+            }
+        }
+        val vocabularSize = vocab.size
+        val rvocab = vocab.map(_.swap)
+        scribe.info(
+          s"Vocabulary size $vocabularSize, tokenized length of train ${trainTokenized.size}, test ${testTokenized.size}"
         )
-      )
 
-      val model = {
-
-        val decoder = statefulSequence(
+        val hiddenSize = 256
+        val lookAhead = 70
+        val embeddingDimension = 8
+        val device = if (config.cuda) CudaDevice(0) else CPU
+        val precision =
+          if (config.singlePrecision) SinglePrecision else DoublePrecision
+        val tensorOptions = device.options(precision)
+        val classWeights =
+          ATen.ones(Array(vocabularSize), tensorOptions)
+        val encoder = statefulSequence(
+          Embedding(
+            classes = vocabularSize,
+            dimensions = embeddingDimension,
+            tOpt = tensorOptions
+          ).lift,
           LSTM(
-            in = embeddingDimension + hiddenSize,
+            in = embeddingDimension,
             hiddenSize = hiddenSize,
             tOpt = tensorOptions
-          ),
-          Fun(_.relu).lift,
-          SeqLinear
-            .apply(
-              in = hiddenSize,
-              out = vocabularSize,
+          )
+        )
+
+        val model = {
+
+          val decoder = statefulSequence(
+            LSTM(
+              in = embeddingDimension + hiddenSize,
+              hiddenSize = hiddenSize,
               tOpt = tensorOptions
+            ),
+            Fun(implicit scope => _.relu).lift,
+            SeqLinear
+              .apply(
+                in = hiddenSize,
+                out = vocabularSize,
+                tOpt = tensorOptions
+              )
+              .lift,
+            Fun(implicit scope => _.logSoftMax(2)).lift
+          )
+
+          val destinationEmbedding = Embedding(
+            classes = vocabularSize,
+            dimensions = embeddingDimension,
+            tOpt = tensorOptions
+          )
+          val net1 =
+            Seq2SeqWithAttention(
+              destinationEmbedding,
+              encoder.mapState {
+                case (_, lstmState) => (lstmState, (), (), ())
+              },
+              decoder,
+              vocab('#').toLong
+            )(_._1.get._1).unlift
+
+          val net =
+            config.checkpointLoad
+              .map { load =>
+                scribe.info(s"Loading parameters from file $load")
+                Reader
+                  .loadFromFile(net1, new File(load), device)
+                  .unsafeRunSync()
+                  .right
+                  .get
+              }
+              .getOrElse(net1)
+
+          scribe.info("Learnable parameters: " + net.learnableParameters)
+          SupervisedModel(
+            net,
+            LossFunctions
+              .SequenceNLL(vocabularSize, classWeights, ignore = vocab('#'))
+          )
+        }
+        val rng = org.saddle.spire.random.rng.Cmwc5.apply
+        val trainEpochs = () =>
+          Text
+            .minibatchesForSeq2Seq(
+              trainTokenized,
+              config.trainBatchSize,
+              lookAhead,
+              vocab('#'),
+              device,
+              rng
             )
-            .lift,
-          Fun(_.logSoftMax(2)).lift
+        val testEpochs = testTokenized.map { t => () =>
+          Text
+            .minibatchesForSeq2Seq(
+              t,
+              config.validationBatchSize,
+              lookAhead,
+              vocab('#'),
+              device,
+              rng
+            )
+        }
+
+        val optimizer = AdamW.factory(
+          weightDecay = simple(0.00),
+          learningRate = simple(config.learningRate),
+          scheduler = LearningRateSchedule.cyclicSchedule(10d, 300),
+          clip = Some(1d)
         )
 
-        val destinationEmbedding = Embedding(
-          classes = vocabularSize,
-          dimensions = embeddingDimension,
-          tOpt = tensorOptions
-        )
-        val net1 =
-          Seq2SeqWithAttention(
-            destinationEmbedding,
-            encoder.mapState {
-              case (_, lstmState) => (lstmState, (), (), ())
-            },
-            decoder,
-            vocab('#').toLong
-          )(_._1.get._1).unlift
+        val validationCallback = new ValidationCallback {
 
-        val net =
-          config.checkpointLoad
-            .map { load =>
-              scribe.info(s"Loading parameters from file $load")
-              Reader
-                .loadFromFile(net1, new File(load), device)
-                .unsafeRunSync()
-                .right
-                .get
+          override def apply(
+              validationOutput: Tensor,
+              validationTarget: Tensor,
+              validationLoss: Double,
+              epochCount: Long
+          ): Unit = {
+            if (true) {
+              val targetString =
+                Text.convertIntegersToText(validationTarget, rvocab)
+              val outputString =
+                Text.convertLogitsToText(validationOutput, rvocab)
+              scribe.info(
+                (targetString zip outputString)
+                  .map(x => "'" + x._1 + "'  -->  '" + x._2 + "'")
+                  .mkString("\n")
+              )
             }
-            .getOrElse(net1)
 
-        scribe.info("Learnable parameters: " + net.learnableParameters)
-        SupervisedModel(
-          net,
-          LossFunctions
-            .SequenceNLL(vocabularSize, classWeights, ignore = vocab('#'))
-        )
-      }
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply
-      val trainEpochs = () =>
-        Text
-          .minibatchesForSeq2Seq(
-            trainTokenized,
-            config.trainBatchSize,
-            lookAhead,
-            vocab('#'),
-            device,
-            rng
-          )
-      val testEpochs = testTokenized.map { t => () =>
-        Text
-          .minibatchesForSeq2Seq(
-            t,
-            config.validationBatchSize,
-            lookAhead,
-            vocab('#'),
-            device,
-            rng
-          )
-      }
-
-      val optimizer = AdamW.factory(
-        weightDecay = simple(0.00),
-        learningRate = simple(config.learningRate),
-        scheduler = LearningRateSchedule.cyclicSchedule(10d, 300),
-        clip = Some(1d)
-      )
-
-      val validationCallback = new ValidationCallback {
-
-        override def apply(
-            validationOutput: Tensor,
-            validationTarget: Tensor,
-            validationLoss: Double,
-            epochCount: Long
-        ): Unit = {
-          if (true) {
-            val targetString =
-              Text.convertIntegersToText(validationTarget, rvocab)
-            val outputString =
-              Text.convertLogitsToText(validationOutput, rvocab)
-            scribe.info(
-              (targetString zip outputString)
-                .map(x => "'" + x._1 + "'  -->  '" + x._2 + "'")
-                .mkString("\n")
-            )
           }
 
         }
 
-      }
-
-      val trainedModel = IOLoops
-        .epochs(
-          model = model,
-          optimizerFactory = optimizer,
-          trainBatchesOverEpoch = trainEpochs,
-          validationBatchesOverEpoch = testEpochs,
-          epochs = config.epochs,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback = validationCallback,
-          checkpointFile = config.checkpointSave.map(s => new File(s)),
-          minimumCheckpointFile =
-            config.checkpointSave.map(s => new File(s + ".min")),
-          logger = Some(scribe.Logger("training")),
-          logFrequency = 10,
-          validationFrequency = 1
-        )
-        .unsafeRunSync()
-      scribe.info("Training done.")
-
-      config.query.foreach { prefix =>
-        val text = Text
-          .makePredictionBatch(
-            List(prefix).map(t => Text.charsToIntegers(t, vocab).map(_.toLong)),
-            device
+        val trainedModel = IOLoops
+          .epochs(
+            model = model,
+            optimizerFactory = optimizer,
+            trainBatchesOverEpoch = trainEpochs,
+            validationBatchesOverEpoch = testEpochs,
+            epochs = config.epochs,
+            trainingCallback = TrainingCallback.noop,
+            validationCallback = validationCallback,
+            checkpointFile = config.checkpointSave.map(s => new File(s)),
+            minimumCheckpointFile =
+              config.checkpointSave.map(s => new File(s + ".min")),
+            logger = Some(scribe.Logger("training")),
+            logFrequency = 10,
+            validationFrequency = 1
           )
-          .use { warmupBatch =>
-            val enc = trainedModel.module.statefulModule.encoder
+          .unsafeRunSync()
+        scribe.info("Training done.")
 
-            val (encOut, encState) =
-              enc.forward(const(warmupBatch) -> enc.initState)
+        config.query.foreach { prefix =>
+          val text = IO(Scope.free)
+            .bracket { implicit scope =>
+              IO {
+                val warmupBatch = Text
+                  .makePredictionBatch(
+                    List(prefix)
+                      .map(t => Text.charsToIntegers(t, vocab).map(_.toLong)),
+                    device
+                  )
 
-            val dec =
-              trainedModel.module.statefulModule
-                .attentionDecoder(encOut, const(warmupBatch))
-                .withInit(encState)
+                val enc = trainedModel.module.statefulModule.encoder
 
-            Text
-              .sequencePredictionBeam(
-                Text.charsToIntegers("=", vocab).map(_.toLong),
-                device,
-                dec,
-                lookAhead,
-                vocab('='),
-                vocab('*')
-              )
-              .use { variable =>
-                IO {
-                  variable.map(_._1).map { v =>
-                    Text
-                      .convertIntegersToText(
-                        v.value,
-                        rvocab
-                      )
-                      .mkString
-                  }
+                val (encOut, encState) =
+                  enc.forward(warmupBatch -> enc.initState)
+
+                val dec =
+                  trainedModel.module.statefulModule
+                    .attentionDecoder(encOut, warmupBatch)
+                    .withInit(encState)
+
+                val beams = Text
+                  .sequencePredictionBeam(
+                    Text.charsToIntegers("=", vocab).map(_.toLong),
+                    device,
+                    dec,
+                    lookAhead,
+                    vocab('='),
+                    vocab('*')
+                  )
+                beams.map(_._1).map { v =>
+                  Text
+                    .convertIntegersToText(
+                      v,
+                      rvocab
+                    )
+                    .mkString
                 }
               }
-          }
-          .unsafeRunSync()
+            }(b => IO(b.release))
+            .unsafeRunSync()
 
-        scribe.info(
-          s"Answer to query text follows (from prefix '$prefix'): \n\n" + text
-        )
+          scribe.info(
+            s"Answer to query text follows (from prefix '$prefix'): \n\n" + text
+          )
+        }
       }
-
     case _ =>
     // arguments are bad, error message will have been displayed
   }

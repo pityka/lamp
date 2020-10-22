@@ -4,8 +4,8 @@ import org.saddle._
 import org.saddle.order._
 import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
-import lamp.autograd._
-import lamp.syntax
+import lamp.TensorHelpers
+import lamp.util.syntax
 import aten.Tensor
 import cats.effect.IO
 import lamp.SinglePrecision
@@ -17,9 +17,6 @@ import scribe.Logger
 import lamp.StringMetadata
 
 class GreenerManufacturingSuite extends AnyFunSuite {
-  val cpuPool = new AllocatedVariablePool
-  val cudaPool = new AllocatedVariablePool
-  def selectPool(cuda: Boolean) = if (cuda) cudaPool else cpuPool
 
   ignore("regression") {
 
@@ -32,7 +29,7 @@ class GreenerManufacturingSuite extends AnyFunSuite {
         logger: Option[Logger],
         logFrequency: Int
     ) = {
-      implicit val pool = new AllocatedVariablePool
+
       val precision =
         if (features.options.isDouble) DoublePrecision
         else if (features.options.isFloat) SinglePrecision
@@ -80,7 +77,6 @@ class GreenerManufacturingSuite extends AnyFunSuite {
       )
     }
 
-    implicit val pool = new AllocatedVariablePool
     val device = if (Tensor.cudnnAvailable()) CudaDevice(0) else CPU
     val rawTrainingData0 = org.saddle.csv.CsvParser
       .parseSourceWithHeader[String](
@@ -195,9 +191,8 @@ class GreenerManufacturingSuite extends AnyFunSuite {
           withRowIx = false
         )
     )
-    // println(Mat(predictedTest, testTarget.col(0)))
-    // println(math.pow(predictedTest.pearson(testTarget.col(0)), 2d))
-
   }
+  // println(Mat(predictedTest, testTarget.col(0)))
+  // println(math.pow(predictedTest.pearson(testTarget.col(0)), 2d))
 
 }

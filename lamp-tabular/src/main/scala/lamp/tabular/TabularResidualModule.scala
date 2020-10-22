@@ -3,14 +3,15 @@ package lamp.tabular
 import lamp.nn._
 import aten.TensorOptions
 import lamp.autograd.Variable
-import lamp.autograd.AllocatedVariablePool
+import lamp.Sc
+import lamp.Scope
 
 case class TabularResidual[Block <: Module, B2 <: Module](
     straight: B2 with Module,
     block: Block with Module
 ) extends Module {
   override def state = straight.state ++ block.state
-  def forward(x: Variable) = {
+  def forward[S: Sc](x: Variable) = {
     val r = straight.forward(x)
     val l = block.forward(x)
     (r + l)
@@ -25,7 +26,7 @@ object TabularResidual {
       outChannels: Int,
       tOpt: TensorOptions,
       dropout: Double
-  )(implicit pool: AllocatedVariablePool) =
+  )(implicit scope: Scope) =
     TabularResidual(
       straight = sequence(
         BatchNorm(inChannels, tOpt),
@@ -36,7 +37,7 @@ object TabularResidual {
           BatchNorm(inChannels, tOpt),
           Dropout(dropout * 0.2, training = true),
           Linear(inChannels, math.max(outChannels, hiddenChannels), tOpt),
-          Fun(_.relu)
+          Fun(implicit scope => _.relu)
         ),
         sequence(
           BatchNorm(math.max(outChannels, hiddenChannels), tOpt),
@@ -46,7 +47,7 @@ object TabularResidual {
             math.max(outChannels, hiddenChannels / 2),
             tOpt
           ),
-          Fun(_.relu)
+          Fun(implicit scope => _.relu)
         ),
         sequence(
           BatchNorm(math.max(outChannels, hiddenChannels / 2), tOpt),

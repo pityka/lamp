@@ -1,9 +1,11 @@
 package lamp.autograd
 import aten.{Tensor, ATen}
 import java.{util => ju}
-import scala.collection.mutable
+// import scala.collection.mutable
 import lamp.FloatingPointPrecision
-import lamp.syntax
+import lamp.util.syntax
+import lamp.Scope
+import lamp.Sc
 
 /**
   * Params: the input and the function which calculates the partial derivative
@@ -37,36 +39,21 @@ trait Op {
   val params: List[(Variable, (Tensor, Tensor) => Unit)]
 }
 
-class AllocatedVariablePool {
-  private val buffer0 = scala.collection.mutable.ArrayBuffer[Variable]()
-  private val buffer1 = scala.collection.mutable.ArrayBuffer[Tensor]()
-
-  def remove(v: Variable) = {
-    buffer0 -= v
-  }
-  def append(v: Variable) = buffer0.append(v)
-  def appendTensor(t: Tensor) = buffer1.append(t)
-  def releaseAll() = {
-    val buffer = mutable.ArrayBuffer[Tensor]()
-    buffer0.foreach { variable =>
-      buffer.append(variable.value)
-      variable.partialDerivative.foreach { pd => buffer.append(pd) }
-    }
-    buffer1.foreach { t => buffer.append(t) }
-    Tensor.releaseAll(buffer.distinct.toArray)
-    buffer0.clear()
-    buffer1.clear()
-  }
+object Variable {
+  def apply(op: Op, value: Tensor, needsGrad: Boolean = true)(
+      implicit sc: Scope
+  ): Variable = Variable(op, value, sc, needsGrad)
 }
 
-// Variable takes ownership of the value: Tensor
-// therefore it must be the sole owner
 case class Variable(
     op: Op,
     value: Tensor,
-    pool: AllocatedVariablePool,
-    needsGrad: Boolean = true
+    scope: Scope,
+    needsGrad: Boolean
 ) {
+  scope(value)
+
+  def pool = scope
 
   override def toString =
     s"Var(shape=$shape,value=$value,needsGrad=$needsGrad)"
@@ -81,28 +68,8 @@ case class Variable(
 
   val id = ju.UUID.randomUUID()
 
-  def releaseAll(): Unit = {
-    pool.releaseAll
-
-  }
-  def keep = {
-    pool.remove(this)
-    this
-  }
-  def releasable = {
-    pool.append(this)
-    this
-  }
-  def releaseWith(t: Tensor*) = {
-    t.foreach { t => pool.appendTensor(t) }
-    this
-  }
-  def releaseWithVariable(t: Variable*) = {
-    t.foreach { t => pool.append(t) }
-    this
-  }
   def needsNoGrad = copy(needsGrad = false)
-  def detached = const(value)(pool).releasable
+  def detached = const(value)(scope)
   def zeroGrad() = {
     partialDerivative.foreach { t => ATen.zero_(t) }
   }
@@ -112,7 +79,7 @@ case class Variable(
   def backprop(): Unit = {
     if (partialDerivative.isEmpty) {
       partialDerivative = Some(
-        ATen.ones_like(value, value.options)
+        scope(ATen.ones_like(value, value.options))
       )
     }
     wengert.foreach { v =>
@@ -133,64 +100,67 @@ case class Variable(
   ) = if (needsGrad) {
 
     if (partialDerivative.isEmpty) {
-      partialDerivative = Some(ATen.zeros(shape.toArray, options))
+      partialDerivative = Some(scope(ATen.zeros(shape.toArray, options)))
     }
     computeGrad(incoming, partialDerivative.get)
   }
 
-  def t = Transpose(this).value
-  def transpose(dim1: Int, dim2: Int) = Transpose(this, dim1, dim2).value
-  def select(dim: Long, index: Long) =
+  def t[S: Sc] = Transpose(this).value
+  def transpose[S: Sc](dim1: Int, dim2: Int) = Transpose(this, dim1, dim2).value
+  def select[S: Sc](dim: Long, index: Long) =
     Select(this, dim = dim, index = index).value
-  def indexSelect(dim: Long, index: Variable) =
+  def indexSelect[S: Sc](dim: Long, index: Variable) =
     IndexSelect(this, dim = dim, index = index).value
-  def argmax(dim: Long, keepDim: Boolean) =
+  def argmax[S: Sc](dim: Long, keepDim: Boolean) =
     ArgMax(this, dim = dim, keepDim = keepDim).value
-  def oneHot(numClasses: Int) =
+  def oneHot[S: Sc](numClasses: Int) =
     OneHot(this, numClasses).value
-  def assign(other: Variable) = Assign(abandon = this, keep = other).value
-  def maskFill(mask: Variable, fill: Double) = MaskFill(this, mask, fill).value
-  def makeBooleanMask(q: Long) = EqWhere(this, q).value
-  def cast(precision: FloatingPointPrecision) =
+  def assign[S: Sc](other: Variable) =
+    Assign(abandon = this, keep = other).value
+  def maskFill[S: Sc](mask: Variable, fill: Double) =
+    MaskFill(this, mask, fill).value
+  def makeBooleanMask[S: Sc](q: Long) = EqWhere(this, q).value
+  def cast[S: Sc](precision: FloatingPointPrecision) =
     CastToPrecision(this, precision).value
-  def cat(other: Variable, dim: Long) =
+  def cat[S: Sc](other: Variable, dim: Long) =
     Concatenate(List(this, other), dim).value
-  def +(other: Variable) = Add(this, other).value
-  def +(other: Double) = ConstAdd(this, other).value
-  def -(other: Variable) = Minus(this, other).value
-  def *(other: Variable) = Mult(this, other).value
-  def *(other: Double) = ConstMult(this, other).value
-  def /(other: Variable) = Div(this, other).value
-  def mm(other: Variable) = MatMul(this, other).value
-  def bmm(other: Variable) = BatchedMatMul(this, other).value
-  def relu = Relu(this).value
-  def gelu = Gelu(this).value
-  def sigmoid = Sigmoid(this).value
-  def dropout(prob: Double, train: Boolean) = Dropout(this, prob, train).value
-  def scatterAdd(index: Variable, dim: Int, maxIndex: Long) =
+  def +[S: Sc](other: Variable) = Add(this, other).value
+  def +[S: Sc](other: Double) = ConstAdd(this, other).value
+  def -[S: Sc](other: Variable) = Minus(this, other).value
+  def *[S: Sc](other: Variable) = Mult(this, other).value
+  def *[S: Sc](other: Double) = ConstMult(this, other).value
+  def /[S: Sc](other: Variable) = Div(this, other).value
+  def mm[S: Sc](other: Variable) = MatMul(this, other).value
+  def bmm[S: Sc](other: Variable) = BatchedMatMul(this, other).value
+  def relu[S: Sc] = Relu(this).value
+  def gelu[S: Sc] = Gelu(this).value
+  def sigmoid[S: Sc] = Sigmoid(this).value
+  def dropout[S: Sc](prob: Double, train: Boolean) =
+    Dropout(this, prob, train).value
+  def scatterAdd[S: Sc](index: Variable, dim: Int, maxIndex: Long) =
     ScatterAdd(this, index, dim, maxIndex).value
-  def indexAdd(index: Variable, dim: Int, maxIndex: Long) =
+  def indexAdd[S: Sc](index: Variable, dim: Int, maxIndex: Long) =
     IndexAdd(this, index, dim, maxIndex).value
-  def sum = Sum(this).value
-  def expandAs(other: Tensor) = ExpandAs(this, other).value
-  def rowSum = RowSum(this).value
-  def colSum = ColSum(this).value
-  def exp = Exp(this).value
-  def log = Log(this).value
-  def log1p = Log1p(this).value
-  def sin = Sin(this).value
-  def cos = Cos(this).value
-  def tan = Tan(this).value
-  def tanh = Tanh(this).value
-  def atan = ArcTan(this).value
-  def pow(const: Double) = PowConst(this, const).value
-  def pow(exponent: Variable) = Pow(this, exponent).value
-  def euclideanDistance(b: Variable, dim: Int) =
+  def sum[S: Sc] = Sum(this).value
+  def expandAs[S: Sc](other: Tensor) = ExpandAs(this, other).value
+  def rowSum[S: Sc] = RowSum(this).value
+  def colSum[S: Sc] = ColSum(this).value
+  def exp[S: Sc] = Exp(this).value
+  def log[S: Sc] = Log(this).value
+  def log1p[S: Sc] = Log1p(this).value
+  def sin[S: Sc] = Sin(this).value
+  def cos[S: Sc] = Cos(this).value
+  def tan[S: Sc] = Tan(this).value
+  def tanh[S: Sc] = Tanh(this).value
+  def atan[S: Sc] = ArcTan(this).value
+  def pow[S: Sc](const: Double) = PowConst(this, const).value
+  def pow[S: Sc](exponent: Variable) = Pow(this, exponent).value
+  def euclideanDistance[S: Sc](b: Variable, dim: Int) =
     EuclideanDistance(this, b, dim).value
-  def logSoftMax(dim: Int) = LogSoftMax(this, dim).value
-  def crossEntropy(other: Variable) =
+  def logSoftMax[S: Sc](dim: Int) = LogSoftMax(this, dim).value
+  def crossEntropy[S: Sc](other: Variable) =
     ((this.*(other)).rowSum).*(-1d)
-  def nllLoss(
+  def nllLoss[S: Sc](
       target: Tensor,
       numClasses: Int,
       weights: Tensor,
@@ -198,24 +168,26 @@ case class Variable(
       ignore: Long = -100L
   ) =
     NllLoss(this, target, weights, numClasses, reduction, ignore).value
-  def mseLoss(
+  def mseLoss[S: Sc](
       target: Tensor,
       reduction: Reduction = Mean
   ) =
     MseLoss(this, target, reduction).value
-  def l1Loss(
+  def l1Loss[S: Sc](
       target: Tensor,
       reduction: Reduction = Mean
   ) =
     L1Loss(this, target, reduction).value
-  def squaredFrobenius = SquaredFrobeniusMatrixNorm(this).value
-  def mean(dim: List[Int]) = Mean(this, dim).value
-  def variance(dim: List[Int]) = Variance(this, dim).value
-  def normalize(dim: List[Int]) = {
+  def squaredFrobenius[S: Sc] = SquaredFrobeniusMatrixNorm(this).value
+  def mean[S: Sc](dim: List[Int]) = Mean(this, dim).value
+  def variance[S: Sc](dim: List[Int]) = Variance(this, dim).value
+  def normalize[S: Sc](dim: List[Int]) = {
     (this - this.mean(dim)) / ((this.variance(dim) + 1e-6).pow(0.5))
   }
-  def view(shape: List[Int]) = View(this, shape.map(_.toLong).toArray).value
-  def flattenLastDimensions(dims: Int) = FlattenLastDimensions(this, dims).value
+  def view[S: Sc](shape: List[Int]) =
+    View(this, shape.map(_.toLong).toArray).value
+  def flattenLastDimensions[S: Sc](dims: Int) =
+    FlattenLastDimensions(this, dims).value
 
   def toMat = value.toMat
   def toLongMat = value.toLongMat

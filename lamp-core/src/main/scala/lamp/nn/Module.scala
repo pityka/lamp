@@ -2,6 +2,9 @@ package lamp.nn
 
 import aten.Tensor
 import lamp.autograd._
+import lamp.Sc
+import lamp.Scope
+import lamp.scope
 
 case class EitherModule[
     A,
@@ -13,7 +16,7 @@ case class EitherModule[
 ) extends GenericModule[A, B] {
   override def state =
     members.fold(_.state, _.state)
-  def forward(x: A) =
+  def forward[S: Sc](x: A) =
     members.fold(_.forward(x), _.forward(x))
 }
 object EitherModule {
@@ -61,7 +64,7 @@ case class Sequential[A, M <: GenericModule[A, A]](
           case (param, ptag) => (param, Sequential.Tag(ptag, idx))
         }
     }
-  def forward(x: A) =
+  def forward[S: Sc](x: A) =
     members.foldLeft(x) {
       case (x, m) =>
         m.forward(x)
@@ -95,9 +98,9 @@ object Sequential {
   }
 }
 
-case class Fun(fun: Variable => Variable) extends Module {
+case class Fun(fun: Scope => Variable => Variable) extends Module {
   def state = Nil
-  def forward(x: Variable): Variable = fun(x)
+  def forward[S: Sc](x: Variable): Variable = fun(scope)(x)
 }
 object Fun {
   implicit val trainingMode = TrainingMode.identity[Fun]
@@ -106,7 +109,7 @@ object Fun {
 
 case class GenericFun[A, B](fun: A => B) extends GenericModule[A, B] {
   def state = Nil
-  def forward(x: A): B = fun(x)
+  def forward[S: Sc](x: A): B = fun(x)
 }
 object GenericFun {
   implicit def trainingMode[A, B] = TrainingMode.identity[GenericFun[A, B]]
@@ -116,7 +119,7 @@ object GenericFun {
 case class LiftedModule[M <: Module](mod: M with Module)
     extends StatefulModule[Variable, Variable, Unit] {
   def state = mod.state
-  def forward(x: (Variable, Unit)) = (mod.forward(x._1), ())
+  def forward[S: Sc](x: (Variable, Unit)) = (mod.forward(x._1), ())
 }
 object LiftedModule {
   implicit def trainingMode[
@@ -141,7 +144,8 @@ case class UnliftedModule[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
 )(implicit init: InitState[M, C])
     extends GenericModule[A, B] {
   def state = statefulModule.state
-  def forward(x: A) = statefulModule.forward((x, statefulModule.initState))._1
+  def forward[S: Sc](x: A) =
+    statefulModule.forward((x, statefulModule.initState))._1
 }
 object UnliftedModule {
   implicit def trainingMode[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
@@ -165,9 +169,9 @@ object UnliftedModule {
       is.initState(m.statefulModule)
     )
 }
-trait GenericModule[A, B] extends (A => B) {
-  def forward(x: A): B
-  def apply(a: A): B = forward(a)
+trait GenericModule[A, B] {
+  def forward[S: Sc](x: A): B
+  def apply[S: Sc](a: A): B = forward(a)
   def state: Seq[(Variable, PTag)]
   final def parameters =
     state.filter(v => v._1.needsGrad && v._2.updateDuringOptimization)
@@ -185,7 +189,6 @@ trait GenericModule[A, B] extends (A => B) {
     val g = parameters.map {
       case (param, _) => param.partialDerivative
     }
-    loss.releaseAll
     g
   }
   final def learnableParameters =
@@ -239,7 +242,7 @@ case class MappedState[A, B, C, D, M <: StatefulModule[A, B, C]](
     map: C => D
 ) extends StatefulModule2[A, B, C, D] {
   def state = statefulModule.state
-  def forward(x: (A, C)) = {
+  def forward[S: Sc](x: (A, C)) = {
     val (b, c) = statefulModule.forward(x)
     (b, map(c))
   }

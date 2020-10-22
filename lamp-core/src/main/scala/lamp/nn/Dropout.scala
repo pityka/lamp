@@ -1,10 +1,11 @@
 package lamp.nn
 
 import lamp.autograd.Variable
+import lamp.Sc
 
 case class Dropout(prob: Double, training: Boolean) extends Module {
   override def state: Seq[(Variable, PTag)] = Nil
-  def forward(x: Variable): Variable = x.dropout(prob, training)
+  def forward[S: Sc](x: Variable): Variable = x.dropout(prob, training)
 }
 object Dropout {
   implicit val load = Load.identity[Dropout]

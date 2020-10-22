@@ -3,11 +3,12 @@ package lamp.data
 import cats.effect._
 import aten.Tensor
 import org.saddle._
-import lamp.autograd.{TensorHelpers, const}
+import lamp.autograd.{const}
+import lamp.TensorHelpers
 import aten.ATen
 import lamp.Device
 import lamp.autograd.Variable
-import lamp.autograd.AllocatedVariablePool
+import lamp.Scope
 
 trait BatchStream[I] { self =>
   def nextBatch: Resource[IO, Option[(I, Tensor)]]
@@ -27,6 +28,11 @@ trait BatchStream[I] { self =>
 
 object BatchStream {
 
+  def scopeInResource =
+    Resource.make(IO {
+      Scope.free
+    })(scope => IO { scope.release })
+
   def minibatchesFromFull(
       minibatchSize: Int,
       dropLast: Boolean,
@@ -34,24 +40,26 @@ object BatchStream {
       target: Tensor,
       device: Device,
       rng: org.saddle.spire.random.Generator
-  )(implicit pool: AllocatedVariablePool) = {
+  ) = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
-      Resource.make(IO {
-        val idxT = TensorHelpers.fromLongVec(idx.toVec.map(_.toLong))
-        val xcl = ATen.index(features, Array(idxT))
-        val tcl = ATen.index(target, Array(idxT))
-        val d1 = device.to(xcl)
-        val d2 = device.to(tcl)
-        xcl.release
-        tcl.release
-        idxT.release
-        Some((const(d1).releasable, d2)): Option[(Variable, Tensor)]
-      }) {
-        case None => IO.unit
-        case Some((_, b)) =>
-          IO {
-            b.release
-          }
+      scopeInResource.flatMap { implicit scope =>
+        Resource.make(IO {
+          val idxT = TensorHelpers.fromLongVec(idx.toVec.map(_.toLong))
+          val xcl = ATen.index(features, Array(idxT))
+          val tcl = ATen.index(target, Array(idxT))
+          val d1 = device.to(xcl)
+          val d2 = device.to(tcl)
+          xcl.release
+          tcl.release
+          idxT.release
+          Some((const(d1), d2)): Option[(Variable, Tensor)]
+        }) {
+          case None => IO.unit
+          case Some((_, b)) =>
+            IO {
+              b.release
+            }
+        }
       }
     }
     val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
@@ -80,18 +88,19 @@ object BatchStream {
   }
 
   def fromFullBatch(features: Tensor, targets: Tensor, device: Device)(
-      implicit pool: AllocatedVariablePool
-  ) = {
-    val resource = Resource.make(IO {
-      val xcl = device.to(features)
-      val tcl = device.to(targets)
-      Some((const(xcl).releasable, tcl)): Option[(Variable, Tensor)]
-    }) {
-      case None => IO.unit
-      case Some((_, b)) =>
-        IO {
-          b.release
-        }
+      ) = {
+    val resource = scopeInResource.flatMap { implicit scope =>
+      Resource.make(IO {
+        val xcl = device.to(features)
+        val tcl = device.to(targets)
+        Some((const(xcl), tcl)): Option[(Variable, Tensor)]
+      }) {
+        case None => IO.unit
+        case Some((_, b)) =>
+          IO {
+            b.release
+          }
+      }
     }
     val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
     new BatchStream[Variable] {

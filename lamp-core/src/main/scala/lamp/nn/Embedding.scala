@@ -2,7 +2,7 @@ package lamp.nn
 
 import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
-import lamp.autograd.AllocatedVariablePool
+import lamp.Sc
 
 /**
   * Learnable mapping from classes to dense vectors.
@@ -22,7 +22,7 @@ case class Embedding(weights: Variable) extends Module {
     weights -> Embedding.Weights
   )
 
-  def forward(x: Variable): Variable =
+  def forward[S: Sc](x: Variable): Variable =
     lamp.autograd.Embedding(x, weights).value
 
 }
@@ -35,11 +35,11 @@ object Embedding {
     m.copy(weights = w)
   }
   case object Weights extends LeafTag
-  def apply(
+  def apply[S: Sc](
       classes: Int,
       dimensions: Int,
       tOpt: TensorOptions
-  )(implicit pool: AllocatedVariablePool): Embedding =
+  ): Embedding =
     Embedding(
       weights = param(
         ATen.normal_3(

@@ -1,6 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.Variable
+import lamp.Sc
 
 case class Seq2SeqWithAttention[S0, S1, M0 <: Module, M1 <: StatefulModule2[
   Variable,
@@ -29,7 +30,7 @@ case class Seq2SeqWithAttention[S0, S1, M0 <: Module, M1 <: StatefulModule2[
       padToken
     )
 
-  override def forward(x: ((Variable, Variable), S0)): (Variable, S1) = {
+  override def forward[S: Sc](x: ((Variable, Variable), S0)): (Variable, S1) = {
     val ((source, dest), state0) = x
     val embeddedDest = destinationEmbedding.forward(dest)
     val (encoderOutput, encoderState) = encoder.forward((source, state0))

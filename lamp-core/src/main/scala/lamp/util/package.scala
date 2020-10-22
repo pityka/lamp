@@ -1,23 +1,24 @@
-import aten.ATen
+package lamp
 
-import cats.effect.{IO, Resource}
-import lamp.autograd.{TensorHelpers, AllocatedVariablePool}
-import aten.Tensor
-import org.saddle.Mat
+import aten.{ATen, Tensor}
+import org.saddle._
+import cats.effect.Resource
+import cats.effect.IO
 
-package object lamp {
-
+package object util {
   implicit class syntax(self: Tensor) {
 
     def scalar(d: Double) = inResource {
       ATen.scalar_tensor(d, self.options())
     }
 
+    def copy = ATen.clone(self)
+
     def shape = self.sizes.toList
     def options = self.options
     def size = self.numel
 
-    def asVariable(implicit pool: AllocatedVariablePool) =
+    def asVariable(implicit pool: Scope) =
       lamp.autograd.const(self)(pool)
 
     def toDoubleArray = {
@@ -39,7 +40,7 @@ package object lamp {
     def toLongMat = TensorHelpers.toLongMat(self)
     def toLongVec = TensorHelpers.toLongMat(self).toVec
 
-    def normalized = inResource {
+    def normalized[S: Sc] = {
       import autograd.const
       val features = {
         val s = shape.drop(1)
@@ -49,12 +50,11 @@ package object lamp {
       val bias = ATen.zeros(Array(features), this.options)
       val runningMean = ATen.clone(weights)
       val runningVar = ATen.clone(weights)
-      val pool = new AllocatedVariablePool
       val v = autograd
         .BatchNorm(
-          const(self)(pool),
-          const(weights)(pool),
-          const(bias)(pool),
+          const(self),
+          const(weights),
+          const(bias),
           runningMean,
           runningVar,
           true,
@@ -63,14 +63,10 @@ package object lamp {
         )
         .value
         .value
-      weights.release
-      bias.release
-      runningVar.release
-      runningMean.release
+
       v
     }
   }
 
   def inResource(f: => Tensor) = Resource.make(IO { f })(v => IO { v.release })
-
 }

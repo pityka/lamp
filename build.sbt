@@ -78,13 +78,13 @@ lazy val AllTest = config("alltest").extend(Test)
 val saddleVersion = "2.0.0-M29"
 val upickleVersion = "1.2.0"
 
-lazy val core = project
-  .in(file("lamp-core"))
+lazy val sten = project
+  .in(file("lamp-sten"))
   .configs(Cuda)
   .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
-    name := "lamp-core",
+    name := "lamp-sten",
     libraryDependencies ++= Seq(
       "io.github.pityka" %% "aten-scala-core" % "0.0.0+54-0fe1190b",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
@@ -100,6 +100,24 @@ lazy val core = project
     testOptions in AllTest := Nil
   )
 
+lazy val core = project
+  .in(file("lamp-core"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-core",
+    libraryDependencies ++= Seq(
+      // "org.scalatest" %% "scalatest" % "3.1.2" % "test"
+    ),
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
+    testOptions in AllTest := Nil
+  )
+  .dependsOn(sten % "test->test;compile->compile")
+
 lazy val data = project
   .in(file("lamp-data"))
   .configs(Cuda)
@@ -109,8 +127,9 @@ lazy val data = project
     name := "lamp-data",
     libraryDependencies ++= Seq(
       "com.outr" %% "scribe" % "2.7.3",
-      "com.lihaoyi" %% "ujson" % "1.2.0",
-      "org.scalatest" %% "scalatest" % "3.1.2" % "test"
+      "com.lihaoyi" %% "ujson" % "1.2.0"
+      // "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
+      // "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
@@ -304,5 +323,6 @@ lazy val root = project
     example_cifar100,
     example_timemachine,
     example_translation,
-    example_arxiv
+    example_arxiv,
+    e2etest
   )

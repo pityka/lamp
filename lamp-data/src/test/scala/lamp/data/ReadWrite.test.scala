@@ -10,10 +10,9 @@ import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 import java.io.File
 import lamp.CPU
-import lamp.autograd.AllocatedVariablePool
+import lamp.Scope
 
 class ReadWriteSuite extends AnyFunSuite {
-  implicit val pool = new AllocatedVariablePool
   test("to tensor") {
     val t = ATen.ones(Array(3, 3, 3), TensorOptions.dtypeFloat())
     val t2 = Reader
@@ -64,42 +63,47 @@ class ReadWriteSuite extends AnyFunSuite {
     )
   }
   test("checkpoint modules - float") {
-    val topt = TensorOptions.dtypeFloat()
-    val net = Sequential(Linear(5, 5, topt), Linear(5, 5, topt))
-    val file = File.createTempFile("prefix", "suffx")
-    file.delete
-    Writer.writeCheckpoint(file, net).unsafeRunSync()
-    val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt))
-    val loaded = Reader.loadFromFile(net2, file, CPU).unsafeRunSync().right.get
-    loaded.state.zip(net.state).foreach {
-      case ((loaded, _), (orig, _)) =>
-        val ndL = NDArray.tensorToFloatNDArray(loaded.value)
-        val ndO = NDArray.tensorToFloatNDArray(orig.value)
-        assert(ndL.toVec == ndO.toVec)
+    Scope.root { implicit scope =>
+      val topt = TensorOptions.dtypeFloat()
+      val net = Sequential(Linear(5, 5, topt), Linear(5, 5, topt))
+      val file = File.createTempFile("prefix", "suffx")
+      file.delete
+      Writer.writeCheckpoint(file, net).unsafeRunSync()
+      val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt))
+      val loaded =
+        Reader.loadFromFile(net2, file, CPU).unsafeRunSync().right.get
+      loaded.state.zip(net.state).foreach {
+        case ((loaded, _), (orig, _)) =>
+          val ndL = NDArray.tensorToFloatNDArray(loaded.value)
+          val ndO = NDArray.tensorToFloatNDArray(orig.value)
+          assert(ndL.toVec == ndO.toVec)
+      }
     }
-
   }
   test("checkpoint modules - mixed") {
-    val topt = TensorOptions.dtypeFloat()
-    val net = Sequential(Linear(5, 5, topt), Linear(5, 5, topt.toDouble))
-    val file = File.createTempFile("prefix", "suffx")
-    file.delete
-    Writer.writeCheckpoint(file, net).unsafeRunSync()
-    val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt.toDouble()))
-    val loaded = Reader.loadFromFile(net2, file, CPU).unsafeRunSync().right.get
-    loaded.state.zip(net.state).foreach {
-      case ((loaded, _), (orig, _)) =>
-        loaded.options.scalarTypeByte() match {
-          case 6 =>
-            val ndL = NDArray.tensorToFloatNDArray(loaded.value)
-            val ndO = NDArray.tensorToFloatNDArray(orig.value)
-            assert(ndL.toVec == ndO.toVec)
-          case 7 =>
-            val ndL = NDArray.tensorToNDArray(loaded.value)
-            val ndO = NDArray.tensorToNDArray(orig.value)
-            assert(ndL.toVec == ndO.toVec)
-        }
-    }
+    Scope.root { implicit scope =>
+      val topt = TensorOptions.dtypeFloat()
+      val net = Sequential(Linear(5, 5, topt), Linear(5, 5, topt.toDouble))
+      val file = File.createTempFile("prefix", "suffx")
+      file.delete
+      Writer.writeCheckpoint(file, net).unsafeRunSync()
+      val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt.toDouble()))
+      val loaded =
+        Reader.loadFromFile(net2, file, CPU).unsafeRunSync().right.get
+      loaded.state.zip(net.state).foreach {
+        case ((loaded, _), (orig, _)) =>
+          loaded.options.scalarTypeByte() match {
+            case 6 =>
+              val ndL = NDArray.tensorToFloatNDArray(loaded.value)
+              val ndO = NDArray.tensorToFloatNDArray(orig.value)
+              assert(ndL.toVec == ndO.toVec)
+            case 7 =>
+              val ndL = NDArray.tensorToNDArray(loaded.value)
+              val ndO = NDArray.tensorToNDArray(orig.value)
+              assert(ndL.toVec == ndO.toVec)
+          }
+      }
 
+    }
   }
 }

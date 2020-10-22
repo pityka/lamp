@@ -2,6 +2,7 @@ package lamp
 import lamp.autograd.Variable
 import aten.Tensor
 import aten.ATen
+import lamp.util.syntax
 import cats.effect.IO
 
 package object nn {
@@ -47,14 +48,14 @@ package object nn {
       gradients: Seq[Option[Tensor]],
       theta: Double
   ): Unit = {
-    val norm = math.sqrt(gradients.map {
+    val norm = math.sqrt((gradients.map {
       case Some(g) =>
         val tmp = ATen.pow_0(g, 2d)
         val d = ATen.sum_0(tmp).toMat.raw(0)
         tmp.release
         d
       case None => 0d
-    }.sum)
+    }: Seq[Double]).sum)
     if (norm > theta) {
       gradients.foreach {
         case None =>

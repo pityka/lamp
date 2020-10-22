@@ -1,15 +1,9 @@
-package lamp.autograd
+package lamp
 
 import aten.Tensor
 import org.saddle._
 import aten.ATen
 import aten.TensorOptions
-import lamp.CPU
-import lamp.FloatingPointPrecision
-import lamp.DoublePrecision
-import lamp.Device
-import lamp.CudaDevice
-import lamp.SinglePrecision
 
 object TensorHelpers {
   def unbroadcast(p: Tensor, desiredShape: List[Long]) = {

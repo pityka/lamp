@@ -43,7 +43,10 @@ case class CudaDevice(i: Int) extends Device {
     i >= 0 && i < Tensor.getNumGPUs,
     s"Device number is wrong. Got $i. Available gpus: ${Tensor.getNumGPUs}."
   )
-  def to(t: Tensor): Tensor = t.cuda
+  def to(t: Tensor): Tensor = {
+    val topt = t.options().cuda_index(i)
+    t.to(topt, true)
+  }
   def options(precision: FloatingPointPrecision): TensorOptions =
     precision.convertOption(TensorOptions.d.cuda_index(i))
 }

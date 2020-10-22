@@ -3,7 +3,7 @@ package lamp.tabular
 import org.saddle._
 import org.saddle.ops.BinOps._
 import aten.Tensor
-import lamp.autograd.TensorHelpers
+import lamp.TensorHelpers
 import cats.effect.Resource
 import cats.effect.IO
 
@@ -36,7 +36,7 @@ case class ECDF(x: Vec[Double], y: Vec[Double]) {
   def apply(t: Tensor): Resource[IO, Tensor] =
     Resource.make {
       IO {
-        import lamp.syntax
+        import lamp.util.syntax
         val v = t.toMat.col(0)
         val transformed = v.map(x => this(x))
         val t2 = TensorHelpers.fromVec(
@@ -51,7 +51,7 @@ case class ECDF(x: Vec[Double], y: Vec[Double]) {
 
 object ECDF {
   def apply(t: Tensor): ECDF = {
-    import lamp.syntax
+    import lamp.util.syntax
     val v = t.toMat.col(0)
     ECDF(v)
 

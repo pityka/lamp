@@ -5,23 +5,15 @@ import aten.TensorOptions
 import lamp.autograd.MaxPool2D
 import lamp.autograd.Variable
 import lamp.autograd.AvgPool2D
-import lamp.autograd.AllocatedVariablePool
-
-case class Peek(label: String) extends Module {
-  def state = Nil
-  def forward(x: Variable): Variable = {
-    scribe.info(s"PEEK - $label - ${x.shape}")
-    x
-  }
-
-}
+import lamp.Sc
+import lamp.Scope
 
 case class Residual[M1 <: Module, M2 <: Module](
     right: M1 with Module,
     left: Option[M2 with Module]
 ) extends Module {
   override def state = right.state ++ left.toList.flatMap(_.state)
-  def forward(x: Variable) = {
+  def forward[S: Sc](x: Variable) = {
     val r = right.forward(x)
     val l = left.map(_.forward(x)).getOrElse(x)
     (r + l)
@@ -46,7 +38,7 @@ object Residual {
       tOpt: TensorOptions,
       dropout: Double,
       stride: Int
-  )(implicit pool: AllocatedVariablePool) =
+  )(implicit pool: Scope) =
     sequence(
       Residual(
         right = Seq6(
@@ -59,7 +51,7 @@ object Residual {
             tOpt = tOpt
           ),
           BatchNorm2D(outChannels, tOpt = tOpt),
-          Fun(_.gelu),
+          Fun(implicit pool => _.gelu),
           Dropout(dropout, true),
           Conv2D(
             inChannels = outChannels,
@@ -88,7 +80,7 @@ object Residual {
               )
             )
       ),
-      Fun(_.gelu),
+      Fun(implicit pool => _.gelu),
       Dropout(dropout, true)
     )
 
@@ -100,7 +92,7 @@ object Cnn {
       numClasses: Int,
       dropout: Double,
       tOpt: TensorOptions
-  )(implicit pool: AllocatedVariablePool) =
+  )(implicit pool: Scope) =
     sequence(
       Conv2D(
         inChannels = 3,
@@ -139,16 +131,18 @@ object Cnn {
           stride = 1
         )
       ),
-      Fun(AvgPool2D(_, kernelSize = 8, padding = 0, stride = 1).value),
-      Fun(_.flattenLastDimensions(3)),
-      Fun(_.logSoftMax(dim = 1))
+      Fun(implicit pool =>
+        AvgPool2D(_, kernelSize = 8, padding = 0, stride = 1).value
+      ),
+      Fun(implicit pool => _.flattenLastDimensions(3)),
+      Fun(implicit pool => _.logSoftMax(dim = 1))
     )
 
   def lenet(
       numClasses: Int,
       dropOut: Double,
       tOpt: TensorOptions
-  )(implicit pool: AllocatedVariablePool) =
+  )(implicit pool: Scope) =
     Sequential(
       Conv2D(
         inChannels = 3,
@@ -158,9 +152,9 @@ object Cnn {
         tOpt = tOpt
       ),
       BatchNorm2D(6, tOpt),
-      Fun(_.gelu),
+      Fun(implicit pool => _.gelu),
       Dropout(dropOut, training = true),
-      Fun(
+      Fun(implicit pool =>
         MaxPool2D(_, kernelSize = 2, stride = 2, padding = 0, dilation = 1).value
       ),
       Conv2D(
@@ -171,21 +165,21 @@ object Cnn {
         tOpt = tOpt
       ),
       BatchNorm2D(16, tOpt),
-      Fun(_.gelu),
+      Fun(implicit pool => _.gelu),
       Dropout(dropOut, training = true),
-      Fun(
+      Fun(implicit pool =>
         MaxPool2D(_, kernelSize = 2, stride = 2, padding = 0, dilation = 1).value
       ),
-      Fun(_.flattenLastDimensions(3)),
+      Fun(implicit pool => _.flattenLastDimensions(3)),
       Linear(1024, 120, tOpt = tOpt),
       BatchNorm(120, tOpt),
-      Fun(_.gelu),
+      Fun(implicit pool => _.gelu),
       Dropout(dropOut, training = true),
       Linear(120, 84, tOpt = tOpt),
       BatchNorm(84, tOpt),
-      Fun(_.gelu),
+      Fun(implicit pool => _.gelu),
       Dropout(dropOut, training = true),
       Linear(84, numClasses, tOpt = tOpt),
-      Fun(_.logSoftMax(dim = 1))
+      Fun(implicit pool => _.logSoftMax(dim = 1))
     )
 }

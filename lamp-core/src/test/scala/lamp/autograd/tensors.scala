@@ -5,11 +5,13 @@ import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
 import aten.TensorOptions
 import lamp.nn.CudaTest
-import lamp.syntax
+import lamp.util.syntax
+import lamp.TensorHelpers
 import lamp.util.NDArray
+import lamp.Scope
 
 class TensorHelperSuite extends AnyFunSuite {
-  implicit val pool = new AllocatedVariablePool
+
   test("to/from cuda", CudaTest) {
     val eye = ATen.eye_1(3, 3, TensorOptions.d.cuda)
     val m = TensorHelpers.toMat(eye)
@@ -77,16 +79,18 @@ class TensorHelperSuite extends AnyFunSuite {
     )
   }
   test("normalized") {
-    val nd2x3x3 =
-      NDArray((0 until 18).toArray.map(_.toDouble), List(2, 3, 3))
-    val t = NDArray.tensorFromNDArray(nd2x3x3)
-    val t2 = t.normalized.allocated.unsafeRunSync()._1
-    val n2 = NDArray.tensorToNDArray(t2)
-    assert(
-      n2.toVec.roundTo(4) == Vec(-1d, -1d, -1d, -1d, -1d, -1d, -1d, -1d, -1d,
-        1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d)
-    )
-
+    Scope.leak { implicit scope =>
+      val nd2x3x3 =
+        NDArray((0 until 18).toArray.map(_.toDouble), List(2, 3, 3))
+      val t = NDArray.tensorFromNDArray(nd2x3x3)
+      val t2 = t.normalized
+      val n2 = NDArray.tensorToNDArray(t2)
+      assert(
+        n2.toVec.roundTo(4) == Vec(-1d, -1d, -1d, -1d, -1d, -1d, -1d, -1d, -1d,
+          1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d)
+      )
+      ()
+    }
   }
   test("zero_") {
     val t = ATen.eye_0(3, TensorOptions.dtypeDouble())
@@ -111,22 +115,22 @@ class TensorHelperSuite extends AnyFunSuite {
   ignore(" memory leak") {
     val m = mat.ones(3000, 3000)
     0 until 1000 foreach { _ =>
-      val t = TensorHelpers.fromMat(m)
-      val t2 = TensorHelpers.fromMat(m)
-      val t3 = TensorHelpers.fromMat(m)
-      val t4 =
-        Concatenate(
-          List(
-            const(t).releasable,
-            const(t2).releasable,
-            const(t3).releasable
-          ),
-          1
-        ).value
-      assert(t4.shape == List(3000, 9000))
-
-      t4.releaseAll
-
+      Scope.root { implicit scope =>
+        val t = TensorHelpers.fromMat(m)
+        val t2 = TensorHelpers.fromMat(m)
+        val t3 = TensorHelpers.fromMat(m)
+        val t4 =
+          Concatenate(
+            List(
+              const(t),
+              const(t2),
+              const(t3)
+            ),
+            1
+          ).value
+        assert(t4.shape == List(3000, 9000))
+        ()
+      }
     }
   }
 

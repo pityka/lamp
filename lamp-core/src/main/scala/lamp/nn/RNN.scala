@@ -5,7 +5,7 @@ import aten.ATen
 import scala.collection.mutable
 import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
-import lamp.autograd.AllocatedVariablePool
+import lamp.Sc
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * hidden dim)
@@ -25,14 +25,12 @@ case class RNN(
       (biasH, RNN.BiasH)
     )
 
-  private def initHidden(batchSize: Long) = {
-    param(ATen.zeros(Array(batchSize, hiddenSize), weightHh.options))(
-      weightHh.pool
-    ).releasable
+  private def initHidden[S: Sc](batchSize: Long) = {
+    param(ATen.zeros(Array(batchSize, hiddenSize), weightHh.options))
   }
 
-  def forward(a: (Variable, Option[Variable])) = forward1(a._1, a._2)
-  def forward1(x: Variable, state: Option[Variable]) = {
+  def forward[S: Sc](a: (Variable, Option[Variable])) = forward1(a._1, a._2)
+  def forward1[S: Sc](x: Variable, state: Option[Variable]) = {
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
     val outputs = mutable.ArrayBuffer[Variable]()
@@ -66,11 +64,11 @@ object RNN {
   case object WeightHh extends LeafTag
   case object BiasH extends LeafTag
 
-  def apply(
+  def apply[S: Sc](
       in: Int,
       hiddenSize: Int,
       tOpt: TensorOptions
-  )(implicit pool: AllocatedVariablePool): RNN =
+  ): RNN =
     RNN(
       weightXh = param(
         ATen.normal_3(
