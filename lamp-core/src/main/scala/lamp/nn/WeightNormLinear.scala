@@ -1,6 +1,7 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param, AllocatedVariablePool}
+import lamp.Sc
+import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
 
 case class WeightNormLinear(
@@ -14,7 +15,7 @@ case class WeightNormLinear(
     weightsG -> WeightNormLinear.WeightsG
   ) ++ bias.toList.map(b => (b, WeightNormLinear.Bias))
 
-  def forward(x: Variable): Variable = {
+  def forward[S: Sc](x: Variable): Variable = {
     val weights = lamp.autograd.WeightNorm(weightsV, weightsG, 0).value
     val v = x.mm(weights.t)
     bias.map(_ + v).getOrElse(v)
@@ -34,12 +35,12 @@ object WeightNormLinear {
   case object WeightsV extends LeafTag
   case object WeightsG extends LeafTag
   case object Bias extends LeafTag
-  def apply(
+  def apply[S: Sc](
       in: Int,
       out: Int,
       tOpt: TensorOptions,
       bias: Boolean = true
-  )(implicit pool: AllocatedVariablePool): WeightNormLinear =
+  ): WeightNormLinear =
     WeightNormLinear(
       weightsV = param(
         ATen.normal_3(0d, math.sqrt(2d / (in + out)), Array(out, in), tOpt)

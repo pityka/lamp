@@ -4,7 +4,8 @@ import lamp.autograd.Variable
 import aten.ATen
 import cats.effect.Resource
 import cats.effect.IO
-import lamp.syntax
+import lamp.util.syntax
+import lamp.Scope
 
 case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     module: M with GenericModule[I, Variable],
@@ -19,26 +20,28 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
   ): Resource[IO, (Double, Tensor, Long)] = {
     val release = (_: Double, outputCloned: Tensor, _: Long) =>
       IO(outputCloned.release)
-    Resource.make(IO {
-      val output = module.forward(samples)
-      val (loss, examples) = lossFunction(output, target)
-      val lossAsDouble = loss.value.toMat.raw(0)
-      val outputCloned = ATen.clone(output.value)
-      loss.releaseAll
-      (lossAsDouble, outputCloned, examples)
-    })(release.tupled)
+    Scope.inResource.flatMap { implicit scope =>
+      Resource.make(IO {
+        val output = module.forward(samples)
+        val (loss, examples) = lossFunction(output, target)
+        val lossAsDouble = loss.value.toMat.raw(0)
+        val outputCloned = ATen.clone(output.value)
+        (lossAsDouble, outputCloned, examples)
+      })(release.tupled)
+    }
   }
   def lossAndGradients(
       samples: I,
       target: Tensor
-  ): (Double, Seq[Option[Tensor]]) = {
-    val output = module.forward(samples)
-    val (loss, _) = lossFunction(output, target)
-    val lossAsDouble = loss.value.toMat.raw(0)
+  ): (Double, Seq[Option[Tensor]]) =
+    Scope.leak { implicit scope =>
+      val output = module.forward(samples)
+      val (loss, _) = lossFunction(output, target)
+      val lossAsDouble = loss.value.toMat.raw(0)
 
-    val gradients = module.gradients(loss)
-    (lossAsDouble, gradients)
-  }
+      val gradients = module.gradients(loss)
+      (lossAsDouble, gradients)
+    }
 
   def zipOptimizer(optimizerFactory: Seq[(Tensor, PTag)] => Optimizer) =
     ModelWithOptimizer(
@@ -53,6 +56,5 @@ case class ModelWithOptimizer[I, M <: GenericModule[I, Variable]](
 ) {
   def release() = {
     optimizer.release
-    model.module.state.foreach(_._1.value.release)
   }
 }

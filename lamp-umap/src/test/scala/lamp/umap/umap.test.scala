@@ -17,7 +17,7 @@ class UmapSuite extends AnyFunSuite {
       data,
       data,
       3,
-      lamp.knn.squaredEuclideanDistance _,
+      lamp.knn.SquaredEuclideanDistance,
       CPU,
       DoublePrecision,
       100

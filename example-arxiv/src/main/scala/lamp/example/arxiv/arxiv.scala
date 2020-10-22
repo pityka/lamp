@@ -6,6 +6,7 @@ import lamp.autograd._
 import lamp.nn._
 import lamp.data._
 import aten.ATen
+import lamp.util.syntax
 
 case class CliConfig(
     folder: String = "",
@@ -77,99 +78,101 @@ object Train extends App {
       val validL = mask(validIdx)
       val testL = mask(testIdx)
 
-      implicit val pool = new AllocatedVariablePool
-      val numClasses = 40
-      val classWeights = ATen.ones(Array(numClasses), device.options(precision))
+      Scope.root { implicit scope =>
+        val numClasses = 40
+        val classWeights =
+          ATen.ones(Array(numClasses), device.options(precision))
 
-      val model = SupervisedModel(
-        sequence(
-          // NGCN.ngcn(
-          //   in = 128,
-          //   middle = 128,
-          //   out = numClasses,
-          //   tOpt = device.options(precision),
-          //   dropout = 0.5,
-          //   K = 5,
-          //   r = 1
-          // ),
-          GCN.gcn(
-            in = 128,
-            out = 128,
-            tOpt = device.options(precision),
-            dropout = 0.5
-          ),
-          GCN.gcn(
-            in = 128,
-            out = 128,
-            tOpt = device.options(precision),
-            dropout = 0.5
-          ),
-          GCN.gcn(
-            in = 128,
-            out = numClasses,
-            tOpt = device.options(precision),
-            dropout = 0.5,
-            nonLinearity = false
-          ),
-          GenericFun[(Variable, Variable), Variable](_._1),
-          Fun(_.logSoftMax(1))
-        ),
-        LossFunctions.NLL(numClasses, classWeights, ignore = -100)
-      )
-
-      println(s"Number of parameters: ${model.module.learnableParameters}")
-
-      val makeTrainingBatch = () =>
-        GraphBatchStream.bigGraphModeFullBatch(
-          nodes = nodesT,
-          edges = edgesT,
-          targetPerNode = trainL
-        )
-      val makeValidationBatch = () =>
-        GraphBatchStream.bigGraphModeFullBatch(
-          nodes = nodesT,
-          edges = edgesT,
-          targetPerNode = validL
-        )
-
-      val trainedModel = IOLoops
-        .epochs(
-          model = model,
-          optimizerFactory = AdamW
-            .factory(
-              learningRate = simple(0.01),
-              weightDecay = simple(1e-4),
-              scheduler = LearningRateSchedule.decrement(40, 0.01)
+        val model = SupervisedModel(
+          sequence(
+            // NGCN.ngcn(
+            //   in = 128,
+            //   middle = 128,
+            //   out = numClasses,
+            //   tOpt = device.options(precision),
+            //   dropout = 0.5,
+            //   K = 5,
+            //   r = 1
+            // ),
+            GCN.gcn(
+              in = 128,
+              out = 128,
+              tOpt = device.options(precision),
+              dropout = 0.5
             ),
-          trainBatchesOverEpoch = makeTrainingBatch,
-          validationBatchesOverEpoch = Some(makeValidationBatch),
-          epochs = 500,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback = ValidationCallback.noop,
-          checkpointFile = None,
-          minimumCheckpointFile = None,
-          logger = Some(scribe.Logger("b"))
+            GCN.gcn(
+              in = 128,
+              out = 128,
+              tOpt = device.options(precision),
+              dropout = 0.5
+            ),
+            GCN.gcn(
+              in = 128,
+              out = numClasses,
+              tOpt = device.options(precision),
+              dropout = 0.5,
+              nonLinearity = false
+            ),
+            GenericFun[(Variable, Variable), Variable](_._1),
+            Fun(scope => variable => variable.logSoftMax(1)(scope))
+          ),
+          LossFunctions.NLL(numClasses, classWeights, ignore = -100)
         )
-        .unsafeRunSync()
 
-      val accuracy = {
-        val output =
-          trainedModel.module.asEval.forward((const(nodesT), const(edgesT)))
-        val prediction = {
-          val argm = ATen.argmax(output.value, 1, false)
-          val r =
-            TensorHelpers.toLongMat(argm).toVec.take(testIdx.toVec.toArray)
-          argm.release
-          r
-        }
+        println(s"Number of parameters: ${model.module.learnableParameters}")
 
-        val correct =
-          prediction.zipMap(testL.toLongVec.filter(_ != -100L))((a, b) =>
-            if (a == b) 1d else 0d
+        val makeTrainingBatch = () =>
+          GraphBatchStream.bigGraphModeFullBatch(
+            nodes = nodesT,
+            edges = edgesT,
+            targetPerNode = trainL
           )
-        correct.mean2
+        val makeValidationBatch = () =>
+          GraphBatchStream.bigGraphModeFullBatch(
+            nodes = nodesT,
+            edges = edgesT,
+            targetPerNode = validL
+          )
+
+        val trainedModel = IOLoops
+          .epochs(
+            model = model,
+            optimizerFactory = AdamW
+              .factory(
+                learningRate = simple(0.01),
+                weightDecay = simple(1e-4),
+                scheduler = LearningRateSchedule.decrement(40, 0.01)
+              ),
+            trainBatchesOverEpoch = makeTrainingBatch,
+            validationBatchesOverEpoch = Some(makeValidationBatch),
+            epochs = 500,
+            trainingCallback = TrainingCallback.noop,
+            validationCallback = ValidationCallback.noop,
+            checkpointFile = None,
+            minimumCheckpointFile = None,
+            logger = Some(scribe.Logger("b"))
+          )
+          .unsafeRunSync()
+
+        val accuracy = {
+          val output =
+            trainedModel.module.asEval.forward((const(nodesT), const(edgesT)))
+          val prediction = {
+            val argm = ATen.argmax(output.value, 1, false)
+            val r =
+              TensorHelpers.toLongMat(argm).toVec.take(testIdx.toVec.toArray)
+            argm.release
+            r
+          }
+
+          val correct =
+            prediction.zipMap(testL.toLongVec.filter(_ != -100L))((a, b) =>
+              if (a == b) 1d else 0d
+            )
+          correct.mean2
+        }
+        println("Test set accuracy: " + accuracy)
       }
-      println("Test set accuracy: " + accuracy)
 
     case _ =>
     // arguments are bad, error message will have been displayed

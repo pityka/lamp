@@ -1,7 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.{Variable, param}
-import lamp.autograd.AllocatedVariablePool
+import lamp.Sc
 import aten.ATen
 import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
@@ -21,7 +21,7 @@ case class SeqLinear(
       (bias, SeqLinear.Bias)
     )
 
-  override def forward(x: Variable) = {
+  override def forward[S: Sc](x: Variable) = {
     val timesteps = x.shape.head
     val outputs = (0 until timesteps.toInt).map { t =>
       val xt = x.select(0, t)
@@ -45,11 +45,11 @@ object SeqLinear {
   case object Weight extends LeafTag
   case object Bias extends LeafTag
 
-  def apply(
+  def apply[S: Sc](
       in: Int,
       out: Int,
       tOpt: TensorOptions
-  )(implicit pool: AllocatedVariablePool): SeqLinear =
+  ): SeqLinear =
     SeqLinear(
       weight = param(
         ATen.normal_3(

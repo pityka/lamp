@@ -6,25 +6,27 @@ import lamp.autograd.Reduction
 import lamp.autograd.Mean
 import aten.ATen
 import lamp.autograd.Sum
-import lamp.syntax
+import lamp.util.syntax
+import lamp.Sc
+import lamp.scoped
 
 trait LossFunction {
 
   /**
     * Returns the loss averaged over examples and the number of examples
     */
-  def apply(output: Variable, target: Tensor): (Variable, Long)
+  def apply[S: Sc](output: Variable, target: Tensor): (Variable, Long)
 }
 
 object LossFunctions {
   case object MSE extends LossFunction {
-    def apply(out: Variable, target: Tensor) = {
+    def apply[S: Sc](out: Variable, target: Tensor) = {
       val v = out.mseLoss(target)
       (v, out.shape(0))
     }
   }
   case object L1Loss extends LossFunction {
-    def apply(out: Variable, target: Tensor) = {
+    def apply[S: Sc](out: Variable, target: Tensor) = {
       val v = out.l1Loss(target)
       (v, out.shape(0))
     }
@@ -35,7 +37,7 @@ object LossFunctions {
       reduction: Reduction = Mean,
       ignore: Long = -100L
   ) extends LossFunction {
-    def apply(out: Variable, target: Tensor) = {
+    def apply[S: Sc](out: Variable, target: Tensor) = {
       val v = out.nllLoss(target, numClasses, classWeights, reduction, ignore)
       (v, out.shape(0))
     }
@@ -52,11 +54,11 @@ object LossFunctions {
       ignore: Long = -100L
   ) extends LossFunction {
     val ignoreScalar = Tensor.scalarLong(ignore, classWeights.options)
-    def apply(out: Variable, target: Tensor) = {
+    def apply[S: Sc](out: Variable, target: Tensor) = {
       val timeSteps = out.shape(0)
       val batches = out.shape(1)
       val lossesAtTimeSteps = (0 until timeSteps.toInt).map { t =>
-        val t1 = ATen.select(target, 0, t)
+        val t1 = scoped(ATen.select(target, 0, t))
         val ignored = ATen.eq_1(t1, ignoreScalar)
         val sumT = ATen.sum_0(ignored)
         val ignoredCount = sumT.toLongMat.raw(0)
@@ -71,7 +73,7 @@ object LossFunctions {
             reduction = Sum,
             ignore = ignore
           )
-        (v.releaseWith(t1), count)
+        (v, count)
       }
       val totalCount = lossesAtTimeSteps.map(_._2).sum
       val v =

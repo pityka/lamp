@@ -1,7 +1,7 @@
 package lamp.data
 
 import aten.Tensor
-import lamp.autograd._
+import lamp.TensorHelpers
 import aten.ATen
 import scribe.Logger
 

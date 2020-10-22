@@ -1,6 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.Variable
+import lamp.Sc
 
 case class ResidualModule[M <: Module](
     transform: M with Module
@@ -9,7 +10,7 @@ case class ResidualModule[M <: Module](
   def state: Seq[(Variable, PTag)] =
     transform.state
 
-  override def forward(
+  override def forward[S: Sc](
       x: Variable
   ): Variable = {
     val n = transform.forward(x)

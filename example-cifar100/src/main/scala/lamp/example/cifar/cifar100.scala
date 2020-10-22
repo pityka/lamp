@@ -4,7 +4,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import org.saddle._
-import lamp.autograd.TensorHelpers
+import lamp.TensorHelpers
+import lamp.util.syntax
 import aten.ATen
 import cats.effect.Resource
 import cats.effect.IO
@@ -19,7 +20,6 @@ import aten.Tensor
 import lamp.nn.AdamW
 import lamp.nn.simple
 import lamp.nn.LossFunctions
-import lamp.syntax
 import lamp.data.BufferedImageHelper
 import lamp.nn.LearningRateSchedule
 
@@ -27,7 +27,7 @@ import lamp.data.Reader
 import lamp.DoublePrecision
 import lamp.FloatingPointPrecision
 import lamp.SinglePrecision
-import lamp.autograd.AllocatedVariablePool
+import lamp.Scope
 
 object Cifar {
   def loadImageFile(
@@ -130,93 +130,94 @@ object Train extends App {
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) =>
       scribe.info(s"Config: $config")
-      implicit val pool = new AllocatedVariablePool
-      val device = if (config.cuda) CudaDevice(0) else CPU
-      val precision =
-        if (config.singlePrecision) SinglePrecision else DoublePrecision
-      val tensorOptions = device.options(precision)
-      val model = {
-        val numClasses = 100
-        val classWeights = ATen.ones(Array(numClasses), tensorOptions)
-        val net =
-          // if (config.network == "lenet")
-          //   Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
-          Cnn.resnet(numClasses, config.dropout, tensorOptions)
+      Scope.root { implicit scope =>
+        val device = if (config.cuda) CudaDevice(0) else CPU
+        val precision =
+          if (config.singlePrecision) SinglePrecision else DoublePrecision
+        val tensorOptions = device.options(precision)
+        val model = {
+          val numClasses = 100
+          val classWeights = ATen.ones(Array(numClasses), tensorOptions)
+          val net =
+            // if (config.network == "lenet")
+            //   Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
+            Cnn.resnet(numClasses, config.dropout, tensorOptions)
 
-        val loadedNet = config.checkpointLoad match {
-          case None => net
-          case Some(file) =>
-            Reader
-              .loadFromFile(net, new File(file), device)
-              .unsafeRunSync()
-              .right
-              .get
+          val loadedNet = config.checkpointLoad match {
+            case None => net
+            case Some(file) =>
+              Reader
+                .loadFromFile(net, new File(file), device)
+                .unsafeRunSync()
+                .right
+                .get
+          }
+          scribe.info("Learnable parametes: " + loadedNet.learnableParameters)
+          scribe.info("parameters: " + loadedNet.parameters.mkString("\n"))
+          SupervisedModel(
+            loadedNet,
+            LossFunctions.NLL(numClasses, classWeights)
+          )
         }
-        scribe.info("Learnable parametes: " + loadedNet.learnableParameters)
-        scribe.info("parameters: " + loadedNet.parameters.mkString("\n"))
-        SupervisedModel(
-          loadedNet,
-          LossFunctions.NLL(numClasses, classWeights)
+
+        val (trainTarget, trainFullbatch) =
+          Cifar.loadImageFile(new File(config.trainData), 50000, precision)
+        val (testTarget, testFullbatch) =
+          Cifar.loadImageFile(new File(config.testData), 10000, precision)
+        Resource
+          .fromAutoCloseable(IO {
+            scala.io.Source.fromFile(config.labels)
+          })
+          .use(src => IO { src.getLines.toVector })
+          .unsafeRunSync
+
+        scribe.info(
+          s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
         )
+        val rng = org.saddle.spire.random.rng.Cmwc5.apply
+        val trainEpochs = () =>
+          BatchStream.minibatchesFromFull(
+            config.trainBatchSize,
+            true,
+            trainFullbatch,
+            trainTarget,
+            device,
+            rng
+          )
+        val testEpochs = () =>
+          BatchStream.minibatchesFromFull(
+            config.testBatchSize,
+            true,
+            testFullbatch,
+            testTarget,
+            device,
+            rng
+          )
+
+        val optimizer = AdamW.factory(
+          weightDecay = simple(0.00),
+          learningRate = simple(config.learningRate),
+          scheduler = LearningRateSchedule.noop
+        )
+
+        IOLoops
+          .epochs(
+            model = model,
+            optimizerFactory = optimizer,
+            trainBatchesOverEpoch = trainEpochs,
+            validationBatchesOverEpoch = Some(testEpochs),
+            epochs = config.epochs,
+            trainingCallback = TrainingCallback.noop,
+            validationCallback =
+              ValidationCallback.logAccuracy(scribe.Logger("validation")),
+            checkpointFile = config.checkpointSave.map(s => new File(s)),
+            minimumCheckpointFile =
+              config.checkpointSave.map(s => new File(s + ".min")),
+            logger = Some(scribe.Logger("training"))
+          )
+          .unsafeRunSync()
+        ()
       }
-
-      val (trainTarget, trainFullbatch) =
-        Cifar.loadImageFile(new File(config.trainData), 50000, precision)
-      val (testTarget, testFullbatch) =
-        Cifar.loadImageFile(new File(config.testData), 10000, precision)
-      Resource
-        .fromAutoCloseable(IO {
-          scala.io.Source.fromFile(config.labels)
-        })
-        .use(src => IO { src.getLines.toVector })
-        .unsafeRunSync
-
-      scribe.info(
-        s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
-      )
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply
-      val trainEpochs = () =>
-        BatchStream.minibatchesFromFull(
-          config.trainBatchSize,
-          true,
-          trainFullbatch,
-          trainTarget,
-          device,
-          rng
-        )
-      val testEpochs = () =>
-        BatchStream.minibatchesFromFull(
-          config.testBatchSize,
-          true,
-          testFullbatch,
-          testTarget,
-          device,
-          rng
-        )
-
-      val optimizer = AdamW.factory(
-        weightDecay = simple(0.00),
-        learningRate = simple(config.learningRate),
-        scheduler = LearningRateSchedule.noop
-      )
-
-      IOLoops
-        .epochs(
-          model = model,
-          optimizerFactory = optimizer,
-          trainBatchesOverEpoch = trainEpochs,
-          validationBatchesOverEpoch = Some(testEpochs),
-          epochs = config.epochs,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback =
-            ValidationCallback.logAccuracy(scribe.Logger("validation")),
-          checkpointFile = config.checkpointSave.map(s => new File(s)),
-          minimumCheckpointFile =
-            config.checkpointSave.map(s => new File(s + ".min")),
-          logger = Some(scribe.Logger("training"))
-        )
-        .unsafeRunSync()
-
     case _ =>
     // arguments are bad, error message will have been displayed
   }

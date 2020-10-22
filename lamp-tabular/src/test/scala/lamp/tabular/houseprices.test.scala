@@ -4,8 +4,8 @@ import org.saddle._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
-import lamp.autograd._
-import lamp.syntax
+import lamp.TensorHelpers
+import lamp.util.syntax
 import aten.Tensor
 import cats.effect.IO
 import lamp.SinglePrecision
@@ -24,7 +24,6 @@ object TestTrain {
       device: Device,
       logFrequency: Int
   ) = {
-    implicit val pool = new AllocatedVariablePool
     val precision =
       if (features.options.isDouble) DoublePrecision
       else if (features.options.isFloat) SinglePrecision
@@ -44,6 +43,7 @@ object TestTrain {
     val ensembleFolds =
       AutoLoop
         .makeCVFolds(numInstances, k = 4, 2, rng)
+    println("BBB")
     AutoLoop.train(
       dataFullbatch = features,
       targetFullbatch = target,
@@ -51,11 +51,11 @@ object TestTrain {
       targetType = targetType,
       dataLayout = dataLayout,
       epochs = Seq(4, 8, 16),
-      weighDecays = Seq(0.0001, 0.001),
-      dropouts = Seq(0.05, 0.5, 0.95),
+      weighDecays = Seq(0.0001),
+      dropouts = Seq(0.05),
       hiddenSizes = Seq(32),
-      knnK = Seq(5, 25),
-      extratreesK = Seq(30),
+      knnK = Nil,
+      extratreesK = Nil,
       extratreesM = Seq(5),
       extratreesNMin = Seq(2),
       extratreeParallelism = 1,
@@ -74,13 +74,9 @@ object TestTrain {
 }
 
 class HousePricesSuite extends AnyFunSuite {
-  val cpuPool = new AllocatedVariablePool
-  val cudaPool = new AllocatedVariablePool
-  def selectPool(cuda: Boolean) = if (cuda) cudaPool else cpuPool
 
   test("regression") {
     import TestTrain.train
-    implicit val pool = new AllocatedVariablePool
     val device = if (Tensor.cudnnAvailable()) CudaDevice(0) else CPU
 
     val rawTrainingData0 = org.saddle.csv.CsvParser
@@ -146,6 +142,7 @@ class HousePricesSuite extends AnyFunSuite {
             .use {
               case ((testFeatures, metadata2)) =>
                 assert(metadata == metadata2)
+                println("AA")
                 for {
                   trained <- train(
                     trainingFeatures,

@@ -22,114 +22,201 @@ import lamp.nn.SlowTest
 import lamp.nn.LSTM
 import lamp.nn.SeqLinear
 import lamp.nn.statefulSequence
-import lamp.autograd.AllocatedVariablePool
+import lamp.Scope
 
 class TextGenerationSuite extends AnyFunSuite {
-  implicit val pool = new AllocatedVariablePool
   val asciiSilentCharsetDecoder = Charset
     .forName("UTF8")
     .newDecoder()
     .onMalformedInput(CodingErrorAction.REPLACE)
     .onUnmappableCharacter(CodingErrorAction.REPLACE)
   test("text learning - slow - LSTM", SlowTest) {
-    val trainText =
-      scala.io.Source
-        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
-          Codec.apply(asciiSilentCharsetDecoder)
+    Scope.root { implicit scope =>
+      val trainText =
+        scala.io.Source
+          .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
+            Codec.apply(asciiSilentCharsetDecoder)
+          )
+          .mkString
+
+      val (vocab, _) = Text.charsToIntegers(trainText)
+      val trainTokenized = Text.charsToIntegers(trainText, vocab)
+      val vocabularSize = vocab.size
+      val lookAhead = 5
+      val device = CPU
+      val precision = SinglePrecision
+      val tensorOptions = device.options(precision)
+      val model = {
+        val classWeights =
+          ATen.ones(Array(vocabularSize), tensorOptions)
+        val net =
+          statefulSequence(
+            Embedding(
+              classes = vocabularSize,
+              dimensions = 10,
+              tOpt = tensorOptions
+            ).lift,
+            LSTM(
+              in = 10,
+              hiddenSize = 256,
+              tOpt = tensorOptions
+            ),
+            Fun(implicit scope => _.relu).lift,
+            SeqLinear(in = 256, out = vocabularSize, tOpt = tensorOptions).lift,
+            Fun(implicit scope => _.logSoftMax(2)).lift
+          ).unlift
+
+        SupervisedModel(
+          net,
+          LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
-        .mkString
+      }
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply
+      val trainEpochs = () =>
+        Text
+          .minibatchesFromText(
+            trainTokenized,
+            64,
+            lookAhead,
+            device,
+            rng
+          )
 
-    val (vocab, _) = Text.charsToIntegers(trainText)
-    val trainTokenized = Text.charsToIntegers(trainText, vocab)
-    val vocabularSize = vocab.size
-    val lookAhead = 5
-    val device = CPU
-    val precision = SinglePrecision
-    val tensorOptions = device.options(precision)
-    val model = {
-      val classWeights =
-        ATen.ones(Array(vocabularSize), tensorOptions)
-      val net =
-        statefulSequence(
-          Embedding(
-            classes = vocabularSize,
-            dimensions = 10,
-            tOpt = tensorOptions
-          ).lift,
-          LSTM(
-            in = 10,
-            hiddenSize = 256,
-            tOpt = tensorOptions
-          ),
-          Fun(_.relu).lift,
-          SeqLinear(in = 256, out = vocabularSize, tOpt = tensorOptions).lift,
-          Fun(_.logSoftMax(2)).lift
-        ).unlift
-
-      SupervisedModel(
-        net,
-        LossFunctions.SequenceNLL(vocabularSize, classWeights)
+      val optimizer = AdamW.factory(
+        weightDecay = simple(0.00),
+        learningRate = simple(0.1),
+        scheduler = LearningRateSchedule.noop,
+        clip = Some(1d)
       )
+
+      val buffer = mutable.ArrayBuffer[Double]()
+      IOLoops
+        .epochs(
+          model = model,
+          optimizerFactory = optimizer,
+          trainBatchesOverEpoch = trainEpochs,
+          validationBatchesOverEpoch = None,
+          trainingCallback = new TrainingCallback {
+
+            override def apply(trainingLoss: Double, batchCount: Int): Unit = {
+              buffer.append(trainingLoss)
+            }
+
+          },
+          epochs = 15
+        )
+        .unsafeRunSync()
+
+      assert(buffer.last < 3d)
     }
-    val rng = org.saddle.spire.random.rng.Cmwc5.apply
-    val trainEpochs = () =>
-      Text
-        .minibatchesFromText(
-          trainTokenized,
-          64,
-          lookAhead,
-          device,
-          rng
-        )
-
-    val optimizer = AdamW.factory(
-      weightDecay = simple(0.00),
-      learningRate = simple(0.1),
-      scheduler = LearningRateSchedule.noop,
-      clip = Some(1d)
-    )
-
-    val buffer = mutable.ArrayBuffer[Double]()
-    IOLoops
-      .epochs(
-        model = model,
-        optimizerFactory = optimizer,
-        trainBatchesOverEpoch = trainEpochs,
-        validationBatchesOverEpoch = None,
-        trainingCallback = new TrainingCallback {
-
-          override def apply(trainingLoss: Double, batchCount: Int): Unit = {
-            buffer.append(trainingLoss)
-          }
-
-        },
-        epochs = 15
-      )
-      .unsafeRunSync()
-
-    assert(buffer.last < 3d)
-
   }
   test("text learning", SlowTest) {
-    val trainText =
-      scala.io.Source
-        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
-          Codec.apply(asciiSilentCharsetDecoder)
+    Scope.root { implicit scope =>
+      val trainText =
+        scala.io.Source
+          .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
+            Codec.apply(asciiSilentCharsetDecoder)
+          )
+          .mkString
+
+      val (vocab, _) = Text.charsToIntegers(trainText)
+      val trainTokenized = Text.charsToIntegers(trainText, vocab)
+      val vocabularSize = vocab.size
+
+      val hiddenSize = 1024
+      val lookAhead = 10
+      val device = CPU
+      val precision = SinglePrecision
+      val tensorOptions = device.options(precision)
+      val model = {
+        val classWeights =
+          ATen.ones(Array(vocabularSize), tensorOptions)
+        val net =
+          statefulSequence(
+            Embedding(
+              classes = vocabularSize,
+              dimensions = 10,
+              tOpt = tensorOptions
+            ).lift,
+            RNN(
+              in = 10,
+              hiddenSize = hiddenSize,
+              tOpt = tensorOptions
+            ),
+            Fun(implicit scope => _.relu).lift,
+            SeqLinear(
+              in = hiddenSize,
+              out = vocabularSize,
+              tOpt = tensorOptions
+            ).lift,
+            Fun(implicit scope => _.logSoftMax(2)).lift
+          ).unlift
+
+        SupervisedModel(
+          net,
+          LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
-        .mkString
+      }
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply
+      val trainEpochs = () =>
+        Text
+          .minibatchesFromText(
+            trainTokenized,
+            64,
+            lookAhead,
+            device,
+            rng
+          )
 
-    val (vocab, _) = Text.charsToIntegers(trainText)
-    val trainTokenized = Text.charsToIntegers(trainText, vocab)
-    val vocabularSize = vocab.size
+      val optimizer = AdamW.factory(
+        weightDecay = simple(0.00),
+        learningRate = simple(0.0001),
+        scheduler = LearningRateSchedule.noop,
+        clip = Some(1d)
+      )
 
-    val hiddenSize = 1024
-    val lookAhead = 10
-    val device = CPU
-    val precision = SinglePrecision
-    val tensorOptions = device.options(precision)
-    val model = {
-      val classWeights =
-        ATen.ones(Array(vocabularSize), tensorOptions)
+      val buffer = mutable.ArrayBuffer[Double]()
+      IOLoops
+        .epochs(
+          model = model,
+          optimizerFactory = optimizer,
+          trainBatchesOverEpoch = trainEpochs,
+          validationBatchesOverEpoch = None,
+          trainingCallback = new TrainingCallback {
+
+            override def apply(trainingLoss: Double, batchCount: Int): Unit = {
+              buffer.append(trainingLoss)
+            }
+
+          },
+          epochs = 1
+          // checkpointFile = Some(new java.io.File("checkpoint.test")),
+          // logger = Some(scribe.Logger("training"))
+        )
+        .unsafeRunSync()
+
+      assert(buffer.last < 8d)
+    }
+  }
+  test("text generation") {
+    Scope.root { implicit scope =>
+      val trainText =
+        scala.io.Source
+          .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
+            Codec.apply(asciiSilentCharsetDecoder)
+          )
+          .mkString
+
+      val (vocab, _) = Text.charsToIntegers(trainText)
+      val vocabularSize = vocab.size
+      val rvocab = vocab.map(_.swap)
+
+      val hiddenSize = 1024
+      val lookAhead = 10
+      val device = CPU
+      val precision = SinglePrecision
+      val tensorOptions = device.options(precision)
+
       val net =
         statefulSequence(
           Embedding(
@@ -142,177 +229,95 @@ class TextGenerationSuite extends AnyFunSuite {
             hiddenSize = hiddenSize,
             tOpt = tensorOptions
           ),
-          Fun(_.relu).lift,
+          Fun(implicit scope => _.relu).lift,
           SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
-          Fun(_.logSoftMax(2)).lift
-        ).unlift
+          Fun(implicit scope => _.logSoftMax(2)).lift
+        )
 
-      SupervisedModel(
-        net,
-        LossFunctions.SequenceNLL(vocabularSize, classWeights)
-      )
-    }
-    val rng = org.saddle.spire.random.rng.Cmwc5.apply
-    val trainEpochs = () =>
-      Text
-        .minibatchesFromText(
-          trainTokenized,
-          64,
-          lookAhead,
+      val channel = Resource.make(IO {
+        val is = getClass.getResourceAsStream("/checkpoint.test")
+        java.nio.channels.Channels.newChannel(is)
+      })(v => IO { v.close })
+      val trainedModel =
+        Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
+      val textVariable = Text
+        .sequencePrediction(
+          List("time machine").map(t =>
+            Text.charsToIntegers(t, vocab).map(_.toLong)
+          ),
           device,
-          rng
+          trainedModel,
+          lookAhead
         )
+      val text = Text.convertIntegersToText(textVariable, rvocab)
 
-    val optimizer = AdamW.factory(
-      weightDecay = simple(0.00),
-      learningRate = simple(0.0001),
-      scheduler = LearningRateSchedule.noop,
-      clip = Some(1d)
-    )
-
-    val buffer = mutable.ArrayBuffer[Double]()
-    IOLoops
-      .epochs(
-        model = model,
-        optimizerFactory = optimizer,
-        trainBatchesOverEpoch = trainEpochs,
-        validationBatchesOverEpoch = None,
-        trainingCallback = new TrainingCallback {
-
-          override def apply(trainingLoss: Double, batchCount: Int): Unit = {
-            buffer.append(trainingLoss)
-          }
-
-        },
-        epochs = 1
-        // checkpointFile = Some(new java.io.File("checkpoint.test")),
-        // logger = Some(scribe.Logger("training"))
-      )
-      .unsafeRunSync()
-
-    assert(buffer.last < 8d)
-
-  }
-  test("text generation") {
-    val trainText =
-      scala.io.Source
-        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
-          Codec.apply(asciiSilentCharsetDecoder)
-        )
-        .mkString
-
-    val (vocab, _) = Text.charsToIntegers(trainText)
-    val vocabularSize = vocab.size
-    val rvocab = vocab.map(_.swap)
-
-    val hiddenSize = 1024
-    val lookAhead = 10
-    val device = CPU
-    val precision = SinglePrecision
-    val tensorOptions = device.options(precision)
-
-    val net =
-      statefulSequence(
-        Embedding(
-          classes = vocabularSize,
-          dimensions = 10,
-          tOpt = tensorOptions
-        ).lift,
-        RNN(
-          in = 10,
-          hiddenSize = hiddenSize,
-          tOpt = tensorOptions
-        ),
-        Fun(_.relu).lift,
-        SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
-        Fun(_.logSoftMax(2)).lift
-      )
-
-    val channel = Resource.make(IO {
-      val is = getClass.getResourceAsStream("/checkpoint.test")
-      java.nio.channels.Channels.newChannel(is)
-    })(v => IO { v.close })
-    val trainedModel =
-      Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
-    val text = Text
-      .sequencePrediction(
-        List("time machine").map(t =>
-          Text.charsToIntegers(t, vocab).map(_.toLong)
-        ),
-        device,
-        trainedModel,
-        lookAhead
-      )
-      .use { variable =>
-        IO { Text.convertIntegersToText(variable.value, rvocab) }
-      }
-      .unsafeRunSync()
-
-    assert(text == Vector(" the the t"))
+      assert(text == Vector(" the the t"))
+    }
   }
   test("text generation - beam") {
-    val trainText =
-      scala.io.Source
-        .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
-          Codec.apply(asciiSilentCharsetDecoder)
-        )
-        .mkString
-
-    val (vocab, _) = Text.charsToIntegers(trainText)
-    val vocabularSize = vocab.size
-    val rvocab = vocab.map(_.swap)
-
-    val hiddenSize = 1024
-    val lookAhead = 10
-    val device = CPU
-    val precision = SinglePrecision
-    val tensorOptions = device.options(precision)
-
-    val net =
-      statefulSequence(
-        Embedding(
-          classes = vocabularSize,
-          dimensions = 10,
-          tOpt = tensorOptions
-        ).lift,
-        RNN(
-          in = 10,
-          hiddenSize = hiddenSize,
-          tOpt = tensorOptions
-        ),
-        Fun(_.relu).lift,
-        SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
-        Fun(_.logSoftMax(2)).lift
-      )
-
-    val channel = Resource.make(IO {
-      val is = getClass.getResourceAsStream("/checkpoint.test")
-      java.nio.channels.Channels.newChannel(is)
-    })(v => IO { v.close })
-    val trainedModel =
-      Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
-    val text = Text
-      .sequencePredictionBeam(
-        List("time machine")
-          .map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
-          .head,
-        device,
-        trainedModel,
-        lookAhead,
-        0,
-        1
-      )
-      .use { variables =>
-        IO {
-          variables.map(v =>
-            (Text.convertIntegersToText(v._1.value, rvocab).mkString, v._2)
+    Scope.root { implicit scope =>
+      val trainText =
+        scala.io.Source
+          .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
+            Codec.apply(asciiSilentCharsetDecoder)
           )
-        }
-      }
-      .unsafeRunSync()
+          .mkString
 
-    assert(
-      text.map(_._1) == List("e theeeeeee", "ed and thee", "ed and and ")
-    )
+      val (vocab, _) = Text.charsToIntegers(trainText)
+      val vocabularSize = vocab.size
+      val rvocab = vocab.map(_.swap)
+
+      val hiddenSize = 1024
+      val lookAhead = 10
+      val device = CPU
+      val precision = SinglePrecision
+      val tensorOptions = device.options(precision)
+
+      val net =
+        statefulSequence(
+          Embedding(
+            classes = vocabularSize,
+            dimensions = 10,
+            tOpt = tensorOptions
+          ).lift,
+          RNN(
+            in = 10,
+            hiddenSize = hiddenSize,
+            tOpt = tensorOptions
+          ),
+          Fun(implicit scope => _.relu).lift,
+          SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
+          Fun(implicit scope => _.logSoftMax(2)).lift
+        )
+
+      val channel = Resource.make(IO {
+        val is = getClass.getResourceAsStream("/checkpoint.test")
+        java.nio.channels.Channels.newChannel(is)
+      })(v => IO { v.close })
+      val trainedModel =
+        Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
+      val textVariables = Text
+        .sequencePredictionBeam(
+          List("time machine")
+            .map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
+            .head,
+          device,
+          trainedModel,
+          lookAhead,
+          0,
+          1
+        )
+
+      val text = textVariables.map(v =>
+        (
+          Text.convertIntegersToText(v._1, rvocab).mkString,
+          v._2
+        )
+      )
+
+      assert(
+        text.map(_._1) == List("e theeeeeee", "ed and thee", "ed and and ")
+      )
+    }
   }
 }

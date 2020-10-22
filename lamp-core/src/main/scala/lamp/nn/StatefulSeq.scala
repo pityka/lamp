@@ -1,5 +1,7 @@
 package lamp.nn
 
+import lamp.Sc
+
 object statefulSequence {
   def apply[T1, T2, T3, S1, S2, M1 <: StatefulModule[T1, T2, S1], M2 <: StatefulModule[
     T2,
@@ -100,8 +102,8 @@ case class StatefulSeq2[T1, T2, T3, S1, S2, M1 <: StatefulModule[T1, T2, S1], M2
     m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) }
 
-  def forward(x: (T1, (S1, S2))) = forward1(x._1, x._2)
-  def forward1(x: T1, st: (S1, S2)) = {
+  def forward[S: Sc](x: (T1, (S1, S2))) = forward1(x._1, x._2)
+  def forward1[S: Sc](x: T1, st: (S1, S2)) = {
     val (x1, t1) = m1.forward((x, st._1))
     val (x2, t2) = m2.forward((x1, st._2))
     (x2, (t1, t2))
@@ -178,8 +180,8 @@ case class StatefulSeq3[T1, T2, T3, T4, S1, S2, S3, M1 <: StatefulModule[
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) }
 
-  def forward(x: (T1, (S1, S2, S3))) = forward1(x._1, x._2)
-  def forward1(x: T1, st: (S1, S2, S3)) = {
+  def forward[S: Sc](x: (T1, (S1, S2, S3))) = forward1(x._1, x._2)
+  def forward1[S: Sc](x: T1, st: (S1, S2, S3)) = {
     val (x1, t1) = m1.forward((x, st._1))
     val (x2, t2) = m2.forward((x1, st._2))
     val (x3, t3) = m3.forward((x2, st._3))
@@ -299,8 +301,8 @@ case class StatefulSeq4[
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) } ++
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) }
 
-  def forward(x: (T1, (S1, S2, S3, S4))) = forward1(x._1, x._2)
-  def forward1(x: T1, st: (S1, S2, S3, S4)) = {
+  def forward[S: Sc](x: (T1, (S1, S2, S3, S4))) = forward1(x._1, x._2)
+  def forward1[S: Sc](x: T1, st: (S1, S2, S3, S4)) = {
     val (x1, t1) = m1.forward((x, st._1))
     val (x2, t2) = m2.forward((x1, st._2))
     val (x3, t3) = m3.forward((x2, st._3))
@@ -482,8 +484,8 @@ case class StatefulSeq5[
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) } ++
       m5.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 4)) }
 
-  def forward(x: (T1, (S1, S2, S3, S4, S5))) = forward1(x._1, x._2)
-  def forward1(x: T1, st: (S1, S2, S3, S4, S5)) = {
+  def forward[S: Sc](x: (T1, (S1, S2, S3, S4, S5))) = forward1(x._1, x._2)
+  def forward1[S: Sc](x: T1, st: (S1, S2, S3, S4, S5)) = {
     val (x1, t1) = m1.forward((x, st._1))
     val (x2, t2) = m2.forward((x1, st._2))
     val (x3, t3) = m3.forward((x2, st._3))

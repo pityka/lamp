@@ -224,10 +224,7 @@ object Reader {
               device
             )
             .right
-            .map { tensors =>
-              oldTensors.foreach(_.release)
-              module.load(tensors)
-            }
+            .map { tensors => module.load(tensors) }
         }
       }
 

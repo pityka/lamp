@@ -3,6 +3,7 @@ package lamp.nn
 import lamp.autograd._
 import aten.ATen
 import aten.TensorOptions
+import lamp.Sc
 
 case class Passthrough[M <: Module](
     m: M with Module
@@ -14,7 +15,7 @@ case class Passthrough[M <: Module](
   def state: Seq[(Variable, PTag)] =
     m.state
 
-  override def forward(
+  override def forward[S: Sc](
       x: (Variable, Variable)
   ): (Variable, Variable) = {
     val (a, b) = x
@@ -47,7 +48,7 @@ case class GCN[M <: Module](
   def state: Seq[(Variable, PTag)] =
     transform.state
 
-  override def forward(
+  override def forward[S: Sc](
       x: (Variable, Variable)
   ): (Variable, Variable) = {
     val (nodeFeatures, edgeList) = x
@@ -73,7 +74,7 @@ case class NGCN[M <: Module](
     (weightFc -> NGCN.Weights) +:
       transforms.flatMap(_.state)
 
-  override def forward(
+  override def forward[S: Sc](
       x: (Variable, Variable)
   ): (Variable, Variable) = {
     val (nodeFeatures, edgeList) = x
@@ -127,7 +128,7 @@ object NGCN {
     )
   }
 
-  def ngcn(
+  def ngcn[S: Sc](
       in: Int,
       middle: Int,
       out: Int,
@@ -137,7 +138,7 @@ object NGCN {
       K: Int,
       r: Int,
       includeZeroOrder: Boolean = true
-  )(implicit pool: AllocatedVariablePool) = {
+  ) = {
 
     def makeModule = ResidualModule(
       EitherModule(
@@ -146,7 +147,7 @@ object NGCN {
             sequence(
               Linear(in = in, out = middle, tOpt = tOpt, bias = false),
               BatchNorm(features = middle, tOpt = tOpt),
-              Fun(_.relu),
+              Fun(scope => input => input.relu(scope)),
               Dropout(dropout, training = true)
             )
           )
@@ -173,7 +174,7 @@ object NGCN {
 
 object GCN {
 
-  def precomputeSparseAdjacency(
+  def precomputeSparseAdjacency[S: Sc](
       valueOpt: TensorOptions,
       edgeList: Variable,
       numNodes: Long
@@ -208,7 +209,7 @@ object GCN {
       result1.release
       result2.release
       result3.release
-      const(viewed)(edgeList.pool).releasable.pow(-0.5)
+      const(viewed).pow(-0.5)
     }
 
     val a = {
@@ -251,7 +252,7 @@ object GCN {
       ATen.add_out(sp1, sp1, ident, 1d)
 
       ident.release
-      const(sp1)(edgeList.pool).releasable
+      const(sp1)
     }
 
     (degrees, a)
@@ -269,7 +270,10 @@ object GCN {
     * @param edgeList N x 2 long tensor the edges in A (asymmetric, no diagonal)
     * @return N x D aggregated features
     */
-  def gcnAggregation(nodeFeatures: Variable, edgeList: Variable): Variable = {
+  def gcnAggregation[S: Sc](
+      nodeFeatures: Variable,
+      edgeList: Variable
+  ): Variable = {
     val (degrees, a) = precomputeSparseAdjacency(
       nodeFeatures.options,
       edgeList,
@@ -277,7 +281,7 @@ object GCN {
     )
     gcnAggregation(nodeFeatures, degrees, a)
   }
-  def gcnAggregation(
+  def gcnAggregation[S: Sc](
       nodeFeatures: Variable,
       degrees: Variable,
       a: Variable
@@ -298,13 +302,13 @@ object GCN {
     )
   }
 
-  def gcn(
+  def gcn[S: Sc](
       in: Int,
       out: Int,
       tOpt: TensorOptions,
       dropout: Double = 0d,
       nonLinearity: Boolean = true
-  )(implicit pool: AllocatedVariablePool) =
+  ) =
     GCN(
       ResidualModule(
         EitherModule(
@@ -313,7 +317,7 @@ object GCN {
               sequence(
                 Linear(in = in, out = out, tOpt = tOpt, bias = false),
                 BatchNorm(features = out, tOpt = tOpt),
-                Fun(_.relu),
+                Fun(scope => input => input.relu(scope)),
                 Dropout(dropout, training = true)
               )
             )

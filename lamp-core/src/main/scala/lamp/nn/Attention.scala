@@ -2,6 +2,7 @@ package lamp.nn
 
 import lamp.autograd.Variable
 import lamp.autograd.ConcatenateAddNewDim
+import lamp.Sc
 
 object Attention {
 
@@ -12,7 +13,7 @@ object Attention {
     * @param fill
     * @return batch x seq where (seq,batch,:) is set to fill if tokens(seq,batch)== maskedToken
     */
-  def sequenceMask(
+  def sequenceMask[S: Sc](
       tokens: Variable,
       maskable: Variable,
       maskedToken: Long,
@@ -33,7 +34,7 @@ object Attention {
     * @param key num keys x batch x d
     * @return  batch x d
     */
-  def dotProductAttention(
+  def dotProductAttention[S: Sc](
       query: Variable,
       keyvalue: Variable,
       tokens: Variable,
@@ -68,7 +69,7 @@ object Attention {
     output.view(List(batch.toInt, -1))
   }
 
-  def forward[T, M <: StatefulModule[Variable, Variable, T]](
+  def forward[T, M <: StatefulModule[Variable, Variable, T], S: Sc](
       decoder: M with StatefulModule[Variable, Variable, T],
       x: Variable,
       keyValue: Variable,
@@ -115,11 +116,11 @@ case class AttentionDecoder[T, M <: StatefulModule[Variable, Variable, T], M0 <:
   override def state: Seq[(Variable, PTag)] =
     decoder.state ++ embedding.state
 
-  def forward(x: (Variable, T)) = {
+  def forward[S: Sc](x: (Variable, T)) = {
     val (input, state) = x
     forward1(input, state)
   }
-  def forward1(x: Variable, state: T) =
+  def forward1[S: Sc](x: Variable, state: T) =
     Attention.forward(
       decoder,
       embedding.forward(x),

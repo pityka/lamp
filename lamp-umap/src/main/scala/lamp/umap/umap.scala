@@ -1,6 +1,7 @@
 package lamp.umap
 
 import lamp._
+import lamp.util.syntax
 import org.saddle._
 import org.saddle.linalg._
 import org.saddle.macros.BinOps._
@@ -146,7 +147,7 @@ object Umap {
         index3: Variable,
         index4: Variable,
         b: Variable
-    ) = {
+    )(implicit scope: Scope) = {
 
       val locations_1 = locations.indexSelect(0, index1)
       val locations_2 = locations.indexSelect(0, index2)
@@ -196,80 +197,76 @@ object Umap {
       (ri, rj)
     }
 
-    implicit val pool = new AllocatedVariablePool
-    val locations = param(
-      TensorHelpers.fromMat(
-        Mat(total, numDim, array.randDouble(total * numDim, rng)),
-        device,
-        precision
+    Scope.leak { implicit scope =>
+      val locations = param(
+        TensorHelpers.fromMat(
+          Mat(total, numDim, array.randDouble(total * numDim, rng)),
+          device,
+          precision
+        )
       )
-    )
-    val index1 = const(
-      indexIT
-    )
-    val index2 = {
-      val indexJ = edgeWeights.col(1).map(_.toLong)
-      const(
-        TensorHelpers.fromLongVec(indexJ, device)
+      val index1 = const(
+        indexIT
       )
-    }
-
-    val b = const(
-      TensorHelpers.fromVec(edgeWeights.col(2), device, precision)
-    )
-
-    val optimizer = AdamW.factory(
-      weightDecay = simple(0.0),
-      learningRate = simple(lr),
-      clip = Some(1d)
-    )(List(locations.value -> NoTag))
-
-    var i = 0
-    var lastLoss = 0d
-    while (i < iterations) {
-
-      val (index3T, index4T) = {
-        var (index3, index4) = sampleRepulsivePairsT(negativeSampleSize)
-        val i3 = const(
-          index3
-        ).releasable
-        val i4 = const(
-          index4
-        ).releasable
-        (i3, i4)
+      val index2 = {
+        val indexJ = edgeWeights.col(1).map(_.toLong)
+        const(
+          TensorHelpers.fromLongVec(indexJ, device)
+        )
       }
 
-      val lossV = loss(
-        locations = locations,
-        index1 = index1,
-        index2 = index2,
-        index3 = index3T,
-        index4 = index4T,
-        b = b
+      val b = const(
+        TensorHelpers.fromVec(edgeWeights.col(2), device, precision)
       )
-      val lossAsDouble = lossV.value.toMat.raw(0)
-      lastLoss = lossAsDouble
-      logger.foreach(_.info(s"loss in epoch: ${(i, lossAsDouble)}"))
 
-      val gradients = {
-        locations.zeroGrad()
-        lossV.backprop()
-        val g = locations.partialDerivative
-        lossV.releaseAll
-        g
+      val optimizer = AdamW.factory(
+        weightDecay = simple(0.0),
+        learningRate = simple(lr),
+        clip = Some(1d)
+      )(List(locations.value -> NoTag))
+
+      var i = 0
+      var lastLoss = 0d
+      while (i < iterations) {
+        Scope { implicit scope =>
+          val (index3T, index4T) = {
+            var (index3, index4) = sampleRepulsivePairsT(negativeSampleSize)
+            val i3 = const(
+              index3
+            )
+            val i4 = const(
+              index4
+            )
+            (i3, i4)
+          }
+
+          val lossV = loss(
+            locations = locations,
+            index1 = index1,
+            index2 = index2,
+            index3 = index3T,
+            index4 = index4T,
+            b = b
+          )
+          val lossAsDouble = lossV.value.toMat.raw(0)
+          lastLoss = lossAsDouble
+          logger.foreach(_.info(s"loss in epoch: ${(i, lossAsDouble)}"))
+
+          val gradients = {
+            locations.zeroGrad()
+            lossV.backprop()
+            val g = locations.partialDerivative
+            g
+          }
+          optimizer.step(List(gradients))
+        }
+        i += 1
       }
-      optimizer.step(List(gradients))
-      i += 1
-    }
-    pool.releaseAll()
-    index1.value.release()
-    index2.value.release()
-    b.value.release()
-    optimizer.release()
+      optimizer.release()
 
-    val jLoc = locations.toMat
-    locations.value.release
-    (jLoc, lastLoss)
+      val jLoc = locations.toMat
+      (jLoc, lastLoss)
+    }
 
   }
 
@@ -341,7 +338,7 @@ object Umap {
       data,
       data,
       k,
-      lamp.knn.squaredEuclideanDistance _,
+      lamp.knn.SquaredEuclideanDistance,
       device,
       precision,
       knnMinibatchSize

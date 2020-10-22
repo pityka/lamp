@@ -2,69 +2,81 @@ package lamp
 
 import org.saddle._
 import org.saddle.macros.BinOps._
-import lamp.autograd._
-import aten.Tensor
-import aten.ATen
 
 package object knn {
 
-  def squaredEuclideanDistance(t1: Tensor, t2: Tensor): Tensor = {
-    withPool { implicit pool =>
-      val v1 = t1.asVariable
-      val v2 = t2.asVariable
+  trait DistanceFunction {
+    def apply(a: STen, b: STen)(implicit scope: Scope): STen
+  }
+
+  object SquaredEuclideanDistance extends DistanceFunction {
+    def apply(a: STen, b: STen)(implicit scope: Scope): STen =
+      squaredEuclideanDistance(a, b)
+  }
+  object JaccardDistance extends DistanceFunction {
+    def apply(a: STen, b: STen)(implicit scope: Scope): STen =
+      jaccardDistance(a, b)
+  }
+
+  def squaredEuclideanDistance(v1: STen, v2: STen)(
+      implicit scope: Scope
+  ): STen = {
+    Scope { implicit scope =>
       val outer = v1.mm(v2.t)
       val n1 = (v1 * v1).rowSum
       val n2 = (v2 * v2).rowSum
-      (n1 + n2.t - outer * 2).keep.value
+      (n1 + n2.t - outer * 2)
     }
   }
 
-  def jaccardDistance(t1: Tensor, t2: Tensor): Tensor = {
-    withPool { implicit pool =>
-      val v1 = t1.asVariable
-      val v2 = t2.asVariable
+  def jaccardDistance(v1: STen, v2: STen)(
+      implicit scope: Scope
+  ): STen = {
+    Scope { implicit scope =>
       val outer = v1.mm(v2.t)
       val n1 = v1.rowSum
       val n2 = v2.rowSum
       val denom = n1 + n2.t - outer
       val sim = outer / denom
-      val one = const(1d, v1.options)(v1.pool)
-      (one - sim).keep.value
+      val one = STen.ones(List(1), sim.options)
+      (one - sim)
     }
   }
 
   def knn(
-      d: Tensor,
-      query: Tensor,
+      d: STen,
+      query: STen,
       k: Int,
-      distanceMatrix: (Tensor, Tensor) => Tensor
-  ) = {
-    val distance = distanceMatrix(query, d)
-    val (topk1, topkindices) = ATen.topk(distance, k, 1, false, false)
-    topk1.release
-    distance.release
-    topkindices
+      distanceMatrix: DistanceFunction
+  )(implicit scope: Scope) = {
+    Scope { implicit scope =>
+      val distance =
+        distanceMatrix(query, d)
+      val (_, topkindices) = distance.topk(k, 1, false, false)
+      topkindices
+    }
   }
 
   def knnMinibatched(
-      d: Tensor,
-      query: Tensor,
+      d: STen,
+      query: STen,
       k: Int,
-      distanceMatrix: (Tensor, Tensor) => Tensor,
+      distanceMatrix: DistanceFunction,
       minibatchSize: Int
-  ) = {
-    val rows = query.sizes.apply(0)
-    val slices = ((0L until rows) grouped minibatchSize map { slice =>
-      val first = slice.head
-      val last = slice.last
-      val querySlice = ATen.slice(query, 0, first, last + 1, 1)
-      val indices = knn(d, querySlice, k, distanceMatrix)
-      querySlice.release
-      indices
-    }).toArray
-    val cat = ATen.cat(slices, 0)
-    slices.foreach(_.release)
-    cat
+  )(implicit scope: Scope) = {
+    Scope { implicit scope =>
+      val rows = query.shape.apply(0)
+      val slices = ((0L until rows) grouped minibatchSize map { slice =>
+        Scope { implicit scope =>
+          val first = slice.head
+          val last = slice.last
+          val querySlice = query.slice(0, first, last + 1, 1)
+          val indices = knn(d, querySlice, k, distanceMatrix)
+          indices
+        }
+      }).toList
+      STen.cat(slices, 0)
+    }
   }
 
   def regression(values: Vec[Double], indices: Mat[Int]): Vec[Double] =
@@ -87,32 +99,31 @@ package object knn {
       features: Mat[Double],
       query: Mat[Double],
       k: Int,
-      distance: (Tensor, Tensor) => Tensor,
+      distance: DistanceFunction,
       device: Device,
       precision: FloatingPointPrecision,
       minibatchSize: Int
   ): Mat[Int] = {
-    val featuresOnDevice = TensorHelpers.fromMat(features, device, precision)
-    val queryOnDevice = TensorHelpers.fromMat(query, device, precision)
-    val indices = knnMinibatched(
-      featuresOnDevice,
-      queryOnDevice,
-      k,
-      distance,
-      minibatchSize
-    )
-    val indicesJvm = TensorHelpers.toLongMat(indices).map(_.toInt)
-    featuresOnDevice.release
-    queryOnDevice.release
-    indices.release
-    indicesJvm
+    Scope.leak { implicit scope =>
+      val featuresOnDevice = STen.fromMat(features, device, precision)
+      val queryOnDevice = STen.fromMat(query, device, precision)
+      val indices = knnMinibatched(
+        featuresOnDevice,
+        queryOnDevice,
+        k,
+        distance,
+        minibatchSize
+      )
+      val indicesJvm = indices.toLongMat.map(_.toInt)
+      indicesJvm
+    }
   }
   def knnClassification(
       features: Mat[Double],
       values: Vec[Int],
       query: Mat[Double],
       k: Int,
-      distance: (Tensor, Tensor) => Tensor,
+      distance: DistanceFunction,
       device: Device,
       precision: FloatingPointPrecision,
       minibatchSize: Int,
@@ -129,7 +140,7 @@ package object knn {
       values: Vec[Double],
       query: Mat[Double],
       k: Int,
-      distance: (Tensor, Tensor) => Tensor = squaredEuclideanDistance _,
+      distance: DistanceFunction,
       device: Device = CPU,
       precision: FloatingPointPrecision = DoublePrecision,
       minibatchSize: Int = Int.MaxValue

@@ -1,12 +1,7 @@
 package lamp.nn
 
-import lamp.autograd.{
-  Variable,
-  param,
-  Conv1D => Conv1dOp,
-  const,
-  AllocatedVariablePool
-}
+import lamp.autograd.{Variable, param, Conv1D => Conv1dOp, const}
+import lamp.Sc
 import aten.{ATen, TensorOptions}
 
 case class Conv1D(
@@ -23,7 +18,7 @@ case class Conv1D(
     bias -> Conv1D.Bias
   )
 
-  def forward(x: Variable): Variable =
+  def forward[S: Sc](x: Variable): Variable =
     Conv1dOp(x, weights, bias, stride, padding, dilation, groups).value
 
 }
@@ -40,7 +35,7 @@ object Conv1D {
   )
   case object Weights extends LeafTag
   case object Bias extends LeafTag
-  def apply(
+  def apply[S: Sc](
       inChannels: Long,
       outChannels: Long,
       kernelSize: Long,
@@ -50,7 +45,7 @@ object Conv1D {
       padding: Long = 0,
       dilation: Long = 1,
       groups: Long = 1
-  )(implicit pool: AllocatedVariablePool): Conv1D = {
+  ): Conv1D = {
     val weightVar = param(
       ATen.normal_3(
         0d,

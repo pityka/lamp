@@ -1,6 +1,7 @@
 package lamp.nn
 import lamp.autograd.Variable
 import lamp.autograd.ConcatenateAddNewDim
+import lamp.Sc
 
 /**
   * Wraps a (sequence x batch) long -> (sequence x batch x dim) double stateful module
@@ -14,7 +15,7 @@ case class FreeRunningRNN[T, M <: StatefulModule[Variable, Variable, T]](
 
   override def state: Seq[(Variable, PTag)] = module.state
 
-  def forward(x: (Variable, T)) = {
+  def forward[S: Sc](x: (Variable, T)) = {
     val batchSize = x._1.shape(1)
     val (outputs, lastState) = loop(x._1, x._2, timeSteps, Nil)
     (
@@ -24,7 +25,7 @@ case class FreeRunningRNN[T, M <: StatefulModule[Variable, Variable, T]](
       lastState
     )
   }
-  def loop(
+  def loop[S: Sc](
       lastOutput: Variable,
       lastState: T,
       n: Int,

@@ -2,7 +2,7 @@ package lamp.nn
 
 import lamp.autograd.{Variable, param, Conv2D => Conv2dOp, const}
 import aten.{ATen, TensorOptions}
-import lamp.autograd.AllocatedVariablePool
+import lamp.Sc
 case class Conv2D(
     weights: Variable,
     bias: Variable,
@@ -17,7 +17,7 @@ case class Conv2D(
     bias -> Conv2D.Bias
   )
 
-  def forward(x: Variable): Variable =
+  def forward[S: Sc](x: Variable): Variable =
     Conv2dOp(x, weights, bias, stride, padding, dilation, groups).value
 
 }
@@ -35,7 +35,7 @@ object Conv2D {
   )
   case object Weights extends LeafTag
   case object Bias extends LeafTag
-  def apply(
+  def apply[S: Sc](
       inChannels: Long,
       outChannels: Long,
       kernelSize: Long,
@@ -45,7 +45,7 @@ object Conv2D {
       padding: Long = 0,
       dilation: Long = 1,
       groups: Long = 1
-  )(implicit pool: AllocatedVariablePool): Conv2D = {
+  ): Conv2D = {
     val weightVar = param(
       ATen.normal_3(
         0d,

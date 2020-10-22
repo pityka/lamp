@@ -1,12 +1,7 @@
 package lamp.nn
 
-import lamp.autograd.{
-  Variable,
-  BatchNorm => BN,
-  param,
-  const,
-  AllocatedVariablePool
-}
+import lamp.autograd.{Variable, BatchNorm => BN, param, const}
+import lamp.Sc
 import aten.ATen
 import aten.TensorOptions
 
@@ -27,7 +22,7 @@ case class BatchNorm(
     runningVar -> BatchNorm.RunningVar
   )
 
-  override def forward(x: Variable): Variable =
+  override def forward[S: Sc](x: Variable): Variable =
     BN(
       x,
       weight,
@@ -48,7 +43,7 @@ object BatchNorm {
   )
   implicit val load = Load.make[BatchNorm](m =>
     tensors => {
-      implicit val pool = m.weight.pool
+      implicit val pool = m.weight.scope
       val w = param(tensors.head)
       val b = param(tensors(1))
       val rm = const(tensors(2))
@@ -60,13 +55,13 @@ object BatchNorm {
   case object Bias extends LeafTag
   case object RunningMean extends LeafTag
   case object RunningVar extends LeafTag
-  def apply(
+  def apply[S: Sc](
       features: Int,
       tOpt: TensorOptions,
       training: Boolean = true,
       momentum: Double = 0.1,
       eps: Double = 1e-5
-  )(implicit pool: AllocatedVariablePool): BatchNorm = BatchNorm(
+  ): BatchNorm = BatchNorm(
     weight = param(ATen.normal_3(0.0, 0.01, Array(features.toLong), tOpt)),
     bias = param(ATen.zeros(Array(features.toLong), tOpt)),
     runningMean = const(ATen.zeros(Array(features.toLong), tOpt)),
