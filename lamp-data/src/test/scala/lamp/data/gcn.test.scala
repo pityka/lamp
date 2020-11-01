@@ -387,7 +387,7 @@ class GCNSuite extends AnyFunSuite {
       .nextBatch
       .allocated
       .unsafeRunSync()
-    val ((batchNodes, batchEdges, Some(batchGraphIndices)), batchTarget) =
+    val ((batchNodes, batchEdges, batchGraphIndices), batchTarget) =
       batch.get
     assert(batchNodes.shape == List(10, 2))
     assert(batchEdges.toLongMat.raw(9, 0) >= 5)

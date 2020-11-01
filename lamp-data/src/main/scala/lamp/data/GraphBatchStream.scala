@@ -23,7 +23,7 @@ object GraphBatchStream {
       rng: org.saddle.spire.random.Generator
   )(
       implicit pool: AllocatedVariablePool
-  ): BatchStream[(Variable, Variable, Option[Variable])] = {
+  ): BatchStream[(Variable, Variable, Variable)] = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
       Resource.make(IO {
         val selectedGraphs = graphNodesAndEdges.take(idx).toSeq
@@ -109,7 +109,7 @@ object GraphBatchStream {
         idxT.release
 
         Option(
-          ((nodesV, edgesV, Some(graphIndicesV)), selectedTargetOnDevice)
+          ((nodesV, edgesV, graphIndicesV), selectedTargetOnDevice)
         )
       }) {
         case None => IO.unit
@@ -120,17 +120,17 @@ object GraphBatchStream {
       }
     }
     val emptyResource = Resource
-      .pure[IO, Option[((Variable, Variable, Option[Variable]), Tensor)]](None)
+      .pure[IO, Option[((Variable, Variable, Variable), Tensor)]](None)
 
     val idx =
       array
         .shuffle(array.range(0, graphNodesAndEdges.length), rng)
         .grouped(minibatchSize)
         .toList
-    new BatchStream[(Variable, Variable, Option[Variable])] {
+    new BatchStream[(Variable, Variable, Variable)] {
       private var remaining = idx
       def nextBatch: Resource[IO, Option[
-        ((Variable, Variable, Option[Variable]), Tensor)
+        ((Variable, Variable, Variable), Tensor)
       ]] =
         remaining match {
           case Nil => emptyResource
