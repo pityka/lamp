@@ -173,7 +173,7 @@ class STenSuite extends AnyFunSuite {
       val t1 = STen.rand(List(2, 2), TensorOptions.d)
       val t2 = STen.rand(List(2, 2), TensorOptions.d)
       assert(
-        (t1 mm t2).toMat == (t1.toMat mm t2.toMat)
+        (t1 mm t2).toMat.roundTo(4) == (t1.toMat mm t2.toMat).roundTo(4)
       )
     }
   }
