@@ -107,9 +107,6 @@ lazy val core = project
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-core",
-    libraryDependencies ++= Seq(
-      // "org.scalatest" %% "scalatest" % "3.1.2" % "test"
-    ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
@@ -128,8 +125,6 @@ lazy val data = project
     libraryDependencies ++= Seq(
       "com.outr" %% "scribe" % "2.7.3",
       "com.lihaoyi" %% "ujson" % "1.2.0"
-      // "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
-      // "org.scalatest" %% "scalatest" % "3.1.2" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),

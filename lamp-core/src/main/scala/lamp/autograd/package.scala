@@ -3,12 +3,6 @@ import aten.Tensor
 import aten.ATen
 import aten.TensorOptions
 package object autograd {
-  // def withPool[T](f: AllocatedVariablePool => T): T = {
-  //   val pool = new AllocatedVariablePool
-  //   val r = f(pool)
-  //   pool.releaseAll()
-  //   r
-  // }
 
   def const[S: Sc](m: Tensor): Variable =
     Constant(m).value.needsNoGrad
