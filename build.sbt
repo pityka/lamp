@@ -308,6 +308,7 @@ lazy val root = project
     skip in publish := true
   )
   .aggregate(
+    sten,
     core,
     data,
     tabular,
