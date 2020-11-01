@@ -9,8 +9,27 @@ Each `aten.Tensor` JVM object is a handle to the tensor - actually handle to nat
 
 Tensors must be released manually with the `aten.Tensor#release` or `releaseAll` methods. A double release might crash the VM.
 
-# autograd Variables
+# autograd Variables and STen tensors
 
-In contrast with `aten.Tensor`s `lamp.autograd.Variable`s are managed. Allocation of these are recorded into a pool (`lamp.autograd.AllocatedVariablePool`) and the pool is released at certain points - after each backpropagation step - during the training loop.
+In contrast with `aten.Tensor`s `lamp.autograd.Variable`s and `lamp.STen`s are managed. Allocation of these require a scope (`lamp.Scope`) which demarkate the lifetime of the variable.
+Autograd variabels own up to two tensors: their value and optionally their partial derivatives.
 
-The `const(t:Tensor)` or `param(t:Tensor)` Variable factories do not append their argument to the pool, therefore those tensors are not released when the pool is cleared. Use the `releasable` method on a variable to ensure the pool will release their tensor.
+`lamp.STen` is a shallow wrapper around `aten.Tensor`s. It ensures that an appropriate scope is present
+before allocation.
+
+Example:
+
+``` scala mdoc
+  def squaredEuclideanDistance(v1: STen, v2: STen)(
+      implicit scope: Scope // parent scope
+  ): STen = {
+    Scope { implicit scope => // this is a local scope cleared up when block ends
+      val outer = v1.mm(v2.t) // these allocations will get released at the end of the block
+      val n1 = (v1 * v1).rowSum
+      val n2 = (v2 * v2).rowSum
+      (n1 + n2.t - outer * 2) // the return value of the block is not released, but moved to the parent scope
+    }
+  }
+```
+
+
