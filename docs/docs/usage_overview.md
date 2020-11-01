@@ -90,17 +90,18 @@ Then we compose that function with a softmax, and provide a suitable loss functi
 
 Loss functions in lamp are of the type `(lamp.autograd.Variable, aten.Tensor) => lamp.autograd.Variable`. The first `Variable` argument is the output of the model, the second `Tensor` argument is the target. It returns a new `Variable` which is the loss. An autograd `Variable` holds a tensor and has the ability to compute partial derivatives. The training loop will take the loss and compute the partial derivative of all learnable parameters.
 
-We also have to provide an instance of `lamp.autograd.AllocatedVariablePool` which is used to keep track of allocated tensors in `lamp.autograd`. The pool is released after each backward pass. Variables created with `lamp.autograd.const` and `lamp.autograd.param` are not put in the pool, therefore those won't get released. 
+We also have to provide an instance of `lamp.Scope` which is used to keep track of allocated tensors. 
+
 
 ```scala mdoc
 import lamp.nn._
 val tensorOptions = device.options(SinglePrecision)
 val classWeights = ATen.ones(Array(10), tensorOptions)
-implicit val pool = new lamp.autograd.AllocatedVariablePool
+implicit val scope = Scope.free
 val model = SupervisedModel(
   sequence(
       MLP(in = 784, out = 10, List(64, 32), tensorOptions, dropout = 0.2),
-      Fun(_.logSoftMax(dim = 1))
+      Fun(implicit scope => _.logSoftMax(dim = 1))
     ),
   LossFunctions.NLL(10, classWeights)
 )
