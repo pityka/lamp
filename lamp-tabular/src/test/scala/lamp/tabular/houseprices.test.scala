@@ -175,7 +175,7 @@ class HousePricesSuite extends AnyFunSuite {
         (ecdf.inverse(predictedTest.map(math.exp)) - testTarget
           .col(0)).map(v => v * v).mean
       )
-    assert(error < 0.4)
+    assert(error < 0.5)
 
   }
 
