@@ -446,24 +446,30 @@ class GCNSuite extends AnyFunSuite {
     assert(module.transform.transform.m1.weights.partialDerivative.isDefined)
 
     val readoutModule = GraphReadout(
-      GCN(
-        ResidualModule(
-          sequence(
-            Linear(
-              weights = param(ATen.ones(Array(3, 3), tOpt)),
-              bias = Some(param(ATen.ones(Array(1, 3), tOpt)))
-            ),
-            Fun(_.relu)
-          )
+      Passthrough(
+        Linear(
+          weights = param(ATen.eye_0(3, tOpt)),
+          bias = None
         )
-      )
+      ),
+      GraphReadout.Mean
     )
 
+    val nodesStatesM = nodeStates.toMat
+
     val graphStates = readoutModule.forward((nodeStates, edges, graphIndices))
+    val graphStatesM = graphStates.toMat
+
     assert(graphStates.toMat.numRows == 2)
+    assert(
+      graphStatesM == Mat(
+        nodesStatesM.row(0, 1, 2, 3, 4).reduceCols((v, _) => v.mean),
+        nodesStatesM.row(5, 6, 7, 8, 9).reduceCols((v, _) => v.mean)
+      ).T
+    )
     graphStates.sum.backprop()
     assert(
-      readoutModule.m.transform.transform.m1.weights.partialDerivative.isDefined
+      readoutModule.m.m.weights.partialDerivative.isDefined
     )
 
   }
