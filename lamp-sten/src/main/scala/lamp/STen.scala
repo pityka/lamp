@@ -13,13 +13,22 @@ object STen {
 
   def fromMat[S: Sc](
       m: Mat[Double],
-      cuda: Boolean
+      cuda: Boolean = false
   ) = owned(TensorHelpers.fromMat(m, cuda))
   def fromMat[S: Sc](
       m: Mat[Double],
       device: Device,
       precision: FloatingPointPrecision
   ) = owned(TensorHelpers.fromMat(m, device, precision))
+  def fromVec[S: Sc](
+      m: Vec[Double],
+      cuda: Boolean = false
+  ) = owned(TensorHelpers.fromVec(m, cuda))
+  def fromVec[S: Sc](
+      m: Vec[Double],
+      device: Device,
+      precision: FloatingPointPrecision
+  ) = owned(TensorHelpers.fromVec(m, device, precision))
 
   def fromLongMat[S: Sc](
       m: Mat[Long],
@@ -27,10 +36,21 @@ object STen {
   ) = owned(TensorHelpers.fromLongMat(m, device))
   def fromLongMat[S: Sc](
       m: Mat[Long],
-      cuda: Boolean
+      cuda: Boolean = false
   ) = owned(TensorHelpers.fromLongMat(m, cuda))
 
+  def fromLongVec[S: Sc](
+      m: Vec[Long],
+      device: Device
+  ) = owned(TensorHelpers.fromLongVec(m, device))
+  def fromLongVec[S: Sc](
+      m: Vec[Long],
+      cuda: Boolean = false
+  ) = owned(TensorHelpers.fromLongVec(m, cuda))
+
   def free(value: Tensor) = STen(value, Scope.free)
+
+  def apply[S: Sc](vs: Double*) = fromVec(Vec(vs: _*))
 
   def owned(
       value: Tensor
@@ -54,40 +74,53 @@ object STen {
 
   def ones[S: Sc](
       size: List[Int],
-      tensorOptions: TensorOptions
+      tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.ones(size.toArray.map(_.toLong), tensorOptions))
-  def zeros[S: Sc](size: List[Int], tensorOptions: TensorOptions) =
+  def zeros[S: Sc](
+      size: List[Int],
+      tensorOptions: TensorOptions = TensorOptions.d
+  ) =
     owned(ATen.zeros(size.toArray.map(_.toLong), tensorOptions))
-  def rand[S: Sc](size: List[Int], tensorOptions: TensorOptions) =
+  def rand[S: Sc](
+      size: List[Int],
+      tensorOptions: TensorOptions = TensorOptions.d
+  ) =
     owned(ATen.rand(size.toArray.map(_.toLong), tensorOptions))
-  def randn[S: Sc](size: List[Int], tensorOptions: TensorOptions) =
+  def randn[S: Sc](
+      size: List[Int],
+      tensorOptions: TensorOptions = TensorOptions.d
+  ) =
     owned(ATen.randn(size.toArray.map(_.toLong), tensorOptions))
   def randint[S: Sc](
       high: Long,
       size: List[Int],
-      tensorOptions: TensorOptions
+      tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(
       ATen.randint_0(high, size.toArray.map(_.toLong), tensorOptions)
     )
-  def eye[S: Sc](n: Int, tensorOptions: TensorOptions) =
+  def eye[S: Sc](n: Int, tensorOptions: TensorOptions = TensorOptions.d) =
     owned(ATen.eye_0(n, tensorOptions))
-  def eye[S: Sc](n: Int, m: Int, tensorOptions: TensorOptions) =
+  def eye[S: Sc](
+      n: Int,
+      m: Int,
+      tensorOptions: TensorOptions
+  ) =
     owned(ATen.eye_1(n, m, tensorOptions))
 
   def arange[S: Sc](
       start: Double,
       end: Double,
       step: Double,
-      tensorOptions: TensorOptions
+      tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.arange(start, end, step, tensorOptions))
   def linspace[S: Sc](
       start: Double,
       end: Double,
       steps: Long,
-      tensorOptions: TensorOptions
+      tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.linspace(start, end, steps, tensorOptions))
 }
@@ -102,6 +135,7 @@ case class STen(
   def toMat = TensorHelpers.toMat(value)
   def toLongMat = TensorHelpers.toLongMat(value)
   def toVec = toMat.toVec
+  def toLongVec = toLongMat.toVec
   val shape = value.sizes.toList
   def sizes = shape
   val options = value.options()
@@ -129,6 +163,8 @@ case class STen(
     owned(ATen.masked_fill_0(value, mask.value, fill))
   def eq[S: Sc](other: STen) =
     owned(ATen.eq_1(value, other.value))
+  def eq[S: Sc](other: Double) =
+    owned(ATen.eq_0(value, other))
   def cat[S: Sc](other: STen, dim: Long) =
     owned(ATen.cat(Array(value, other.value), dim))
 
@@ -138,6 +174,8 @@ case class STen(
 
   def +[S: Sc](other: STen) =
     owned(ATen.add_0(value, other.value, 1d))
+  def +[S: Sc](other: Double) =
+    owned(ATen.add_1(value, other, 1d))
   def add[S: Sc](other: STen, alpha: Double) =
     owned(ATen.add_0(value, other.value, alpha))
   def add[S: Sc](other: Double, alpha: Double) =
@@ -227,8 +265,8 @@ case class STen(
 
   def expandAs[S: Sc](other: STen) =
     owned(value.expand_as(other.value))
-  def view[S: Sc](other: List[Int]) =
-    owned(ATen._unsafe_view(value, other.map(_.toLong).toArray))
+  def view[S: Sc](dims: Int*) =
+    owned(ATen._unsafe_view(value, dims.map(_.toLong).toArray))
 
   def norm2[S: Sc](dim: List[Int], keepDim: Boolean) =
     owned(
@@ -402,6 +440,8 @@ case class STen(
     ATen.where_0(condition.value, value, other.value).owned
   def where[S: Sc] =
     ATen.where_1(value).toList.map(_.owned)
+
+  def round[S: Sc] = ATen.round(value).owned
 
   // todo:
   // ATen.eig
