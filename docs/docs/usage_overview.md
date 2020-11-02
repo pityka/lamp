@@ -153,12 +153,13 @@ Lamp provides two optimizers: SgdW and AdamW.
 The `IOLoop.epochs` method returns an `IO` which will run into the trained model once executed:
 
 ```scala mdoc
-val trainedModel = trainedModelIO.unsafeRunSync.module
+val (epochOfModel, trainedModel) = trainedModelIO.unsafeRunSync
+val module = trainedModel.module
 ```
 
 The trained model we can use for prediction:
 ```scala mdoc
 val bogusData = ATen.ones(Array(1,784),tensorOptions)
-val classProbabilities = trainedModel.forward(const(bogusData)).toMat.map(math.exp)
+val classProbabilities = module.forward(const(bogusData)).toMat.map(math.exp)
 println(classProbabilities)
 ```
