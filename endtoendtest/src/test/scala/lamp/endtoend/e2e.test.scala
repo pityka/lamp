@@ -147,7 +147,9 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       )
       val (_, output, _) = trainedModel
         .flatMap(
-          _.lossAndOutput(const(testFeaturesTensor), testTargetTensor).allocated
+          _._2
+            .lossAndOutput(const(testFeaturesTensor), testTargetTensor)
+            .allocated
             .map(_._1)
         )
         .unsafeRunSync

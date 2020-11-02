@@ -119,7 +119,10 @@ class MLPSuite extends AnyFunSuite {
       )
       val (loss, _, _) = trainedModel
         .flatMap(
-          _.lossAndOutput(const(testDataTensor), testTarget).allocated.map(_._1)
+          _._2
+            .lossAndOutput(const(testDataTensor), testTarget)
+            .allocated
+            .map(_._1)
         )
         .unsafeRunSync
       assert(loss < 3)

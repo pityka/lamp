@@ -6,7 +6,7 @@ import java.io.File
 import scribe.Logger
 import Writer.writeCheckpoint
 import lamp.autograd.Variable
-import aten.ATen
+import lamp.TensorHelpers
 object IOLoops {
 
   def epochs[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
@@ -22,31 +22,47 @@ object IOLoops {
       logFrequency: Int = 1,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
-      returnMinValidationLossModel: Seq[Int] = Nil
-  ): IO[SupervisedModel[I, M]] = {
+      returnMinValidationLossModel: Seq[Int] = Nil,
+      returnDevice: Option[lamp.Device] = None
+  ): IO[(Int, SupervisedModel[I, M])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
     def loop(
         epoch: Int,
         minValidationLoss: Option[Double],
-        minValidationLossModel: Option[Seq[Tensor]]
-    ): IO[SupervisedModel[I, M]] =
+        minValidationLossModel: Option[(Int, Seq[Tensor])]
+    ): IO[(Int, SupervisedModel[I, M])] =
       if (epoch >= epochs)
         IO.pure {
           modelWithOptimizer.optimizer.release()
           minValidationLossModel match {
-            case None => modelWithOptimizer.model
-            case Some(state) =>
-              modelWithOptimizer.model
-                .copy(module = modelWithOptimizer.model.module.load(state))
+            case None => (epoch - 1, modelWithOptimizer.model)
+            case Some((epochOfMinValidation, state)) =>
+              val stateOnDevice = state.map { t =>
+                val device =
+                  returnDevice.getOrElse(
+                    TensorHelpers.device(model.module.state.head._1.value)
+                  )
+                val t2 = device.to(t)
+                t.release
+                t2
+              }
+              val loadedModel = modelWithOptimizer.model
+                .copy(module =
+                  modelWithOptimizer.model.module.load(stateOnDevice)
+                )
+              (epochOfMinValidation, loadedModel)
           }
         }
       else {
 
         def copyModel = {
           logger.foreach(_.info(s"Copying model at epoch $epoch"))
-          minValidationLossModel.foreach(_.foreach(_.release))
-          model.module.state.map(_._1.value).map { t => ATen.clone(t) }
+          minValidationLossModel.foreach(_._2.foreach(_.release))
+          val copiedState =
+            model.module.state.map(_._1.value).map { t => lamp.CPU.to(t) }
+
+          (epoch, copiedState)
         }
 
         for {
@@ -85,7 +101,7 @@ object IOLoops {
             else if (minValidationLoss.get > maybeValidationLoss.get)
               Some(copyModel)
             else None
-          } else None
+          } else minValidationLossModel
           next <- loop(
             epoch + 1,
             nextMinValidationLoss,
