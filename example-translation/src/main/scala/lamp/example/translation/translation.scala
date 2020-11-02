@@ -317,7 +317,7 @@ object Train extends App {
 
         }
 
-        val trainedModel = IOLoops
+        val (_, trainedModel) = IOLoops
           .epochs(
             model = model,
             optimizerFactory = optimizer,
