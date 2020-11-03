@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>Defining modules - Lamp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="icon" href="https://pityka.github.io/lamp/favicon.png">
+
+  
+  
+  <link rel="stylesheet" href="/lamp/css/style.min.ab49f0da65a9bb2e51b43f76fb24346d416717d3205cbd8e2e0bd70b9c811f6c.css">
+  
+
+  
+
+</head>
+
+<body class='page page-default-single'>
+  <div id="main-menu-mobile" class="main-menu-mobile">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+  <div class="wrapper">
+    <div class='header'>
+  <div class="container">
+    
+    
+    <div id="main-menu" class="main-menu">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+    <button id="toggle-main-menu-mobile" class="hamburger hamburger--slider" type="button">
+  <span class="hamburger-box">
+    <span class="hamburger-inner"></span>
+  </span>
+</button>
+  </div>
+</div>
+
+    <div class="container pt-2 pt-md-6 pb-3 pb-md-6">
+      <div class="row">
+        <div class="col-12 col-md-3 mb-3">
+          <div class="sidebar">
+            
+<div class="docs-menu">
+  <h4>Docs</h4>
+  <ul>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/getting_started/">Getting started</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/usage_overview/">How to build and train a model</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/memory_management/">Memory management</a>
+    </li>
+    
+    <li class="active ">
+      <a href="https://pityka.github.io/lamp/docs/modules/">Defining modules</a>
+    </li>
+    
+  </ul>
+</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-9">
+          
+<h1 class="title">Defining modules</h1>
+<div class="content anchor-link-enabled">
+  <p>Similar to PyTorch, Lamp organizes neural networks into modules.
+A module holds a state (typically parameters) and provide a function from some type A to type B while potentially closing over its state.
+A simple interface could be:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.autograd.Variable
+<span style="color:#66d9ef">trait</span> <span style="color:#a6e22e">Module</span><span style="color:#f92672">[</span><span style="color:#66d9ef">A</span>, <span style="color:#66d9ef">B</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span>
+  <span style="color:#66d9ef">def</span> forward<span style="color:#f92672">(</span>x<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">A</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">B</span>
+  <span style="color:#66d9ef">val</span> state<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Seq</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Variable</span><span style="color:#f92672">]</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>Lamp provides generic building blocks to combine modules (sequences, Either, Option).
+The most common combination of modules is to sequence them, that is function composition.
+This one can do with the apply methods in the <code>lamp.nn.sequence</code> object.</p>
+
+<p>As an example here is the complete source code of the linear layer:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.autograd.Variable
+<span style="color:#66d9ef">import</span> lamp.nn.Module
+<span style="color:#66d9ef">import</span> lamp.nn.Linear
+<span style="color:#66d9ef">import</span> lamp.Sc
+
+<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LinearDemo</span><span style="color:#f92672">(</span>weights<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Variable</span><span style="color:#f92672">,</span> bias<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Option</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Variable</span><span style="color:#f92672">])</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">Module</span> <span style="color:#f92672">{</span>
+
+  <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">val</span> state <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">List</span><span style="color:#f92672">(</span>
+    weights <span style="color:#f92672">-&gt;</span> <span style="color:#a6e22e">Linear</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Weights</span>
+  <span style="color:#f92672">)</span> <span style="color:#f92672">++</span> bias<span style="color:#f92672">.</span>toList<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>b <span style="color:#66d9ef">=&gt;</span> <span style="color:#f92672">(</span>b<span style="color:#f92672">,</span> <span style="color:#a6e22e">Linear</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Bias</span><span style="color:#f92672">))</span>
+
+  <span style="color:#66d9ef">def</span> forward<span style="color:#f92672">[</span><span style="color:#66d9ef">S:Sc</span><span style="color:#f92672">](</span>x<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Variable</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Variable</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+    <span style="color:#66d9ef">val</span> v <span style="color:#66d9ef">=</span> x<span style="color:#f92672">.</span>mm<span style="color:#f92672">(</span>weights<span style="color:#f92672">.</span>t<span style="color:#f92672">)</span>
+    bias<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">+</span> v<span style="color:#f92672">).</span>getOrElse<span style="color:#f92672">(</span>v<span style="color:#f92672">)</span>
+
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span></code></pre></div>
+<p>This module has two state variables <code>wight</code> and <code>bias</code>.
+The <code>state</code> field takes these values along with a small tag object which helps identifying the parameter during runtime.
+The <code>forward</code> method applies a linear to the input variable. The <code>forward</code> method also takes an implicit <code>Scope</code> instance since the return type of <code>forward</code> is <code>Variable</code> and Variables are only constructable with a <code>Scope</code> instance.</p>
+
+<p>Additional features around modules are added with type classes: putting a module into training or evaluation mode needs some compile time introspection and this is added with the <code>TrainingMode</code> type class. Loading a module from a sequence of Tensors also needs compile time introspection and is added with the <code>Load</code> type class.</p>
+
+<p>Some transformations in a neural network are stateless, e.g. applying a nonlinearity: they only depend on the input but have no parameters. These can be written without a specific module with <code>Fun</code></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">lamp<span style="color:#f92672">.</span>nn<span style="color:#f92672">.</span><span style="color:#a6e22e">Fun</span><span style="color:#f92672">(</span><span style="color:#66d9ef">implicit</span> scope <span style="color:#66d9ef">=&gt;</span> <span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>relu<span style="color:#f92672">)</span></code></pre></div>
+</div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/lamp/js/scripts.min.1237ff71925bb8625c97a9af8db4c54525258bedfd7c47493daaff723bea755e.js"></script>
+  
+
+  
+  
+  
+    
+  
+
+
+</body>
+
+</html>
