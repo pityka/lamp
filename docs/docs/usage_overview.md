@@ -7,7 +7,7 @@ weight: 2
 
 Lamp's design closely follows the design of pytorch. It is organized into the following components:
 
-1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the `aten` package. 
+1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the `aten` package and in the class `lamp.STen`. 
 2. An algorithm to compute partial derivatives of composite functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package `lamp.autograd`.
 3. A set of building blocks to build neural networks in the package `lamp.nn`.
 4. Training loop and utilities to work with image and text data in `lamp.data`.
@@ -148,7 +148,8 @@ val trainedModelIO = IOLoops.epochs(
     )
 ```
 
-Lamp provides two optimizers: SgdW and AdamW.
+Lamp provides two optimizers: SgdW and AdamW. They can take a learning rate schedule as well.
+For other capabilities of this training loop see the scaladoc of `IOLoops.epochs`.
 
 The `IOLoop.epochs` method returns an `IO` which will run into the trained model once executed:
 
@@ -163,3 +164,4 @@ val bogusData = ATen.ones(Array(1,784),tensorOptions)
 val classProbabilities = module.forward(const(bogusData)).toMat.map(math.exp)
 println(classProbabilities)
 ```
+
