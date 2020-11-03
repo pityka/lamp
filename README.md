@@ -5,7 +5,8 @@
 [![doc](https://img.shields.io/badge/api-scaladoc-green)](https://pityka.github.io/lamp/api/lamp/index.html)
 [![doc](https://img.shields.io/badge/docs-green)](https://pityka.github.io/lamp)
 
-Lamp is a deep learning library for Scala with native CPU and GPU backend. 
+Lamp is a Scala library for deep learning and scientific computing. 
+It features a native CPU and GPU backend and operates on off-heap memory. 
 
 Lamp is inspired by [pytorch](https://pytorch.org/). 
 The foundation of lamp is a [JNI binding to ATen](https://github.com/pityka/aten-scala), the C++ tensor backend of torch ([see here](https://pytorch.org/cppdocs/#aten])).
@@ -14,8 +15,9 @@ As a consequence lamp uses fast CPU and GPU code and stores its data in off-heap
 # Features
 
 Lamp implements generic automatic reverse mode differentiation (also known as autograd, see e.g. [this paper](https://arxiv.org/pdf/1811.05031.pdf)). 
+The library also provides off-heap (living in main or GPU memory) n-dimensional arrays with sane memory management.
 
-On top of that it provides a small set of components to build neural networks:
+It provides components to build neural networks:
 
 - fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM, GCN layers
 - various nonlinearities
@@ -26,14 +28,16 @@ On top of that it provides a small set of components to build neural networks:
 - training loop and data loaders on top of cats-effect
 - checkpointing
 
+With the above components Lamp is feature complete to build machine learning models on tabular, image, text and graph domains.
+
 This repository also hosts some other loosely related libraries. 
 
-- an implementation of UMAP ([see](https://arxiv.org/abs/1802.03426))
-- an implementation of extratrees ([see](https://hal.archives-ouvertes.fr/hal-00341932))
+- an fast GPU compatible implementation of UMAP ([see](https://arxiv.org/abs/1802.03426))
+- an implementation of extratrees ([see](https://hal.archives-ouvertes.fr/hal-00341932)). This is a JVM implementation with no further dependencies.
 
 # Platforms
 
-Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.5.0 shared libraries in its linker path.
+Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.6.0 shared libraries in its linker path.
 
 On mac it suffices to install torch with `brew install libtorch`.
 On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile).
@@ -41,7 +45,7 @@ On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/bl
 # Completeness
 
 The machine generated ATen JNI binding ([aten-scala](https://github.com/pityka/aten-scala)) exposes hundreds of tensor operations from libtorch. 
-On top of those lamp provides autograd for the operations needed to build neural networks. The library is expressive enough to implement common models for text, image and tabular data processing.
+On top of those tensors lamp provides autograd for the operations needed to build neural networks.
 
 # Correctness
 
@@ -91,17 +95,15 @@ Cuda tests are run separately with `sbt cuda:test`. See `test_cuda.sh` in the so
 
 All tests are executed with `sbt alltest:test`. This runs all unit tests, all cuda tests, additional tests marked as slow, and a more extensive end-to-end benchmark against PyTorch itself on 50 datasets.
 
-## Running the cifar-100 example
+## Examples
 
-See `run_cifar.sh` in the source tree.
+Examples for various tasks:
 
-## Running the text model example
+- Image classification: `bash run_cifar.sh` runs the code in `example-cifar100/`.
+- Text generation: `bash run_timemachine.sh` runs the code in `example-timemachine/`.
+- Machine translation: `bash run_translation.sh` runs the code in `example-translation/`.
+- Graph node property prediction: `bash run_arxiv.sh` runs the code in `example-arxiv/`.
 
-See `run_timemachine.sh` in the source tree.
-
-## Running the machine translation example
-
-See `run_translation.sh` in the source tree.
 
 # License
 
