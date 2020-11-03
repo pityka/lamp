@@ -133,6 +133,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+    </li><li name="lamp.knn" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="knn"></a><a id="knn:knn"></a>
+      <span class="permalink">
+      <a href="../../lamp/knn/index.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="../knn/index.html"><span class="name">knn</span></a>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
     </li><li name="lamp.nn" visbl="pub" class="indented2 current" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="nn"></a><a id="nn:nn"></a>
       <span class="permalink">
@@ -743,7 +759,7 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Fun.html"><span class="name">Fun</span></a><span class="params">(<span name="fun">fun: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>) ⇒ <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="Fun.html"><span class="name">Fun</span></a><span class="params">(<span name="fun">fun: (<a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a>) ⇒ (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>) ⇒ <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -798,7 +814,7 @@ Outputs of size (sequence length * batch * hidden dim)
       
       
     </li><li name="lamp.nn.GenericModule" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
-      <a id="GenericModule[A,B]extendsA=&gt;B"></a><a id="GenericModule[A,B]:GenericModule[A,B]"></a>
+      <a id="GenericModule[A,B]extendsAnyRef"></a><a id="GenericModule[A,B]:GenericModule[A,B]"></a>
       <span class="permalink">
       <a href="../../lamp/nn/GenericModule.html" title="Permalink">
         <i class="material-icons"></i>
@@ -809,7 +825,7 @@ Outputs of size (sequence length * batch * hidden dim)
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="GenericModule.html"><span class="name">GenericModule</span></a><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>]</span><span class="result"> extends (<span class="extype" name="lamp.nn.GenericModule.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericModule.B">B</span></span>
+        <a title="" href="GenericModule.html"><span class="name">GenericModule</span></a><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
       
@@ -830,7 +846,7 @@ Outputs of size (sequence length * batch * hidden dim)
       
       
     </li><li name="lamp.nn.GraphReadout" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="GraphReadout[M&lt;:lamp.nn.GraphModule]extendsGenericModule[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable),lamp.autograd.Variable]withProductwithSerializable"></a><a id="GraphReadout[M&lt;:nn.GraphModule]:GraphReadout[M]"></a>
+      <a id="GraphReadout[M&lt;:lamp.nn.GraphModule]extendsGenericModule[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable),lamp.autograd.Variable]withProductwithSerializable"></a><a id="GraphReadout[M&lt;:GraphModule]:GraphReadout[M]"></a>
       <span class="permalink">
       <a href="../../lamp/nn/GraphReadout.html" title="Permalink">
         <i class="material-icons"></i>
@@ -841,7 +857,7 @@ Outputs of size (sequence length * batch * hidden dim)
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="GraphReadout.html"><span class="name">GraphReadout</span></a><span class="tparams">[<span name="M">M &lt;: <span class="extype" name="lamp.nn.GraphModule">nn.GraphModule</span></span>]</span><span class="params">(<span name="m">m: <span class="extype" name="lamp.nn.GraphReadout.M">M</span> with <a href="#GraphModule=lamp.nn.GenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]" class="extmbr" name="lamp.nn.GraphModule">GraphModule</a></span>, <span name="pooling">pooling: <a href="GraphReadout$$PoolType.html" class="extype" name="lamp.nn.GraphReadout.PoolType">PoolType</a></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="GraphReadout.html"><span class="name">GraphReadout</span></a><span class="tparams">[<span name="M">M &lt;: <a href="#GraphModule=lamp.nn.GenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]" class="extmbr" name="lamp.nn.GraphModule">GraphModule</a></span>]</span><span class="params">(<span name="m">m: <span class="extype" name="lamp.nn.GraphReadout.M">M</span> with <a href="#GraphModule=lamp.nn.GenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]" class="extmbr" name="lamp.nn.GraphModule">GraphModule</a></span>, <span name="pooling">pooling: <a href="GraphReadout$$PoolType.html" class="extype" name="lamp.nn.GraphReadout.PoolType">PoolType</a></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       

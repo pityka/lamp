@@ -404,7 +404,7 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>), (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)], ((<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)) ⇒ (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>), <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>), (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)], <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -430,7 +430,7 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.nn.FreeRunningRNN"><span>FreeRunningRNN</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.nn.GenericModule"><span>GenericModule</span></li><li class="in" name="scala.Function1"><span>Function1</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.nn.FreeRunningRNN"><span>FreeRunningRNN</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.nn.GenericModule"><span>GenericModule</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -524,29 +524,10 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
-    </li><li name="scala.Function1#andThen" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="andThen[A](g:R=&gt;A):T1=&gt;A"></a><a id="andThen[A](((Variable,T))⇒A):((Variable,T))⇒A"></a>
-      <span class="permalink">
-      <a href="../../lamp/nn/FreeRunningRNN.html#andThen[A](g:R=&gt;A):T1=&gt;A" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">andThen</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="g">g: ((<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)) ⇒ <span class="extype" name="scala.Function1.andThen.A">A</span></span>)</span><span class="result">: ((<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)) ⇒ <span class="extype" name="scala.Function1.andThen.A">A</span></span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Function1</dd><dt>Annotations</dt><dd>
-                <span class="name">@unspecialized</span><span class="args">()</span>
-              
-        </dd></dl></div>
     </li><li name="lamp.nn.GenericModule#apply" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="apply(a:A):B"></a><a id="apply((Variable,T)):(Variable,T)"></a>
+      <a id="apply[S](a:A)(implicitevidence$17:lamp.Sc[S]):B"></a><a id="apply[S]((Variable,T))(Sc[S]):(Variable,T)"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/FreeRunningRNN.html#apply(a:A):B" title="Permalink">
+      <a href="../../lamp/nn/FreeRunningRNN.html#apply[S](a:A)(implicitevidence$17:lamp.Sc[S]):B" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -555,10 +536,10 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">apply</span><span class="params">(<span name="a">a: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>)</span><span class="result">: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>
+        <span class="name">apply</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="a">a: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.nn.GenericModule.apply.S">S</span>]</span>)</span><span class="result">: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a> → Function1</dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
@@ -597,25 +578,6 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
     </span>)</span>
               
                 <span class="name">@native</span><span class="args">()</span>
-              
-        </dd></dl></div>
-    </li><li name="scala.Function1#compose" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="compose[A](g:A=&gt;T1):A=&gt;R"></a><a id="compose[A]((A)⇒(Variable,T)):(A)⇒(Variable,T)"></a>
-      <span class="permalink">
-      <a href="../../lamp/nn/FreeRunningRNN.html#compose[A](g:A=&gt;T1):A=&gt;R" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">compose</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="g">g: (<span class="extype" name="scala.Function1.compose.A">A</span>) ⇒ (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>)</span><span class="result">: (<span class="extype" name="scala.Function1.compose.A">A</span>) ⇒ (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Function1</dd><dt>Annotations</dt><dd>
-                <span class="name">@unspecialized</span><span class="args">()</span>
               
         </dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
@@ -657,9 +619,9 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
               
         </dd></dl></div>
     </li><li name="lamp.nn.FreeRunningRNN#forward" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="forward(x:(lamp.autograd.Variable,T)):(lamp.autograd.Variable,T)"></a><a id="forward((Variable,T)):(Variable,T)"></a>
+      <a id="forward[S](x:(lamp.autograd.Variable,T))(implicitevidence$1:lamp.Sc[S]):(lamp.autograd.Variable,T)"></a><a id="forward[S]((Variable,T))(Sc[S]):(Variable,T)"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/FreeRunningRNN.html#forward(x:(lamp.autograd.Variable,T)):(lamp.autograd.Variable,T)" title="Permalink">
+      <a href="../../lamp/nn/FreeRunningRNN.html#forward[S](x:(lamp.autograd.Variable,T))(implicitevidence$1:lamp.Sc[S]):(lamp.autograd.Variable,T)" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -668,7 +630,7 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">forward</span><span class="params">(<span name="x">x: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>)</span><span class="result">: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>
+        <span class="name">forward</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="x">x: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.nn.FreeRunningRNN.forward.S">S</span>]</span>)</span><span class="result">: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.nn.FreeRunningRNN">FreeRunningRNN</a> → <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
@@ -740,9 +702,9 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="lamp.nn.FreeRunningRNN#loop" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="loop(lastOutput:lamp.autograd.Variable,lastState:T,n:Int,buffer:Seq[lamp.autograd.Variable]):(Seq[lamp.autograd.Variable],T)"></a><a id="loop(Variable,T,Int,Seq[Variable]):(Seq[Variable],T)"></a>
+      <a id="loop[S](lastOutput:lamp.autograd.Variable,lastState:T,n:Int,buffer:Seq[lamp.autograd.Variable])(implicitevidence$2:lamp.Sc[S]):(Seq[lamp.autograd.Variable],T)"></a><a id="loop[S](Variable,T,Int,Seq[Variable])(Sc[S]):(Seq[Variable],T)"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/FreeRunningRNN.html#loop(lastOutput:lamp.autograd.Variable,lastState:T,n:Int,buffer:Seq[lamp.autograd.Variable]):(Seq[lamp.autograd.Variable],T)" title="Permalink">
+      <a href="../../lamp/nn/FreeRunningRNN.html#loop[S](lastOutput:lamp.autograd.Variable,lastState:T,n:Int,buffer:Seq[lamp.autograd.Variable])(implicitevidence$2:lamp.Sc[S]):(Seq[lamp.autograd.Variable],T)" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -751,7 +713,7 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">loop</span><span class="params">(<span name="lastOutput">lastOutput: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="lastState">lastState: <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span></span>, <span name="n">n: <span class="extype" name="scala.Int">Int</span></span>, <span name="buffer">buffer: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>)</span><span class="result">: (<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>], <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>
+        <span class="name">loop</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="lastOutput">lastOutput: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="lastState">lastState: <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span></span>, <span name="n">n: <span class="extype" name="scala.Int">Int</span></span>, <span name="buffer">buffer: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.nn.FreeRunningRNN.loop.S">S</span>]</span>)</span><span class="result">: (<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>], <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</span>
       </span>
       
       
@@ -889,22 +851,6 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
       </span>
       
       
-    </li><li name="scala.Function1#toString" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="toString():String"></a>
-      <span class="permalink">
-      <a href="../../lamp/nn/FreeRunningRNN.html#toString():String" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">toString</span><span class="params">()</span><span class="result">: <span class="extype" name="java.lang.String">String</span></span>
-      </span>
-      
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Function1 → AnyRef → Any</dd></dl></div>
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <span class="permalink">
@@ -993,8 +939,6 @@ and runs in it greedy (argmax) generation mode over <code>timeSteps</code> steps
               <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
             </div><div class="parent" name="lamp.nn.GenericModule">
               <h3>Inherited from <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>), (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)]</h3>
-            </div><div class="parent" name="scala.Function1">
-              <h3>Inherited from ((<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)) ⇒ (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="lamp.nn.FreeRunningRNN.T">T</span>)</h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></h3>
             </div><div class="parent" name="scala.Any">
