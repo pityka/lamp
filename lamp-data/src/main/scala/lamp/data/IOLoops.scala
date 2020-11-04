@@ -96,11 +96,11 @@ object IOLoops {
 
           nextMinValidationLossModel = if (returnMinValidationLossModel
                                              .contains(epoch)) {
-            if (maybeValidationLoss.isEmpty) None
+            if (maybeValidationLoss.isEmpty) minValidationLossModel
             else if (minValidationLoss.isEmpty) Some(copyModel)
             else if (minValidationLoss.get > maybeValidationLoss.get)
               Some(copyModel)
-            else None
+            else minValidationLossModel
           } else minValidationLossModel
           next <- loop(
             epoch + 1,
