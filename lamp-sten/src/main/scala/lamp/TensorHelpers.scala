@@ -215,7 +215,7 @@ object TensorHelpers {
     )
     assert(t.copyFromLongArray(arr))
     if (device != CPU) {
-      val t2 = t.cuda
+      val t2 = device.to(t)
       t.release
       t2
     } else t
@@ -230,7 +230,7 @@ object TensorHelpers {
     )
     assert(t.copyFromLongArray(arr))
     if (device != CPU) {
-      val t2 = t.cuda
+      val t2 = device.to(t)
       t.release
       t2
     } else t
