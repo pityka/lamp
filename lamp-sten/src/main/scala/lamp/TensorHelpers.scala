@@ -265,7 +265,7 @@ object TensorHelpers {
   def device(t: Tensor) = {
     val op = t.options
     if (op.isCPU) CPU
-    else CudaDevice(op.deviceIndex)
+    else CudaDevice(op.deviceIndex.toShort)
   }
 
   def precision(t: Tensor) = {
