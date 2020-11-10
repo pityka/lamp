@@ -52,6 +52,7 @@ package object util {
       val runningVar = ATen.clone(weights)
       val v = autograd
         .BatchNorm(
+          scope,
           const(self),
           const(weights),
           const(bias),

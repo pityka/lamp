@@ -5,21 +5,21 @@ import aten.TensorOptions
 package object autograd {
 
   def const[S: Sc](m: Tensor): Variable =
-    Constant(m).value.needsNoGrad
+    Constant(scope, m).value.needsNoGrad
 
   def const(
       m: Double,
       tOpt: TensorOptions = TensorOptions.dtypeDouble()
   )(implicit pool: Scope): Variable =
-    Constant(ATen.scalar_tensor(m, tOpt)).value.needsNoGrad
+    Constant(scope, ATen.scalar_tensor(m, tOpt)).value.needsNoGrad
 
   def param[S: Sc](m: Tensor): Variable =
-    Constant(m).value
+    Constant(scope, m).value
   def param[S: Sc](
       m: Double,
       tOpt: TensorOptions = TensorOptions.dtypeDouble()
   ): Variable =
-    Constant(ATen.scalar_tensor(m, tOpt)).value.view(List(1, 1))
+    Constant(scope, ATen.scalar_tensor(m, tOpt)).value.view(List(1, 1))
 
   def measure[T](tag: String)(body: => T): T = {
     val t1 = System.nanoTime()

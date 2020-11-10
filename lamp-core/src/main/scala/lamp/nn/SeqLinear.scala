@@ -5,6 +5,7 @@ import lamp.Sc
 import aten.ATen
 import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
+import lamp.scope
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * output dim)
@@ -27,7 +28,7 @@ case class SeqLinear(
       val xt = x.select(0, t)
       (xt.mm(weight) + bias)
     }
-    ConcatenateAddNewDim(outputs).value
+    ConcatenateAddNewDim(scope, outputs).value
 
   }
 

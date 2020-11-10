@@ -4,6 +4,7 @@ import lamp.autograd._
 import aten.ATen
 import aten.TensorOptions
 import lamp.Sc
+import lamp.scope
 
 case class Passthrough[M <: Module](
     m: M with Module
@@ -95,7 +96,7 @@ case class NGCN[M <: Module](
       case (transforms, message) =>
         transforms.map { tr => tr.forward(message) }
     }
-    val cat = Concatenate(transformedNodes.flatten, 1).value
+    val cat = Concatenate(scope, transformedNodes.flatten, 1).value
 
     (cat.mm(weightFc), edgeList)
   }

@@ -121,6 +121,7 @@ class TensorHelperSuite extends AnyFunSuite {
         val t3 = TensorHelpers.fromMat(m)
         val t4 =
           Concatenate(
+            scope,
             List(
               const(t),
               const(t2),

@@ -2,6 +2,7 @@ package lamp.nn
 import lamp.autograd.Variable
 import lamp.autograd.ConcatenateAddNewDim
 import lamp.Sc
+import lamp.scope
 
 /**
   * Wraps a (sequence x batch) long -> (sequence x batch x dim) double stateful module
@@ -19,9 +20,8 @@ case class FreeRunningRNN[T, M <: StatefulModule[Variable, Variable, T]](
     val batchSize = x._1.shape(1)
     val (outputs, lastState) = loop(x._1, x._2, timeSteps, Nil)
     (
-      ConcatenateAddNewDim(
-        outputs
-      ).value.view(List(timeSteps, batchSize.toInt, -1)),
+      ConcatenateAddNewDim(scope, outputs).value
+        .view(List(timeSteps, batchSize.toInt, -1)),
       lastState
     )
   }

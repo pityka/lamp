@@ -132,7 +132,7 @@ object Cnn {
         )
       ),
       Fun(implicit pool =>
-        AvgPool2D(_, kernelSize = 8, padding = 0, stride = 1).value
+        AvgPool2D(pool, _, kernelSize = 8, padding = 0, stride = 1).value
       ),
       Fun(implicit pool => _.flattenLastDimensions(3)),
       Fun(implicit pool => _.logSoftMax(dim = 1))
@@ -155,7 +155,14 @@ object Cnn {
       Fun(implicit pool => _.gelu),
       Dropout(dropOut, training = true),
       Fun(implicit pool =>
-        MaxPool2D(_, kernelSize = 2, stride = 2, padding = 0, dilation = 1).value
+        MaxPool2D(
+          pool,
+          _,
+          kernelSize = 2,
+          stride = 2,
+          padding = 0,
+          dilation = 1
+        ).value
       ),
       Conv2D(
         inChannels = 6,
@@ -168,7 +175,14 @@ object Cnn {
       Fun(implicit pool => _.gelu),
       Dropout(dropOut, training = true),
       Fun(implicit pool =>
-        MaxPool2D(_, kernelSize = 2, stride = 2, padding = 0, dilation = 1).value
+        MaxPool2D(
+          pool,
+          _,
+          kernelSize = 2,
+          stride = 2,
+          padding = 0,
+          dilation = 1
+        ).value
       ),
       Fun(implicit pool => _.flattenLastDimensions(3)),
       Linear(1024, 120, tOpt = tOpt),

@@ -1,11 +1,12 @@
 package lamp.autograd
-import aten.{Tensor, ATen}
+import aten.{Tensor}
 import java.{util => ju}
 // import scala.collection.mutable
 import lamp.FloatingPointPrecision
 import lamp.util.syntax
 import lamp.Scope
 import lamp.Sc
+import lamp.STen
 
 /**
   * Params: the input and the function which calculates the partial derivative
@@ -36,7 +37,7 @@ import lamp.Sc
   */
 trait Op {
   val value: Variable
-  val params: List[(Variable, (Tensor, Tensor) => Unit)]
+  val params: List[(Variable, (STen, STen) => Unit)]
 }
 
 object Variable {
@@ -60,7 +61,7 @@ case class Variable(
 
   val options = value.options
 
-  var partialDerivative: Option[Tensor] = None
+  var partialDerivative: Option[STen] = None
 
   val sizes = value.sizes.toList
 
@@ -71,7 +72,7 @@ case class Variable(
   def needsNoGrad = copy(needsGrad = false)
   def detached = const(value)(scope)
   def zeroGrad() = {
-    partialDerivative.foreach { t => ATen.zero_(t) }
+    partialDerivative.foreach { t => t.zero_() }
   }
 
   lazy val wengert = Autograd.topologicalSort(this)
@@ -79,7 +80,8 @@ case class Variable(
   def backprop(): Unit = {
     if (partialDerivative.isEmpty) {
       partialDerivative = Some(
-        scope(ATen.ones_like(value, value.options))
+        STen.ones(shape, options)(scope)
+        // scope(ATen.ones_like(value, value.options))
       )
     }
     wengert.foreach { v =>
@@ -92,72 +94,73 @@ case class Variable(
 
   }
 
-  def zipBackward(fn: (Tensor, Tensor) => Unit) = (this, fn)
+  def zipBackward(fn: (STen, STen) => Unit) = (this, fn)
 
   def accumulateGrad(
-      incoming: Tensor,
-      computeGrad: (Tensor, Tensor) => Unit
+      incoming: STen,
+      computeGrad: (STen, STen) => Unit
   ) = if (needsGrad) {
 
     if (partialDerivative.isEmpty) {
-      partialDerivative = Some(scope(ATen.zeros(shape.toArray, options)))
+      partialDerivative = Some(STen.zeros(shape, options)(scope))
     }
     computeGrad(incoming, partialDerivative.get)
   }
 
-  def t[S: Sc] = Transpose(this).value
-  def transpose[S: Sc](dim1: Int, dim2: Int) = Transpose(this, dim1, dim2).value
+  def t[S: Sc] = Transpose(scope, this).value
+  def transpose[S: Sc](dim1: Int, dim2: Int) =
+    Transpose(scope, this, dim1, dim2).value
   def select[S: Sc](dim: Long, index: Long) =
-    Select(this, dim = dim, index = index).value
+    Select(scope, this, dim = dim, index = index).value
   def indexSelect[S: Sc](dim: Long, index: Variable) =
-    IndexSelect(this, dim = dim, index = index).value
+    IndexSelect(scope, this, dim = dim, index = index).value
   def argmax[S: Sc](dim: Long, keepDim: Boolean) =
-    ArgMax(this, dim = dim, keepDim = keepDim).value
+    ArgMax(scope, this, dim = dim, keepDim = keepDim).value
   def oneHot[S: Sc](numClasses: Int) =
-    OneHot(this, numClasses).value
+    OneHot(scope, this, numClasses).value
   def assign[S: Sc](other: Variable) =
-    Assign(abandon = this, keep = other).value
+    Assign(scope, abandon = this, keep = other).value
   def maskFill[S: Sc](mask: Variable, fill: Double) =
-    MaskFill(this, mask, fill).value
-  def makeBooleanMask[S: Sc](q: Long) = EqWhere(this, q).value
+    MaskFill(scope, this, mask, fill).value
+  def makeBooleanMask[S: Sc](q: Long) = EqWhere(scope, this, q).value
   def cast[S: Sc](precision: FloatingPointPrecision) =
-    CastToPrecision(this, precision).value
+    CastToPrecision(scope, this, precision).value
   def cat[S: Sc](other: Variable, dim: Long) =
-    Concatenate(List(this, other), dim).value
-  def +[S: Sc](other: Variable) = Add(this, other).value
-  def +[S: Sc](other: Double) = ConstAdd(this, other).value
-  def -[S: Sc](other: Variable) = Minus(this, other).value
-  def *[S: Sc](other: Variable) = Mult(this, other).value
-  def *[S: Sc](other: Double) = ConstMult(this, other).value
-  def /[S: Sc](other: Variable) = Div(this, other).value
-  def mm[S: Sc](other: Variable) = MatMul(this, other).value
-  def bmm[S: Sc](other: Variable) = BatchedMatMul(this, other).value
-  def relu[S: Sc] = Relu(this).value
-  def gelu[S: Sc] = Gelu(this).value
-  def sigmoid[S: Sc] = Sigmoid(this).value
+    Concatenate(scope, List(this, other), dim).value
+  def +[S: Sc](other: Variable) = Add(scope, this, other).value
+  def +[S: Sc](other: Double) = ConstAdd(scope, this, other).value
+  def -[S: Sc](other: Variable) = Minus(scope, this, other).value
+  def *[S: Sc](other: Variable) = Mult(scope, this, other).value
+  def *[S: Sc](other: Double) = ConstMult(scope, this, other).value
+  def /[S: Sc](other: Variable) = Div(scope, this, other).value
+  def mm[S: Sc](other: Variable) = MatMul(scope, this, other).value
+  def bmm[S: Sc](other: Variable) = BatchedMatMul(scope, this, other).value
+  def relu[S: Sc] = Relu(scope, this).value
+  def gelu[S: Sc] = Gelu(scope, this).value
+  def sigmoid[S: Sc] = Sigmoid(scope, this).value
   def dropout[S: Sc](prob: Double, train: Boolean) =
-    Dropout(this, prob, train).value
+    Dropout(scope, this, prob, train).value
   def scatterAdd[S: Sc](index: Variable, dim: Int, maxIndex: Long) =
-    ScatterAdd(this, index, dim, maxIndex).value
+    ScatterAdd(scope, this, index, dim, maxIndex).value
   def indexAdd[S: Sc](index: Variable, dim: Int, maxIndex: Long) =
-    IndexAdd(this, index, dim, maxIndex).value
-  def sum[S: Sc] = Sum(this).value
-  def expandAs[S: Sc](other: Tensor) = ExpandAs(this, other).value
-  def rowSum[S: Sc] = RowSum(this).value
-  def colSum[S: Sc] = ColSum(this).value
-  def exp[S: Sc] = Exp(this).value
-  def log[S: Sc] = Log(this).value
-  def log1p[S: Sc] = Log1p(this).value
-  def sin[S: Sc] = Sin(this).value
-  def cos[S: Sc] = Cos(this).value
-  def tan[S: Sc] = Tan(this).value
-  def tanh[S: Sc] = Tanh(this).value
-  def atan[S: Sc] = ArcTan(this).value
-  def pow[S: Sc](const: Double) = PowConst(this, const).value
-  def pow[S: Sc](exponent: Variable) = Pow(this, exponent).value
+    IndexAdd(scope, this, index, dim, maxIndex).value
+  def sum[S: Sc] = Sum(scope, this).value
+  def expandAs[S: Sc](other: Tensor) = ExpandAs(scope, this, other).value
+  def rowSum[S: Sc] = RowSum(scope, this).value
+  def colSum[S: Sc] = ColSum(scope, this).value
+  def exp[S: Sc] = Exp(scope, this).value
+  def log[S: Sc] = Log(scope, this).value
+  def log1p[S: Sc] = Log1p(scope, this).value
+  def sin[S: Sc] = Sin(scope, this).value
+  def cos[S: Sc] = Cos(scope, this).value
+  def tan[S: Sc] = Tan(scope, this).value
+  def tanh[S: Sc] = Tanh(scope, this).value
+  def atan[S: Sc] = ArcTan(scope, this).value
+  def pow[S: Sc](const: Double) = PowConst(scope, this, const).value
+  def pow[S: Sc](exponent: Variable) = Pow(scope, this, exponent).value
   def euclideanDistance[S: Sc](b: Variable, dim: Int) =
-    EuclideanDistance(this, b, dim).value
-  def logSoftMax[S: Sc](dim: Int) = LogSoftMax(this, dim).value
+    EuclideanDistance(scope, this, b, dim).value
+  def logSoftMax[S: Sc](dim: Int) = LogSoftMax(scope, this, dim).value
   def crossEntropy[S: Sc](other: Variable) =
     ((this.*(other)).rowSum).*(-1d)
   def nllLoss[S: Sc](
@@ -167,27 +170,27 @@ case class Variable(
       reduction: Reduction = Mean,
       ignore: Long = -100L
   ) =
-    NllLoss(this, target, weights, numClasses, reduction, ignore).value
+    NllLoss(scope, this, target, weights, numClasses, reduction, ignore).value
   def mseLoss[S: Sc](
       target: Tensor,
       reduction: Reduction = Mean
   ) =
-    MseLoss(this, target, reduction).value
+    MseLoss(scope, this, target, reduction).value
   def l1Loss[S: Sc](
       target: Tensor,
       reduction: Reduction = Mean
   ) =
-    L1Loss(this, target, reduction).value
-  def squaredFrobenius[S: Sc] = SquaredFrobeniusMatrixNorm(this).value
-  def mean[S: Sc](dim: List[Int]) = Mean(this, dim).value
-  def variance[S: Sc](dim: List[Int]) = Variance(this, dim).value
+    L1Loss(scope, this, target, reduction).value
+  def squaredFrobenius[S: Sc] = SquaredFrobeniusMatrixNorm(scope, this).value
+  def mean[S: Sc](dim: List[Int]) = Mean(scope, this, dim).value
+  def variance[S: Sc](dim: List[Int]) = Variance(scope, this, dim).value
   def normalize[S: Sc](dim: List[Int]) = {
     (this - this.mean(dim)) / ((this.variance(dim) + 1e-6).pow(0.5))
   }
   def view[S: Sc](shape: List[Int]) =
-    View(this, shape.map(_.toLong).toArray).value
+    View(scope, this, shape.map(_.toLong).toArray).value
   def flattenLastDimensions[S: Sc](dims: Int) =
-    FlattenLastDimensions(this, dims).value
+    FlattenLastDimensions(scope, this, dims).value
 
   def toMat = value.toMat
   def toLongMat = value.toLongMat

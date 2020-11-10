@@ -3,6 +3,7 @@ package lamp.nn
 import lamp.autograd.Variable
 import lamp.autograd.ConcatenateAddNewDim
 import lamp.Sc
+import lamp.scope
 
 object Attention {
 
@@ -98,7 +99,7 @@ object Attention {
         outputs.append(output.select(0, 0))
         nextHidden
       }
-    val r = ConcatenateAddNewDim(outputs).value
+    val r = ConcatenateAddNewDim(scope, outputs).value
     (r, lastHidden)
 
   }

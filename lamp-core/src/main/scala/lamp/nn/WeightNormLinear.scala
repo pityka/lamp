@@ -3,6 +3,7 @@ package lamp.nn
 import lamp.Sc
 import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
+import lamp.scope
 
 case class WeightNormLinear(
     weightsV: Variable,
@@ -16,7 +17,7 @@ case class WeightNormLinear(
   ) ++ bias.toList.map(b => (b, WeightNormLinear.Bias))
 
   def forward[S: Sc](x: Variable): Variable = {
-    val weights = lamp.autograd.WeightNorm(weightsV, weightsG, 0).value
+    val weights = lamp.autograd.WeightNorm(scope, weightsV, weightsG, 0).value
     val v = x.mm(weights.t)
     bias.map(_ + v).getOrElse(v)
 

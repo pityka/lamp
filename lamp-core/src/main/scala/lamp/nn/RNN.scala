@@ -6,6 +6,7 @@ import scala.collection.mutable
 import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
 import lamp.Sc
+import lamp.scope
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * hidden dim)
@@ -43,7 +44,7 @@ case class RNN(
         outputs.append(newHidden)
         newHidden
       }
-    (ConcatenateAddNewDim(outputs).value, Some(lastHidden))
+    (ConcatenateAddNewDim(scope, outputs).value, Some(lastHidden))
 
   }
 

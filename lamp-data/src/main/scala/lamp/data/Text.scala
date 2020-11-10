@@ -123,6 +123,7 @@ object Text {
         .map {
           case (seq, logProb) =>
             val catted = ConcatenateAddNewDim(
+              scope,
               seq.map(v => v.select(0, v.shape(0) - 1))
             ).value.view(List(seq.size))
 

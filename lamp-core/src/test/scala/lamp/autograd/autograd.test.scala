@@ -158,7 +158,7 @@ class GradientSuite extends AnyFunSuite {
       val L = x1.sum
       // assert(L.value == Mat(Vec(mat2x3.toVec.sum2)))
       L.backprop()
-      assert(TensorHelpers.toMat(x1.partialDerivative.get) == mat.ones(2, 3))
+      assert(x1.partialDerivative.get.toMat == mat.ones(2, 3))
       ()
     }
   }
@@ -172,7 +172,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -185,7 +185,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -198,7 +198,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -212,7 +212,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -226,7 +226,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x2.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x2.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -241,7 +241,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -255,7 +255,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -270,7 +270,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -284,7 +284,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -298,7 +298,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -313,7 +313,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -328,7 +328,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -342,7 +342,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -355,7 +355,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -368,7 +368,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -383,7 +383,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -398,7 +398,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -412,7 +412,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -427,7 +427,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -442,7 +442,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -456,7 +456,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -471,7 +471,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -493,7 +493,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -507,7 +507,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -523,7 +523,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -538,7 +538,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -552,7 +552,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -565,7 +565,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -578,7 +578,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -592,7 +592,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -606,7 +606,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -619,7 +619,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -633,7 +633,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -647,7 +647,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -661,7 +661,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -676,14 +676,14 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
   testGradientAndValue("capped exp")(mat3x1, 2.6065) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val x1 = param(TensorHelpers.fromMat(m, cuda))
-      val out = CappedShiftedNegativeExponential(x1, 2.5d).value
+      val out = CappedShiftedNegativeExponential(scope, x1, 2.5d).value
       assert(
         out.toMat.roundTo(4) == Mat(Vec(1d, 1d, math.exp(-0.5))).roundTo(4)
       )
@@ -693,7 +693,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -706,7 +706,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -724,7 +724,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -742,7 +742,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -756,7 +756,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -769,7 +769,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -783,7 +783,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -797,7 +797,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+          x1.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -810,7 +810,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -823,7 +823,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -837,7 +837,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -851,7 +851,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        x1.partialDerivative.map(t => TensorHelpers.toMat(t))
+        x1.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -874,7 +874,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        w.partialDerivative.map(t => TensorHelpers.toMat(t))
+        w.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -898,7 +898,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        w.partialDerivative.map(t => TensorHelpers.toMat(t))
+        w.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -923,7 +923,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        w.partialDerivative.map(t => TensorHelpers.toMat(t))
+        w.partialDerivative.map(t => t.toMat)
       )
     }
   }
@@ -932,13 +932,13 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val v = param(TensorHelpers.fromMat(mat.ones(2, 3), cuda))
         val g = param(TensorHelpers.fromMat(m, cuda))
-        val L = WeightNorm(v, g, 0).value.sum
+        val L = WeightNorm(scope, v, g, 0).value.sum
         if (doBackprop) {
           L.backprop()
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          g.partialDerivative.map(t => TensorHelpers.toMat(t))
+          g.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -947,13 +947,13 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val v = param(TensorHelpers.fromMat(m, cuda))
         val g = param(TensorHelpers.fromMat(mat.ones(1, 3), cuda))
-        val L = WeightNorm(v, g, 0).value.sum
+        val L = WeightNorm(scope, v, g, 0).value.sum
         if (doBackprop) {
           L.backprop()
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          v.partialDerivative.map(t => TensorHelpers.toMat(t))
+          v.partialDerivative.map(t => t.toMat)
         )
       }
   }
@@ -970,7 +970,7 @@ class GradientSuite extends AnyFunSuite {
         param(ATen.eq_1(q, sc))
       }
 
-      val output = MaskFill(input, mask, 2d).value
+      val output = MaskFill(scope, input, mask, 2d).value
 
       val L = output.sum
       if (doBackprop) {
@@ -978,7 +978,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -989,7 +989,7 @@ class GradientSuite extends AnyFunSuite {
       val index =
         param(NDArray.tensorFromLongNDArray(NDArray(Array(1L), List(1)), cuda))
 
-      val output = IndexFill(input, 1L, index, 2d).value
+      val output = IndexFill(scope, input, 1L, index, 2d).value
 
       val L = output.sum
       if (doBackprop) {
@@ -997,7 +997,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -1021,7 +1021,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -1105,7 +1105,7 @@ class GradientSuite extends AnyFunSuite {
             .tensorFromLongNDArray(NDArray(Array(1L, 1L, 1L), List(3)), cuda)
         )
 
-      val output = IndexSelect(input, 1L, index).value
+      val output = IndexSelect(scope, input, 1L, index).value
 
       val L = output.sum
       if (doBackprop) {
@@ -1113,7 +1113,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -1126,7 +1126,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv1D(input, weight, bias, 1, 0, 1, 1L).value
+          Conv1D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1134,7 +1134,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1147,7 +1147,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv1D(input, weight, bias, 1, 0, 1, 1L).value
+          Conv1D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1155,7 +1155,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1168,7 +1168,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv1D(input, weight, bias, 1L, 1L, 1L, 1L).value
+          Conv1D(scope, input, weight, bias, 1L, 1L, 1L, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1176,7 +1176,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1189,7 +1189,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv1D(input, weight, bias, 1, 1, 1, 1L).value
+          Conv1D(scope, input, weight, bias, 1, 1, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1197,7 +1197,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1210,7 +1210,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv1D(input, weight, bias, 2L, 1L, 1L, 1L).value
+          Conv1D(scope, input, weight, bias, 2L, 1L, 1L, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1218,7 +1218,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1231,7 +1231,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv1D(input, weight, bias, 2, 1, 1, 1L).value
+          Conv1D(scope, input, weight, bias, 2, 1, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1239,7 +1239,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1252,7 +1252,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(NDArray.tensorFromNDArray(m, cuda))
         val output =
-          Conv1D(input, weight, bias, 2, 1, 1, 1L).value
+          Conv1D(scope, input, weight, bias, 2, 1, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1260,7 +1260,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1273,7 +1273,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv2D(input, weight, bias, 1, 0, 1, 1L).value
+          Conv2D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1281,7 +1281,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1294,7 +1294,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv2D(input, weight, bias, 1, 0, 1, 1L).value
+          Conv2D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1302,7 +1302,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1315,7 +1315,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(TensorHelpers.fromVec(vec.ones(1), cuda))
         val output =
-          Conv2D(input, weight, bias, 1, 1, 1, 1L).value
+          Conv2D(scope, input, weight, bias, 1, 1, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1323,7 +1323,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1336,7 +1336,7 @@ class GradientSuite extends AnyFunSuite {
 
         val bias = param(NDArray.tensorFromNDArray(m, cuda))
         val output =
-          Conv2D(input, weight, bias, 1, 0, 1, 1L).value
+          Conv2D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1344,7 +1344,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1355,7 +1355,7 @@ class GradientSuite extends AnyFunSuite {
         val input =
           param(NDArray.tensorFromNDArray(m, cuda))
         val output =
-          MaxPool1D(input, 2, 1, 1, 1).value
+          MaxPool1D(scope, input, 2, 1, 1, 1).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1363,7 +1363,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1374,7 +1374,7 @@ class GradientSuite extends AnyFunSuite {
           param(NDArray.tensorFromNDArray(m, cuda))
 
         val output =
-          MaxPool1D(input, 2, 1, 0, 1).value
+          MaxPool1D(scope, input, 2, 1, 0, 1).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1382,7 +1382,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1393,7 +1393,7 @@ class GradientSuite extends AnyFunSuite {
           param(NDArray.tensorFromNDArray(m, cuda))
 
         val output =
-          MaxPool1D(input, 2, 2, 0, 1).value
+          MaxPool1D(scope, input, 2, 2, 0, 1).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1401,7 +1401,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1412,7 +1412,7 @@ class GradientSuite extends AnyFunSuite {
           param(NDArray.tensorFromNDArray(m, cuda))
 
         val output =
-          MaxPool2D(input, 2, 2, 0, 1).value
+          MaxPool2D(scope, input, 2, 2, 0, 1).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1420,7 +1420,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1431,7 +1431,7 @@ class GradientSuite extends AnyFunSuite {
           param(NDArray.tensorFromNDArray(m, cuda))
 
         val output =
-          MaxPool2D(input, 2, 2, 1, 1).value
+          MaxPool2D(scope, input, 2, 2, 1, 1).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1439,7 +1439,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1450,7 +1450,7 @@ class GradientSuite extends AnyFunSuite {
           param(NDArray.tensorFromNDArray(m, cuda))
 
         val output =
-          AvgPool2D(input, 2, 2, 1).value
+          AvgPool2D(scope, input, 2, 2, 1).value
 
         val L = output.sum
         if (doBackprop) {
@@ -1458,7 +1458,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1475,6 +1475,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weight,
             bias,
@@ -1508,6 +1509,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weight,
             bias,
@@ -1524,7 +1526,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1541,6 +1543,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weight,
             bias,
@@ -1557,7 +1560,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1575,7 +1578,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1593,7 +1596,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1610,6 +1613,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weight,
             bias,
@@ -1626,7 +1630,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1643,6 +1647,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weight,
             bias,
@@ -1659,7 +1664,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1676,6 +1681,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weight,
             bias,
@@ -1692,7 +1698,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1709,6 +1715,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weight,
             bias,
@@ -1725,7 +1732,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1742,6 +1749,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weight,
             bias,
@@ -1758,7 +1766,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1775,6 +1783,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm(
+            scope,
             input,
             weights,
             bias,
@@ -1791,7 +1800,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1808,6 +1817,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm2D(
+            scope,
             input,
             weights,
             bias,
@@ -1824,7 +1834,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1841,6 +1851,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm2D(
+            scope,
             input,
             weights,
             bias,
@@ -1857,7 +1868,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          weights.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          weights.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1874,6 +1885,7 @@ class GradientSuite extends AnyFunSuite {
 
         val output =
           BatchNorm2D(
+            scope,
             input,
             weights,
             bias,
@@ -1890,7 +1902,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1900,10 +1912,7 @@ class GradientSuite extends AnyFunSuite {
         param(NDArray.tensorFromNDArray(m, cuda))
 
       val output =
-        FlattenLastDimensions(
-          input,
-          3
-        ).value
+        FlattenLastDimensions(scope, input, 3).value
 
       assert(output.shape == List(1, 18))
 
@@ -1913,7 +1922,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -1934,7 +1943,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1955,7 +1964,7 @@ class GradientSuite extends AnyFunSuite {
         }
         (
           TensorHelpers.toMat(L.value).raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
   }
@@ -1965,7 +1974,7 @@ class GradientSuite extends AnyFunSuite {
         param(NDArray.tensorFromNDArray(m, cuda))
 
       val output =
-        ConcatenateAddNewDim(List(input, input)).value
+        ConcatenateAddNewDim(scope, List(input, input)).value
 
       assert(output.shape == List(2, 1, 2, 3))
 
@@ -1975,7 +1984,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -1987,7 +1996,7 @@ class GradientSuite extends AnyFunSuite {
         param(NDArray.tensorFromNDArray(nd1x2x3_2, cuda))
 
       val output =
-        Concatenate(List(input, t2), 1).value
+        Concatenate(scope, List(input, t2), 1).value
 
       assert(output.shape == List(1, 4, 3))
 
@@ -1997,7 +2006,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -2008,7 +2017,7 @@ class GradientSuite extends AnyFunSuite {
       val t2 =
         param(NDArray.tensorFromNDArray(nd1x2x3_2, cuda))
       val output =
-        Concatenate(List(input, t2), 2).value
+        Concatenate(scope, List(input, t2), 2).value
 
       assert(output.shape == List(1, 2, 6))
 
@@ -2018,7 +2027,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -2038,7 +2047,7 @@ class GradientSuite extends AnyFunSuite {
       }
       (
         TensorHelpers.toMat(L.value).raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t))
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
       )
     }
   }
@@ -2049,7 +2058,7 @@ class GradientSuite extends AnyFunSuite {
       val input =
         param(TensorHelpers.fromLongMat(mat.ones(4, 5).map(_.toLong), cuda))
 
-      val output = Embedding(input, weight).value
+      val output = Embedding(scope, input, weight).value
 
       assert(output.shape == List(4, 5, 3))
 
