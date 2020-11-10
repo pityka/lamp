@@ -159,7 +159,7 @@ object Umap {
         if (minDist == 0d) {
           (locNorm1 * b).sum * (-1)
         } else {
-          (CappedShiftedNegativeExponential(locNorm1, minDist).value.log * b).sum
+          (CappedShiftedNegativeExponential(scope, locNorm1, minDist).value.log * b).sum
         }
 
       val locNorm2 =
@@ -168,7 +168,7 @@ object Umap {
         if (minDist == 0d) (((locNorm2 * (-1)).exp * (-1))).log1p.sum
         else {
           val p =
-            CappedShiftedNegativeExponential(locNorm2, minDist).value * (-1) + 1e-6
+            CappedShiftedNegativeExponential(scope, locNorm2, minDist).value * (-1) + 1e-6
           p.log1p.sum
         }
 
@@ -228,7 +228,7 @@ object Umap {
       var i = 0
       var lastLoss = 0d
       while (i < iterations) {
-        Scope { implicit scope =>
+        Scope.root { implicit scope =>
           val (index3T, index4T) = {
             var (index3, index4) = sampleRepulsivePairsT(negativeSampleSize)
             val i3 = const(
@@ -256,7 +256,7 @@ object Umap {
             locations.zeroGrad()
             lossV.backprop()
             val g = locations.partialDerivative
-            g
+            g.map(_.value)
           }
           optimizer.step(List(gradients))
         }

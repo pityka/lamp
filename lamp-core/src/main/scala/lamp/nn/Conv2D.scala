@@ -3,6 +3,7 @@ package lamp.nn
 import lamp.autograd.{Variable, param, Conv2D => Conv2dOp, const}
 import aten.{ATen, TensorOptions}
 import lamp.Sc
+import lamp.scope
 case class Conv2D(
     weights: Variable,
     bias: Variable,
@@ -18,7 +19,7 @@ case class Conv2D(
   )
 
   def forward[S: Sc](x: Variable): Variable =
-    Conv2dOp(x, weights, bias, stride, padding, dilation, groups).value
+    Conv2dOp(scope, x, weights, bias, stride, padding, dilation, groups).value
 
 }
 

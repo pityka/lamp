@@ -6,6 +6,7 @@ import scala.collection.mutable
 import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
 import lamp.Sc
+import lamp.scope
 
 /** Inputs of size (sequence length * batch * vocab)
   * Outputs of size (sequence length * batch * output dim)
@@ -79,7 +80,7 @@ case class LSTM(
           (ht, ct)
       }
     (
-      ConcatenateAddNewDim(outputs).value,
+      ConcatenateAddNewDim(scope, outputs).value,
       Some((lastHidden, lastMemory))
     )
 

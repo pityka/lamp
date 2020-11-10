@@ -3,6 +3,7 @@ package lamp.nn
 import lamp.autograd.{Variable, param}
 import aten.{ATen, TensorOptions}
 import lamp.Sc
+import lamp.scope
 
 /**
   * Learnable mapping from classes to dense vectors.
@@ -23,7 +24,7 @@ case class Embedding(weights: Variable) extends Module {
   )
 
   def forward[S: Sc](x: Variable): Variable =
-    lamp.autograd.Embedding(x, weights).value
+    lamp.autograd.Embedding(scope, x, weights).value
 
 }
 

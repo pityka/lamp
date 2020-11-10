@@ -57,38 +57,29 @@ object STen {
   )(implicit scope: Scope): STen =
     STen(value, scope)
 
-  def addOut(
-      out: STen,
-      self: STen,
-      other: STen,
-      alpha: Double
-  ): Unit =
-    ATen.add_out(out.value, self.value, other.value, alpha)
-  def zeroInplace(
-      self: STen
-  ): Unit =
-    ATen.zero_(self.value)
-
   def cat[S: Sc](tensors: Seq[STen], dim: Long) =
     owned(ATen.cat(tensors.map(_.value).toArray, dim))
 
+  def scalarLong[S: Sc](value: Long, options: TensorOptions) =
+    Tensor.scalarLong(value, options.toLong()).owned
+
   def ones[S: Sc](
-      size: List[Int],
+      size: List[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.ones(size.toArray.map(_.toLong), tensorOptions))
   def zeros[S: Sc](
-      size: List[Int],
+      size: List[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.zeros(size.toArray.map(_.toLong), tensorOptions))
   def rand[S: Sc](
-      size: List[Int],
+      size: List[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.rand(size.toArray.map(_.toLong), tensorOptions))
   def randn[S: Sc](
-      size: List[Int],
+      size: List[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.randn(size.toArray.map(_.toLong), tensorOptions))
@@ -123,6 +114,133 @@ object STen {
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.linspace(start, end, steps, tensorOptions))
+
+  def indexSelectOut(out: STen, self: STen, dim: Int, index: STen) =
+    ATen.index_select_out(out.value, self.value, dim, index.value)
+  def catOut(out: STen, tensors: Seq[STen], dim: Int) =
+    ATen.cat_out(out.value, tensors.map(_.value).toArray, dim)
+  def addOut(
+      out: STen,
+      self: STen,
+      other: STen,
+      alpha: Double
+  ): Unit =
+    ATen.add_out(out.value, self.value, other.value, alpha)
+  def subOut(
+      out: STen,
+      self: STen,
+      other: STen,
+      alpha: Double
+  ): Unit =
+    ATen.sub_out(out.value, self.value, other.value, alpha)
+  def mulOut(
+      out: STen,
+      self: STen,
+      other: STen
+  ): Unit =
+    ATen.mul_out(out.value, self.value, other.value)
+  def divOut(
+      out: STen,
+      self: STen,
+      other: STen
+  ): Unit =
+    ATen.div_out(out.value, self.value, other.value)
+  def mmOut(
+      out: STen,
+      self: STen,
+      other: STen
+  ): Unit =
+    ATen.mm_out(out.value, self.value, other.value)
+  def bmmOut(
+      out: STen,
+      self: STen,
+      other: STen
+  ): Unit =
+    ATen.bmm_out(out.value, self.value, other.value)
+  def remainderOut(
+      out: STen,
+      self: STen,
+      other: STen
+  ): Unit =
+    ATen.remainder_out_1(out.value, self.value, other.value)
+  def remainderOut(
+      out: STen,
+      self: STen,
+      other: Double
+  ): Unit =
+    ATen.remainder_out_0(out.value, self.value, other)
+  def powOut(
+      out: STen,
+      self: STen,
+      other: Double
+  ): Unit =
+    ATen.pow_out_0(out.value, self.value, other)
+  def powOut(
+      out: STen,
+      self: STen,
+      other: STen
+  ): Unit =
+    ATen.pow_out_1(out.value, self.value, other.value)
+  def sumOut(
+      out: STen,
+      self: STen,
+      dim: List[Int],
+      keepDim: Boolean
+  ): Unit =
+    ATen.sum_out(out.value, self.value, dim.map(_.toLong).toArray, keepDim)
+  def meanOut(
+      out: STen,
+      self: STen,
+      dim: List[Int],
+      keepDim: Boolean
+  ): Unit =
+    ATen.mean_out(out.value, self.value, dim.map(_.toLong).toArray, keepDim)
+  def addmmOut(
+      out: STen,
+      self: STen,
+      mat1: STen,
+      mat2: STen,
+      beta: Double,
+      alpha: Double
+  ): Unit =
+    ATen.addmm_out(out.value, self.value, mat1.value, mat2.value, beta, alpha)
+
+  def addcmulOut(
+      out: STen,
+      self: STen,
+      tensor1: STen,
+      tensor2: STen,
+      alpha: Double
+  ): Unit =
+    ATen
+      .addcmul_out(out.value, self.value, tensor1.value, tensor2.value, alpha)
+
+  def tanh_backward[S: Sc](gradOutput: STen, output: STen) =
+    ATen.tanh_backward(gradOutput.value, output.value).owned
+  def l1_loss_backward[S: Sc](
+      gradOutput: STen,
+      self: STen,
+      target: STen,
+      reduction: Long
+  ) =
+    ATen
+      .l1_loss_backward(gradOutput.value, self.value, target.value, reduction)
+      .owned
+  def mse_loss_backward[S: Sc](
+      gradOutput: STen,
+      self: STen,
+      target: STen,
+      reduction: Long
+  ) =
+    ATen
+      .mse_loss_backward(gradOutput.value, self.value, target.value, reduction)
+      .owned
+
+  def where[S: Sc](condition: STen, self: STen, other: STen) =
+    ATen.where_0(condition.value, self.value, other.value).owned
+  def where[S: Sc](condition: Tensor, self: STen, other: STen) =
+    ATen.where_0(condition, self.value, other.value).owned
+
 }
 
 case class STen(
@@ -147,14 +265,22 @@ case class STen(
   override def toString =
     s"STen(shape=$shape,value=$value,scope=$scope)"
 
+  def unbroadcast[S: Sc](sizes: List[Long]) =
+    TensorHelpers.unbroadcast(value, sizes).owned
+
   def t[S: Sc] = owned(ATen.t(value))
   def transpose[S: Sc](dim1: Int, dim2: Int) =
     owned(ATen.transpose(value, dim1, dim2))
 
   def select[S: Sc](dim: Long, index: Long) =
     owned(ATen.select(value, dim, index))
+  def flatten[S: Sc](startDim: Long, endDim: Long) =
+    owned(ATen.flatten(value, startDim, endDim))
+
   def indexSelect[S: Sc](dim: Long, index: STen) =
     owned(ATen.index_select(value, dim, index.value))
+  def indexSelect[S: Sc](dim: Long, index: Tensor) =
+    owned(ATen.index_select(value, dim, index))
   def argmax[S: Sc](dim: Long, keepDim: Boolean) =
     owned(ATen.argmax(value, dim, keepDim))
   def argmin[S: Sc](dim: Long, keepDim: Boolean) =
@@ -174,6 +300,8 @@ case class STen(
 
   def +[S: Sc](other: STen) =
     owned(ATen.add_0(value, other.value, 1d))
+  def +=(other: STen): Unit =
+    ATen.add_out(value, value, other.value, 1d)
   def +[S: Sc](other: Double) =
     owned(ATen.add_1(value, other, 1d))
   def add[S: Sc](other: STen, alpha: Double) =
@@ -181,8 +309,13 @@ case class STen(
   def add[S: Sc](other: Double, alpha: Double) =
     owned(ATen.add_1(value, other, alpha))
 
+  def addmm[S: Sc](mat1: STen, mat2: STen, beta: Double, alpha: Double) =
+    ATen.addmm(value, mat1.value, mat2.value, beta, alpha).owned
+
   def -[S: Sc](other: STen) =
     owned(ATen.sub_0(value, other.value, 1d))
+  def -=[S: Sc](other: STen): Unit =
+    ATen.sub_out(value, value, other.value, 1d)
   def sub[S: Sc](other: STen, alpha: Double) =
     owned(ATen.sub_0(value, other.value, alpha))
   def sub[S: Sc](other: Double, alpha: Double) =
@@ -190,43 +323,94 @@ case class STen(
 
   def *[S: Sc](other: STen) =
     owned(ATen.mul_0(value, other.value))
+  def *[S: Sc](other: Tensor) =
+    owned(ATen.mul_0(value, other))
+
   def *[S: Sc](other: Double) =
     owned(ATen.mul_1(value, other))
 
+  def *=[S: Sc](other: STen): Unit =
+    ATen.mul_out(value, value, other.value)
+
   def /[S: Sc](other: STen) =
     owned(ATen.div_0(value, other.value))
+  def /[S: Sc](other: Tensor) =
+    owned(ATen.div_0(value, other))
   def /[S: Sc](other: Double) =
     owned(ATen.div_1(value, other))
+  def /=[S: Sc](other: STen): Unit =
+    ATen.div_out(value, value, other.value)
 
   def mm[S: Sc](other: STen) =
     owned(ATen.mm(value, other.value))
+
   def bmm[S: Sc](other: STen) =
     owned(ATen.bmm(value, other.value))
 
+  def baddbmm[S: Sc](batch1: STen, batch2: STen, beta: Double, alpha: Double) =
+    ATen.baddbmm(value, batch1.value, batch2.value, beta, alpha).owned
+
+  def addcmul[S: Sc](
+      tensor1: STen,
+      tensor2: STen,
+      alpha: Double
+  ) =
+    ATen.addcmul(value, tensor1.value, tensor2.value, alpha).owned
+  def addcmulSelf(
+      tensor1: STen,
+      tensor2: STen,
+      alpha: Double
+  ): Unit =
+    ATen.addcmul_out(value, value, tensor1.value, tensor2.value, alpha)
+  def addcmulSelf(
+      tensor1: STen,
+      tensor2: Tensor,
+      alpha: Double
+  ): Unit =
+    ATen.addcmul_out(value, value, tensor1.value, tensor2, alpha)
+
   def relu[S: Sc] = owned(ATen.relu(value))
+  def relu_() = ATen.relu_(value)
   def gelu[S: Sc] = owned(ATen.gelu(value))
   def sigmoid[S: Sc] = owned(ATen.sigmoid(value))
+  def sigmoid_() = ATen.sigmoid_(value)
   def exp[S: Sc] = owned(ATen.exp(value))
+  def exp_() = ATen.exp_(value)
   def log[S: Sc] = owned(ATen.log(value))
+  def log_() = ATen.log_(value)
   def log1p[S: Sc] = owned(ATen.log1p(value))
+  def log1p_() = ATen.log1p_(value)
   def sin[S: Sc] = owned(ATen.sin(value))
+  def sin_() = ATen.sin_(value)
   def cos[S: Sc] = owned(ATen.cos(value))
+  def cos_() = ATen.cos_(value)
   def tan[S: Sc] = owned(ATen.tan(value))
+  def tan_() = ATen.tan_(value)
   def tanh[S: Sc] = owned(ATen.tanh(value))
-  def atanh[S: Sc] = owned(ATen.atan(value))
+  def tanh_() = ATen.tanh_(value)
+  def atan[S: Sc] = owned(ATen.atan(value))
+  def atan_() = ATen.atan_(value)
   def acos[S: Sc] = owned(ATen.acos(value))
+  def acos_() = ATen.acos_(value)
   def asin[S: Sc] = owned(ATen.asin(value))
+  def asin_() = ATen.asin_(value)
   def sqrt[S: Sc] = owned(ATen.sqrt(value))
   def square[S: Sc] = owned(ATen.square(value))
+  def square_() = ATen.square_(value)
   def abs[S: Sc] = owned(ATen.abs(value))
+  def abs_() = ATen.abs_(value)
   def ceil[S: Sc] = owned(ATen.ceil(value))
+  def ceil_() = ATen.ceil_(value)
   def floor[S: Sc] = owned(ATen.floor(value))
+  def floor_() = ATen.floor_(value)
   def reciprocal[S: Sc] = owned(ATen.reciprocal(value))
+  def reciprocal_() = ATen.reciprocal_(value)
   def det[S: Sc] = owned(ATen.det(value))
   def trace[S: Sc] = owned(ATen.trace(value))
 
   def remainder[S: Sc](other: STen) =
     ATen.remainder_1(value, other.value).owned
+
   def remainder[S: Sc](other: Double) =
     ATen.remainder_0(value, other).owned
 
@@ -249,7 +433,33 @@ case class STen(
 
   def slice[S: Sc](dim: Int, start: Long, end: Long, step: Long) =
     owned(ATen.slice(value, dim, start, end, step))
+  def slice[S: Sc](dim: Long, start: Long, end: Long, step: Long) =
+    owned(ATen.slice(value, dim, start, end, step))
 
+  def fill_(v: Double) = ATen.fill__0(value, v)
+
+  def maskedFill[S: Sc](mask: STen, fill: Double) =
+    ATen.masked_fill_0(value, mask.value, fill).owned
+  def maskedFill[S: Sc](mask: Tensor, fill: Double) =
+    ATen.masked_fill_0(value, mask, fill).owned
+
+  def zero_(): Unit =
+    ATen.zero_(value)
+
+  def fill_(v: STen) = ATen.fill__1(value, v.value)
+
+  def scatter[S: Sc](
+      dim: Long,
+      index: STen,
+      source: STen
+  ) =
+    owned(ATen.scatter_0(value, dim, index.value, source.value))
+  def scatter[S: Sc](
+      dim: Long,
+      index: STen,
+      source: Double
+  ) =
+    owned(ATen.scatter_1(value, dim, index.value, source))
   def scatterAdd[S: Sc](
       dim: Long,
       index: STen,
@@ -262,11 +472,45 @@ case class STen(
       source: STen
   ) =
     owned(ATen.index_add(value, dim, index.value, source.value))
+  def indexAdd[S: Sc](
+      dim: Long,
+      index: Tensor,
+      source: STen
+  ) =
+    owned(ATen.index_add(value, dim, index, source.value))
+  def indexFill[S: Sc](
+      dim: Long,
+      index: STen,
+      source: STen
+  ) =
+    owned(ATen.index_fill_1(value, dim, index.value, source.value))
+  def indexFill[S: Sc](
+      dim: Long,
+      index: STen,
+      source: Double
+  ) =
+    owned(ATen.index_fill_0(value, dim, index.value, source))
+  def indexFill[S: Sc](
+      dim: Long,
+      index: Tensor,
+      source: Double
+  ) =
+    owned(ATen.index_fill_0(value, dim, index, source))
+  def gather[S: Sc](
+      dim: Long,
+      index: Tensor
+  ) =
+    owned(ATen.gather(value, dim, index, false))
+  def gather[S: Sc](
+      dim: Long,
+      index: STen
+  ) =
+    owned(ATen.gather(value, dim, index.value, false))
 
   def expandAs[S: Sc](other: STen) =
     owned(value.expand_as(other.value))
-  def view[S: Sc](dims: Int*) =
-    owned(ATen._unsafe_view(value, dims.map(_.toLong).toArray))
+  def view[S: Sc](dims: Long*) =
+    owned(ATen._unsafe_view(value, dims.toArray))
 
   def norm2[S: Sc](dim: List[Int], keepDim: Boolean) =
     owned(
@@ -436,8 +680,6 @@ case class STen(
     (a.owned, b.owned)
   }
 
-  def where[S: Sc](condition: STen, other: STen) =
-    ATen.where_0(condition.value, value, other.value).owned
   def where[S: Sc] =
     ATen.where_1(value).toList.map(_.owned)
 

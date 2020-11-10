@@ -187,7 +187,7 @@ trait GenericModule[A, B] {
     }
     loss.backprop()
     val g = parameters.map {
-      case (param, _) => param.partialDerivative
+      case (param, _) => param.partialDerivative.map(_.value)
     }
     g
   }

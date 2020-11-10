@@ -4,6 +4,7 @@ import lamp.autograd.{Variable, BatchNorm2D => BN, param, const}
 import lamp.Sc
 import aten.ATen
 import aten.TensorOptions
+import lamp.scope
 
 case class BatchNorm2D(
     weight: Variable,
@@ -24,6 +25,7 @@ case class BatchNorm2D(
 
   override def forward[S: Sc](x: Variable): Variable =
     BN(
+      scope,
       x,
       weight,
       bias,

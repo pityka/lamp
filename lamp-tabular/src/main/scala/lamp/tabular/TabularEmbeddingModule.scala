@@ -7,6 +7,7 @@ import aten.Tensor
 import lamp.Sc
 import lamp.autograd.Concatenate
 import lamp.Scope
+import lamp.scope
 
 case class TabularEmbedding(
     categoricalEmbeddings: Seq[Embedding]
@@ -23,7 +24,7 @@ case class TabularEmbedding(
       case (v, embedding) =>
         embedding.forward(v).view(List(v.shape.head.toInt, -1))
     }
-    Concatenate(embeddedCategoricals :+ numericals, dim = 1).value
+    Concatenate(scope, embeddedCategoricals :+ numericals, dim = 1).value
   }
 
 }
