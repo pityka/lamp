@@ -20,6 +20,10 @@ object STen {
       device: Device,
       precision: FloatingPointPrecision
   ) = owned(TensorHelpers.fromMat(m, device, precision))
+  def fromFloatMat[S: Sc](
+      m: Mat[Float],
+      device: Device
+  ) = owned(TensorHelpers.fromFloatMat(m, device))
   def fromVec[S: Sc](
       m: Vec[Double],
       cuda: Boolean = false
@@ -48,48 +52,72 @@ object STen {
       cuda: Boolean = false
   ) = owned(TensorHelpers.fromLongVec(m, cuda))
 
-  def free(value: Tensor) = STen(value, Scope.free)
+  def free(value: Tensor) = STen(value)
 
   def apply[S: Sc](vs: Double*) = fromVec(Vec(vs: _*))
 
   def owned(
       value: Tensor
-  )(implicit scope: Scope): STen =
-    STen(value, scope)
+  )(implicit scope: Scope): STen = {
+    scope(value)
+    STen(value)
+  }
 
   def cat[S: Sc](tensors: Seq[STen], dim: Long) =
     owned(ATen.cat(tensors.map(_.value).toArray, dim))
+  def stack[S: Sc](tensors: Seq[STen], dim: Long) =
+    owned(ATen.stack(tensors.map(_.value).toArray, dim))
 
-  def scalarLong[S: Sc](value: Long, options: TensorOptions) =
+  def scalarLong(value: Long, options: TensorOptions)(implicit scope: Scope) =
     Tensor.scalarLong(value, options.toLong()).owned
+  def scalarDouble[S: Sc](value: Double, options: TensorOptions) =
+    Tensor.scalarDouble(value, options.toDouble()).owned
 
   def ones[S: Sc](
-      size: List[Long],
+      size: Seq[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.ones(size.toArray.map(_.toLong), tensorOptions))
   def zeros[S: Sc](
-      size: List[Long],
+      size: Seq[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.zeros(size.toArray.map(_.toLong), tensorOptions))
   def rand[S: Sc](
-      size: List[Long],
+      size: Seq[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.rand(size.toArray.map(_.toLong), tensorOptions))
   def randn[S: Sc](
-      size: List[Long],
+      size: Seq[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.randn(size.toArray.map(_.toLong), tensorOptions))
+
+  def normal[S: Sc](
+      mean: Double,
+      std: Double,
+      size: Seq[Long],
+      options: TensorOptions
+  ) =
+    ATen.normal_3(mean, std, size.toArray, options).owned
+
   def randint[S: Sc](
       high: Long,
-      size: List[Int],
+      size: Seq[Long],
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(
-      ATen.randint_0(high, size.toArray.map(_.toLong), tensorOptions)
+      ATen.randint_0(high, size.toArray, tensorOptions)
+    )
+  def randint[S: Sc](
+      low: Long,
+      high: Long,
+      size: Seq[Long],
+      tensorOptions: TensorOptions
+  ) =
+    owned(
+      ATen.randint_2(low, high, size.toArray, tensorOptions)
     )
   def eye[S: Sc](n: Int, tensorOptions: TensorOptions = TensorOptions.d) =
     owned(ATen.eye_0(n, tensorOptions))
@@ -114,6 +142,20 @@ object STen {
       tensorOptions: TensorOptions = TensorOptions.d
   ) =
     owned(ATen.linspace(start, end, steps, tensorOptions))
+  def sparse_coo[S: Sc](
+      indices: STen,
+      values: STen,
+      dim: Seq[Long],
+      tensorOptions: TensorOptions = TensorOptions.d
+  ) =
+    owned(
+      ATen.sparse_coo_tensor(
+        indices.value,
+        values.value,
+        dim.toArray,
+        tensorOptions
+      )
+    )
 
   def indexSelectOut(out: STen, self: STen, dim: Int, index: STen) =
     ATen.index_select_out(out.value, self.value, dim, index.value)
@@ -184,14 +226,14 @@ object STen {
   def sumOut(
       out: STen,
       self: STen,
-      dim: List[Int],
+      dim: Seq[Int],
       keepDim: Boolean
   ): Unit =
     ATen.sum_out(out.value, self.value, dim.map(_.toLong).toArray, keepDim)
   def meanOut(
       out: STen,
       self: STen,
-      dim: List[Int],
+      dim: Seq[Int],
       keepDim: Boolean
   ): Unit =
     ATen.mean_out(out.value, self.value, dim.map(_.toLong).toArray, keepDim)
@@ -235,6 +277,12 @@ object STen {
     ATen
       .mse_loss_backward(gradOutput.value, self.value, target.value, reduction)
       .owned
+  def mse_loss[S: Sc](
+      self: STen,
+      target: STen,
+      reduction: Long
+  ) =
+    ATen.mse_loss(self.value, target.value, reduction).owned
 
   def where[S: Sc](condition: STen, self: STen, other: STen) =
     ATen.where_0(condition.value, self.value, other.value).owned
@@ -243,30 +291,37 @@ object STen {
 
 }
 
-case class STen(
-    value: Tensor,
-    scope: Scope
+case class STen private (
+    value: Tensor
 ) {
   import STen._
-  scope(value)
+
+  def numel = value.numel
 
   def toMat = TensorHelpers.toMat(value)
   def toLongMat = TensorHelpers.toLongMat(value)
-  def toVec = toMat.toVec
-  def toLongVec = toLongMat.toVec
+  def toVec = TensorHelpers.toVec(value)
+  def toLongVec = TensorHelpers.toLongVec(value)
   val shape = value.sizes.toList
   def sizes = shape
   val options = value.options()
 
-  def copyTo(implicit scope: Scope, device: Device) = {
-    STen(device.to(value), scope)
+  def copyToDevice(device: Device)(implicit scope: Scope) = {
+    STen.owned(device.to(value))
   }
 
-  override def toString =
-    s"STen(shape=$shape,value=$value,scope=$scope)"
+  def cloneTensor[S: Sc] = ATen.clone(value).owned
+  def copyTo[S: Sc](options: TensorOptions) = value.to(options, true).owned
+  def copyFrom(source: Tensor) =
+    value.copyFrom(source)
+  def copyFrom(source: STen) =
+    value.copyFrom(source.value)
 
-  def unbroadcast[S: Sc](sizes: List[Long]) =
-    TensorHelpers.unbroadcast(value, sizes).owned
+  override def toString =
+    s"STen(shape=$shape,value=$value)"
+
+  def unbroadcast[S: Sc](sizes: Seq[Long]) =
+    TensorHelpers.unbroadcast(value, sizes.toList).owned
 
   def t[S: Sc] = owned(ATen.t(value))
   def transpose[S: Sc](dim1: Int, dim2: Int) =
@@ -287,9 +342,9 @@ case class STen(
     owned(ATen.argmin(value, dim, keepDim))
   def maskFill[S: Sc](mask: STen, fill: Double) =
     owned(ATen.masked_fill_0(value, mask.value, fill))
-  def eq[S: Sc](other: STen) =
+  def equ[S: Sc](other: STen) =
     owned(ATen.eq_1(value, other.value))
-  def eq[S: Sc](other: Double) =
+  def equ[S: Sc](other: Double) =
     owned(ATen.eq_0(value, other))
   def cat[S: Sc](other: STen, dim: Long) =
     owned(ATen.cat(Array(value, other.value), dim))
@@ -417,9 +472,11 @@ case class STen(
   def pow[S: Sc](exponent: Double) = owned(ATen.pow_0(value, exponent))
   def pow[S: Sc](exponent: STen) =
     owned(ATen.pow_1(value, exponent.value))
+  def pow_(exponent: Double) =
+    ATen.pow_out_0(value, value, exponent)
 
   def sum[S: Sc] = owned(ATen.sum_0(value))
-  def sum[S: Sc](dim: List[Int], keepDim: Boolean) =
+  def sum[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(ATen.sum_1(value, dim.toArray.map(_.toLong), keepDim))
   def sum[S: Sc](dim: Int, keepDim: Boolean) =
     owned(ATen.sum_1(value, Array(dim.toLong), keepDim))
@@ -437,6 +494,11 @@ case class STen(
     owned(ATen.slice(value, dim, start, end, step))
 
   def fill_(v: Double) = ATen.fill__0(value, v)
+
+  def maskedSelect[S: Sc](mask: STen) =
+    ATen.masked_select(value, mask.value).owned
+  def maskedSelect[S: Sc](mask: Tensor) =
+    ATen.masked_select(value, mask).owned
 
   def maskedFill[S: Sc](mask: STen, fill: Double) =
     ATen.masked_fill_0(value, mask.value, fill).owned
@@ -512,7 +574,7 @@ case class STen(
   def view[S: Sc](dims: Long*) =
     owned(ATen._unsafe_view(value, dims.toArray))
 
-  def norm2[S: Sc](dim: List[Int], keepDim: Boolean) =
+  def norm2[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(
       ATen.norm_2(
         value,
@@ -532,21 +594,21 @@ case class STen(
 
   def mean[S: Sc] =
     owned(ATen.mean_0(value))
-  def mean[S: Sc](dim: List[Int], keepDim: Boolean) =
+  def mean[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(ATen.mean_1(value, dim.toArray.map(_.toLong), keepDim))
   def mean[S: Sc](dim: Int, keepDim: Boolean) =
     owned(ATen.mean_1(value, Array(dim), keepDim))
 
   def variance[S: Sc](unbiased: Boolean) =
     owned(ATen.var_0(value, unbiased))
-  def variance[S: Sc](dim: List[Int], unbiased: Boolean, keepDim: Boolean) =
+  def variance[S: Sc](dim: Seq[Int], unbiased: Boolean, keepDim: Boolean) =
     owned(ATen.var_1(value, dim.toArray.map(_.toLong), unbiased, keepDim))
   def variance[S: Sc](dim: Int, unbiased: Boolean, keepDim: Boolean) =
     owned(ATen.var_1(value, Array(dim), unbiased, keepDim))
 
   def std[S: Sc](unbiased: Boolean) =
     owned(ATen.std_0(value, unbiased))
-  def std[S: Sc](dim: List[Int], unbiased: Boolean, keepDim: Boolean) =
+  def std[S: Sc](dim: Seq[Int], unbiased: Boolean, keepDim: Boolean) =
     owned(ATen.std_1(value, dim.toArray.map(_.toLong), unbiased, keepDim))
   def std[S: Sc](dim: Int, unbiased: Boolean, keepDim: Boolean) =
     owned(ATen.std_1(value, Array(dim), unbiased, keepDim))
@@ -617,7 +679,7 @@ case class STen(
     ATen.log10(value).owned
   def expm1[S: Sc] =
     ATen.expm1(value).owned
-  def index[S: Sc](indices: List[STen]) =
+  def index[S: Sc](indices: STen*) =
     ATen.index(value, indices.map(_.value).toArray).owned
   def indexPut[S: Sc](indices: List[STen], values: STen, accumulate: Boolean) =
     ATen
@@ -627,6 +689,9 @@ case class STen(
     ATen
       .index_copy(value, dim, index.value, source.value)
       .owned
+  def index_copy_(dim: Int, index: STen, source: STen): Unit =
+    ATen
+      ._index_copy_(value, dim, index.value, source.value)
 
   def matrixPower[S: Sc](n: Int) =
     ATen.matrix_power(value, n).owned
@@ -665,7 +730,7 @@ case class STen(
     val (a, b) = ATen.var_mean_0(value, unbiased)
     (a.owned, b.owned)
   }
-  def varAndMean[S: Sc](dim: List[Int], unbiased: Boolean, keepDim: Boolean) = {
+  def varAndMean[S: Sc](dim: Seq[Int], unbiased: Boolean, keepDim: Boolean) = {
     val (a, b) =
       ATen.var_mean_1(value, dim.map(_.toLong).toArray, unbiased, keepDim)
     (a.owned, b.owned)
@@ -674,7 +739,7 @@ case class STen(
     val (a, b) = ATen.std_mean_0(value, unbiased)
     (a.owned, b.owned)
   }
-  def stdAndMean[S: Sc](dim: List[Int], unbiased: Boolean, keepDim: Boolean) = {
+  def stdAndMean[S: Sc](dim: Seq[Int], unbiased: Boolean, keepDim: Boolean) = {
     val (a, b) =
       ATen.std_mean_1(value, dim.map(_.toLong).toArray, unbiased, keepDim)
     (a.owned, b.owned)
@@ -684,6 +749,11 @@ case class STen(
     ATen.where_1(value).toList.map(_.owned)
 
   def round[S: Sc] = ATen.round(value).owned
+
+  def dropout_(p: Double, training: Boolean): Unit =
+    ATen.dropout_(value, p, training)
+
+  def frobeniusNorm[S: Sc] = ATen.frobenius_norm_0(value).owned
 
   // todo:
   // ATen.eig

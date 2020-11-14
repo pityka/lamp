@@ -3,7 +3,6 @@ package lamp.example.translation
 import lamp.CudaDevice
 import lamp.CPU
 import lamp.nn.SupervisedModel
-import aten.ATen
 import lamp.nn.LossFunctions
 import java.io.File
 import lamp.nn.AdamW
@@ -13,7 +12,6 @@ import cats.effect.Resource
 import cats.effect.IO
 import lamp.data.ValidationCallback
 import lamp.nn.Fun
-import aten.Tensor
 import lamp.DoublePrecision
 import lamp.SinglePrecision
 import java.nio.charset.CodingErrorAction
@@ -29,6 +27,7 @@ import lamp.data.Text
 import lamp.data.Reader
 import lamp.data.IOLoops
 import lamp.data.TrainingCallback
+import lamp.STen
 
 case class CliConfig(
     trainData: String = "",
@@ -196,7 +195,7 @@ object Train extends App {
           if (config.singlePrecision) SinglePrecision else DoublePrecision
         val tensorOptions = device.options(precision)
         val classWeights =
-          ATen.ones(Array(vocabularSize), tensorOptions)
+          STen.ones(Array(vocabularSize), tensorOptions)
         val encoder = statefulSequence(
           Embedding(
             classes = vocabularSize,
@@ -244,21 +243,19 @@ object Train extends App {
               vocab('#').toLong
             )(_._1.get._1).unlift
 
-          val net =
-            config.checkpointLoad
-              .map { load =>
-                scribe.info(s"Loading parameters from file $load")
-                Reader
-                  .loadFromFile(net1, new File(load), device)
-                  .unsafeRunSync()
-                  .right
-                  .get
-              }
-              .getOrElse(net1)
+          config.checkpointLoad
+            .foreach { load =>
+              scribe.info(s"Loading parameters from file $load")
+              Reader
+                .loadFromFile(net1, new File(load), device)
+                .unsafeRunSync()
+                .right
+                .get
+            }
 
-          scribe.info("Learnable parameters: " + net.learnableParameters)
+          scribe.info("Learnable parameters: " + net1.learnableParameters)
           SupervisedModel(
-            net,
+            net1,
             LossFunctions
               .SequenceNLL(vocabularSize, classWeights, ignore = vocab('#'))
           )
@@ -296,8 +293,8 @@ object Train extends App {
         val validationCallback = new ValidationCallback {
 
           override def apply(
-              validationOutput: Tensor,
-              validationTarget: Tensor,
+              validationOutput: STen,
+              validationTarget: STen,
               validationLoss: Double,
               epochCount: Long
           ): Unit = {

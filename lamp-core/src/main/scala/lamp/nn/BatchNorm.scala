@@ -1,16 +1,16 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, BatchNorm => BN, param, const}
+import lamp.autograd.{Variable, Constant, BatchNorm => BN, param, const}
 import lamp.Sc
-import aten.ATen
 import aten.TensorOptions
 import lamp.scope
+import lamp.STen
 
 case class BatchNorm(
-    weight: Variable,
-    bias: Variable,
-    runningMean: Variable,
-    runningVar: Variable,
+    weight: Constant,
+    bias: Constant,
+    runningMean: Constant,
+    runningVar: Constant,
     training: Boolean,
     momentum: Double,
     eps: Double
@@ -24,7 +24,7 @@ case class BatchNorm(
   )
 
   override def forward[S: Sc](x: Variable): Variable =
-    BN(
+    new BN(
       scope,
       x,
       weight,
@@ -45,12 +45,11 @@ object BatchNorm {
   )
   implicit val load = Load.make[BatchNorm](m =>
     tensors => {
-      implicit val pool = m.weight.scope
-      val w = param(tensors.head)
-      val b = param(tensors(1))
-      val rm = const(tensors(2))
-      val rv = const(tensors(3))
-      m.copy(weight = w, bias = b, runningMean = rm, runningVar = rv)
+      m.weight.value.copyFrom(tensors.head)
+      m.bias.value.copyFrom(tensors(1))
+      m.runningMean.value.copyFrom(tensors(2))
+      m.runningVar.value.copyFrom(tensors(3))
+
     }
   )
   case object Weights extends LeafTag
@@ -64,10 +63,10 @@ object BatchNorm {
       momentum: Double = 0.1,
       eps: Double = 1e-5
   ): BatchNorm = BatchNorm(
-    weight = param(ATen.normal_3(0.0, 0.01, Array(features.toLong), tOpt)),
-    bias = param(ATen.zeros(Array(features.toLong), tOpt)),
-    runningMean = const(ATen.zeros(Array(features.toLong), tOpt)),
-    runningVar = const(ATen.zeros(Array(features.toLong), tOpt)),
+    weight = param(STen.normal(0.0, 0.01, List(features.toLong), tOpt)),
+    bias = param(STen.zeros(List(features.toLong), tOpt)),
+    runningMean = const(STen.zeros(List(features.toLong), tOpt)),
+    runningVar = const(STen.zeros(List(features.toLong), tOpt)),
     training = training,
     momentum = momentum,
     eps = eps

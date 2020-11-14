@@ -1,33 +1,31 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param}
-import aten.ATen
+import lamp.autograd.{Variable, Constant, param}
 import scala.collection.mutable
-import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
 import lamp.Sc
-import lamp.scope
+import lamp.STen
 
 /** Inputs of size (sequence length * batch * vocab)
   * Outputs of size (sequence length * batch * output dim)
   */
 case class LSTM(
-    weightXi: Variable,
-    weightXf: Variable,
-    weightXo: Variable,
-    weightHi: Variable,
-    weightHf: Variable,
-    weightHo: Variable,
-    weightXc: Variable,
-    weightHc: Variable,
-    biasI: Variable,
-    biasF: Variable,
-    biasO: Variable,
-    biasC: Variable
+    weightXi: Constant,
+    weightXf: Constant,
+    weightXo: Constant,
+    weightHi: Constant,
+    weightHf: Constant,
+    weightHo: Constant,
+    weightXc: Constant,
+    weightHc: Constant,
+    biasI: Constant,
+    biasF: Constant,
+    biasO: Constant,
+    biasC: Constant
 ) extends StatefulModule[Variable, Variable, Option[(Variable, Variable)]] {
   val hiddenSize = biasI.shape.last
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     List(
       (weightXi, LSTM.WeightXi),
       (weightXf, LSTM.WeightXf),
@@ -45,10 +43,10 @@ case class LSTM(
 
   private def initHidden[S: Sc](batchSize: Long) = {
     (
-      param(ATen.zeros(Array(batchSize, hiddenSize), weightHf.options)),
+      param(STen.zeros(List(batchSize, hiddenSize), weightHf.options)),
       param(
-        ATen
-          .zeros(Array(batchSize, hiddenSize), weightHf.options)
+        STen
+          .zeros(List(batchSize, hiddenSize), weightHf.options)
       )
     )
   }
@@ -80,7 +78,7 @@ case class LSTM(
           (ht, ct)
       }
     (
-      ConcatenateAddNewDim(scope, outputs).value,
+      Variable.concatenateAddNewDim(outputs),
       Some((lastHidden, lastMemory))
     )
 
@@ -93,21 +91,18 @@ object LSTM {
   implicit val is =
     InitState.make[LSTM, Option[(Variable, Variable)]](_ => None)
   implicit val load = Load.make[LSTM] { m => tensors =>
-    implicit val pool = m.weightHc.pool
-    m.copy(
-      weightXi = param(tensors(0)),
-      weightXf = param(tensors(1)),
-      weightXo = param(tensors(2)),
-      weightHi = param(tensors(3)),
-      weightHf = param(tensors(4)),
-      weightHo = param(tensors(5)),
-      weightXc = param(tensors(6)),
-      weightHc = param(tensors(7)),
-      biasI = param(tensors(8)),
-      biasF = param(tensors(9)),
-      biasO = param(tensors(10)),
-      biasC = param(tensors(11))
-    )
+    m.weightXi.value.copyFrom(tensors(0))
+    m.weightXf.value.copyFrom(tensors(1))
+    m.weightXo.value.copyFrom(tensors(2))
+    m.weightHi.value.copyFrom(tensors(3))
+    m.weightHf.value.copyFrom(tensors(4))
+    m.weightHo.value.copyFrom(tensors(5))
+    m.weightXc.value.copyFrom(tensors(6))
+    m.weightHc.value.copyFrom(tensors(7))
+    m.biasI.value.copyFrom(tensors(8))
+    m.biasF.value.copyFrom(tensors(9))
+    m.biasO.value.copyFrom(tensors(10))
+    m.biasC.value.copyFrom(tensors(11))
   }
   case object WeightXi extends LeafTag
   case object WeightXf extends LeafTag
@@ -129,90 +124,90 @@ object LSTM {
   ): LSTM =
     LSTM(
       weightXi = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(in, hiddenSize),
+          List(in, hiddenSize),
           tOpt
         )
       ),
       weightXf = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(in, hiddenSize),
+          List(in, hiddenSize),
           tOpt
         )
       ),
       weightXo = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(in, hiddenSize),
+          List(in, hiddenSize),
           tOpt
         )
       ),
       weightXc = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(in, hiddenSize),
+          List(in, hiddenSize),
           tOpt
         )
       ),
       weightHi = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (hiddenSize + hiddenSize)),
-          Array(hiddenSize, hiddenSize),
+          List(hiddenSize, hiddenSize),
           tOpt
         )
       ),
       weightHo = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (hiddenSize + hiddenSize)),
-          Array(hiddenSize, hiddenSize),
+          List(hiddenSize, hiddenSize),
           tOpt
         )
       ),
       weightHf = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (hiddenSize + hiddenSize)),
-          Array(hiddenSize, hiddenSize),
+          List(hiddenSize, hiddenSize),
           tOpt
         )
       ),
       weightHc = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (hiddenSize + hiddenSize)),
-          Array(hiddenSize, hiddenSize),
+          List(hiddenSize, hiddenSize),
           tOpt
         )
       ),
       biasI = param(
-        ATen.zeros(
-          Array(1, hiddenSize),
+        STen.zeros(
+          List(1, hiddenSize),
           tOpt
         )
       ),
       biasF = param(
-        ATen.zeros(
-          Array(1, hiddenSize),
+        STen.zeros(
+          List(1, hiddenSize),
           tOpt
         )
       ),
       biasO = param(
-        ATen.zeros(
-          Array(1, hiddenSize),
+        STen.zeros(
+          List(1, hiddenSize),
           tOpt
         )
       ),
       biasC = param(
-        ATen.zeros(
-          Array(1, hiddenSize),
+        STen.zeros(
+          List(1, hiddenSize),
           tOpt
         )
       )

@@ -1,14 +1,12 @@
 package lamp.data
 
 import cats.effect._
-import aten.Tensor
 import org.saddle._
 import lamp.autograd.{const}
-import lamp.TensorHelpers
-import aten.ATen
 import lamp.Device
 import lamp.autograd.Variable
 import lamp.Scope
+import lamp.STen
 
 object GraphBatchStream {
 
@@ -18,13 +16,13 @@ object GraphBatchStream {
     */
   def smallGraphMode(
       minibatchSize: Int,
-      graphNodesAndEdges: Vec[(Tensor, Tensor)],
-      targetPerGraph: Tensor,
+      graphNodesAndEdges: Vec[(STen, STen)],
+      targetPerGraph: STen,
       device: Device,
       rng: Option[org.saddle.spire.random.Generator]
   ): BatchStream[(Variable, Variable, Variable)] = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
-      Resource.make(IO {
+      Scope.inResource.map { implicit scope =>
         val selectedGraphs = graphNodesAndEdges.take(idx).toSeq
         val (
           _,
@@ -38,7 +36,7 @@ object GraphBatchStream {
             (
               0L,
               0L,
-              Seq.empty[Tensor],
+              Seq.empty[STen],
               Vector.empty[Long],
               Vector.empty[Long],
               Vector.empty[Long]
@@ -56,9 +54,7 @@ object GraphBatchStream {
                 (nextNodes, nextEdges)
                 ) =>
               val numNodes = nextNodes.sizes.head.toInt
-              val edges = TensorHelpers
-                .toLongMat(nextEdges)
-                .rows
+              val edges = nextEdges.toLongMat.rows
                 .map(v => v.raw(0) -> v.raw(1))
               assert(edges.map(_._1).forall(e => e >= 0 && e < numNodes))
               assert(edges.map(_._2).forall(e => e >= 0 && e < numNodes))
@@ -83,45 +79,38 @@ object GraphBatchStream {
                 newGraphIndices
               )
           }
-        val scope = Scope.free
         val nodesV = {
-          val c = ATen.cat(nodes.toArray, 0)
-          val cd = device.to(c)
-          c.release
-          const(cd)(scope)
+          val t = Scope { implicit scope =>
+            val c = STen.cat(nodes, 0)
+            device.to(c)
+          }
+          const(t)
         }
         val edgesV = {
-          val i = TensorHelpers.fromLongVec(edgesI.toVec, device)
-          val j = TensorHelpers.fromLongVec(edgesJ.toVec, device)
-          val r = const(ATen.stack(Array(i, j), 1))(scope)
-          i.release
-          j.release
-          r
+          val s = Scope { implicit scope =>
+            val i = STen.fromLongVec(edgesI.toVec, device)
+            val j = STen.fromLongVec(edgesJ.toVec, device)
+            STen.stack(Array(i, j), 1)
+          }
+          const(s)
         }
         val graphIndicesV = const(
-          TensorHelpers.fromLongVec(graphIndices.toVec, device)
-        )(scope)
+          STen.fromLongVec(graphIndices.toVec, device)
+        )
 
-        val idxT = TensorHelpers.fromLongVec(idx.toVec.map(_.toLong))
-        val selectedTarget = ATen.index(targetPerGraph, Array(idxT))
-        val selectedTargetOnDevice = device.to(selectedTarget)
-        selectedTarget.release
-        idxT.release
+        val selectedTargetOnDevice = Scope { implicit scope =>
+          val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
+          val selectedTarget = targetPerGraph.index(idxT)
+          device.to(selectedTarget)
+        }
 
         Option(
           ((nodesV, edgesV, graphIndicesV), selectedTargetOnDevice)
         )
-      }) {
-        case None => IO.unit
-        case Some((graph, b)) =>
-          IO {
-            b.release
-            graph._1.scope.release()
-          }
       }
     }
     val emptyResource = Resource
-      .pure[IO, Option[((Variable, Variable, Variable), Tensor)]](None)
+      .pure[IO, Option[((Variable, Variable, Variable), STen)]](None)
 
     val idx =
       rng
@@ -140,7 +129,7 @@ object GraphBatchStream {
     new BatchStream[(Variable, Variable, Variable)] {
       private var remaining = idx
       def nextBatch: Resource[IO, Option[
-        ((Variable, Variable, Variable), Tensor)
+        ((Variable, Variable, Variable), STen)
       ]] =
         remaining match {
           case Nil => emptyResource
@@ -158,28 +147,24 @@ object GraphBatchStream {
     * Returns a pair of node features, edge list
     */
   def bigGraphModeFullBatch(
-      nodes: Tensor,
-      edges: Tensor,
-      targetPerNode: Tensor
+      nodes: STen,
+      edges: STen,
+      targetPerNode: STen
   ): BatchStream[(Variable, Variable)] =
     new BatchStream[(Variable, Variable)] {
       var i = 1
       def nextBatch: Resource[IO, Option[
-        ((Variable, Variable), Tensor)
+        ((Variable, Variable), STen)
       ]] = {
         if (i == 1) {
           i -= 1
-          Resource.make(IO {
-            val scope = Scope.free
-            val nodesV = const(nodes)(scope)
-            val edgesV = const(edges)(scope)
+          Scope.inResource.map { _ =>
+            val nodesV = const(nodes)
+            val edgesV = const(edges)
 
             Option(
               ((nodesV, edgesV), targetPerNode)
             )
-          }) {
-            case _ => IO.unit
-
           }
         } else { Resource.make(IO(None))(_ => IO.unit) }
       }

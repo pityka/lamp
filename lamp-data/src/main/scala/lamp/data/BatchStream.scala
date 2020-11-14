@@ -1,24 +1,22 @@
 package lamp.data
 
 import cats.effect._
-import aten.Tensor
 import org.saddle._
 import lamp.autograd.{const}
-import lamp.TensorHelpers
-import aten.ATen
 import lamp.Device
 import lamp.autograd.Variable
 import lamp.Scope
+import lamp.STen
 
 trait BatchStream[I] { self =>
-  def nextBatch: Resource[IO, Option[(I, Tensor)]]
+  def nextBatch: Resource[IO, Option[(I, STen)]]
 
-  def map[I2](f: (I, Tensor) => Resource[IO, (I2, Tensor)]) =
+  def map[I2](f: (I, STen) => Resource[IO, (I2, STen)]) =
     new BatchStream[I2] {
-      def nextBatch: Resource[IO, Option[(I2, Tensor)]] =
+      def nextBatch: Resource[IO, Option[(I2, STen)]] =
         self.nextBatch.flatMap(maybe =>
           maybe match {
-            case None => Resource.pure[IO, Option[(I2, Tensor)]](None)
+            case None => Resource.pure[IO, Option[(I2, STen)]](None)
             case Some(pair) =>
               f.tupled(pair).map(Some(_))
           }
@@ -36,33 +34,26 @@ object BatchStream {
   def minibatchesFromFull(
       minibatchSize: Int,
       dropLast: Boolean,
-      features: Tensor,
-      target: Tensor,
+      features: STen,
+      target: STen,
       device: Device,
       rng: org.saddle.spire.random.Generator
   ) = {
     def makeNonEmptyBatch(idx: Array[Int]) = {
-      scopeInResource.flatMap { implicit scope =>
-        Resource.make(IO {
-          val idxT = TensorHelpers.fromLongVec(idx.toVec.map(_.toLong))
-          val xcl = ATen.index(features, Array(idxT))
-          val tcl = ATen.index(target, Array(idxT))
+      scopeInResource.map { implicit scope =>
+        val (d1, d2) = Scope { implicit scope =>
+          val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
+          val xcl = features.index(idxT)
+          val tcl = target.index(idxT)
           val d1 = device.to(xcl)
           val d2 = device.to(tcl)
-          xcl.release
-          tcl.release
-          idxT.release
-          Some((const(d1), d2)): Option[(Variable, Tensor)]
-        }) {
-          case None => IO.unit
-          case Some((_, b)) =>
-            IO {
-              b.release
-            }
+          (d1, d2)
         }
+        Some((const(d1), d2)): Option[(Variable, STen)]
       }
+
     }
-    val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
+    val emptyResource = Resource.pure[IO, Option[(Variable, STen)]](None)
 
     val idx = {
       val t = array
@@ -75,7 +66,7 @@ object BatchStream {
 
     new BatchStream[Variable] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[(Variable, Tensor)]] =
+      def nextBatch: Resource[IO, Option[(Variable, STen)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>
@@ -87,25 +78,18 @@ object BatchStream {
 
   }
 
-  def fromFullBatch(features: Tensor, targets: Tensor, device: Device)(
+  def fromFullBatch(features: STen, targets: STen, device: Device)(
       ) = {
-    val resource = scopeInResource.flatMap { implicit scope =>
-      Resource.make(IO {
-        val xcl = device.to(features)
-        val tcl = device.to(targets)
-        Some((const(xcl), tcl)): Option[(Variable, Tensor)]
-      }) {
-        case None => IO.unit
-        case Some((_, b)) =>
-          IO {
-            b.release
-          }
-      }
+    val resource = scopeInResource.map { implicit scope =>
+      val xcl = device.to(features)
+      val tcl = device.to(targets)
+      Some((const(xcl), tcl)): Option[(Variable, STen)]
+
     }
-    val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
+    val emptyResource = Resource.pure[IO, Option[(Variable, STen)]](None)
     new BatchStream[Variable] {
       private var pulled = false
-      def nextBatch: Resource[IO, Option[(Variable, Tensor)]] =
+      def nextBatch: Resource[IO, Option[(Variable, STen)]] =
         if (!pulled) {
           pulled = true
           resource

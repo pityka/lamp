@@ -4,7 +4,6 @@ import org.saddle._
 import org.saddle.order._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
-import aten.ATen
 import lamp.autograd._
 import aten.TensorOptions
 
@@ -18,7 +17,7 @@ import lamp.data.IOLoops
 import java.io.FileOutputStream
 import org.saddle.index.InnerJoin
 import lamp.Scope
-import lamp.TensorHelpers
+import lamp.STen
 
 class EndToEndClassificationSuite extends AnyFunSuite {
 
@@ -90,13 +89,14 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       val trainTarget = Frame(target).row(numExamples / 3 + 1 -> *).colAt(0)
 
       val testFeaturesTensor =
-        TensorHelpers.fromMat(testFeatures.toMat, device, SinglePrecision)
-      val testTargetTensor = ATen.squeeze_0(
-        TensorHelpers.fromLongMat(
-          Mat(testTarget.toVec.map(_.toLong)),
-          device
-        )
-      )
+        STen.fromMat(testFeatures.toMat, device, SinglePrecision)
+      val testTargetTensor =
+        STen
+          .fromLongMat(
+            Mat(testTarget.toVec.map(_.toLong)),
+            device
+          )
+          .squeeze
 
       def mlp(dim: Int, k: Int, tOpt: TensorOptions) =
         sequence(
@@ -105,18 +105,19 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         )
 
       val trainFeaturesTensor =
-        TensorHelpers.fromMat(trainFeatures.toMat, device, SinglePrecision)
-      val trainTargetTensor = ATen.squeeze_0(
-        TensorHelpers.fromLongMat(
-          Mat(trainTarget.toVec.map(_.toLong)),
-          device
-        )
-      )
+        STen.fromMat(trainFeatures.toMat, device, SinglePrecision)
+      val trainTargetTensor =
+        STen
+          .fromLongMat(
+            Mat(trainTarget.toVec.map(_.toLong)),
+            device
+          )
+          .squeeze
 
       val numClasses = target.toVec.toSeq.distinct.max.toInt + 1
       val numFeatures = features.numCols
       val classWeights =
-        ATen.ones(Array(numClasses), device.options(SinglePrecision))
+        STen.ones(Array(numClasses), device.options(SinglePrecision))
 
       val model = SupervisedModel(
         mlp(numFeatures, numClasses, device.options(SinglePrecision)),
@@ -153,15 +154,11 @@ class EndToEndClassificationSuite extends AnyFunSuite {
             .map(_._1)
         )
         .unsafeRunSync
-      val prediction = TensorHelpers.toFloatMat(output).rows.map(_.argmax).toVec
+      val prediction = output.toMat.rows.map(_.argmax).toVec
       val accuracy = prediction
         .zipMap(testTarget.toVec)((a, b) => if (a.toInt == b.toInt) 1d else 0d)
         .mean2
 
-      testTargetTensor.release
-      testFeaturesTensor.release
-      trainTargetTensor.release
-      trainFeaturesTensor.release
       accuracy
     }
   }

@@ -5,7 +5,6 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import org.saddle._
 import lamp.TensorHelpers
-import lamp.util.syntax
 import aten.ATen
 import cats.effect.Resource
 import cats.effect.IO
@@ -28,13 +27,14 @@ import lamp.DoublePrecision
 import lamp.FloatingPointPrecision
 import lamp.SinglePrecision
 import lamp.Scope
+import lamp.STen
 
 object Cifar {
   def loadImageFile(
       file: File,
       numImages: Int,
       precision: FloatingPointPrecision
-  ) = {
+  )(implicit scope: Scope) = {
     val inputStream = new FileInputStream(file)
     val channel = inputStream.getChannel()
     val tensors = 0 until numImages map { _ =>
@@ -69,7 +69,7 @@ object Cifar {
     }
 
     tensors.foreach(_._2.release())
-    (labels, fullBatch)
+    (STen.owned(labels), STen.owned(fullBatch))
 
   }
 }
@@ -137,14 +137,14 @@ object Train extends App {
         val tensorOptions = device.options(precision)
         val model = {
           val numClasses = 100
-          val classWeights = ATen.ones(Array(numClasses), tensorOptions)
+          val classWeights = STen.ones(Array(numClasses), tensorOptions)
           val net =
             // if (config.network == "lenet")
             //   Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
             Cnn.resnet(numClasses, config.dropout, tensorOptions)
 
-          val loadedNet = config.checkpointLoad match {
-            case None => net
+          config.checkpointLoad match {
+            case None =>
             case Some(file) =>
               Reader
                 .loadFromFile(net, new File(file), device)
@@ -152,10 +152,10 @@ object Train extends App {
                 .right
                 .get
           }
-          scribe.info("Learnable parametes: " + loadedNet.learnableParameters)
-          scribe.info("parameters: " + loadedNet.parameters.mkString("\n"))
+          scribe.info("Learnable parametes: " + net.learnableParameters)
+          scribe.info("parameters: " + net.parameters.mkString("\n"))
           SupervisedModel(
-            loadedNet,
+            net,
             LossFunctions.NLL(numClasses, classWeights)
           )
         }

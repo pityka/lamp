@@ -45,7 +45,7 @@ case class Seq2SeqWithAttention[S0, S1, M0 <: Module, M1 <: StatefulModule2[
     )(stateToKey)
   }
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     destinationEmbedding.state ++ encoder.state ++ decoder.state
 
 }
@@ -98,12 +98,11 @@ object Seq2SeqWithAttention {
       val m0Size = m.destinationEmbedding.state.size
       val mESize = m.encoder.state.size
       val mDSize = m.decoder.state.size
-      Seq2SeqWithAttention(
-        m.destinationEmbedding.load(t.take(m0Size)),
-        m.encoder.load(t.drop(m0Size).take(mESize)),
-        m.decoder.load(t.drop(mESize + m0Size).take(mDSize)),
-        m.padToken
-      )(m.stateToKey)
+
+      m.destinationEmbedding.load(t.take(m0Size))
+      m.encoder.load(t.drop(m0Size).take(mESize))
+      m.decoder.load(t.drop(mESize + m0Size).take(mDSize))
+
     }
   implicit def initState[
       S0,

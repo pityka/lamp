@@ -14,6 +14,8 @@ import org.saddle.scalar.ScalarTagLong
 import aten.TensorOptions
 import lamp.ClassificationTree
 import lamp.RegressionTree
+import lamp.STen
+import lamp.Scope
 
 object Serialization {
 
@@ -58,7 +60,7 @@ object Serialization {
     import upickle.default.{ReadWriter => RW, macroRW}
     implicit val rw: RW[DTO] = macroRW
   }
-  def loadModel(path: String) = {
+  def loadModel(path: String)(implicit scope: Scope) = {
     val json = scala.io.Source.fromFile(path).mkString
     val dto = read[DTO](json)
     def scalarTag(p: String) = p match {
@@ -78,7 +80,14 @@ object Serialization {
           device = CPU
         )
         channel.close
-        tensors.map(v => KnnBase(k, v.head, v.drop(2), v(1)))
+        tensors.map(v =>
+          KnnBase(
+            k,
+            STen.owned(v.head),
+            v.drop(2).map(STen.owned),
+            STen.owned(v(1))
+          )
+        )
       case NNDto(hiddenSize, _, file, dataTypes) =>
         val channel = new FileInputStream(new File(file)).getChannel()
         val tensors = lamp.data.Reader.readTensorsFromChannel(
@@ -87,7 +96,7 @@ object Serialization {
           device = CPU
         )
         channel.close
-        tensors.map(v => NNBase(hiddenSize, v))
+        tensors.map(v => NNBase(hiddenSize, v.map(STen.owned)))
     })
     val baseModels = lamp.data.Reader.sequence(dto.baseModels.map {
       case files =>
@@ -103,7 +112,7 @@ object Serialization {
                 device = CPU
               )
               channel.close
-              tensors.map(t => NNBase(hiddenSize, t))
+              tensors.map(t => NNBase(hiddenSize, t.map(STen.owned)))
             case KnnDto(k, file, dataTypes) =>
               val channel = new FileInputStream(new File(file)).getChannel()
               val tensors = lamp.data.Reader.readTensorsFromChannel(
@@ -112,7 +121,14 @@ object Serialization {
                 device = CPU
               )
               channel.close
-              tensors.map(t => KnnBase(k, t.head, t.drop(2), t(1)))
+              tensors.map(t =>
+                KnnBase(
+                  k,
+                  STen.owned(t.head),
+                  t.drop(2).map(STen.owned),
+                  STen.owned(t(1))
+                )
+              )
           })
 
     })
@@ -147,7 +163,7 @@ object Serialization {
         val path = outPath + ".selection.nn." + idx
         val channel =
           new FileOutputStream(new File(path)).getChannel()
-        lamp.data.Writer.writeTensorsIntoChannel(tensors, channel)
+        lamp.data.Writer.writeTensorsIntoChannel(tensors.map(_.value), channel)
         channel.close
         NNDto(
           hiddenSize,
@@ -160,7 +176,10 @@ object Serialization {
         val channel =
           new FileOutputStream(new File(path)).getChannel()
         lamp.data.Writer
-          .writeTensorsIntoChannel(List(tensor1, tensor2) ++ tensors, channel)
+          .writeTensorsIntoChannel(
+            (List(tensor1, tensor2) ++ tensors).map(_.value),
+            channel
+          )
         channel.close
         KnnDto(
           k,
@@ -179,7 +198,7 @@ object Serialization {
               new FileOutputStream(new File(path)).getChannel()
             lamp.data.Writer
               .writeTensorsIntoChannel(
-                List(tensor1, tensor2) ++ tensors,
+                (List(tensor1, tensor2) ++ tensors).map(_.value),
                 channel
               )
             channel.close
@@ -192,7 +211,8 @@ object Serialization {
             val path = outPath + ".base.nn." + idx0 + "." + idx1
             val channel =
               new FileOutputStream(new File(path)).getChannel()
-            lamp.data.Writer.writeTensorsIntoChannel(tensors, channel)
+            lamp.data.Writer
+              .writeTensorsIntoChannel(tensors.map(_.value), channel)
             channel.close
             NNDto(
               hiddenSize,

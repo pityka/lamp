@@ -7,8 +7,8 @@ import aten.TensorOptions
 import lamp.nn.CudaTest
 import lamp.util.syntax
 import lamp.TensorHelpers
-import lamp.util.NDArray
 import lamp.Scope
+import lamp.STen
 
 class TensorHelperSuite extends AnyFunSuite {
 
@@ -78,20 +78,7 @@ class TensorHelperSuite extends AnyFunSuite {
         1d)
     )
   }
-  test("normalized") {
-    Scope.leak { implicit scope =>
-      val nd2x3x3 =
-        NDArray((0 until 18).toArray.map(_.toDouble), List(2, 3, 3))
-      val t = NDArray.tensorFromNDArray(nd2x3x3)
-      val t2 = t.normalized
-      val n2 = NDArray.tensorToNDArray(t2)
-      assert(
-        n2.toVec.roundTo(4) == Vec(-1d, -1d, -1d, -1d, -1d, -1d, -1d, -1d, -1d,
-          1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d, 1d)
-      )
-      ()
-    }
-  }
+
   test("zero_") {
     val t = ATen.eye_0(3, TensorOptions.dtypeDouble())
     assert(t.toMat == mat.ident(3))
@@ -116,11 +103,11 @@ class TensorHelperSuite extends AnyFunSuite {
     val m = mat.ones(3000, 3000)
     0 until 1000 foreach { _ =>
       Scope.root { implicit scope =>
-        val t = TensorHelpers.fromMat(m)
-        val t2 = TensorHelpers.fromMat(m)
-        val t3 = TensorHelpers.fromMat(m)
+        val t = STen.fromMat(m)
+        val t2 = STen.fromMat(m)
+        val t3 = STen.fromMat(m)
         val t4 =
-          Concatenate(
+          new Concatenate(
             scope,
             List(
               const(t),

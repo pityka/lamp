@@ -1,16 +1,16 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, BatchNorm2D => BN, param, const}
+import lamp.autograd.{Variable, Constant, BatchNorm2D => BN, param, const}
 import lamp.Sc
-import aten.ATen
 import aten.TensorOptions
 import lamp.scope
+import lamp.STen
 
 case class BatchNorm2D(
-    weight: Variable,
-    bias: Variable,
-    runningMean: Variable,
-    runningVar: Variable,
+    weight: Constant,
+    bias: Constant,
+    runningMean: Constant,
+    runningVar: Constant,
     training: Boolean,
     momentum: Double,
     eps: Double
@@ -24,7 +24,7 @@ case class BatchNorm2D(
   )
 
   override def forward[S: Sc](x: Variable): Variable =
-    BN(
+    new BN(
       scope,
       x,
       weight,
@@ -44,13 +44,11 @@ object BatchNorm2D {
     asTraining1 = m => m.copy(training = true)
   )
   implicit val load = Load.make[BatchNorm2D](m =>
-    parameters => {
-      implicit val pool = m.weight.scope
-      val w = param(parameters.head)
-      val b = param(parameters(1))
-      val rm = const(parameters(2))
-      val rv = const(parameters(3))
-      m.copy(weight = w, bias = b, runningMean = rm, runningVar = rv)
+    tensors => {
+      m.weight.value.copyFrom(tensors.head)
+      m.bias.value.copyFrom(tensors(1))
+      m.runningMean.value.copyFrom(tensors(2))
+      m.runningVar.value.copyFrom(tensors(3))
     }
   )
   case object Weights extends LeafTag
@@ -62,10 +60,10 @@ object BatchNorm2D {
       momentum: Double = 0.1,
       eps: Double = 1e-5
   ): BatchNorm2D = BatchNorm2D(
-    weight = param(ATen.normal_3(0.0, 0.01, Array(features.toLong), tOpt)),
-    bias = param(ATen.zeros(Array(features.toLong), tOpt)),
-    runningMean = const(ATen.zeros(Array(features.toLong), tOpt)),
-    runningVar = const(ATen.zeros(Array(features.toLong), tOpt)),
+    weight = param(STen.normal(0.0, 0.01, List(features.toLong), tOpt)),
+    bias = param(STen.zeros(List(features.toLong), tOpt)),
+    runningMean = const(STen.zeros(List(features.toLong), tOpt)),
+    runningVar = const(STen.zeros(List(features.toLong), tOpt)),
     training = training,
     momentum = momentum,
     eps = eps

@@ -3,7 +3,6 @@ package lamp.example.timemachine
 import lamp.CudaDevice
 import lamp.CPU
 import lamp.nn.SupervisedModel
-import aten.ATen
 import lamp.nn.LossFunctions
 import lamp.data.{Reader, Text, IOLoops}
 import java.io.File
@@ -15,7 +14,6 @@ import cats.effect.IO
 import lamp.data.TrainingCallback
 import lamp.data.ValidationCallback
 import lamp.nn.Fun
-import aten.Tensor
 import lamp.DoublePrecision
 import lamp.SinglePrecision
 import java.nio.charset.CodingErrorAction
@@ -26,6 +24,7 @@ import lamp.nn.SeqLinear
 import lamp.nn.LSTM
 import lamp.nn.statefulSequence
 import lamp.Scope
+import lamp.STen
 
 case class CliConfig(
     trainData: String = "",
@@ -120,7 +119,7 @@ object Train extends App {
         val tensorOptions = device.options(precision)
         val model = {
           val classWeights =
-            ATen.ones(Array(vocabularSize), tensorOptions)
+            STen.ones(Array(vocabularSize), tensorOptions)
           val net1 =
             statefulSequence(
               Embedding(
@@ -144,8 +143,8 @@ object Train extends App {
               Fun(implicit scope => _.logSoftMax(2)).lift
             ).unlift
 
-          val net = config.checkpointLoad
-            .map { load =>
+          config.checkpointLoad
+            .foreach { load =>
               scribe.info(s"Loading parameters from file $load")
               Reader
                 .loadFromFile(net1, new File(load), device)
@@ -153,11 +152,10 @@ object Train extends App {
                 .right
                 .get
             }
-            .getOrElse(net1)
 
-          scribe.info("Learnable parameters: " + net.learnableParameters)
+          scribe.info("Learnable parameters: " + net1.learnableParameters)
           SupervisedModel(
-            net,
+            net1,
             LossFunctions.SequenceNLL(vocabularSize, classWeights)
           )
         }
@@ -191,8 +189,8 @@ object Train extends App {
         val validationCallback = new ValidationCallback {
 
           override def apply(
-              validationOutput: Tensor,
-              validationTarget: Tensor,
+              validationOutput: STen,
+              validationTarget: STen,
               validationLoss: Double,
               epochCount: Long
           ): Unit = {
@@ -242,7 +240,6 @@ object Train extends App {
               lookAhead
             )
           val text = Text.convertIntegersToText(text1, rvocab)
-          text1.release
 
           scribe.info(
             s"Hallucinated text follows (from prefix '$prefix'): \n\n" + prefix + text

@@ -27,8 +27,9 @@ case object SinglePrecision extends FloatingPointPrecision {
   }
 }
 
-sealed trait Device {
+sealed trait Device { self =>
   def to(t: Tensor): Tensor
+  def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))
   def options(precision: FloatingPointPrecision): TensorOptions
 }
 case object CPU extends Device {
@@ -44,9 +45,9 @@ case class CudaDevice(i: Int) extends Device {
     s"Device number is wrong. Got $i. Available gpus: ${Tensor.getNumGPUs}."
   )
   def to(t: Tensor): Tensor = {
-    val topt = t.options().cuda_index(i)
+    val topt = t.options().cuda_index(i.toShort)
     t.to(topt, true)
   }
   def options(precision: FloatingPointPrecision): TensorOptions =
-    precision.convertOption(TensorOptions.d.cuda_index(i))
+    precision.convertOption(TensorOptions.d.cuda_index(i.toShort))
 }

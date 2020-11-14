@@ -66,12 +66,9 @@ object TabularResidual {
       m => TabularResidual(m.straight.asTraining, m.block.asTraining)
     )
   implicit def load[M2 <: Module: Load, B2 <: Module: Load] =
-    Load.make[TabularResidual[M2, B2]](m =>
-      t =>
-        TabularResidual(
-          m.straight.load(t.take(m.straight.state.size)),
-          m.block.load(t.drop(m.straight.state.size).take(m.block.state.size))
-        )
-    )
+    Load.make[TabularResidual[M2, B2]] { m => t =>
+      m.straight.load(t.take(m.straight.state.size))
+      m.block.load(t.drop(m.straight.state.size).take(m.block.state.size))
+    }
 
 }

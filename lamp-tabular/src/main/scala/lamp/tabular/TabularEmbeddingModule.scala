@@ -3,11 +3,9 @@ package lamp.tabular
 import lamp.nn._
 import aten.TensorOptions
 import lamp.autograd.Variable
-import aten.Tensor
 import lamp.Sc
-import lamp.autograd.Concatenate
 import lamp.Scope
-import lamp.scope
+import lamp.STen
 
 case class TabularEmbedding(
     categoricalEmbeddings: Seq[Embedding]
@@ -24,7 +22,7 @@ case class TabularEmbedding(
       case (v, embedding) =>
         embedding.forward(v).view(List(v.shape.head.toInt, -1))
     }
-    Concatenate(scope, embeddedCategoricals :+ numericals, dim = 1).value
+    Variable.cat(embeddedCategoricals :+ numericals, dim = 1)
   }
 
 }
@@ -56,10 +54,10 @@ object TabularEmbedding {
     Load.make[TabularEmbedding](m =>
       t => {
         def loop(
-            ts: Seq[Tensor],
+            ts: Seq[STen],
             mods: Seq[Embedding],
-            acc: List[(Embedding, Seq[Tensor])]
-        ): (Seq[Tensor], Seq[(Embedding, Seq[Tensor])]) =
+            acc: List[(Embedding, Seq[STen])]
+        ): (Seq[STen], Seq[(Embedding, Seq[STen])]) =
           if (mods.size == 0) (ts, acc)
           else {
             loop(
@@ -72,13 +70,10 @@ object TabularEmbedding {
         val (_, zippedEmbeddingTensors) =
           loop(t, m.categoricalEmbeddings, Nil)
 
-        val loadedCategoricals =
-          zippedEmbeddingTensors.reverse.filter(_._2.nonEmpty).map {
-            case (emb, ts) => emb.load(ts)
-          }
-        TabularEmbedding(
-          loadedCategoricals
-        )
+        zippedEmbeddingTensors.reverse.filter(_._2.nonEmpty).foreach {
+          case (emb, ts) => emb.load(ts)
+        }
+
       }
     )
 

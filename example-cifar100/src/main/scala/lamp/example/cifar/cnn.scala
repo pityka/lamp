@@ -25,13 +25,11 @@ object Residual {
   implicit def trainingMode[M1 <: Module: Load, M2 <: Module: Load] =
     TrainingMode.identity[Residual[M1, M2]]
   implicit def load[M1 <: Module: Load, M2 <: Module: Load] =
-    Load.make[Residual[M1, M2]](m =>
-      t =>
-        Residual(
-          m.right.load(t.take(m.right.state.size)),
-          m.left.map(l => l.load(t.drop(m.right.state.size).take(l.state.size)))
-        )
-    )
+    Load.make[Residual[M1, M2]] { m => t =>
+      m.right.load(t.take(m.right.state.size))
+      m.left.map(l => l.load(t.drop(m.right.state.size).take(l.state.size)))
+
+    }
   def make(
       inChannels: Int,
       outChannels: Int,
@@ -132,7 +130,7 @@ object Cnn {
         )
       ),
       Fun(implicit pool =>
-        AvgPool2D(pool, _, kernelSize = 8, padding = 0, stride = 1).value
+        new AvgPool2D(pool, _, kernelSize = 8, padding = 0, stride = 1).value
       ),
       Fun(implicit pool => _.flattenLastDimensions(3)),
       Fun(implicit pool => _.logSoftMax(dim = 1))
@@ -155,7 +153,7 @@ object Cnn {
       Fun(implicit pool => _.gelu),
       Dropout(dropOut, training = true),
       Fun(implicit pool =>
-        MaxPool2D(
+        new MaxPool2D(
           pool,
           _,
           kernelSize = 2,
@@ -175,7 +173,7 @@ object Cnn {
       Fun(implicit pool => _.gelu),
       Dropout(dropOut, training = true),
       Fun(implicit pool =>
-        MaxPool2D(
+        new MaxPool2D(
           pool,
           _,
           kernelSize = 2,

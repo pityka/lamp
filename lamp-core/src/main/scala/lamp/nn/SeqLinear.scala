@@ -1,22 +1,20 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param}
+import lamp.autograd.{Variable, Constant, param}
 import lamp.Sc
-import aten.ATen
-import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
-import lamp.scope
+import lamp.STen
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * output dim)
   * Applies a linear function to each time step
   */
 case class SeqLinear(
-    weight: Variable,
-    bias: Variable
+    weight: Constant,
+    bias: Constant
 ) extends Module {
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     List(
       (weight, SeqLinear.Weight),
       (bias, SeqLinear.Bias)
@@ -28,7 +26,7 @@ case class SeqLinear(
       val xt = x.select(0, t)
       (xt.mm(weight) + bias)
     }
-    ConcatenateAddNewDim(scope, outputs).value
+    Variable.concatenateAddNewDim(outputs)
 
   }
 
@@ -37,11 +35,9 @@ case class SeqLinear(
 object SeqLinear {
   implicit val trainingMode = TrainingMode.identity[SeqLinear]
   implicit val load = Load.make[SeqLinear] { m => tensors =>
-    implicit val pool = m.weight.pool
-    m.copy(
-      weight = param(tensors(0)),
-      bias = param(tensors(1))
-    )
+    m.weight.value.copyFrom(tensors(0))
+    m.bias.value.copyFrom(tensors(1))
+
   }
   case object Weight extends LeafTag
   case object Bias extends LeafTag
@@ -53,7 +49,7 @@ object SeqLinear {
   ): SeqLinear =
     SeqLinear(
       weight = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + out)),
           Array(in, out),
@@ -61,7 +57,7 @@ object SeqLinear {
         )
       ),
       bias = param(
-        ATen.zeros(
+        STen.zeros(
           Array(1, out),
           tOpt
         )

@@ -15,6 +15,8 @@ import lamp.Device
 import lamp.SinglePrecision
 import lamp.nn.GenericModule
 import lamp.nn.Load
+import lamp.Scope
+import lamp.STen
 
 object Reader {
 
@@ -224,7 +226,11 @@ object Reader {
               device
             )
             .right
-            .map { tensors => module.load(tensors) }
+            .map { tensors =>
+              Scope.root { implicit scope =>
+                module.load(tensors.map(t => STen.owned(t)))
+              }
+            }
         }
       }
 

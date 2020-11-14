@@ -55,15 +55,18 @@ object Movable {
   def empty[T] = new Movable[T] {
     def list(t: T) = Nil
   }
+  def nonEmpty[T](extract: T => List[Tensor]) = new Movable[T] {
+    def list(t: T) = extract(t)
+  }
+  def by[T, K: Movable](convert: T => K) = new Movable[T] {
+    def list(t: T) = convert(t).tensors
+  }
   implicit def stensorIsMovable = new Movable[STen] {
     def list(m: STen) = List(m.value)
   }
-  implicit object UnitIsMovable extends Movable[Unit] {
-    def list(m: Unit) = Nil
-  }
-  implicit object StringIsMovable extends Movable[String] {
-    def list(m: String) = Nil
-  }
+
+  implicit def unitIsMovable = Movable.empty[Unit]
+  implicit def stringIsMovable = Movable.empty[String]
   implicit def DoubleIsMovable = Movable.empty[Double]
   implicit def FloatIsMovable = Movable.empty[Float]
   implicit def BooleanIsMovable = Movable.empty[Boolean]
@@ -75,6 +78,15 @@ object Movable {
   implicit def VecDoubleIsMovable = Movable.empty[org.saddle.Vec[Double]]
   implicit def MatIntIsMovable = Movable.empty[org.saddle.Mat[Int]]
   implicit def VecIntIsMovable = Movable.empty[org.saddle.Vec[Int]]
+  implicit def OptionIsMovable[T: Movable] = new Movable[Option[T]] {
+    def list(m: Option[T]) =
+      m.toList.flatMap(m => implicitly[Movable[T]].list(m)).toList
+  }
+  implicit def EitherIsMovable[T1: Movable, T2: Movable] =
+    new Movable[Either[T1, T2]] {
+      def list(m: Either[T1, T2]) =
+        m.fold(_.tensors, _.tensors)
+    }
   implicit def SeqIsMovable[T: Movable] = new Movable[Seq[T]] {
     def list(m: Seq[T]) = m.flatMap(m => implicitly[Movable[T]].list(m)).toList
   }
@@ -90,10 +102,33 @@ object Movable {
       def list(m: (T1, T2, T3, T4)) =
         m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors
     }
+  implicit def t5[
+      T1: Movable,
+      T2: Movable,
+      T3: Movable,
+      T4: Movable,
+      T5: Movable
+  ] =
+    new Movable[(T1, T2, T3, T4, T5)] {
+      def list(m: (T1, T2, T3, T4, T5)) =
+        m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors ++ m._5.tensors
+    }
+  implicit def t6[
+      T1: Movable,
+      T2: Movable,
+      T3: Movable,
+      T4: Movable,
+      T5: Movable,
+      T6: Movable
+  ] =
+    new Movable[(T1, T2, T3, T4, T5, T6)] {
+      def list(m: (T1, T2, T3, T4, T5, T6)) =
+        m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors ++ m._5.tensors ++ m._6.tensors
+    }
 
 }
 
-final class Scope private (val level: Int) {
+final class Scope private {
 
   private var closed = false
   private var resources: List[Tensor] = Nil
@@ -114,17 +149,21 @@ final class Scope private (val level: Int) {
 
   private def manageMovable[A](
       op: Scope => A
-  )(implicit movable: Movable[A]): A = {
+  )(implicit movable: Movable[A]): (A, List[Tensor]) = {
     var toThrow: Throwable = null
     try {
       val last = op(this)
       val lastResources = movable.list(last)
-      resources = resources.filterNot(r => lastResources.exists(_ eq r))
-      last
+      val (movableResources, releasableResources) =
+        resources.partition(r => lastResources.exists(_ eq r))
+      resources = releasableResources
+      (last, movableResources)
     } catch {
       case t: Throwable =>
         toThrow = t
-        null.asInstanceOf[A] // compiler doesn't know `finally` will throw
+        null.asInstanceOf[
+          (A, List[Tensor])
+        ] // compiler doesn't know `finally` will throw
     } finally {
       closed = true
       var rs = resources.distinct
@@ -141,6 +180,42 @@ final class Scope private (val level: Int) {
       }
       if (toThrow != null) throw toThrow
     }
+  }
+  private def manageMovableIO[A](
+      op: Scope => IO[A]
+  )(implicit movable: Movable[A]): IO[(A, List[Tensor])] = {
+    import cats.syntax.all._
+
+    op(this)
+      .map { last =>
+        val lastResources = movable.list(last)
+        val (movables, releasable) =
+          resources.partition(r => lastResources.exists(_ eq r))
+        (Option(last), movables, releasable, Option.empty[Throwable])
+      }
+      .recover {
+        case t: Throwable => (Option.empty[A], Nil, resources, Some(t))
+      }
+      .flatMap {
+        case (last, movables, releasable, error) =>
+          closed = true
+          var rs = releasable.distinct
+          this.resources = null // allow GC, in case something is holding a reference to `this`
+          var toThrow: Throwable = null
+          while (rs.nonEmpty) {
+            val resource = rs.head
+            rs = rs.tail
+            try resource.release()
+            catch {
+              case t: Throwable =>
+                toThrow = t
+            }
+          }
+          if (toThrow != null) IO.raiseError(toThrow)
+          else if (error.isDefined) IO.raiseError(error.get)
+          else IO.pure((last.get, movables))
+      }
+
   }
   private def manage[A](
       op: Scope => A
@@ -173,7 +248,7 @@ final class Scope private (val level: Int) {
 
 object Scope {
 
-  def free = new Scope(0)
+  def free = new Scope
 
   def inResource =
     Resource.make(IO {
@@ -182,39 +257,40 @@ object Scope {
 
   def bracket[A: Movable](
       use: Scope => IO[A]
-  )(implicit parent: Scope = null): IO[A] =
-    IO.pure(Scope.free)
-      .bracket(use) { scope =>
+  )(implicit parent: Scope): IO[A] =
+    Scope.free.manageMovableIO(use).flatMap {
+      case (last, movables) =>
         IO {
-          scope.release
+          movables.foreach(a => parent.register(a))
+          last
         }
-      }
-      .map { last =>
-        if (parent != null) {
-          implicitly[Movable[A]].list(last).foreach(a => parent.register(a))
-        }
-        last
-      }
+    }
+
+  def bracket[A: Movable](parent: Scope)(
+      use: Scope => IO[A]
+  ): IO[A] = {
+    implicit val p = parent
+    bracket(use)
+  }
 
   def apply[A: Movable](
       op: Scope => A
   )(implicit parent: Scope): A = {
-    val level = if (parent == null) 0 else parent.level + 1
-    val last = (new Scope(level)).manageMovable(op)
+    val (last, movables) = (new Scope).manageMovable(op)
     if (parent != null) {
-      implicitly[Movable[A]].list(last).foreach(a => parent.register(a))
+      movables.foreach(a => parent.register(a))
     }
     last
   }
   def root[A](
       op: Scope => Unit
   ): Unit = {
-    (new Scope(0)).manage(op)
+    (new Scope).manage(op)
   }
   def leak[A](
       op: Scope => A
   ): A = {
-    (new Scope(0)).manage(op)
+    (new Scope).manage(op)
   }
 
 }

@@ -3,6 +3,7 @@ package lamp.nn
 import lamp.autograd._
 import aten.ATen
 import lamp.Sc
+import lamp.STen
 
 case class GraphReadout[M <: GraphModule](
     m: M with GraphModule,
@@ -12,7 +13,7 @@ case class GraphReadout[M <: GraphModule](
       Variable
     ] {
 
-  def state: Seq[(Variable, PTag)] =
+  def state =
     m.state
 
   def forward[S: Sc](
@@ -22,7 +23,7 @@ case class GraphReadout[M <: GraphModule](
     val (nodes, edges, graphIndices) = x
     val (mN, _) = m.forward((nodes, edges))
 
-    val max = ATen.max_2(graphIndices.value)
+    val max = ATen.max_2(graphIndices.value.value)
 
     val maxi = max.toLongMat.raw(0) + 1
     max.release
@@ -31,7 +32,7 @@ case class GraphReadout[M <: GraphModule](
       case GraphReadout.Sum => sum
       case GraphReadout.Mean =>
         val ones =
-          const(ATen.ones(Array(nodes.shape(0), 1), sum.options))(sum.pool)
+          const(STen.ones(List(nodes.shape(0), 1), sum.options))
         val counts = ones.indexAdd(graphIndices, 0, maxi)
         sum / counts
     }
@@ -54,7 +55,7 @@ object GraphReadout {
   implicit def load[M1 <: GraphModule: Load] =
     Load.make[GraphReadout[M1]](module =>
       tensors => {
-        GraphReadout(module.m.load(tensors), module.pooling)
+        module.m.load(tensors)
       }
     )
 

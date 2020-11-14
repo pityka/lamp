@@ -3,10 +3,7 @@ package lamp
 import org.saddle._
 import org.saddle.order._
 import org.saddle.scalar.ScalarTagDouble
-import cats.effect.Resource
-import cats.effect.IO
 import lamp.tabular.Metadata
-import aten.Tensor
 import lamp.tabular.Numerical
 
 sealed trait StringMetadata
@@ -210,36 +207,34 @@ object StringMetadata {
       device: Device,
       precision: FloatingPointPrecision,
       oneHotThreshold: Int
-  ): Resource[IO, (Tensor, Seq[Metadata])] = {
+  )(implicit scope: Scope): (STen, Seq[Metadata]) = Scope { implicit scope =>
     assert(frame.numCols == metadata.size)
-    Resource.make {
-      IO {
-        val mappedColumnsWithMeta2 =
-          frame.toColSeq.map(_._2.toVec).zip(metadata).flatMap {
-            case (
-                column,
-                NumericNormal(mean, std, min, max, indicators, missingCount)
-                ) =>
-              convertNumericNormalColumn(
-                column,
-                mean,
-                std,
-                min,
-                max,
-                indicators,
-                missingCount
-              )
-            case (_, Unknown(_)) => Nil
-            case (column, Categorical(levels, missingLevel)) =>
-              convertCategorical(column, levels, missingLevel)
-          }
-        val (cols, meta) = oneHot(mappedColumnsWithMeta2, oneHotThreshold).unzip
 
-        val mat = Frame(cols: _*).toMat
-        assert(cols.forall(v => !v.hasNA), "NA encountered")
-        val tensor = TensorHelpers.fromMat(mat, device, precision)
-        (tensor, meta)
+    val mappedColumnsWithMeta2 =
+      frame.toColSeq.map(_._2.toVec).zip(metadata).flatMap {
+        case (
+            column,
+            NumericNormal(mean, std, min, max, indicators, missingCount)
+            ) =>
+          convertNumericNormalColumn(
+            column,
+            mean,
+            std,
+            min,
+            max,
+            indicators,
+            missingCount
+          )
+        case (_, Unknown(_)) => Nil
+        case (column, Categorical(levels, missingLevel)) =>
+          convertCategorical(column, levels, missingLevel)
       }
-    }(t => IO { t._1.release })
+    val (cols, meta) = oneHot(mappedColumnsWithMeta2, oneHotThreshold).unzip
+
+    val mat = Frame(cols: _*).toMat
+    assert(cols.forall(v => !v.hasNA), "NA encountered")
+    val tensor = STen.fromMat(mat, device, precision)
+    (tensor, meta)
+
   }
 }

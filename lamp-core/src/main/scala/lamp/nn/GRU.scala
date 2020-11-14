@@ -1,32 +1,30 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param}
-import aten.ATen
+import lamp.autograd.{Variable, Constant, param}
 import scala.collection.mutable
-import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
 import lamp.Sc
-import lamp.scope
+import lamp.STen
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * hidden dim)
   */
 case class GRU(
-    weightXh: Variable,
-    weightHh: Variable,
-    weightXr: Variable,
-    weightXz: Variable,
-    weightHr: Variable,
-    weightHz: Variable,
-    biasR: Variable,
-    biasZ: Variable,
-    biasH: Variable
+    weightXh: Constant,
+    weightHh: Constant,
+    weightXr: Constant,
+    weightXz: Constant,
+    weightHr: Constant,
+    weightHz: Constant,
+    biasR: Constant,
+    biasZ: Constant,
+    biasH: Constant
 ) extends StatefulModule[Variable, Variable, Option[Variable]] {
 
   val inputSize = weightXh.shape.last
   val hiddenSize = biasH.shape.last
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     List(
       (weightXh, GRU.WeightXh),
       (weightHh, GRU.WeightHh),
@@ -40,7 +38,7 @@ case class GRU(
     )
 
   private def initHidden[S: Sc](batchSize: Long) = {
-    param(ATen.zeros(Array(batchSize, hiddenSize), weightHh.options))
+    param(STen.zeros(List(batchSize, hiddenSize), weightHh.options))
   }
   def initState = None
   def forward[S: Sc](a: (Variable, Option[Variable])) = forward1(a._1, a._2)
@@ -61,7 +59,7 @@ case class GRU(
         outputs.append(newHidden)
         newHidden
       }
-    (ConcatenateAddNewDim(scope, outputs).value, Some(lastHidden))
+    (Variable.concatenateAddNewDim(outputs), Some(lastHidden))
 
   }
 
@@ -71,18 +69,16 @@ object GRU {
   implicit val trainingMode = TrainingMode.identity[GRU]
   implicit val is = InitState.make[GRU, Option[Variable]](_ => None)
   implicit val load = Load.make[GRU] { m => tensors =>
-    implicit val pool = m.weightHh.pool
-    m.copy(
-      weightXh = param(tensors(0)),
-      weightHh = param(tensors(1)),
-      weightXr = param(tensors(2)),
-      weightXz = param(tensors(3)),
-      weightHr = param(tensors(4)),
-      weightHz = param(tensors(5)),
-      biasR = param(tensors(6)),
-      biasZ = param(tensors(7)),
-      biasH = param(tensors(8))
-    )
+    m.weightXh.value.copyFrom(tensors(0))
+    m.weightHh.value.copyFrom(tensors(1))
+    m.weightXr.value.copyFrom(tensors(2))
+    m.weightXz.value.copyFrom(tensors(3))
+    m.weightHr.value.copyFrom(tensors(4))
+    m.weightHz.value.copyFrom(tensors(5))
+    m.biasR.value.copyFrom(tensors(6))
+    m.biasZ.value.copyFrom(tensors(7))
+    m.biasH.value.copyFrom(tensors(8))
+
   }
   case object WeightXh extends LeafTag
   case object WeightHh extends LeafTag
@@ -101,68 +97,68 @@ object GRU {
   ): GRU =
     GRU(
       weightXh = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(in, hiddenSize),
+          List(in, hiddenSize),
           tOpt
         )
       ),
       weightXr = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(in, hiddenSize),
+          List(in, hiddenSize),
           tOpt
         )
       ),
       weightXz = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(in, hiddenSize),
+          List(in, hiddenSize),
           tOpt
         )
       ),
       weightHh = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (hiddenSize + hiddenSize)),
-          Array(hiddenSize, hiddenSize),
+          List(hiddenSize, hiddenSize),
           tOpt
         )
       ),
       weightHr = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (hiddenSize + hiddenSize)),
-          Array(hiddenSize, hiddenSize),
+          List(hiddenSize, hiddenSize),
           tOpt
         )
       ),
       weightHz = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (hiddenSize + hiddenSize)),
-          Array(hiddenSize, hiddenSize),
+          List(hiddenSize, hiddenSize),
           tOpt
         )
       ),
       biasH = param(
-        ATen.zeros(
-          Array(1, hiddenSize),
+        STen.zeros(
+          List(1, hiddenSize),
           tOpt
         )
       ),
       biasR = param(
-        ATen.zeros(
-          Array(1, hiddenSize),
+        STen.zeros(
+          List(1, hiddenSize),
           tOpt
         )
       ),
       biasZ = param(
-        ATen.zeros(
-          Array(1, hiddenSize),
+        STen.zeros(
+          List(1, hiddenSize),
           tOpt
         )
       )

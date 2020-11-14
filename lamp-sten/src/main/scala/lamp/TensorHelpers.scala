@@ -38,24 +38,60 @@ object TensorHelpers {
   }
 
   def toMat(t: Tensor) = {
+    if (t.options.scalarTypeByte() == 6) toFloatMat(t).map(_.toDouble)
+    else {
+      assert(
+        t.options.scalarTypeByte == 7,
+        s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+      )
+      val shape = t.sizes()
+      if (shape.size == 2) {
+        val arr = Array.ofDim[Double]((shape(0) * shape(1)).toInt)
+        assert(t.copyToDoubleArray(arr), "failed to copy")
+        Mat.apply(shape(0).toInt, shape(1).toInt, arr)
+      } else if (shape.size == 0) {
+        val arr = Array.ofDim[Double](1)
+        assert(t.copyToDoubleArray(arr))
+        Mat.apply(1, 1, arr)
+      } else if (shape.size == 1) {
+        val arr = Array.ofDim[Double](shape(0).toInt)
+        assert(t.copyToDoubleArray(arr))
+        Mat.apply(1, shape(0).toInt, arr)
+      } else throw new RuntimeException("shape: " + shape.deep)
+    }
+  }
+  def toVec(t: Tensor) = {
+    if (t.options().scalarTypeByte() == 6) {
+      assert(
+        t.numel <= Int.MaxValue,
+        "Tensor too long to fit into a java array"
+      )
+      val arr = Array.ofDim[Float](t.numel.toInt)
+      assert(t.copyToFloatArray(arr))
+      arr.toVec.map(_.toDouble)
+    } else {
+      assert(
+        t.options.scalarTypeByte == 7,
+        s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+      )
+      assert(
+        t.numel <= Int.MaxValue,
+        "Tensor too long to fit into a java array"
+      )
+      val arr = Array.ofDim[Double](t.numel.toInt)
+      assert(t.copyToDoubleArray(arr))
+      arr.toVec
+    }
+  }
+  def toLongVec(t: Tensor) = {
     assert(
-      t.options.scalarTypeByte == 7,
+      t.options.scalarTypeByte == 4,
       s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
     )
-    val shape = t.sizes()
-    if (shape.size == 2) {
-      val arr = Array.ofDim[Double]((shape(0) * shape(1)).toInt)
-      assert(t.copyToDoubleArray(arr), "failed to copy")
-      Mat.apply(shape(0).toInt, shape(1).toInt, arr)
-    } else if (shape.size == 0) {
-      val arr = Array.ofDim[Double](1)
-      assert(t.copyToDoubleArray(arr))
-      Mat.apply(1, 1, arr)
-    } else if (shape.size == 1) {
-      val arr = Array.ofDim[Double](shape(0).toInt)
-      assert(t.copyToDoubleArray(arr))
-      Mat.apply(1, shape(0).toInt, arr)
-    } else throw new RuntimeException("shape: " + shape.deep)
+    assert(t.numel <= Int.MaxValue, "Tensor too long to fit into a java array")
+    val arr = Array.ofDim[Long](t.numel.toInt)
+    assert(t.copyToLongArray(arr))
+    arr.toVec
   }
   def toFloatMat(t: Tensor) = {
     assert(

@@ -7,7 +7,7 @@ case class ResidualModule[M <: Module](
     transform: M with Module
 ) extends Module {
 
-  def state: Seq[(Variable, PTag)] =
+  def state =
     transform.state
 
   override def forward[S: Sc](
@@ -29,10 +29,8 @@ object ResidualModule {
         m => m.copy(transform = m.transform.asTraining)
       )
   implicit def load[M <: Module: Load] = Load.make[ResidualModule[M]] {
-    m => tensors =>
-      m.copy(
-        transform = m.transform.load(tensors)
-      )
+    m => tensors => m.transform.load(tensors)
+
   }
 
 }

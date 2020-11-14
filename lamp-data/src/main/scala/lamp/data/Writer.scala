@@ -232,7 +232,7 @@ object Writer {
         IO {
           Writer.writeTensorsIntoChannel(
             model.state
-              .map(v => v._1.value),
+              .map(v => v._1.value.value),
             channel
           )
         }

@@ -3,7 +3,6 @@ package lamp.data
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.CPU
 import lamp.SinglePrecision
-import aten.ATen
 import lamp.nn.Embedding
 import lamp.nn.RNN
 import lamp.nn.Fun
@@ -23,6 +22,7 @@ import lamp.nn.LSTM
 import lamp.nn.SeqLinear
 import lamp.nn.statefulSequence
 import lamp.Scope
+import lamp.STen
 
 class TextGenerationSuite extends AnyFunSuite {
   val asciiSilentCharsetDecoder = Charset
@@ -48,7 +48,7 @@ class TextGenerationSuite extends AnyFunSuite {
       val tensorOptions = device.options(precision)
       val model = {
         val classWeights =
-          ATen.ones(Array(vocabularSize), tensorOptions)
+          STen.ones(Array(vocabularSize), tensorOptions)
         val net =
           statefulSequence(
             Embedding(
@@ -130,7 +130,7 @@ class TextGenerationSuite extends AnyFunSuite {
       val tensorOptions = device.options(precision)
       val model = {
         val classWeights =
-          ATen.ones(Array(vocabularSize), tensorOptions)
+          STen.ones(Array(vocabularSize), tensorOptions)
         val net =
           statefulSequence(
             Embedding(
@@ -238,15 +238,14 @@ class TextGenerationSuite extends AnyFunSuite {
         val is = getClass.getResourceAsStream("/checkpoint.test")
         java.nio.channels.Channels.newChannel(is)
       })(v => IO { v.close })
-      val trainedModel =
-        Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
+      Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
       val textVariable = Text
         .sequencePrediction(
           List("time machine").map(t =>
             Text.charsToIntegers(t, vocab).map(_.toLong)
           ),
           device,
-          trainedModel,
+          net,
           lookAhead
         )
       val text = Text.convertIntegersToText(textVariable, rvocab)
@@ -294,15 +293,14 @@ class TextGenerationSuite extends AnyFunSuite {
         val is = getClass.getResourceAsStream("/checkpoint.test")
         java.nio.channels.Channels.newChannel(is)
       })(v => IO { v.close })
-      val trainedModel =
-        Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
+      Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
       val textVariables = Text
         .sequencePredictionBeam(
           List("time machine")
             .map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
             .head,
           device,
-          trainedModel,
+          net,
           lookAhead,
           0,
           1
