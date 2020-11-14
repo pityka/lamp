@@ -144,9 +144,8 @@ object Seq2 {
         val m1S = module.m1.state.size
         val m2S = module.m2.state.size
 
-        val loaded1 = module.m1.load(tensors.take(m1S))
-        val loaded2 = module.m2.load(tensors.drop(m1S).take(m2S))
-        Seq2(loaded1, loaded2)
+        module.m1.load(tensors.take(m1S))
+        module.m2.load(tensors.drop(m1S).take(m2S))
       }
     )
 
@@ -212,10 +211,9 @@ object Seq3 {
         val m2S = module.m2.state.size
         val m3S = module.m3.state.size
 
-        val loaded1 = module.m1.load(tensors.take(m1S))
-        val loaded2 = module.m2.load(tensors.drop(m1S).take(m2S))
-        val loaded3 = module.m3.load(tensors.drop(m1S + m2S).take(m3S))
-        Seq3(loaded1, loaded2, loaded3)
+        module.m1.load(tensors.take(m1S))
+        module.m2.load(tensors.drop(m1S).take(m2S))
+        module.m3.load(tensors.drop(m1S + m2S).take(m3S))
       }
     )
 
@@ -318,11 +316,10 @@ object Seq4 {
         val m3S = module.m3.state.size
         val m4S = module.m4.state.size
 
-        val loaded1 = module.m1.load(tensors.take(m1S))
-        val loaded2 = module.m2.load(tensors.drop(m1S).take(m2S))
-        val loaded3 = module.m3.load(tensors.drop(m1S + m2S).take(m3S))
-        val loaded4 = module.m4.load(tensors.drop(m1S + m2S + m3S).take(m4S))
-        Seq4(loaded1, loaded2, loaded3, loaded4)
+        module.m1.load(tensors.take(m1S))
+        module.m2.load(tensors.drop(m1S).take(m2S))
+        module.m3.load(tensors.drop(m1S + m2S).take(m3S))
+        module.m4.load(tensors.drop(m1S + m2S + m3S).take(m4S))
       }
     )
 
@@ -475,13 +472,11 @@ object Seq5 {
         val m4S = module.m4.state.size
         val m5S = module.m5.state.size
 
-        val loaded1 = module.m1.load(tensors.take(m1S))
-        val loaded2 = module.m2.load(tensors.drop(m1S).take(m2S))
-        val loaded3 = module.m3.load(tensors.drop(m1S + m2S).take(m3S))
-        val loaded4 = module.m4.load(tensors.drop(m1S + m2S + m3S).take(m4S))
-        val loaded5 =
-          module.m5.load(tensors.drop(m1S + m2S + m3S + m4S).take(m5S))
-        Seq5(loaded1, loaded2, loaded3, loaded4, loaded5)
+        module.m1.load(tensors.take(m1S))
+        module.m2.load(tensors.drop(m1S).take(m2S))
+        module.m3.load(tensors.drop(m1S + m2S).take(m3S))
+        module.m4.load(tensors.drop(m1S + m2S + m3S).take(m4S))
+        module.m5.load(tensors.drop(m1S + m2S + m3S + m4S).take(m5S))
       }
     )
 
@@ -655,15 +650,12 @@ object Seq6 {
         val m5S = module.m5.state.size
         val m6S = module.m6.state.size
 
-        val loaded1 = module.m1.load(tensors.take(m1S))
-        val loaded2 = module.m2.load(tensors.drop(m1S).take(m2S))
-        val loaded3 = module.m3.load(tensors.drop(m1S + m2S).take(m3S))
-        val loaded4 = module.m4.load(tensors.drop(m1S + m2S + m3S).take(m4S))
-        val loaded5 =
-          module.m5.load(tensors.drop(m1S + m2S + m3S + m4S).take(m5S))
-        val loaded6 =
-          module.m6.load(tensors.drop(m1S + m2S + m3S + m4S + m5S).take(m6S))
-        Seq6(loaded1, loaded2, loaded3, loaded4, loaded5, loaded6)
+        module.m1.load(tensors.take(m1S))
+        module.m2.load(tensors.drop(m1S).take(m2S))
+        module.m3.load(tensors.drop(m1S + m2S).take(m3S))
+        module.m4.load(tensors.drop(m1S + m2S + m3S).take(m4S))
+        module.m5.load(tensors.drop(m1S + m2S + m3S + m4S).take(m5S))
+        module.m6.load(tensors.drop(m1S + m2S + m3S + m4S + m5S).take(m6S))
       }
     )
 

@@ -1,25 +1,23 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param}
-import aten.ATen
+import lamp.autograd.{Variable, Constant, param}
 import scala.collection.mutable
-import lamp.autograd.ConcatenateAddNewDim
 import aten.TensorOptions
 import lamp.Sc
-import lamp.scope
+import lamp.STen
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * hidden dim)
   */
 case class RNN(
-    weightXh: Variable,
-    weightHh: Variable,
-    biasH: Variable
+    weightXh: Constant,
+    weightHh: Constant,
+    biasH: Constant
 ) extends StatefulModule[Variable, Variable, Option[Variable]] {
   val inputSize = weightXh.shape.last
   val hiddenSize = biasH.shape.last
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     List(
       (weightXh, RNN.WeightXh),
       (weightHh, RNN.WeightHh),
@@ -27,7 +25,7 @@ case class RNN(
     )
 
   private def initHidden[S: Sc](batchSize: Long) = {
-    param(ATen.zeros(Array(batchSize, hiddenSize), weightHh.options))
+    param(STen.zeros(List(batchSize, hiddenSize), weightHh.options))
   }
 
   def forward[S: Sc](a: (Variable, Option[Variable])) = forward1(a._1, a._2)
@@ -44,7 +42,7 @@ case class RNN(
         outputs.append(newHidden)
         newHidden
       }
-    (ConcatenateAddNewDim(scope, outputs).value, Some(lastHidden))
+    (Variable.concatenateAddNewDim(outputs), Some(lastHidden))
 
   }
 
@@ -54,12 +52,10 @@ object RNN {
   implicit val trainingMode = TrainingMode.identity[RNN]
   implicit val is = InitState.make[RNN, Option[Variable]](_ => None)
   implicit val load = Load.make[RNN] { m => tensors =>
-    implicit val pool = m.weightHh.pool
-    m.copy(
-      weightXh = param(tensors(0)),
-      weightHh = param(tensors(1)),
-      biasH = param(tensors(2))
-    )
+    m.weightXh.value.copyFrom(tensors(0))
+    m.weightHh.value.copyFrom(tensors(1))
+    m.biasH.value.copyFrom(tensors(2))
+
   }
   case object WeightXh extends LeafTag
   case object WeightHh extends LeafTag
@@ -72,24 +68,24 @@ object RNN {
   ): RNN =
     RNN(
       weightXh = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (in + hiddenSize)),
-          Array(in, hiddenSize),
+          List(in, hiddenSize),
           tOpt
         )
       ),
       weightHh = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (hiddenSize + hiddenSize)),
-          Array(hiddenSize, hiddenSize),
+          List(hiddenSize, hiddenSize),
           tOpt
         )
       ),
       biasH = param(
-        ATen.zeros(
-          Array(1, hiddenSize),
+        STen.zeros(
+          List(1, hiddenSize),
           tOpt
         )
       )

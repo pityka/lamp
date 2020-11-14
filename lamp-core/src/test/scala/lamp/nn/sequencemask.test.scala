@@ -6,6 +6,7 @@ import lamp.autograd._
 
 import lamp.util.NDArray
 import lamp.Scope
+import lamp.STen
 
 class AttentionSuite extends AnyFunSuite {
 
@@ -16,12 +17,12 @@ class AttentionSuite extends AnyFunSuite {
       val tokens = NDArray.tensorFromLongNDArray(nd3x2L, false)
       val maskable = NDArray.tensorFromNDArray(nd2x3, false)
       val masked = Attention.sequenceMask(
-        tokens = const(tokens),
-        maskable = const(maskable),
+        tokens = const(STen.owned(tokens)),
+        maskable = const(STen.owned(maskable)),
         maskedToken = 1L,
         fill = -1d
       )
-      val maskedND = NDArray.tensorToNDArray(masked.value)
+      val maskedND = NDArray.tensorToNDArray(masked.value.value)
       val expected = NDArray(
         Array(1d, 1d, 1d, -1d, -1d, 1d),
         List(2, 3)
@@ -66,11 +67,12 @@ class AttentionSuite extends AnyFunSuite {
       val result = NDArray.tensorToNDArray(
         Attention
           .dotProductAttention(
-            query = const(nd3x2query),
-            keyvalue = const(nd2x3x2kv),
-            tokens = const(nd2x3L),
+            query = const(STen.owned(nd3x2query)),
+            keyvalue = const(STen.owned(nd2x3x2kv)),
+            tokens = const(STen.owned(nd2x3L)),
             padToken = 1L
           )
+          .value
           .value
       )
       val expected = NDArray(

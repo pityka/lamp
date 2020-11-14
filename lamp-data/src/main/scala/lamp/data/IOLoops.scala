@@ -7,11 +7,13 @@ import scribe.Logger
 import Writer.writeCheckpoint
 import lamp.autograd.Variable
 import lamp.TensorHelpers
+import lamp.STen
+import lamp.Scope
 object IOLoops {
 
   def epochs[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
       model: SupervisedModel[I, M],
-      optimizerFactory: Seq[(Tensor, PTag)] => Optimizer,
+      optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I],
       validationBatchesOverEpoch: Option[() => BatchStream[I]],
       epochs: Int,
@@ -38,20 +40,21 @@ object IOLoops {
           minValidationLossModel match {
             case None => (epoch - 1, modelWithOptimizer.model)
             case Some((epochOfMinValidation, state)) =>
-              val stateOnDevice = state.map { t =>
-                val device =
-                  returnDevice.getOrElse(
-                    TensorHelpers.device(model.module.state.head._1.value)
-                  )
-                val t2 = device.to(t)
-                t.release
-                t2
+              Scope.root { implicit scope =>
+                val stateOnDevice = state.map { t =>
+                  val device =
+                    returnDevice.getOrElse(
+                      TensorHelpers.device(
+                        model.module.state.head._1.value.value
+                      )
+                    )
+                  val t2 = device.to(t)
+                  t.release
+                  STen.owned(t2)
+                }
+                model.module.load(stateOnDevice)
               }
-              val loadedModel = modelWithOptimizer.model
-                .copy(module =
-                  modelWithOptimizer.model.module.load(stateOnDevice)
-                )
-              (epochOfMinValidation, loadedModel)
+              (epochOfMinValidation, modelWithOptimizer.model)
           }
         }
       else {
@@ -60,7 +63,7 @@ object IOLoops {
           logger.foreach(_.info(s"Copying model at epoch $epoch"))
           minValidationLossModel.foreach(_._2.foreach(_.release))
           val copiedState =
-            model.module.state.map(_._1.value).map { t => lamp.CPU.to(t) }
+            model.module.state.map(_._1.value).map { t => lamp.CPU.to(t.value) }
 
           (epoch, copiedState)
         }

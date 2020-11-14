@@ -1,9 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.Variable
-import lamp.autograd.ConcatenateAddNewDim
 import lamp.Sc
-import lamp.scope
 
 object Attention {
 
@@ -99,7 +97,7 @@ object Attention {
         outputs.append(output.select(0, 0))
         nextHidden
       }
-    val r = ConcatenateAddNewDim(scope, outputs).value
+    val r = Variable.concatenateAddNewDim(outputs)
     (r, lastHidden)
 
   }
@@ -114,7 +112,7 @@ case class AttentionDecoder[T, M <: StatefulModule[Variable, Variable, T], M0 <:
     padToken: Long
 ) extends StatefulModule[Variable, Variable, T] {
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     decoder.state ++ embedding.state
 
   def forward[S: Sc](x: (Variable, T)) = {

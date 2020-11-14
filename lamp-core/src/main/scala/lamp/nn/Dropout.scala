@@ -4,7 +4,7 @@ import lamp.autograd.Variable
 import lamp.Sc
 
 case class Dropout(prob: Double, training: Boolean) extends Module {
-  override def state: Seq[(Variable, PTag)] = Nil
+  override def state = Nil
   def forward[S: Sc](x: Variable): Variable = x.dropout(prob, training)
 }
 object Dropout {

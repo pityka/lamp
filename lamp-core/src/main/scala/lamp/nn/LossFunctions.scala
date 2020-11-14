@@ -8,37 +8,43 @@ import aten.ATen
 import lamp.autograd.Sum
 import lamp.util.syntax
 import lamp.Sc
-import lamp.scoped
+import lamp.STen
 
 trait LossFunction {
 
   /**
     * Returns the loss averaged over examples and the number of examples
     */
-  def apply[S: Sc](output: Variable, target: Tensor): (Variable, Long)
+  def apply[S: Sc](output: Variable, target: STen): (Variable, Long)
 }
 
 object LossFunctions {
   case object MSE extends LossFunction {
-    def apply[S: Sc](out: Variable, target: Tensor) = {
+    def apply[S: Sc](out: Variable, target: STen) = {
       val v = out.mseLoss(target)
       (v, out.shape(0))
     }
   }
   case object L1Loss extends LossFunction {
-    def apply[S: Sc](out: Variable, target: Tensor) = {
+    def apply[S: Sc](out: Variable, target: STen) = {
       val v = out.l1Loss(target)
       (v, out.shape(0))
     }
   }
   case class NLL(
       numClasses: Int,
-      classWeights: Tensor,
+      classWeights: STen,
       reduction: Reduction = Mean,
       ignore: Long = -100L
   ) extends LossFunction {
-    def apply[S: Sc](out: Variable, target: Tensor) = {
-      val v = out.nllLoss(target, numClasses, classWeights, reduction, ignore)
+    def apply[S: Sc](out: Variable, target: STen) = {
+      val v = out.nllLoss(
+        target,
+        // numClasses,
+        classWeights,
+        reduction,
+        ignore
+      )
       (v, out.shape(0))
     }
   }
@@ -50,16 +56,16 @@ object LossFunctions {
     */
   case class SequenceNLL(
       numClasses: Int,
-      classWeights: Tensor,
+      classWeights: STen,
       ignore: Long = -100L
   ) extends LossFunction {
     val ignoreScalar = Tensor.scalarLong(ignore, classWeights.options)
-    def apply[S: Sc](out: Variable, target: Tensor) = {
+    def apply[S: Sc](out: Variable, target: STen) = {
       val timeSteps = out.shape(0)
       val batches = out.shape(1)
       val lossesAtTimeSteps = (0 until timeSteps.toInt).map { t =>
-        val t1 = scoped(ATen.select(target, 0, t))
-        val ignored = ATen.eq_1(t1, ignoreScalar)
+        val t1 = STen.owned(ATen.select(target.value, 0, t))
+        val ignored = ATen.eq_1(t1.value, ignoreScalar)
         val sumT = ATen.sum_0(ignored)
         val ignoredCount = sumT.toLongMat.raw(0)
         val count = batches - ignoredCount
@@ -68,7 +74,7 @@ object LossFunctions {
           .select(0, t)
           .nllLoss(
             t1,
-            numClasses,
+            // numClasses,
             classWeights,
             reduction = Sum,
             ignore = ignore

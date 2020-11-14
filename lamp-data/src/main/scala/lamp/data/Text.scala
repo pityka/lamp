@@ -9,12 +9,11 @@ import aten.ATen
 import aten.Tensor
 import lamp.Device
 import lamp.autograd.Variable
-import lamp.autograd.ConcatenateAddNewDim
 import lamp.nn.StatefulModule
 import lamp.nn.InitState
 import lamp.nn.FreeRunningRNN
 import lamp.Scope
-import lamp.util.syntax
+import lamp.STen
 
 object Text {
   def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
@@ -23,9 +22,10 @@ object Text {
       module: M with StatefulModule[Variable, Variable, T],
       steps: Int
   )(
-      implicit is: InitState[M, T]
-  ): Tensor = {
-    Scope.leak { implicit scope =>
+      implicit is: InitState[M, T],
+      scope: Scope
+  ): STen = {
+    Scope { implicit scope =>
       val predictionBatch = makePredictionBatch(batch, device)
 
       FreeRunningRNN(module, steps)
@@ -33,7 +33,6 @@ object Text {
         ._1
         .argmax(2, false)
         .value
-        .copy
 
     }
   }
@@ -45,11 +44,12 @@ object Text {
       startSequence: Int,
       endOfSequence: Int
   )(
-      implicit is: InitState[M, T]
-  ): Seq[(Tensor, Double)] = {
+      implicit is: InitState[M, T],
+      scope: Scope
+  ): Seq[(STen, Double)] = {
     val k = 3
 
-    Scope.leak { implicit scope =>
+    Scope { implicit scope =>
       val predictionBatch = makePredictionBatch(Vector(prefix), device)
 
       def loop(
@@ -93,7 +93,7 @@ object Text {
                   val logProb = selected.toMat.raw(0)
                   (
                     sequence,
-                    selected.assign(const(index)),
+                    selected.assign(const(STen.owned(index))),
                     logProb + logProb0,
                     state,
                     i
@@ -122,15 +122,16 @@ object Text {
         .reverse
         .map {
           case (seq, logProb) =>
-            val catted = ConcatenateAddNewDim(
-              scope,
-              seq.map(v => v.select(0, v.shape(0) - 1))
-            ).value.view(List(seq.size))
+            val catted = Variable
+              .concatenateAddNewDim(
+                seq.map(v => v.select(0, v.shape(0) - 1))
+              )
+              .view(List(seq.size))
 
             (catted, logProb)
         }
 
-      ret.map(v => (v._1.value.copy, v._2))
+      ret.map(v => (v._1.value.cloneTensor, v._2))
 
     }
   }
@@ -138,24 +139,20 @@ object Text {
   /** Convert back to text. Tensor shape: time x batch x dim
     */
   def convertLogitsToText(
-      tensor: Tensor,
+      tensor: STen,
       vocab: Map[Int, Char]
-  ): Seq[String] = {
-    val t = ATen.argmax(tensor, 2, false)
-    val r = convertIntegersToText(t, vocab)
-    t.release
-    r
-
+  )(implicit scope: Scope): Seq[String] = Scope { implicit scope =>
+    convertIntegersToText(tensor.argmax(2, false), vocab)
   }
 
   /** Convert back to text. Tensor shape: time x batch x dim
     */
   def convertIntegersToText(
-      tensor: Tensor,
+      tensor: STen,
       vocab: Map[Int, Char]
   ): Seq[String] = {
 
-    val r = TensorHelpers.toLongMat(tensor).T
+    val r = tensor.toLongMat.T
     r.rows.map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
 
   }
@@ -183,24 +180,19 @@ object Text {
       examples: Seq[Vector[Long]],
       device: Device
   )(implicit scope: Scope): Variable = {
-    val flattenedFeature =
-      TensorHelpers.fromLongVec(examples.flatMap(identity).toVec)
-    val viewedFeature = ATen._unsafe_view(
-      flattenedFeature,
-      Array(examples.size.toLong, examples.head.size.toLong)
-    )
-    val transposedFeatures = ATen.transpose(viewedFeature, 0, 1)
-    val movedFeature = device.to(transposedFeatures)
+    val tensor = Scope { implicit scope =>
+      val flattenedFeature =
+        STen.fromLongVec(examples.flatMap(identity).toVec)
+      val viewedFeature =
+        flattenedFeature.view(
+          examples.size.toLong,
+          examples.head.size.toLong
+        )
+      val transposedFeatures = viewedFeature.transpose(0, 1)
+      device.to(transposedFeatures)
 
-    Tensor.releaseAll(
-      Array(
-        viewedFeature,
-        flattenedFeature,
-        transposedFeatures
-      )
-    )
-
-    const(movedFeature)
+    }
+    const(tensor)
   }
 
   /**
@@ -214,57 +206,52 @@ object Text {
       rng: org.saddle.spire.random.Generator
   ) = {
     def makeNonEmptyBatch(idx: Array[Int]) =
-      BatchStream.scopeInResource.flatMap { implicit scope =>
-        Resource.make(IO {
-          val pairs = idx.map { i =>
-            val segmentFeature =
-              text.drop(i).take(timeSteps).map(_.toLong).toArray
-            val segmentTarget =
-              text.drop(i + 1).take(timeSteps).map(_.toLong).toArray
-            assert(segmentFeature.length == timeSteps)
+      BatchStream.scopeInResource.map { implicit scope =>
+        val pairs = idx.map { i =>
+          val segmentFeature =
+            text.drop(i).take(timeSteps).map(_.toLong).toArray
+          val segmentTarget =
+            text.drop(i + 1).take(timeSteps).map(_.toLong).toArray
+          assert(segmentFeature.length == timeSteps)
 
-            (segmentFeature, segmentTarget)
+          (segmentFeature, segmentTarget)
 
-          }
-
-          val flattenedFeature =
-            TensorHelpers
-              .fromLongVec(pairs.flatMap(_._1).toVec, device)
-          val flattenedTarget =
-            TensorHelpers.fromLongVec(pairs.flatMap(_._2).toVec, device)
-          val viewedFeature = ATen._unsafe_view(
-            flattenedFeature,
-            Array(idx.size.toLong, timeSteps.toLong)
-          )
-          val viewedTarget = ATen._unsafe_view(
-            flattenedTarget,
-            Array(idx.size.toLong, timeSteps.toLong)
-          )
-          val transposedFeatures =
-            ATen.transpose(viewedFeature, 0, 1)
-          val transposedTarget = ATen.transpose(viewedTarget, 0, 1)
-
-          Tensor.releaseAll(
-            Array(
-              viewedTarget,
-              viewedFeature,
-              flattenedTarget,
-              flattenedFeature
-            )
-          )
-
-          Some((const(transposedFeatures), transposedTarget)): Option[
-            (Variable, Tensor)
-          ]
-        }) {
-          case None => IO.unit
-          case Some((_, b)) =>
-            IO {
-              b.release
-            }
         }
+
+        val flattenedFeature =
+          TensorHelpers
+            .fromLongVec(pairs.flatMap(_._1).toVec, device)
+        val flattenedTarget =
+          TensorHelpers.fromLongVec(pairs.flatMap(_._2).toVec, device)
+        val viewedFeature = ATen._unsafe_view(
+          flattenedFeature,
+          Array(idx.size.toLong, timeSteps.toLong)
+        )
+        val viewedTarget = ATen._unsafe_view(
+          flattenedTarget,
+          Array(idx.size.toLong, timeSteps.toLong)
+        )
+        val transposedFeatures =
+          ATen.transpose(viewedFeature, 0, 1)
+        val transposedTarget = ATen.transpose(viewedTarget, 0, 1)
+
+        Tensor.releaseAll(
+          Array(
+            viewedTarget,
+            viewedFeature,
+            flattenedTarget,
+            flattenedFeature
+          )
+        )
+
+        Some(
+          (const(STen.owned(transposedFeatures)), STen.owned(transposedTarget))
+        ): Option[
+          (Variable, STen)
+        ]
+
       }
-    val emptyResource = Resource.pure[IO, Option[(Variable, Tensor)]](None)
+    val emptyResource = Resource.pure[IO, Option[(Variable, STen)]](None)
 
     val dropped = text.drop(scala.util.Random.nextInt(timeSteps))
     val numSamples = (dropped.size - 1) / timeSteps
@@ -280,7 +267,7 @@ object Text {
     assert(idx.forall(_.size == minibatchSize))
     new BatchStream[Variable] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[(Variable, Tensor)]] =
+      def nextBatch: Resource[IO, Option[(Variable, STen)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>
@@ -305,96 +292,86 @@ object Text {
       rng: org.saddle.spire.random.Generator
   ): BatchStream[(Variable, Variable)] = {
     def makeNonEmptyBatch(idx: Array[Int]) =
-      BatchStream.scopeInResource.flatMap { implicit scope =>
-        Resource.make {
-          val io = IO {
-            val pairs = idx.map { i =>
-              val segmentSource =
-                text(i)._1
-                  .take(timeSteps)
-                  .padTo(timeSteps, pad.toLong)
-              val segmentDestination =
-                text(i)._2
-                  .take(timeSteps)
-                  .padTo(timeSteps, pad.toLong)
-              val segmentTarget =
-                text(i)._2
-                  .drop(1)
-                  .take(timeSteps)
-                  .padTo(timeSteps, pad.toLong)
-              assert(segmentSource.length == segmentTarget.length)
-              assert(segmentSource.length == segmentTarget.length)
-              assert(segmentSource.length == segmentDestination.length)
-              assert(segmentSource.length == timeSteps)
+      BatchStream.scopeInResource.map { implicit scope =>
+        val pairs = idx.map { i =>
+          val segmentSource =
+            text(i)._1
+              .take(timeSteps)
+              .padTo(timeSteps, pad.toLong)
+          val segmentDestination =
+            text(i)._2
+              .take(timeSteps)
+              .padTo(timeSteps, pad.toLong)
+          val segmentTarget =
+            text(i)._2
+              .drop(1)
+              .take(timeSteps)
+              .padTo(timeSteps, pad.toLong)
+          assert(segmentSource.length == segmentTarget.length)
+          assert(segmentSource.length == segmentTarget.length)
+          assert(segmentSource.length == segmentDestination.length)
+          assert(segmentSource.length == timeSteps)
 
-              (
-                segmentSource,
-                segmentDestination,
-                segmentTarget
-              )
+          (
+            segmentSource,
+            segmentDestination,
+            segmentTarget
+          )
 
-            }
-
-            val flattenedSource =
-              TensorHelpers
-                .fromLongVec(pairs.flatMap(_._1).toVec, device)
-            val viewedSource = ATen._unsafe_view(
-              flattenedSource,
-              Array(idx.size.toLong, timeSteps.toLong)
-            )
-            val transposedSource =
-              ATen.transpose(viewedSource, 0, 1)
-            val flattenedDest =
-              TensorHelpers
-                .fromLongVec(pairs.flatMap(_._2).toVec, device)
-            val viewedDest = ATen._unsafe_view(
-              flattenedDest,
-              Array(idx.size.toLong, timeSteps.toLong)
-            )
-            val transposedDest =
-              ATen.transpose(viewedDest, 0, 1)
-            val flattenedTarget =
-              TensorHelpers.fromLongVec(pairs.flatMap(_._3).toVec, device)
-            val viewedTarget = ATen._unsafe_view(
-              flattenedTarget,
-              Array(idx.size.toLong, timeSteps.toLong)
-            )
-            val transposedTarget = ATen.transpose(viewedTarget, 0, 1)
-
-            Tensor.releaseAll(
-              Array(
-                viewedTarget,
-                viewedSource,
-                viewedDest,
-                flattenedTarget,
-                flattenedSource,
-                flattenedDest
-              )
-            )
-
-            Some(
-              (
-                (
-                  const(transposedSource),
-                  const(transposedDest)
-                ),
-                transposedTarget
-              )
-            ): Option[
-              ((Variable, Variable), Tensor)
-            ]
-          }
-          io
-        } {
-          case None => IO.unit
-          case Some((_, b)) =>
-            IO {
-              b.release
-            }
         }
+
+        val flattenedSource =
+          TensorHelpers
+            .fromLongVec(pairs.flatMap(_._1).toVec, device)
+        val viewedSource = ATen._unsafe_view(
+          flattenedSource,
+          Array(idx.size.toLong, timeSteps.toLong)
+        )
+        val transposedSource =
+          ATen.transpose(viewedSource, 0, 1)
+        val flattenedDest =
+          TensorHelpers
+            .fromLongVec(pairs.flatMap(_._2).toVec, device)
+        val viewedDest = ATen._unsafe_view(
+          flattenedDest,
+          Array(idx.size.toLong, timeSteps.toLong)
+        )
+        val transposedDest =
+          ATen.transpose(viewedDest, 0, 1)
+        val flattenedTarget =
+          TensorHelpers.fromLongVec(pairs.flatMap(_._3).toVec, device)
+        val viewedTarget = ATen._unsafe_view(
+          flattenedTarget,
+          Array(idx.size.toLong, timeSteps.toLong)
+        )
+        val transposedTarget = ATen.transpose(viewedTarget, 0, 1)
+
+        Tensor.releaseAll(
+          Array(
+            viewedTarget,
+            viewedSource,
+            viewedDest,
+            flattenedTarget,
+            flattenedSource,
+            flattenedDest
+          )
+        )
+
+        Some(
+          (
+            (
+              const(STen.owned(transposedSource)),
+              const(STen.owned(transposedDest))
+            ),
+            STen.owned(transposedTarget)
+          )
+        ): Option[
+          ((Variable, Variable), STen)
+        ]
+
       }
     val emptyResource =
-      Resource.pure[IO, Option[((Variable, Variable), Tensor)]](None)
+      Resource.pure[IO, Option[((Variable, Variable), STen)]](None)
 
     val idx = array
       .shuffle(array.range(0, text.size), rng)
@@ -408,7 +385,7 @@ object Text {
     assert(idx.forall(_.size == minibatchSize))
     new BatchStream[(Variable, Variable)] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[((Variable, Variable), Tensor)]] =
+      def nextBatch: Resource[IO, Option[((Variable, Variable), STen)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>

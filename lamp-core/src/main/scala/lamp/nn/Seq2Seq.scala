@@ -18,7 +18,7 @@ case class Seq2Seq[S0, S1, M1 <: StatefulModule2[Variable, Variable, S0, S1], M2
     decoder.forward((dest, encoderState))
   }
 
-  override def state: Seq[(Variable, PTag)] = encoder.state ++ decoder.state
+  override def state = encoder.state ++ decoder.state
 
 }
 
@@ -45,10 +45,9 @@ object Seq2Seq {
     Load.make[Seq2Seq[S0, S1, M1, M2]] { m => t =>
       val mESize = m.encoder.state.size
       val mDSize = m.decoder.state.size
-      m.copy(
-        m.encoder.load(t.take(mESize)),
-        m.decoder.load(t.drop(mESize).take(mDSize))
-      )
+      m.encoder.load(t.take(mESize))
+      m.decoder.load(t.drop(mESize).take(mDSize))
+
     }
   implicit def initState[S0, S1, M1 <: StatefulModule2[
     Variable,
@@ -76,7 +75,7 @@ case class WithInit[A, B, C, M <: StatefulModule[
     module.forward(x)
   }
 
-  override def state: Seq[(Variable, PTag)] = module.state
+  override def state = module.state
 
 }
 
@@ -95,11 +94,7 @@ object WithInit {
     B,
     C
   ]: Load] =
-    Load.make[WithInit[A, B, C, M]] { m => t =>
-      m.copy(
-        m.module.load(t)
-      )
-    }
+    Load.make[WithInit[A, B, C, M]] { m => t => m.module.load(t) }
   implicit def initState[A, B, C, M <: StatefulModule[
     A,
     B,

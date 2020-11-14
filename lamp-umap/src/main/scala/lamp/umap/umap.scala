@@ -1,7 +1,6 @@
 package lamp.umap
 
 import lamp._
-import lamp.util.syntax
 import org.saddle._
 import org.saddle.linalg._
 import org.saddle.macros.BinOps._
@@ -10,7 +9,6 @@ import lamp.nn.AdamW
 import lamp.nn.simple
 import lamp.nn.NoTag
 import scribe.Logger
-import aten.ATen
 import aten.Tensor
 
 object Umap {
@@ -159,7 +157,7 @@ object Umap {
         if (minDist == 0d) {
           (locNorm1 * b).sum * (-1)
         } else {
-          (CappedShiftedNegativeExponential(scope, locNorm1, minDist).value.log * b).sum
+          (new CappedShiftedNegativeExponential(scope, locNorm1, minDist).value.log * b).sum
         }
 
       val locNorm2 =
@@ -168,7 +166,7 @@ object Umap {
         if (minDist == 0d) (((locNorm2 * (-1)).exp * (-1))).log1p.sum
         else {
           val p =
-            CappedShiftedNegativeExponential(scope, locNorm2, minDist).value * (-1) + 1e-6
+            new CappedShiftedNegativeExponential(scope, locNorm2, minDist).value * (-1) + 1e-6
           p.log1p.sum
         }
 
@@ -179,27 +177,13 @@ object Umap {
     }
 
     val indexI = edgeWeights.col(0).map(_.toLong)
-    val indexIT = TensorHelpers.fromLongVec(indexI, device)
     val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(randomSeed)
     Tensor.manual_seed(randomSeed)
 
-    def sampleRepulsivePairsT(n: Int) = {
-      val ii = ATen.repeat_interleave_2(indexIT, n, 0)
-
-      val m = ii.sizes.apply(0)
-      val jj = ATen.randint_2(0, total - 1, Array(m), ii.options)
-      val mask = ATen.ne_1(ii, jj)
-      val ri = ATen.masked_select(ii, mask)
-      val rj = ATen.masked_select(jj, mask)
-      ii.release
-      jj.release
-      mask.release
-      (ri, rj)
-    }
-
     Scope.leak { implicit scope =>
+      val indexIT = STen.fromLongVec(indexI, device)
       val locations = param(
-        TensorHelpers.fromMat(
+        STen.fromMat(
           Mat(total, numDim, array.randDouble(total * numDim, rng)),
           device,
           precision
@@ -211,12 +195,12 @@ object Umap {
       val index2 = {
         val indexJ = edgeWeights.col(1).map(_.toLong)
         const(
-          TensorHelpers.fromLongVec(indexJ, device)
+          STen.fromLongVec(indexJ, device)
         )
       }
 
       val b = const(
-        TensorHelpers.fromVec(edgeWeights.col(2), device, precision)
+        STen.fromVec(edgeWeights.col(2), device, precision)
       )
 
       val optimizer = AdamW.factory(
@@ -224,6 +208,19 @@ object Umap {
         learningRate = simple(lr),
         clip = Some(1d)
       )(List(locations.value -> NoTag))
+
+      def sampleRepulsivePairsT(n: Int)(implicit scope: Scope) = {
+        Scope { implicit scope =>
+          val ii = indexIT.repeatInterleave(n, 0)
+
+          val m = ii.sizes.apply(0)
+          val jj = STen.randint(0, total - 1, Array(m), ii.options)
+          val mask = ii.ne(jj)
+          val ri = ii.maskedSelect(mask)
+          val rj = jj.maskedSelect(mask)
+          (ri, rj)
+        }
+      }
 
       var i = 0
       var lastLoss = 0d
@@ -255,8 +252,7 @@ object Umap {
           val gradients = {
             locations.zeroGrad()
             lossV.backprop()
-            val g = locations.partialDerivative
-            g.map(_.value)
+            locations.partialDerivative
           }
           optimizer.step(List(gradients))
         }

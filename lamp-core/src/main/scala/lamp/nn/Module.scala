@@ -1,10 +1,11 @@
 package lamp.nn
 
-import aten.Tensor
 import lamp.autograd._
 import lamp.Sc
 import lamp.Scope
 import lamp.scope
+import lamp.STen
+import lamp.Movable
 
 case class EitherModule[
     A,
@@ -43,14 +44,11 @@ object EitherModule {
       M2 <: GenericModule[A, B]: Load
   ] =
     Load.make[EitherModule[A, B, M1, M2]] { module => tensors =>
-      EitherModule(
-        module.members.right.map(_.load(tensors)).left.map(_.load(tensors))
-      )
+      module.members.fold(_.load(tensors), _.load(tensors))
     }
 
   case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
     def leaf = t
-    def updateDuringOptimization: Boolean = t.updateDuringOptimization
   }
 }
 
@@ -81,20 +79,18 @@ object Sequential {
 
   implicit def load[A, M <: GenericModule[A, A]: Load] =
     Load.make[Sequential[A, M]] { module => tensors =>
-      val (loadedMembers, _) =
-        module.members.foldLeft((List[M](), tensors)) {
-          case ((acc, params), member) =>
-            val numParam = member.state.size
-            val loaded = member.load(params.take(numParam))
-            (acc.:+(loaded), params.drop(numParam))
+      module.members.foldLeft((List[Unit](), tensors)) {
+        case ((acc, params), member) =>
+          val numParam = member.state.size
+          val loaded = member.load(params.take(numParam))
+          (acc.:+(loaded), params.drop(numParam))
 
-        }
-      Sequential(loadedMembers: _*)
+      }
+      ()
     }
 
   case class Tag[T <: PTag](t: T, idx: Int) extends PTag {
     def leaf = t
-    def updateDuringOptimization: Boolean = t.updateDuringOptimization
   }
 }
 
@@ -132,9 +128,7 @@ object LiftedModule {
   implicit def load[
       M <: Module: Load
   ] =
-    Load.make[LiftedModule[M]](m =>
-      tensors => m.copy(mod = m.mod.load(tensors))
-    )
+    Load.make[LiftedModule[M]](m => tensors => m.mod.load(tensors))
   implicit def initState[M <: Module] =
     InitState.make[LiftedModule[M], Unit](_ => ())
 }
@@ -156,11 +150,9 @@ object UnliftedModule {
       m => UnliftedModule[A, B, C, D, M](m.statefulModule.asEval),
       m => UnliftedModule[A, B, C, D, M](m.statefulModule.asTraining)
     )
-  implicit def load[A, B, C, D, M <: StatefulModule2[A, B, C, D]: Load](
-      implicit is: InitState[M, C]
-  ) =
+  implicit def load[A, B, C, D, M <: StatefulModule2[A, B, C, D]: Load] =
     Load.make[UnliftedModule[A, B, C, D, M]](m =>
-      tensors => UnliftedModule[A, B, C, D, M](m.statefulModule.load(tensors))
+      tensors => m.statefulModule.load(tensors)
     )
   implicit def initState[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
       implicit is: InitState[M, C]
@@ -169,16 +161,28 @@ object UnliftedModule {
       is.initState(m.statefulModule)
     )
 }
+
+object GenericModule {
+  implicit def movable[A, B]: Movable[GenericModule[A, B]] =
+    Movable.nonEmpty[GenericModule[A, B]] { m =>
+      m.state
+        .flatMap(_._1 match {
+          case ConstantWithGrad(value, pd) => List(value.value, pd.value)
+          case ConstantWithoutGrad(value)  => List(value.value)
+        })
+        .toList
+    }
+}
 trait GenericModule[A, B] {
   def forward[S: Sc](x: A): B
   def apply[S: Sc](a: A): B = forward(a)
-  def state: Seq[(Variable, PTag)]
+  def state: Seq[(Constant, PTag)]
   final def parameters =
-    state.filter(v => v._1.needsGrad && v._2.updateDuringOptimization)
+    state.filter(v => v._1.needsGrad)
   final def gradients(
       loss: Variable,
       zeroGrad: Boolean = true
-  ): Seq[Option[Tensor]] = {
+  ): Seq[Option[STen]] = {
     if (zeroGrad) {
       parameters.foreach {
         case (param, _) =>
@@ -187,21 +191,22 @@ trait GenericModule[A, B] {
     }
     loss.backprop()
     val g = parameters.map {
-      case (param, _) => param.partialDerivative.map(_.value)
+      case (param, _) => param.partialDerivative
     }
     g
   }
   final def learnableParameters =
-    parameters.filter(_._1.needsGrad).map(_._1.value.numel()).sum
+    parameters.filter(_._1.needsGrad).map(_._1.value.numel).sum
 }
 
 trait PTag {
   def leaf: PTag
-  def updateDuringOptimization: Boolean
+}
+object PTag {
+  implicit def isMovable = Movable.empty[PTag]
 }
 trait LeafTag extends PTag {
   def leaf: PTag = this
-  def updateDuringOptimization: Boolean = true
 }
 case object NoTag extends LeafTag
 
@@ -220,12 +225,12 @@ object TrainingMode {
     TrainingMode.make(scala.Predef.identity[M], scala.Predef.identity[M])
 }
 trait Load[M] {
-  def load(m: M, tensors: Seq[Tensor]): M
+  def load(m: M, tensors: Seq[STen]): Unit
 }
 object Load {
-  def identity[M]: Load[M] = Load.make[M](fun => _ => fun)
-  def make[M](f: M => Seq[Tensor] => M) = new Load[M] {
-    def load(m: M, tensors: Seq[Tensor]): M = f(m)(tensors)
+  def identity[M]: Load[M] = Load.make[M](_ => _ => ())
+  def make[M](f: M => Seq[STen] => Unit) = new Load[M] {
+    def load(m: M, tensors: Seq[STen]): Unit = f(m)(tensors)
   }
 }
 trait InitState[M, C] {
@@ -257,8 +262,7 @@ object MappedState {
     )
   implicit def load[A, B, C, D, M <: StatefulModule[A, B, C]: Load] =
     Load.make[MappedState[A, B, C, D, M]](m =>
-      tensors =>
-        MappedState[A, B, C, D, M](m.statefulModule.load(tensors), m.map)
+      tensors => m.statefulModule.load(tensors)
     )
   implicit def initState[A, B, C, D, M <: StatefulModule[A, B, C]](
       implicit is: InitState[M, C]

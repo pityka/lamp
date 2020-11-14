@@ -3,13 +3,12 @@ package lamp.data
 import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
 import lamp.autograd.{const}
-import lamp.TensorHelpers
 import lamp.nn._
 import lamp.{CPU, CudaDevice, DoublePrecision}
-import aten.ATen
 import aten.TensorOptions
 import scribe.Level
 import lamp.Scope
+import lamp.STen
 
 class MLPSuite extends AnyFunSuite {
   def mlp(dim: Int, k: Int, tOpt: TensorOptions)(
@@ -40,13 +39,14 @@ class MLPSuite extends AnyFunSuite {
         .right
         .get
       val testDataTensor =
-        TensorHelpers.fromMat(testData.filterIx(_ != "label").toMat, cuda)
-      val testTarget = ATen.squeeze_0(
-        TensorHelpers.fromLongMat(
-          Mat(testData.firstCol("label").toVec.map(_.toLong)),
-          cuda
-        )
-      )
+        STen.fromMat(testData.filterIx(_ != "label").toMat, cuda)
+      val testTarget =
+        STen
+          .fromLongMat(
+            Mat(testData.firstCol("label").toVec.map(_.toLong)),
+            cuda
+          )
+          .squeeze
 
       val trainData = org.saddle.csv.CsvParser
         .parseSourceWithHeader[Double](
@@ -60,14 +60,14 @@ class MLPSuite extends AnyFunSuite {
         .right
         .get
       val trainDataTensor =
-        TensorHelpers.fromMat(trainData.filterIx(_ != "label").toMat, cuda)
-      val trainTarget = ATen.squeeze_0(
-        TensorHelpers.fromLongMat(
+        STen.fromMat(trainData.filterIx(_ != "label").toMat, cuda)
+      val trainTarget = STen
+        .fromLongMat(
           Mat(trainData.firstCol("label").toVec.map(_.toLong)),
           cuda
         )
-      )
-      val classWeights = ATen.ones(Array(10), device.options(DoublePrecision))
+        .squeeze
+      val classWeights = STen.ones(Array(10), device.options(DoublePrecision))
 
       val model = SupervisedModel(
         mlp(784, 10, device.options(DoublePrecision)),

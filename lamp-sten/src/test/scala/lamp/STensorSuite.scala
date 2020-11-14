@@ -71,7 +71,7 @@ class STenSuite extends AnyFunSuite {
   test("maskFill") {
     Scope.root { implicit scope =>
       val t1 = STen.eye(3, TensorOptions.d)
-      val mask = t1.eq(0d)
+      val mask = t1.equ(0d)
       assert(
         t1.maskFill(mask, -1).toMat.row(0) == Vec(1d, -1d, -1d)
       )

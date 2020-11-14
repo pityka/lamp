@@ -1,9 +1,9 @@
 package lamp.nn
 
-import aten.Tensor
+import lamp.STen
 
 trait Optimizer {
-  def step(gradients: Seq[Option[Tensor]]): Unit
+  def step(gradients: Seq[Option[STen]]): Unit
   def release(): Unit
 }
 

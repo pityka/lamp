@@ -1,8 +1,6 @@
 package lamp.nn
 import lamp.autograd.Variable
-import lamp.autograd.ConcatenateAddNewDim
 import lamp.Sc
-import lamp.scope
 
 /**
   * Wraps a (sequence x batch) long -> (sequence x batch x dim) double stateful module
@@ -14,13 +12,14 @@ case class FreeRunningRNN[T, M <: StatefulModule[Variable, Variable, T]](
     timeSteps: Int
 ) extends StatefulModule[Variable, Variable, T] {
 
-  override def state: Seq[(Variable, PTag)] = module.state
+  def state = module.state
 
   def forward[S: Sc](x: (Variable, T)) = {
     val batchSize = x._1.shape(1)
     val (outputs, lastState) = loop(x._1, x._2, timeSteps, Nil)
     (
-      ConcatenateAddNewDim(scope, outputs).value
+      Variable
+        .concatenateAddNewDim(outputs)
         .view(List(timeSteps, batchSize.toInt, -1)),
       lastState
     )
@@ -67,9 +66,5 @@ object FreeRunningRNN {
   ) =
     InitState.make[FreeRunningRNN[T, M], T](m => m.module.initState)
   implicit def load[T, M <: StatefulModule[Variable, Variable, T]: Load] =
-    Load.make[FreeRunningRNN[T, M]] { m => tensors =>
-      m.copy(
-        module = m.module.load(tensors)
-      )
-    }
+    Load.make[FreeRunningRNN[T, M]] { m => tensors => m.module.load(tensors) }
 }

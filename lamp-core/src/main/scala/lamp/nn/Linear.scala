@@ -1,9 +1,10 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param}
-import aten.{ATen, TensorOptions}
+import lamp.autograd.{Variable, Constant, param}
+import aten.{TensorOptions}
 import lamp.Sc
-case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
+import lamp.STen
+case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
 
   override val state = List(
     weights -> Linear.Weights
@@ -19,10 +20,8 @@ case class Linear(weights: Variable, bias: Option[Variable]) extends Module {
 object Linear {
   implicit val trainingMode = TrainingMode.identity[Linear]
   implicit val load = Load.make[Linear] { m => parameters =>
-    implicit val pool = m.weights.scope
-    val w = param(parameters.head)
-    val b = if (m.bias.isDefined) Some(param(parameters(1))) else None
-    m.copy(weights = w, bias = b)
+    m.weights.value.copyFrom(parameters.head)
+    m.bias.foreach(_.value.copyFrom(parameters(1)))
   }
   case object Weights extends LeafTag
   case object Bias extends LeafTag
@@ -34,11 +33,11 @@ object Linear {
   ): Linear =
     Linear(
       weights = param(
-        ATen.normal_3(0d, math.sqrt(2d / (in + out)), Array(out, in), tOpt)
+        STen.normal(0d, math.sqrt(2d / (in + out)), List(out, in), tOpt)
       ),
       bias =
         if (bias)
-          Some(param(ATen.zeros(Array(1, out), tOpt)))
+          Some(param(STen.zeros(List(1, out), tOpt)))
         else None
     )
 }

@@ -1,9 +1,10 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, param}
-import aten.{ATen, TensorOptions}
+import lamp.autograd.{Variable, Constant, param}
+import aten.TensorOptions
 import lamp.Sc
 import lamp.scope
+import lamp.STen
 
 /**
   * Learnable mapping from classes to dense vectors.
@@ -18,22 +19,20 @@ import lamp.scope
   *
   * Input is a long tensor with values in [0,C-1].
   */
-case class Embedding(weights: Variable) extends Module {
-  override val state = List(
+case class Embedding(weights: Constant) extends Module {
+  val state = List(
     weights -> Embedding.Weights
   )
 
   def forward[S: Sc](x: Variable): Variable =
-    lamp.autograd.Embedding(scope, x, weights).value
+    new lamp.autograd.Embedding(scope, x, weights).value
 
 }
 
 object Embedding {
   implicit val trainingMode = TrainingMode.identity[Embedding]
   implicit val load = Load.make[Embedding] { m => parameters =>
-    implicit val pool = m.weights.pool
-    val w = param(parameters.head)
-    m.copy(weights = w)
+    m.weights.value.copyFrom(parameters.head)
   }
   case object Weights extends LeafTag
   def apply[S: Sc](
@@ -43,10 +42,10 @@ object Embedding {
   ): Embedding =
     Embedding(
       weights = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (classes + dimensions)),
-          Array(classes, dimensions),
+          List(classes, dimensions),
           tOpt
         )
       )

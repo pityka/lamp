@@ -1,14 +1,15 @@
 package lamp.nn
 
 import lamp.Sc
-import lamp.autograd.{Variable, param}
-import aten.{ATen, TensorOptions}
+import lamp.autograd.{Variable, Constant, param}
+import aten.{TensorOptions}
 import lamp.scope
+import lamp.STen
 
 case class WeightNormLinear(
-    weightsV: Variable,
-    weightsG: Variable,
-    bias: Option[Variable]
+    weightsV: Constant,
+    weightsG: Constant,
+    bias: Option[Constant]
 ) extends Module {
 
   override val state = List(
@@ -17,7 +18,8 @@ case class WeightNormLinear(
   ) ++ bias.toList.map(b => (b, WeightNormLinear.Bias))
 
   def forward[S: Sc](x: Variable): Variable = {
-    val weights = lamp.autograd.WeightNorm(scope, weightsV, weightsG, 0).value
+    val weights =
+      new lamp.autograd.WeightNorm(scope, weightsV, weightsG, 0).value
     val v = x.mm(weights.t)
     bias.map(_ + v).getOrElse(v)
 
@@ -27,11 +29,9 @@ case class WeightNormLinear(
 object WeightNormLinear {
   implicit val trainingMode = TrainingMode.identity[WeightNormLinear]
   implicit val load = Load.make[WeightNormLinear] { m => parameters =>
-    implicit val pool = m.weightsV.pool
-    val wV = param(parameters.head)
-    val wG = param(parameters(1))
-    val b = if (m.bias.isDefined) Some(param(parameters(2))) else None
-    m.copy(weightsV = wV, weightsG = wG, bias = b)
+    m.weightsV.value.copyFrom(parameters.head)
+    m.weightsG.value.copyFrom(parameters(1))
+    m.bias.foreach(_.value.copyFrom(parameters(2)))
   }
   case object WeightsV extends LeafTag
   case object WeightsG extends LeafTag
@@ -44,14 +44,14 @@ object WeightNormLinear {
   ): WeightNormLinear =
     WeightNormLinear(
       weightsV = param(
-        ATen.normal_3(0d, math.sqrt(2d / (in + out)), Array(out, in), tOpt)
+        STen.normal(0d, math.sqrt(2d / (in + out)), Array(out, in), tOpt)
       ),
       weightsG = param(
-        ATen.normal_3(0d, 0.01, Array(1, in), tOpt)
+        STen.normal(0d, 0.01, Array(1, in), tOpt)
       ),
       bias =
         if (bias)
-          Some(param(ATen.zeros(Array(1, out), tOpt)))
+          Some(param(STen.zeros(Array(1, out), tOpt)))
         else None
     )
 }

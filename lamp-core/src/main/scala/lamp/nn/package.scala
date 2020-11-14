@@ -1,9 +1,7 @@
 package lamp
 import lamp.autograd.Variable
-import aten.Tensor
 import aten.ATen
 import lamp.util.syntax
-import cats.effect.IO
 
 package object nn {
   type Module = GenericModule[Variable, Variable]
@@ -16,7 +14,7 @@ package object nn {
     def asTraining: M = implicitly[TrainingMode[M]].asTraining(m)
   }
   implicit class LoadSyntax[M: Load](m: M) {
-    def load(tensors: Seq[Tensor]): M =
+    def load(tensors: Seq[STen]): Unit =
       implicitly[Load[M]].load(m, tensors)
   }
   implicit class InitStateSyntax[M, C](m: M)(implicit is: InitState[M, C]) {
@@ -45,12 +43,12 @@ package object nn {
   }
 
   def gradientClippingInPlace(
-      gradients: Seq[Option[Tensor]],
+      gradients: Seq[Option[STen]],
       theta: Double
   ): Unit = {
     val norm = math.sqrt((gradients.map {
       case Some(g) =>
-        val tmp = ATen.pow_0(g, 2d)
+        val tmp = ATen.pow_0(g.value, 2d)
         val d = ATen.sum_0(tmp).toMat.raw(0)
         tmp.release
         d
@@ -60,9 +58,11 @@ package object nn {
       gradients.foreach {
         case None =>
         case Some(g) =>
-          g.scalar(theta / norm)
-            .use { scalar => IO { ATen.mul_out(g, g, scalar) } }
-            .unsafeRunSync()
+          Scope.root { implicit scope =>
+            val scalar = STen.scalarDouble(theta / norm, g.options)
+            g *= scalar
+          }
+
       }
     }
   }

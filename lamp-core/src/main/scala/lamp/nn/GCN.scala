@@ -4,7 +4,7 @@ import lamp.autograd._
 import aten.ATen
 import aten.TensorOptions
 import lamp.Sc
-import lamp.scope
+import lamp.STen
 
 case class Passthrough[M <: Module](
     m: M with Module
@@ -13,7 +13,7 @@ case class Passthrough[M <: Module](
       (Variable, Variable)
     ] {
 
-  def state: Seq[(Variable, PTag)] =
+  def state =
     m.state
 
   override def forward[S: Sc](
@@ -33,10 +33,8 @@ object Passthrough {
         m => m.copy(m = m.m.asTraining)
       )
   implicit def load[M <: Module: Load] = Load.make[Passthrough[M]] {
-    m => tensors =>
-      m.copy(
-        m = m.m.load(tensors)
-      )
+    m => tensors => m.m.load(tensors)
+
   }
 }
 case class GCN[M <: Module](
@@ -46,7 +44,7 @@ case class GCN[M <: Module](
       (Variable, Variable)
     ] {
 
-  def state: Seq[(Variable, PTag)] =
+  def state =
     transform.state
 
   override def forward[S: Sc](
@@ -63,7 +61,7 @@ case class GCN[M <: Module](
 
 case class NGCN[M <: Module](
     transforms: Seq[M with Module],
-    weightFc: Variable,
+    weightFc: Constant,
     K: Int,
     includeZeroOrder: Boolean
 ) extends GenericModule[
@@ -71,7 +69,7 @@ case class NGCN[M <: Module](
       (Variable, Variable)
     ] {
 
-  def state: Seq[(Variable, PTag)] =
+  def state =
     (weightFc -> NGCN.Weights) +:
       transforms.flatMap(_.state)
 
@@ -96,7 +94,7 @@ case class NGCN[M <: Module](
       case (transforms, message) =>
         transforms.map { tr => tr.forward(message) }
     }
-    val cat = Concatenate(scope, transformedNodes.flatten, 1).value
+    val cat = Variable.cat(transformedNodes.flatten, 1)
 
     (cat.mm(weightFc), edgeList)
   }
@@ -115,18 +113,16 @@ object NGCN {
       )
   implicit def loadN[M <: Module: Load] = Load.make[NGCN[M]] { m => tensors =>
     val w = tensors.head
-    val (loadedMembers, _) =
-      m.transforms.foldLeft((List[M](), tensors.tail)) {
-        case ((acc, params), member) =>
-          val numParam = member.state.size
-          val loaded = member.load(params.take(numParam))
-          (acc.:+(loaded), params.drop(numParam))
+    m.weightFc.value.copyFrom(w)
 
-      }
-    m.copy(
-      transforms = loadedMembers,
-      weightFc = param(w)(m.weightFc.pool)
-    )
+    m.transforms.foldLeft((List[Unit](), tensors.tail)) {
+      case ((acc, params), member) =>
+        val numParam = member.state.size
+        val loaded = member.load(params.take(numParam))
+        (acc.:+(loaded), params.drop(numParam))
+
+    }
+
   }
 
   def ngcn[S: Sc](
@@ -160,10 +156,10 @@ object NGCN {
     NGCN(
       0 until K * r map (_ => makeModule),
       weightFc = param(
-        ATen.normal_3(
+        STen.normal(
           0d,
           math.sqrt(2d / (out + middle * r * K)),
-          Array(middle * r * K, out),
+          List(middle * r * K, out),
           tOpt
         )
       ),
@@ -192,17 +188,17 @@ object GCN {
       else
         TensorOptions
           .fromScalarType(valueOpt.scalarTypeByte())
-          .cuda_index(valueOpt.deviceIndex())
+          .cuda_index(valueOpt.deviceIndex().toShort)
 
     val tOptLongDevice =
       if (valueOpt.isCPU) TensorOptions.l.cpu
-      else TensorOptions.l.cuda_index(valueOpt.deviceIndex())
+      else TensorOptions.l.cuda_index(valueOpt.deviceIndex().toShort)
 
     val degrees = {
       val ones = ATen.ones(Array(edgeFrom.shape(0)), tOptDoubleDevice)
       val zeros = ATen.zeros(Array(numNodes), ones.options)
-      val result1 = ATen.index_add(zeros, 0, edgeFrom.value, ones)
-      val result2 = ATen.index_add(result1, 0, edgeTo.value, ones)
+      val result1 = ATen.index_add(zeros, 0, edgeFrom.value.value, ones)
+      val result2 = ATen.index_add(result1, 0, edgeTo.value.value, ones)
       val result3 = ATen.add_1(result2, 1.0, 1.0)
       val viewed = ATen._unsafe_view(result3, Array(-1, 1))
       ones.release
@@ -210,12 +206,12 @@ object GCN {
       result1.release
       result2.release
       result3.release
-      const(viewed).pow(-0.5)
+      const(STen.owned(viewed)).pow(-0.5)
     }
 
     val a = {
       val ones = ATen.ones(Array(edgeList.shape(0)), tOptDoubleDevice)
-      val edgeListT = ATen.t(edgeList.value)
+      val edgeListT = ATen.t(edgeList.value.value)
       val sp1 = ATen.sparse_coo_tensor(
         edgeListT,
         ones,
@@ -253,7 +249,7 @@ object GCN {
       ATen.add_out(sp1, sp1, ident, 1d)
 
       ident.release
-      const(sp1)
+      const(STen.owned(sp1))
     }
 
     (degrees, a)
@@ -298,9 +294,8 @@ object GCN {
         m => m.copy(transform = m.transform.asTraining)
       )
   implicit def load[M <: Module: Load] = Load.make[GCN[M]] { m => tensors =>
-    m.copy(
-      transform = m.transform.load(tensors)
-    )
+    m.transform.load(tensors)
+
   }
 
   def gcn[S: Sc](

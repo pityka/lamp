@@ -3,11 +3,10 @@ package lamp.nn
 import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
 import lamp.autograd.{Variable, const}
-import aten.ATen
 import aten.TensorOptions
 import lamp.Sc
 import lamp.Scope
-import lamp.TensorHelpers
+import lamp.STen
 class LogisticSuite extends AnyFunSuite {
 
   def logisticRegression[S: Sc](dim: Int, k: Int, tOpt: TensorOptions) =
@@ -34,14 +33,16 @@ class LogisticSuite extends AnyFunSuite {
         )
         .right
         .get
-      val target = ATen.squeeze_0(
-        TensorHelpers.fromLongMat(
-          Mat(data.firstCol("label").toVec.map(_.toLong)),
-          cuda
-        )
-      )
+      val target =
+        STen
+          .fromLongMat(
+            Mat(data.firstCol("label").toVec.map(_.toLong)),
+            cuda
+          )
+          .squeeze
+
       val x =
-        const(TensorHelpers.fromMat(data.filterIx(_ != "label").toMat, cuda))
+        const(STen.fromMat(data.filterIx(_ != "label").toMat, cuda))
 
       val model = logisticRegression(
         x.sizes(1).toInt,
@@ -61,18 +62,17 @@ class LogisticSuite extends AnyFunSuite {
       while (i < 300) {
         val output = model.forward(x)
         val prediction = {
-          val argm = ATen.argmax(output.value, 1, false)
-          val r = TensorHelpers.toLongMat(argm).toVec
-          argm.release
+          val argm = output.value.argmax(1, false)
+          val r = argm.toLongMat.toVec
           r
         }
         val correct = prediction.zipMap(data.firstCol("label").toVec)((a, b) =>
           if (a == b) 1d else 0d
         )
-        val classWeights = ATen.ones(Array(10), x.options)
-        val loss: Variable = output.nllLoss(target, 10, classWeights)
+        val classWeights = STen.ones(Array(10), x.options)
+        val loss: Variable = output.nllLoss(target, classWeights)
         lastAccuracy = correct.mean2
-        lastLoss = TensorHelpers.toMat(loss.value).raw(0)
+        lastLoss = loss.value.toMat.raw(0)
         val gradients = model.gradients(loss)
         optim.step(gradients)
         i += 1

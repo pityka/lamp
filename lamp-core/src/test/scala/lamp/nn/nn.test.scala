@@ -7,11 +7,11 @@ import aten.ATen
 import lamp.autograd._
 import aten.TensorOptions
 import org.scalatest.Tag
-import lamp.util.syntax
 import lamp.TensorHelpers
 import lamp.Scope
 import lamp.Sc
 import lamp.util.NDArray
+import lamp.STen
 
 object CudaTest extends Tag("cuda")
 object SlowTest extends Tag("slow")
@@ -33,7 +33,7 @@ class NNSuite extends AnyFunSuite {
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
 
       Scope.root { implicit scope =>
-        val d = const(TensorHelpers.fromMat(m, cuda))
+        val d = const(STen.fromMat(m, cuda))
         val module = moduleF(scope)
 
         {
@@ -41,14 +41,14 @@ class NNSuite extends AnyFunSuite {
           val state = module1.state
           val modifiedState = state.map {
             case (v, _) =>
-              ATen.mul_1(v.value, -1d)
+              v.value * (-1)
           }
-          val module2 = module1.load(modifiedState)
-          (module2.state zip modifiedState).foreach {
+          module1.load(modifiedState)
+          (module1.state zip modifiedState).foreach {
             case ((st1, _), (st2)) =>
               assert(
-                NDArray.tensorToNDArray(st1.value).toVec == NDArray
-                  .tensorToNDArray(st2)
+                NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
+                  .tensorToNDArray(st2.value)
                   .toVec
               )
           }
@@ -56,22 +56,22 @@ class NNSuite extends AnyFunSuite {
 
         val output = module.forward(d)
         val sum = output.sum
-        val value = TensorHelpers.toMat(sum.value).raw(0)
-        val gradAuto = module.gradients(sum).map(_.get).map(TensorHelpers.toMat)
+        val value = sum.toMat.raw(0)
+        val gradAuto = module.gradients(sum).map(_.get).map(_.toMat)
         val gradNum = module.parameters.map {
           case (paramT, _) =>
-            val oldparam = ATen.clone(paramT.value)
-            val param = TensorHelpers.toMat(paramT.value)
+            val oldparam = paramT.value.cloneTensor
+            val param = paramT.toMat
             def f(p: Mat[Double]) = {
-              val p2 = TensorHelpers.fromMat(p, cuda)
-              ATen.zero_(paramT.value)
+              val p2 = STen.fromMat(p, cuda)
+              paramT.value.zero_()
               ATen.add_out(
-                paramT.value,
-                paramT.value,
-                ATen._unsafe_view(p2, paramT.sizes.toArray),
+                paramT.value.value,
+                paramT.value.value,
+                ATen._unsafe_view(p2.value, paramT.sizes.toArray),
                 1d
               )
-              TensorHelpers.toMat(module.forward(d).sum.value).raw(0)
+              module.forward(d).sum.value.toMat.raw(0)
             }
             val eps = 1e-6
             val r = mat.zeros(param.numRows, param.numCols).mapRows {
@@ -83,8 +83,13 @@ class NNSuite extends AnyFunSuite {
                   (f(param + epsM) - f(param - epsM)) / (2 * eps)
                 }.toVec
             }
-            ATen.zero_(paramT.value)
-            ATen.add_out(paramT.value, paramT.value, oldparam, 1d)
+            paramT.value.zero_()
+            ATen.add_out(
+              paramT.value.value,
+              paramT.value.value,
+              oldparam.value,
+              1d
+            )
             r
         }
         assert(gradAuto.size == gradNum.size)
@@ -111,7 +116,7 @@ class NNSuite extends AnyFunSuite {
   ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
       Scope.root { implicit scope =>
-        val d = const(NDArray.tensorFromNDArray(m, cuda))
+        val d = const(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
         val module = moduleF(scope)
 
         {
@@ -119,14 +124,14 @@ class NNSuite extends AnyFunSuite {
           val state = module1.state
           val modifiedState = state.map {
             case (v, _) =>
-              ATen.mul_1(v.value, -1d)
+              v.value * (-1)
           }
-          val module2 = module1.load(modifiedState)
-          (module2.state zip modifiedState).foreach {
+          module1.load(modifiedState)
+          (module1.state zip modifiedState).foreach {
             case ((st1, _), (st2)) =>
               assert(
-                NDArray.tensorToNDArray(st1.value).toVec == NDArray
-                  .tensorToNDArray(st2)
+                NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
+                  .tensorToNDArray(st2.value)
                   .toVec
               )
           }
@@ -134,23 +139,23 @@ class NNSuite extends AnyFunSuite {
 
         val output = module.forward((d, st))._1
         val sum = output.sum
-        val value = NDArray.tensorToNDArray(sum.value).data(0)
+        val value = NDArray.tensorToNDArray(sum.value.value).data(0)
         val gradAuto =
-          module.gradients(sum).map(_.get).map(NDArray.tensorToNDArray)
+          module.gradients(sum).map(_.get.value).map(NDArray.tensorToNDArray)
         val gradNum = module.parameters.map {
           case (paramT, _) =>
-            val oldparam = ATen.clone(paramT.value)
-            val param = NDArray.tensorToNDArray(paramT.value)
+            val oldparam = paramT.value.cloneTensor
+            val param = NDArray.tensorToNDArray(paramT.value.value)
             def f(p: NDArray[Double]) = {
               val p2 = NDArray.tensorFromNDArray(p, cuda)
-              ATen.zero_(paramT.value)
+              paramT.value.zero_()
               ATen.add_out(
-                paramT.value,
-                paramT.value,
+                paramT.value.value,
+                paramT.value.value,
                 p2,
                 1d
               )
-              TensorHelpers.toMat(module.forward((d, st))._1.sum.value).raw(0)
+              module.forward((d, st))._1.sum.value.toMat.raw(0)
             }
             val eps = 1e-6
             val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
@@ -162,8 +167,13 @@ class NNSuite extends AnyFunSuite {
                 val r = (a - b) / (2 * eps)
                 r
             }
-            ATen.zero_(paramT.value)
-            ATen.add_out(paramT.value, paramT.value, oldparam, 1d)
+            paramT.value.zero_()
+            ATen.add_out(
+              paramT.value.value,
+              paramT.value.value,
+              oldparam.value,
+              1d
+            )
             r
         }
         assert(gradAuto.size == gradNum.size)
@@ -190,7 +200,7 @@ class NNSuite extends AnyFunSuite {
   ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
       Scope.root { implicit scope =>
-        val d = const(NDArray.tensorFromLongNDArray(m, cuda))
+        val d = const(STen.owned(NDArray.tensorFromLongNDArray(m, cuda)))
         val module = moduleF(scope)
 
         {
@@ -198,14 +208,14 @@ class NNSuite extends AnyFunSuite {
           val state = module1.state
           val modifiedState = state.map {
             case (v, _) =>
-              ATen.mul_1(v.value, -1d)
+              v.value * -1d
           }
-          val module2 = module1.load(modifiedState)
-          (module2.state zip modifiedState).foreach {
+          module1.load(modifiedState)
+          (module1.state zip modifiedState).foreach {
             case ((st1, _), (st2)) =>
               assert(
-                NDArray.tensorToNDArray(st1.value).toVec == NDArray
-                  .tensorToNDArray(st2)
+                NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
+                  .tensorToNDArray(st2.value)
                   .toVec
               )
           }
@@ -213,23 +223,25 @@ class NNSuite extends AnyFunSuite {
 
         val output = module.forward((d, st))._1
         val sum = output.sum
-        val value = NDArray.tensorToNDArray(sum.value).data(0)
+        val value = NDArray.tensorToNDArray(sum.value.value).data(0)
         val gradAuto =
-          module.gradients(sum).map(_.get).map(NDArray.tensorToNDArray)
+          module.gradients(sum).map(_.get.value).map(NDArray.tensorToNDArray)
         val gradNum = module.parameters.map {
           case (paramT, _) =>
-            val oldparam = ATen.clone(paramT.value)
-            val param = NDArray.tensorToNDArray(paramT.value)
+            val oldparam = ATen.clone(paramT.value.value)
+            val param = NDArray.tensorToNDArray(paramT.value.value)
             def f(p: NDArray[Double]) = {
               val p2 = NDArray.tensorFromNDArray(p, cuda)
-              ATen.zero_(paramT.value)
+              ATen.zero_(paramT.value.value)
               ATen.add_out(
-                paramT.value,
-                paramT.value,
+                paramT.value.value,
+                paramT.value.value,
                 p2,
                 1d
               )
-              TensorHelpers.toMat(module.forward((d, st))._1.sum.value).raw(0)
+              TensorHelpers
+                .toMat(module.forward((d, st))._1.sum.value.value)
+                .raw(0)
             }
             val eps = 1e-6
             val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
@@ -241,8 +253,8 @@ class NNSuite extends AnyFunSuite {
                 val r = (a - b) / (2 * eps)
                 r
             }
-            ATen.zero_(paramT.value)
-            ATen.add_out(paramT.value, paramT.value, oldparam, 1d)
+            ATen.zero_(paramT.value.value)
+            ATen.add_out(paramT.value.value, paramT.value.value, oldparam, 1d)
             r
         }
         assert(gradAuto.size == gradNum.size)
@@ -267,7 +279,7 @@ class NNSuite extends AnyFunSuite {
   test("linear") {
     Scope.root { implicit scope =>
       val linear = Linear(3, 1, TensorOptions.dtypeDouble())
-      val output = linear.forward(const(TensorHelpers.fromMat(mat2x3)))
+      val output = linear.forward(const(STen.fromMat(mat2x3)))
       val sum = output.sum
       assert(output.value.sizes.toList == List(2, 1))
       val grad = linear.gradients(sum)
@@ -279,8 +291,8 @@ class NNSuite extends AnyFunSuite {
     mat2x3,
     implicit pool =>
       Linear(
-        param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
-        Some(param(ATen.ones(Array(1), TensorOptions.dtypeDouble)))
+        param(STen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
+        Some(param(STen.ones(Array(1), TensorOptions.dtypeDouble)))
       ),
     23d
   )
@@ -289,16 +301,16 @@ class NNSuite extends AnyFunSuite {
     mat2x3,
     implicit pool =>
       WeightNormLinear(
-        param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
-        param(ATen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
-        Some(param(ATen.ones(Array(1), TensorOptions.dtypeDouble)))
+        param(STen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
+        param(STen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
+        Some(param(STen.ones(Array(1), TensorOptions.dtypeDouble)))
       ),
     23d
   )
   testGradientAndValue("Logistic 1")(
     mat3x2,
     implicit pool =>
-      LogisticRegression1(2, 3, const(TensorHelpers.fromMat(mat.ident(3))))(
+      LogisticRegression1(2, 3, const(STen.fromMat(mat.ident(3))))(
         pool
       ),
     151.0000008318073
@@ -306,7 +318,7 @@ class NNSuite extends AnyFunSuite {
   testGradientAndValue("Logistic 2")(
     mat3x2,
     implicit pool =>
-      LogisticRegression2(2, 3, const(TensorHelpers.fromMat(mat.ident(3))))(
+      LogisticRegression2(2, 3, const(STen.fromMat(mat.ident(3))))(
         pool
       ),
     12.295836866004327
@@ -317,7 +329,7 @@ class NNSuite extends AnyFunSuite {
       LogisticRegression2(
         2,
         3,
-        const(TensorHelpers.fromMat(mat.ident(3), cuda = true))
+        const(STen.fromMat(mat.ident(3), cuda = true))
       )(pool),
     12.295836866004326
   )
@@ -327,7 +339,7 @@ class NNSuite extends AnyFunSuite {
       Mlp1(
         2,
         3,
-        const(TensorHelpers.fromMat(mat.ident(3), cuda = false))
+        const(STen.fromMat(mat.ident(3), cuda = false))
       )(pool),
     192.08796576929555
   )
@@ -337,7 +349,7 @@ class NNSuite extends AnyFunSuite {
       Mlp1(
         2,
         3,
-        const(TensorHelpers.fromMat(mat.ident(3), cuda = true))
+        const(STen.fromMat(mat.ident(3), cuda = true))
       )(pool),
     192.08796576929555
   )
@@ -346,8 +358,8 @@ class NNSuite extends AnyFunSuite {
     nd1x2x3,
     implicit pool =>
       Conv1D(
-        param(ATen.ones(Array(1, 2, 3), TensorOptions.dtypeDouble)),
-        param(ATen.ones(Array(1), TensorOptions.dtypeDouble)),
+        param(STen.ones(Array(1, 2, 3), TensorOptions.dtypeDouble)),
+        param(STen.ones(Array(1), TensorOptions.dtypeDouble)),
         stride = 1,
         padding = 0,
         dilation = 1,
@@ -359,8 +371,8 @@ class NNSuite extends AnyFunSuite {
     nd1x2x3,
     implicit pool =>
       Conv1D(
-        param(ATen.ones(Array(1, 2, 3), TensorOptions.dtypeDouble.cuda)),
-        param(ATen.ones(Array(1), TensorOptions.dtypeDouble.cuda)),
+        param(STen.ones(Array(1, 2, 3), TensorOptions.dtypeDouble.cuda)),
+        param(STen.ones(Array(1), TensorOptions.dtypeDouble.cuda)),
         stride = 1,
         padding = 0,
         dilation = 1,
@@ -372,8 +384,8 @@ class NNSuite extends AnyFunSuite {
     nd1x2x3x3,
     implicit pool =>
       Conv2D(
-        param(ATen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble)),
-        param(ATen.ones(Array(1), TensorOptions.dtypeDouble)),
+        param(STen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble)),
+        param(STen.ones(Array(1), TensorOptions.dtypeDouble)),
         stride = 1,
         padding = 0,
         dilation = 1,
@@ -385,8 +397,8 @@ class NNSuite extends AnyFunSuite {
     nd1x2x3x3,
     implicit pool =>
       Conv2D(
-        param(ATen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble.cuda)),
-        param(ATen.ones(Array(1), TensorOptions.dtypeDouble.cuda)),
+        param(STen.ones(Array(1, 2, 3, 3), TensorOptions.dtypeDouble.cuda)),
+        param(STen.ones(Array(1), TensorOptions.dtypeDouble.cuda)),
         stride = 1,
         padding = 0,
         dilation = 1,
@@ -417,7 +429,7 @@ class NNSuite extends AnyFunSuite {
     nd2x3L,
     implicit pool =>
       Embedding(
-        weights = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble))
+        weights = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble))
       ).lift,
     24d
   )
@@ -425,9 +437,9 @@ class NNSuite extends AnyFunSuite {
     nd2x3x2,
     implicit pool =>
       RNN(
-        weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
+        weightXh = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightHh = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        biasH = param(STen.ones(Array(4), TensorOptions.dtypeDouble))
       ),
     23.8561
   )
@@ -441,13 +453,13 @@ class NNSuite extends AnyFunSuite {
       val rnn = statefulSequence(
         Embedding
           .apply(weights =
-            param(ATen.ones(Array(7, 4), TensorOptions.dtypeDouble))
+            param(STen.ones(Array(7, 4), TensorOptions.dtypeDouble))
           )
           .lift,
         RNN(
-          weightXh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-          weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-          biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
+          weightXh = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+          weightHh = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+          biasH = param(STen.ones(Array(4), TensorOptions.dtypeDouble))
         )
       )
       FreeRunningRNN(rnn, 3)
@@ -458,8 +470,8 @@ class NNSuite extends AnyFunSuite {
     nd2x3x2,
     implicit pool =>
       SeqLinear(
-        weight = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        bias = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
+        weight = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        bias = param(STen.ones(Array(4), TensorOptions.dtypeDouble))
       ).lift,
     288d
   )
@@ -467,15 +479,15 @@ class NNSuite extends AnyFunSuite {
     nd2x3x2,
     implicit pool =>
       GRU(
-        weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightXr = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightXz = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        weightHz = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        weightHr = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        biasZ = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        biasR = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
+        weightXh = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXr = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXz = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightHh = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHz = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHr = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        biasH = param(STen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasZ = param(STen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasR = param(STen.ones(Array(4), TensorOptions.dtypeDouble))
       ),
     0.9395
   )
@@ -483,56 +495,61 @@ class NNSuite extends AnyFunSuite {
     nd2x3x2,
     implicit pool =>
       LSTM(
-        weightXi = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightXo = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightXf = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightXc = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightHi = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        weightHo = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        weightHf = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        weightHc = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        biasI = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        biasO = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        biasF = param(ATen.ones(Array(4), TensorOptions.dtypeDouble)),
-        biasC = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
+        weightXi = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXo = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXf = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightXc = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightHi = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHo = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHf = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        weightHc = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        biasI = param(STen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasO = param(STen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasF = param(STen.ones(Array(4), TensorOptions.dtypeDouble)),
+        biasC = param(STen.ones(Array(4), TensorOptions.dtypeDouble))
       ),
     20.0321
   )
   test("RNN shape and loss") {
     Scope.root { implicit scope =>
       val output = RNN(
-        weightXh = param(ATen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
-        weightHh = param(ATen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
-        biasH = param(ATen.ones(Array(4), TensorOptions.dtypeDouble))
-      ).forward1(const(NDArray.tensorFromNDArray(nd2x3x2)), None)._1.value
+        weightXh = param(STen.ones(Array(2, 4), TensorOptions.dtypeDouble)),
+        weightHh = param(STen.ones(Array(4, 4), TensorOptions.dtypeDouble)),
+        biasH = param(STen.ones(Array(4), TensorOptions.dtypeDouble))
+      ).forward1(const(STen.owned(NDArray.tensorFromNDArray(nd2x3x2))), None)
+        ._1
+        .value
       assert(output.shape == List(2, 3, 4))
-      val target = TensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong))
+      val target =
+        STen.owned(TensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong)))
       val loss = LossFunctions
         .SequenceNLL(
           4,
-          ATen.ones(Array(4), TensorOptions.dtypeDouble())
+          STen.ones(Array(4), TensorOptions.dtypeDouble())
         )(const(output), target)
         ._1
         .value
-      assert(TensorHelpers.toMat(loss).raw(0) == -0.9940025479340507)
+      assert(TensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507)
       ()
     }
   }
 
   test1("gradient clipping") { cuda =>
-    val topt =
-      if (cuda) TensorOptions.dtypeDouble().cuda
-      else TensorOptions.dtypeDouble()
-    val t = ATen.ones(Array(1, 2, 3), topt)
-    val t2 = ATen.ones(Array(1, 2), topt)
-    gradientClippingInPlace(Seq(Some(t), Some(t2)), 2.1)
-    assert(
-      NDArray.tensorToNDArray(t).toVec.roundTo(4) == NDArray(
-        Array(0.7424621202458749, 0.7424621202458749, 0.7424621202458749,
-          0.7424621202458749, 0.7424621202458749, 0.7424621202458749),
-        List(1, 2, 3)
-      ).toVec.roundTo(4)
-    )
+    Scope.root { implicit scope =>
+      val topt =
+        if (cuda) TensorOptions.dtypeDouble().cuda
+        else TensorOptions.dtypeDouble()
+      val t = STen.ones(Array(1, 2, 3), topt)
+      val t2 = STen.ones(Array(1, 2), topt)
+      gradientClippingInPlace(Seq(Some(t), Some(t2)), 2.1)
+      assert(
+        NDArray.tensorToNDArray(t.value).toVec.roundTo(4) == NDArray(
+          Array(0.7424621202458749, 0.7424621202458749, 0.7424621202458749,
+            0.7424621202458749, 0.7424621202458749, 0.7424621202458749),
+          List(1, 2, 3)
+        ).toVec.roundTo(4)
+      )
+    }
   }
 
   test("load params") {
@@ -545,12 +562,12 @@ class NNSuite extends AnyFunSuite {
 
       val parameters = mod.state.map(_._1.value)
 
-      val loaded = mod.load(parameters)
-      assert(loaded.state.map(_._1.value) == parameters)
-      val p2 = parameters.map { t => ATen.mul_1(t, 3d) }
-      val loaded2 = mod.load(p2)
+      mod.load(parameters)
+      assert(mod.state.map(_._1.value.toMat) == parameters.map(_.toMat))
+      val p2 = parameters.map { t => t * 3 }
+      mod.load(p2)
 
-      assert(loaded2.state.map(_._1.value) == p2)
+      assert(mod.state.map(_._1.value.toMat) == parameters.map(_.toMat))
       ()
     }
   }
@@ -572,12 +589,12 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable)(
     pool: Scope
 ) extends Module {
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
-  val w = param(TensorHelpers.fromMat(mat2x3_2))(pool)
+  val w = param(STen.fromMat(mat2x3_2)(pool))(pool)
 
   def forward[S: Sc](x: Variable): Variable =
     ((x.mm(w)).logSoftMax(dim = 1).crossEntropy(y).sum + w.squaredFrobenius)
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     Nil
 
 }
@@ -590,8 +607,8 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable)(
 ) extends Module {
   val mod = sequence(
     Linear(
-      param(ATen.ones(Array(k, dim), y.options))(pool),
-      Some(param(ATen.ones(Array(1, k), y.options))(pool))
+      param(STen.ones(Array(k, dim), y.options)(pool))(pool),
+      Some(param(STen.ones(Array(1, k), y.options)(pool))(pool))
     ),
     Fun(scope => input => input.logSoftMax(dim = 1)(scope))
   )
@@ -602,7 +619,7 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable)(
         .map(_._1.squaredFrobenius)
         .reduce(_ + _)
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     Nil
 
 }
@@ -617,14 +634,14 @@ case class Mlp1(dim: Int, k: Int, y: Variable)(
 
   val mod = Sequential(
     Linear(
-      param(ATen.ones(Array(32, dim), y.options))(pool),
-      Some(param(ATen.ones(Array(1, 32), y.options))(pool))
+      param(STen.ones(Array(32, dim), y.options)(pool))(pool),
+      Some(param(STen.ones(Array(1, 32), y.options)(pool))(pool))
     ),
     Fun(scope => input => input.logSoftMax(dim = 1)(scope)),
     Fun(scope => input => input.gelu(scope)),
     Linear(
-      param(ATen.ones(Array(k, 32), y.options))(pool),
-      Some(param(ATen.ones(Array(1, k), y.options))(pool))
+      param(STen.ones(Array(k, 32), y.options)(pool))(pool),
+      Some(param(STen.ones(Array(1, k), y.options)(pool))(pool))
     )
   )
 
@@ -634,7 +651,7 @@ case class Mlp1(dim: Int, k: Int, y: Variable)(
         .map(_._1.squaredFrobenius)
         .reduce(_ + _)
 
-  override def state: Seq[(Variable, PTag)] =
+  override def state =
     Nil
 
 }

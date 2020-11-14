@@ -10,13 +10,9 @@ import lamp.SinglePrecision
 import lamp.Scope
 import lamp.STen
 
-case class Constant(scope: Scope, const: Tensor) extends Op {
-  val params = Nil
-  val value = Variable(this, const)(scope)
-}
-case class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
+class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
     extends Op {
-  assert(scope.level >= a.scope.level)
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += p.transpose(dim1, dim2) }
@@ -25,24 +21,22 @@ case class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
   )
   val value = Variable(
     this,
-    ATen.transpose(a.value, dim1, dim2)
+    a.value.transpose(dim1, dim2)(scope)
   )(scope)
 }
 
-case class View(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
-  assert(scope.level >= a.scope.level)
+class View(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += p.view(out.shape: _*) }
 
     }
   )
-  val value =
-    Variable(this, ATen._unsafe_view(a.value, shape))(scope)
+  val value = Variable(this, a.value.view(shape: _*)(scope))(scope)
 }
 
-case class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
-  a.foreach { a => assert(scope.level >= a.scope.level) }
+class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
   val ashapes = a.map(_.shape(dim.toInt))
   val boundaries =
     ashapes.scanLeft(0L)(_ + _).sliding(2).toList.map(g => g(0) -> g(1))
@@ -53,13 +47,12 @@ case class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
       }
   }
   val value =
-    Variable(this, ATen.cat(a.map(_.value).toArray, dim))(scope)
+    Variable(this, STen.cat(a.map(_.value), dim)(scope))(scope)
 }
 
 /** Prepends a new dimension and concatenates the tensors along that axis
   */
-case class ConcatenateAddNewDim(scope: Scope, a: Seq[Variable]) extends Op {
-  a.foreach(a => assert(scope.level >= a.scope.level))
+class ConcatenateAddNewDim(scope: Scope, a: Seq[Variable]) extends Op {
   val params = a.zipWithIndex.toList.map {
     case (a, idx) =>
       a.zipBackward { (p, out) =>
@@ -74,20 +67,19 @@ case class ConcatenateAddNewDim(scope: Scope, a: Seq[Variable]) extends Op {
   )
   val shape = List(a.size.toLong) ++ shapes.head
   val shape1 = List(1L) ++ shapes.head
-  val zeros = ATen.zeros(shape.toArray, a.head.options)
-  a.foldLeft(0) { (offset, v) =>
-    val viewed = ATen._unsafe_view(v.value, shape1.toArray)
-    val idx = Tensor.scalarLong(offset, a.head.options.toLong)
-    ATen._index_copy_(zeros, 0, idx, viewed)
-    idx.release
-    viewed.release
-    offset + 1
+  val zeros = STen.zeros(shape, a.head.options)(scope)
+  Scope.root { implicit scope =>
+    a.foldLeft(0) { (offset, v) =>
+      val viewed = v.value.view(shape1: _*)
+      val idx = STen.scalarLong(offset, a.head.options.toLong)
+      zeros.index_copy_(0, idx, viewed)
+      offset + 1
+    }
   }
   val value = Variable(this, zeros)(scope)
 }
-case class Select(scope: Scope, a: Variable, dim: Long, index: Long)
-    extends Op {
-  assert(scope.level >= a.scope.level)
+class Select(scope: Scope, a: Variable, dim: Long, index: Long) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
@@ -105,22 +97,23 @@ case class Select(scope: Scope, a: Variable, dim: Long, index: Long)
     }
   )
   val value =
-    Variable(this, ATen.select(a.value, dim, index))(scope)
+    Variable(this, a.value.select(dim, index)(scope))(scope)
 }
-case class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
-  assert(scope.level >= a.scope.level)
+class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
+
   val params = List()
   val value = Variable(this, {
-    val sc = Tensor.scalarLong(b, a.options)
-    val r = ATen.eq_1(a.value, sc)
-    sc.release
-    r
+    implicit val sc = scope
+    Scope { implicit sc =>
+      val scalar = STen.scalarLong(b, a.options)
+      val r = a.value.equ(scalar)
+      r
+    }
   })(scope)
 }
-case class MaskFill(scope: Scope, input: Variable, mask: Variable, fill: Double)
+class MaskFill(scope: Scope, input: Variable, mask: Variable, fill: Double)
     extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(scope.level >= mask.scope.level)
+
   val params = List(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += p.maskedFill(mask.value, 0d) }
@@ -128,17 +121,16 @@ case class MaskFill(scope: Scope, input: Variable, mask: Variable, fill: Double)
     }
   )
   val value =
-    Variable(this, ATen.masked_fill_0(input.value, mask.value, fill))(scope)
+    Variable(this, input.value.maskFill(mask.value, fill)(scope))(scope)
 }
-case class IndexFill(
+class IndexFill(
     scope: Scope,
     input: Variable,
     dim: Long,
     index: Variable,
     fill: Double
 ) extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(scope.level >= index.scope.level)
+
   val params = List(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += p.indexFill(dim, index.value, 0d) }
@@ -146,18 +138,17 @@ case class IndexFill(
     }
   )
   val value =
-    Variable(this, ATen.index_fill_0(input.value, dim, index.value, fill))(
+    Variable(this, input.value.indexFill(dim, index.value, fill)(scope))(
       scope
     )
 }
-case class IndexSelect(
+class IndexSelect(
     scope: Scope,
     input: Variable,
     dim: Long,
     index: Variable
 ) extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(scope.level >= index.scope.level)
+
   val params = List(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
@@ -168,45 +159,44 @@ case class IndexSelect(
     }
   )
   val value =
-    Variable(this, ATen.index_select(input.value, dim, index.value))(scope)
+    Variable(this, input.value.indexSelect(dim, index.value)(scope))(scope)
 }
-case class ArgMax(scope: Scope, a: Variable, dim: Long, keepDim: Boolean)
+class ArgMax(scope: Scope, a: Variable, dim: Long, keepDim: Boolean)
     extends Op {
-  assert(scope.level >= a.scope.level)
+
   val params = List(
     a.zipBackward { (_, _) =>
       throw new RuntimeException("Argmax is not differentiable")
     }
   )
   val value =
-    Variable(this, ATen.argmax(a.value, dim, keepDim))(scope)
+    Variable(this, a.value.argmax(dim, keepDim)(scope))(scope)
 }
 
-case class Assign(scope: Scope, abandon: Variable, keep: Variable) extends Op {
-  assert(abandon.scope == keep.scope)
-  assert(scope.level >= abandon.scope.level)
+class Assign(scope: Scope, abandon: Variable, keep: Variable) extends Op {
+
   val params = List(
     abandon.zipBackward { (_, _) => () },
     keep.zipBackward { (p, out) => out += p }
   )
   val value = Variable(this, keep.value)(scope)
 }
-case class OneHot(scope: Scope, a: Variable, numClasses: Int) extends Op {
-  assert(scope.level >= a.scope.level)
+class OneHot(scope: Scope, a: Variable, numClasses: Int) extends Op {
+
   val params = List(
     a.zipBackward { (_, _) =>
       throw new RuntimeException("OneHot is not differentiable")
     }
   )
   val value =
-    Variable(this, ATen.one_hot(a.value, numClasses))(scope)
+    Variable(this, a.value.oneHot(numClasses)(scope))(scope)
 }
-case class CastToPrecision(
+class CastToPrecision(
     scope: Scope,
     a: Variable,
     precision: FloatingPointPrecision
 ) extends Op {
-  assert(scope.level >= a.scope.level)
+
   val params = List(
     a.zipBackward { (_, _) =>
       throw new RuntimeException("Cast to Precision is not differentiable")
@@ -214,21 +204,20 @@ case class CastToPrecision(
   )
   val value = Variable(this, {
     precision match {
-      case DoublePrecision => ATen._cast_Double(a.value, false)
-      case SinglePrecision => ATen._cast_Float(a.value, false)
+      case DoublePrecision => a.value.castToDouble(scope)
+      case SinglePrecision => a.value.castToFloat(scope)
     }
   })(scope)
 }
 
-case class ScatterAdd(
+class ScatterAdd(
     scope: Scope,
     src: Variable,
     index: Variable,
     dim: Int,
     maxIndex: Long
 ) extends Op {
-  assert(scope.level >= src.scope.level)
-  assert(scope.level >= index.scope.level)
+
   assert(src.shape(dim) == index.shape(dim))
   val params = List(
     src.zipBackward { (p, out) =>
@@ -239,21 +228,21 @@ case class ScatterAdd(
   val value = {
     val shape = src.sizes.toArray
     shape(dim) = maxIndex
-    val zeros = ATen.zeros(shape, src.options)
-    val result = ATen.scatter_add(zeros, dim, index.value, src.value)
-    zeros.release
+    implicit val sc = scope
+    val result = Scope { implicit sc =>
+      val zeros = STen.zeros(shape.toList, src.options)
+      zeros.scatterAdd(dim, index.value, src.value)
+    }
     Variable(this, result)(scope)
   }
 }
-case class IndexAdd(
+class IndexAdd(
     scope: Scope,
     src: Variable,
     index: Variable,
     dim: Int,
     maxIndex: Long
 ) extends Op {
-  assert(scope.level >= src.scope.level)
-  assert(scope.level >= index.scope.level)
 
   val params = List(
     src.zipBackward { (p, out) =>
@@ -264,16 +253,18 @@ case class IndexAdd(
   val value = {
     val shape = src.sizes.toArray
     shape(dim) = maxIndex
-    val zeros = ATen.zeros(shape, src.options)
-    val result = ATen.index_add(zeros, dim, index.value, src.value)
-    zeros.release
+    implicit val sc = scope
+    val result = Scope { implicit sc =>
+      val zeros = STen.zeros(shape.toList, src.options)
+      zeros.indexAdd(dim, index.value, src.value)
+    }
+
     Variable(this, result)(scope)
   }
 }
 
-case class Add(scope: Scope, a: Variable, b: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
-  assert(scope.level >= b.scope.level)
+class Add(scope: Scope, a: Variable, b: Variable) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += p.unbroadcast(a.sizes) }
@@ -284,23 +275,22 @@ case class Add(scope: Scope, a: Variable, b: Variable) extends Op {
     }
   )
   val value =
-    Variable(this, ATen.add_0(a.value, b.value, 1d))(scope)
+    Variable(this, a.value.+(b.value)(scope))(scope)
 
 }
-case class ConstAdd(scope: Scope, a: Variable, b: Double) extends Op {
-  assert(scope.level >= a.scope.level)
+class ConstAdd(scope: Scope, a: Variable, b: Double) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += p.unbroadcast(a.sizes) }
 
     }
   )
-  val value = Variable(this, ATen.add_1(a.value, b, 1d))(scope)
+  val value = Variable(this, a.value.+(b)(scope))(scope)
 
 }
-case class Minus(scope: Scope, a: Variable, b: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
-  assert(scope.level >= b.scope.level)
+class Minus(scope: Scope, a: Variable, b: Variable) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += p.unbroadcast(a.sizes) }
@@ -312,11 +302,11 @@ case class Minus(scope: Scope, a: Variable, b: Variable) extends Op {
     }
   )
   val value =
-    Variable(this, ATen.add_0(a.value, b.value, -1d))(scope)
+    Variable(this, a.value.-(b.value)(scope))(scope)
 
 }
-case class ConstMult(scope: Scope, a: Variable, b: Double) extends Op {
-  assert(scope.level >= a.scope.level)
+class ConstMult(scope: Scope, a: Variable, b: Double) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += (p * b).unbroadcast(a.sizes) }
@@ -324,12 +314,11 @@ case class ConstMult(scope: Scope, a: Variable, b: Double) extends Op {
     }
   )
 
-  val value = Variable(this, ATen.mul_1(a.value, b))(scope)
+  val value = Variable(this, a.value.*(b)(scope))(scope)
 
 }
-case class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
-  assert(scope.level >= b.scope.level)
+class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += (p * b.value).unbroadcast(a.sizes) }
@@ -341,12 +330,11 @@ case class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
     }
   )
 
-  val value = Variable(this, ATen.mul_0(a.value, b.value))(scope)
+  val value = Variable(this, a.value.*(b.value)(scope))(scope)
 
 }
-case class Div(scope: Scope, a: Variable, b: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
-  assert(scope.level >= b.scope.level)
+class Div(scope: Scope, a: Variable, b: Variable) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope => out += (p / b.value).unbroadcast(a.sizes) }
@@ -354,73 +342,84 @@ case class Div(scope: Scope, a: Variable, b: Variable) extends Op {
     },
     b.zipBackward { (p, out) =>
       // out += p * (a.value * b.value.map(x => -1d / (x * x)))
-
-      val tmp = ATen.div_0(value.value, b.value)
-      ATen.mul_out(tmp, tmp, p.value)
-      val t2 = ub(tmp, b.sizes)
-      ATen.add_out(out.value, out.value, t2, -1d)
-      tmp.release()
-      t2.release()
+      Scope.root { implicit scope =>
+        val tmp = value.value / b.value
+        tmp *= p
+        val t2 = tmp.unbroadcast(b.sizes)
+        out -= t2
+      }
     }
   )
 
-  val value = Variable(this, ATen.div_0(a.value, b.value))(scope)
+  val value = Variable(this, a.value./(b.value)(scope))(scope)
 }
 
-case class Sum(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Sum(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) => out += p })
 
-  val value = Variable(this, ATen.sum_0(a.value))(scope)
+  val value = Variable(this, a.value.sum(scope))(scope)
 
 }
-case class ColSum(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
-  val params = List(a.zipBackward { (p, out) => out += p })
+class ColSum(scope: Scope, a: Variable) extends Op {
 
-  val value =
-    Variable(this, ATen.sum_1(a.value, Array(0), true))(scope)
-
-}
-case class RowSum(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
   val params = List(a.zipBackward { (p, out) => out += p })
 
   val value =
-    Variable(this, ATen.sum_1(a.value, Array(1), true))(scope)
+    Variable(this, a.value.sum(List(0), true)(scope))(scope)
 
 }
-case class ExpandAs(scope: Scope, a: Variable, as: Tensor) extends Op {
-  assert(scope.level >= a.scope.level)
+class RowSum(scope: Scope, a: Variable) extends Op {
+
+  val params = List(a.zipBackward { (p, out) => out += p })
+
+  val value =
+    Variable(this, a.value.sum(List(1), true)(scope))(scope)
+
+}
+class ExpandAs(scope: Scope, a: Variable, as: STen) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope => out += p.unbroadcast(a.shape) }
   })
   val value =
-    Variable(this, a.value.expand_as(as))(scope)
+    Variable(this, a.value.expandAs(as)(scope))(scope)
 }
 
 // http://cs231n.stanford.edu/handouts/derivatives.pdf
-case class MatMul(scope: Scope, a: Variable, b: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
-  assert(scope.level >= b.scope.level)
+class MatMul(scope: Scope, a: Variable, b: Variable) extends Op {
+
   val params =
     List(
       a.zipBackward { (p, out) =>
         Tensor
-          .addmm_out_transposed2(out.value, out.value, p.value, b.value, 1d, 1d)
+          .addmm_out_transposed2(
+            out.value,
+            out.value,
+            p.value,
+            b.value.value,
+            1d,
+            1d
+          )
       },
       b.zipBackward { (p, out) =>
         Tensor
-          .addmm_out_transposed1(out.value, out.value, a.value, p.value, 1d, 1d)
+          .addmm_out_transposed1(
+            out.value,
+            out.value,
+            a.value.value,
+            p.value,
+            1d,
+            1d
+          )
       }
     )
 
-  val value = Variable(this, ATen.mm(a.value, b.value))(scope)
+  val value = Variable(this, a.value.mm(b.value)(scope))(scope)
 
 }
-case class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
-  assert(scope.level >= b.scope.level)
+class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
+
   val params =
     List(
       a.zipBackward { (p, out) =>
@@ -428,7 +427,7 @@ case class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
           out.value,
           out.value,
           p.value,
-          b.value,
+          b.value.value,
           1d,
           1d
         )
@@ -437,7 +436,7 @@ case class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
         Tensor.baddbmm_out_transposed1(
           out.value,
           out.value,
-          a.value,
+          a.value.value,
           p.value,
           1d,
           1d
@@ -445,13 +444,12 @@ case class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
       }
     )
 
-  val value = Variable(this, ATen.bmm(a.value, b.value))(scope)
+  val value = Variable(this, a.value.bmm(b.value)(scope))(scope)
 
 }
-case class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
+class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
     extends Op {
-  assert(scope.level >= a.scope.level)
-  assert(scope.level >= b.scope.level)
+
   val params =
     List(
       a.zipBackward { (p, out) =>
@@ -469,28 +467,28 @@ case class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
 
       }
     )
+  val diff = a.value.-(b.value)(scope)
 
-  val diff = STen.owned(ATen.sub_0(a.value, b.value, dim))(scope)
   val norm =
-    ATen.norm_2(diff.value, Array(1), true, diff.options.scalarTypeByte())
+    diff.norm2(List(dim), true)(scope)
 
   val value = Variable(this, norm)(scope)
 
 }
 
-case class Exp(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Exp(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     out.addcmulSelf(p, value.value, 1d)
   })
-  val value = Variable(this, ATen.exp(a.value))(scope)
+  val value = Variable(this, a.value.exp(scope))(scope)
 }
-case class CappedShiftedNegativeExponential(
+class CappedShiftedNegativeExponential(
     scope: Scope,
     a: Variable,
     shift: Double
 ) extends Op {
-  assert(scope.level >= a.scope.level)
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
@@ -501,87 +499,87 @@ case class CappedShiftedNegativeExponential(
       }
     }
   )
-  val pred = scope.apply(ATen.le_0(a.value, shift))
+  val pred = scope.apply(ATen.le_0(a.value.value, shift))
   val ones =
     scope.apply(ATen.ones(Array(1), a.options))
   val scalar = scope.apply(ATen.scalar_tensor(shift, a.options))
-  val above = scope.apply(ATen.sub_0(scalar, a.value, 1d))
+  val above = scope.apply(ATen.sub_0(scalar, a.value.value, 1d))
   ATen.exp_(above)
   val result = ATen.where_0(pred, ones, above)
-  val value = Variable(this, result)(scope)
+  val value = Variable(this, STen.owned(result)(scope))(scope)
 }
-case class Log(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Log(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
-      val tmp = STen.owned(ATen.reciprocal(a.value))
+      val tmp = a.value.reciprocal
       out.addcmulSelf(p, tmp, 1d)
     }
   })
-  val value = Variable(this, ATen.log(a.value))(scope)
+  val value = Variable(this, a.value.log(scope))(scope)
 }
-case class Log1p(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Log1p(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
-      val tmp = STen.owned(ATen.add_1(a.value, 1d, 1d))
+      val tmp = a.value + 1d
       tmp.reciprocal_
       out.addcmulSelf(p, tmp, 1d)
     }
 
   })
-  val value = Variable(this, ATen.log1p(a.value))(scope)
+  val value = Variable(this, a.value.log1p(scope))(scope)
 }
-case class Sin(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Sin(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
-      val tmp = STen.owned(ATen.cos(a.value))
+      val tmp = a.value.cos
       out.addcmulSelf(p, tmp, 1d)
     }
 
   })
-  val value = Variable(this, ATen.sin(a.value))(scope)
+  val value = Variable(this, a.value.sin(scope))(scope)
 }
-case class Cos(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Cos(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
-      val tmp = STen.owned(ATen.sin(a.value))
+      val tmp = a.value.sin
       out.addcmulSelf(p, tmp, -1d)
     }
 
   })
-  val value = Variable(this, ATen.cos(a.value))(scope)
+  val value = Variable(this, a.value.cos(scope))(scope)
 }
-case class Tan(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Tan(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
-      val tmp1 = STen.owned(ATen.pow_0(value.value, 2d))
+      val tmp1 = value.value.pow(2d)
       val one = STen.ones(List(1), a.options)
       tmp1 += one
       out.addcmulSelf(p, tmp1, 1d)
     }
 
   })
-  val value = Variable(this, ATen.tan(a.value))(scope)
+  val value = Variable(this, a.value.tan(scope))(scope)
 }
-case class Tanh(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Tanh(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
-      val tmp1 = STen.owned(ATen.tanh_backward(p.value, value.value))
+      val tmp1 = STen.tanh_backward(p, value.value)
       out += tmp1
     }
   })
-  val value = Variable(this, ATen.tanh(a.value))(scope)
+  val value = Variable(this, a.value.tanh(scope))(scope)
 }
-case class ArcTan(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class ArcTan(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
-      val tmp1 = STen.owned(ATen.pow_0(a.value, 2d))
+      val tmp1 = a.value.pow(2d)
       val one = STen.ones(List(1L), a.options)
       tmp1 += one
       tmp1.reciprocal_()
@@ -590,26 +588,26 @@ case class ArcTan(scope: Scope, a: Variable) extends Op {
     }
 
   })
-  val value = Variable(this, ATen.atan(a.value))(scope)
+  val value = Variable(this, a.value.atan(scope))(scope)
 }
-case class PowConst(scope: Scope, a: Variable, exponent: Double) extends Op {
-  assert(scope.level >= a.scope.level)
+class PowConst(scope: Scope, a: Variable, exponent: Double) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
-      val tmp1 = STen.owned(ATen.pow_0(a.value, exponent - 1))
+      val tmp1 = a.value.pow(exponent - 1)
       out.addcmulSelf(p, tmp1, exponent)
     }
 
   })
-  val value = Variable(this, ATen.pow_0(a.value, exponent))(scope)
+  val value = Variable(this, a.value.pow(exponent)(scope))(scope)
 }
-case class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
         val exp = exponent.toMat.raw(0)
-        val tmp1 = STen.owned(ATen.pow_0(a.value, exp - 1))
+        val tmp1 = a.value.pow(exp - 1)
         out.addcmulSelf(p, tmp1, exp)
       }
 
@@ -617,8 +615,8 @@ case class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
     exponent.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
         val exp = exponent.toMat.raw(0)
-        val tmp1 = STen.owned(ATen.pow_0(a.value, exp))
-        val tmp2 = STen.owned(ATen.log(a.value))
+        val tmp1 = a.value.pow(exp)
+        val tmp2 = a.value.log
         val tmp3 = tmp1 * tmp2
         val p2 = p.unbroadcast(
           List(if (out.sizes.isEmpty) 1 else out.sizes.toList.head, 1)
@@ -629,14 +627,14 @@ case class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
     }
   )
   val value =
-    Variable(this, ATen.pow_1(a.value, exponent.value))(scope)
+    Variable(this, a.value.pow(exponent.value)(scope))(scope)
 }
-case class Relu(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Relu(scope: Scope, a: Variable) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val pred = STen.owned(ATen.lt_0(a.value, 0d))
+        val pred = a.value.lt(0d)
         val ones =
           STen.ones(List(1), a.options)
         val zeros =
@@ -646,55 +644,60 @@ case class Relu(scope: Scope, a: Variable) extends Op {
       }
     }
   )
-  val value = Variable(this, ATen.relu(a.value))(scope)
+  val value = Variable(this, a.value.relu(scope))(scope)
 }
 
-case class LogSoftMax(scope: Scope, a: Variable, dim: Int) extends Op {
-  assert(scope.level >= a.scope.level)
+class LogSoftMax(scope: Scope, a: Variable, dim: Int) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
         val tmp = STen.owned(
-          ATen._log_softmax_backward_data(p.value, value.value, dim, a.value)
+          ATen._log_softmax_backward_data(
+            p.value,
+            value.value.value,
+            dim,
+            a.value.value
+          )
         )
         out += tmp
 
       }
     }
   )
-  val value = Variable(this, ATen.log_softmax(a.value, dim))(scope)
+  val value = Variable(this, a.value.logSoftMax(dim)(scope))(scope)
 
 }
-case class Gelu(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Gelu(scope: Scope, a: Variable) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val tmp = STen.owned(ATen.gelu_backward(p.value, a.value))
+        val tmp = STen.owned(ATen.gelu_backward(p.value, a.value.value))
         out += tmp
       }
     }
   )
-  val value = Variable(this, ATen.gelu(a.value))(scope)
+  val value = Variable(this, a.value.gelu(scope))(scope)
 
 }
-case class Sigmoid(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class Sigmoid(scope: Scope, a: Variable) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val tmp = STen.owned(ATen.sigmoid_backward(p.value, value.value))
+        val tmp = STen.owned(ATen.sigmoid_backward(p.value, value.value.value))
         out += tmp
       }
 
     }
   )
-  val value = Variable(this, ATen.sigmoid(a.value))(scope)
+  val value = Variable(this, a.value.sigmoid(scope))(scope)
 
 }
 
-case class Mean(scope: Scope, a: Variable, dim: List[Int]) extends Op {
-  assert(scope.level >= a.scope.level)
+class Mean(scope: Scope, a: Variable, dim: List[Int]) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       STen.addOut(out, out, p, 1d / dim.map(l => a.sizes.apply(l.toInt)).sum)
@@ -704,16 +707,16 @@ case class Mean(scope: Scope, a: Variable, dim: List[Int]) extends Op {
   val value =
     Variable(
       this,
-      ATen.mean_1(a.value, dim.map(_.toLong).toArray, true)
+      a.value.mean(dim, true)(scope)
     )(scope)
 
 }
-case class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
-  assert(scope.level >= a.scope.level)
+class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
+
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val s = STen.owned(ATen.sub_0(a.value, m, 1.0))
+        val s = a.value - m
         out.addcmulSelf(
           p,
           s,
@@ -724,8 +727,7 @@ case class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
 
     }
   )
-  val (v, m) = ATen.var_mean_1(a.value, dim.map(_.toLong).toArray, true, true)
-  scope.register(m)
+  val (v, m) = a.value.varAndMean(dim, true, true)(scope)
   val value =
     Variable(
       this,
@@ -733,34 +735,32 @@ case class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
     )(scope)
 
 }
-case class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
+class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
     extends Op {
-  assert(scope.level >= a.scope.level)
+
   val params = List(
     a.zipBackward { (p, out) => out.addcmulSelf(p, mask, 1d) }
   )
   val mask = {
-    val ones = ATen.ones_like(a.value, a.options)
-    ATen.dropout_(ones, prob, train)
-    scope.apply(ones)
+    val ones = STen.ones(a.shape, a.options)(scope)
+    ones.dropout_(prob, train)
+    ones
   }
   val value =
-    Variable(this, ATen.mul_0(a.value, mask))(scope)
+    Variable(this, a.value.*(mask)(scope))(scope)
 
 }
 
 // https://arxiv.org/pdf/1602.07868.pdf
-case class WeightNorm(scope: Scope, v: Variable, g: Variable, dim: Long)
-    extends Op {
-  assert(scope.level >= v.scope.level)
-  assert(scope.level >= g.scope.level)
+class WeightNorm(scope: Scope, v: Variable, g: Variable, dim: Long) extends Op {
+
   assert(v.sizes.size == 2, "WeightNorm: v should have 2 dimensions")
   assert(
     g.sizes.toList == List(1, v.sizes(1)),
     "WeightNorm: g should have dimensions 1 x a where a is the second dimension of v."
   )
   def gradg(p: Tensor) = {
-    val tmp0 = ATen.mul_0(p, v.value)
+    val tmp0 = ATen.mul_0(p, v.value.value)
     val tmp1 = ATen.sum_1(tmp0, Array(0), false)
     ATen.div_out(tmp1, tmp1, norm)
     tmp0.release
@@ -771,13 +771,13 @@ case class WeightNorm(scope: Scope, v: Variable, g: Variable, dim: Long)
   // Mind the dot product (.)
   val params = List(
     v.zipBackward { (p, out) =>
-      val tmp1 = ATen.div_0(g.value, norm)
+      val tmp1 = ATen.div_0(g.value.value, norm)
       val tmp3 = ATen.mul_0(tmp1, p.value)
       val gg = gradg(p.value)
-      val tmp2 = ATen.mul_0(g.value, gg)
+      val tmp2 = ATen.mul_0(g.value.value, gg)
       ATen.div_out(tmp2, tmp2, norm)
       ATen.div_out(tmp2, tmp2, norm)
-      val tmp4 = ATen.mul_0(tmp2, v.value)
+      val tmp4 = ATen.mul_0(tmp2, v.value.value)
       ATen.add_out(tmp3, tmp3, tmp4, -1d)
       ATen.add_out(out.value, out.value, tmp3, 1d)
       tmp1.release
@@ -796,12 +796,12 @@ case class WeightNorm(scope: Scope, v: Variable, g: Variable, dim: Long)
   // https://arxiv.org/pdf/1602.07868.pdf eq2
   val norm =
     scope(
-      ATen.norm_2(v.value, Array(dim), false, v.options.scalarTypeByte)
+      ATen.norm_2(v.value.value, Array(dim), false, v.options.scalarTypeByte)
     )
-  val w = ATen.mul_0(v.value, g.value)
+  val w = ATen.mul_0(v.value.value, g.value.value)
   ATen.div_out(w, w, norm)
 
-  val value = Variable(this, w)(scope)
+  val value = Variable(this, STen.owned(w)(scope))(scope)
 
 }
 
@@ -818,25 +818,23 @@ case object Sum extends Reduction {
   def asLong = 2L
 }
 
-case class MseLoss(
+class MseLoss(
     scope: Scope,
     input: Variable,
-    target: Tensor,
+    target: STen,
     reduction: Reduction
 ) extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(input.value.numel == target.numel())
+
+  assert(input.value.numel == target.numel)
   val params = List(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
         val tmp =
-          STen.owned(
-            ATen.mse_loss_backward(
-              p.value,
-              input.value,
-              targetViewed,
-              reduction.asLong
-            )
+          STen.mse_loss_backward(
+            p,
+            input.value,
+            targetViewed,
+            reduction.asLong
           )
 
         out += tmp
@@ -844,21 +842,21 @@ case class MseLoss(
 
     }
   )
-  val targetViewed = scope(ATen._unsafe_view(target, input.shape.toArray))
+  val targetViewed = target.view(input.shape: _*)(scope)
   val value =
     Variable(
       this,
-      ATen.mse_loss(input.value, targetViewed, reduction.asLong)
+      STen.mse_loss(input.value, targetViewed, reduction.asLong)(scope)
     )(scope)
 }
-case class L1Loss(
+class L1Loss(
     scope: Scope,
     input: Variable,
-    target: Tensor,
+    target: STen,
     reduction: Reduction
 ) extends Op {
-  assert(input.value.numel == target.numel())
-  assert(scope.level >= input.scope.level)
+  assert(input.value.numel == target.numel)
+
   val params = List(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
@@ -866,8 +864,8 @@ case class L1Loss(
           STen.owned(
             ATen.l1_loss_backward(
               p.value,
-              input.value,
-              targetViewed,
+              input.value.value,
+              targetViewed.value,
               reduction.asLong
             )
           )
@@ -877,23 +875,25 @@ case class L1Loss(
       }
     }
   )
-  val targetViewed = scope(ATen._unsafe_view(target, input.shape.toArray))
+  val targetViewed = target.view(input.shape: _*)(scope)
   val value =
     Variable(
       this,
-      ATen.l1_loss(input.value, targetViewed, reduction.asLong)
+      STen.owned(
+        ATen.l1_loss(input.value.value, targetViewed.value, reduction.asLong)
+      )(scope)
     )(scope)
 }
-case class NllLoss(
+class NllLoss(
     scope: Scope,
     input: Variable,
-    target: Tensor,
-    weights: Tensor,
-    numClasses: Int,
+    target: STen,
+    weights: STen,
+    // numClasses: Int,
     reduction: Reduction,
     ignore: Long
 ) extends Op {
-  assert(scope.level >= input.scope.level)
+
   assert(
     input.sizes.size == 2,
     "Nll Loss assumes 2D input (samples x classes). Higher dimensions not implemented."
@@ -910,9 +910,9 @@ case class NllLoss(
           STen.owned(
             ATen.nll_loss_backward(
               p.value,
-              input.value,
-              target,
-              weights,
+              input.value.value,
+              target.value,
+              weights.value,
               reduction.asLong,
               ignore,
               total_weight
@@ -925,9 +925,9 @@ case class NllLoss(
   )
   val (value1, total_weight) =
     ATen.nll_loss_forward(
-      input.value,
-      target,
-      weights,
+      input.value.value,
+      target.value,
+      weights.value,
       reduction.asLong,
       ignore
     )
@@ -936,20 +936,20 @@ case class NllLoss(
   val value =
     Variable(
       this,
-      value1
+      STen.owned(value1)(scope)
     )(scope)
 
 }
 
-case class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
-  assert(scope.level >= a.scope.level)
+class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
+
   val params = List(a.zipBackward { (p, out) =>
     out.addcmulSelf(p, a.value, 2d)
   })
   val value =
     Variable(this, {
-      val fr = ATen.frobenius_norm_0(a.value)
-      ATen.pow_out_0(fr, fr, 2d)
+      val fr = a.value.frobeniusNorm(scope)
+      fr.pow_(2d)
       fr
     })(scope)
 }
@@ -961,7 +961,7 @@ case class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
   * @param bias out_channels
   * @return Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)
   */
-case class Conv1D(
+class Conv1D(
     scope: Scope,
     input: Variable,
     weight: Variable,
@@ -971,9 +971,7 @@ case class Conv1D(
     dilation: Long,
     groups: Long
 ) extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(scope.level >= weight.scope.level)
-  assert(scope.level >= bias.scope.level)
+
   assert(input.shape.size == 3, "Input dimensions must be 3")
   assert(weight.shape.size == 3, "Weight dimensions must be 3")
   val batchSize = input.shape(0)
@@ -1001,7 +999,7 @@ case class Conv1D(
           Array(p_repeated_size(0) * p_repeated_size(1), 1, p_repeated_size(2))
         )
       val input_viewed = ATen._unsafe_view(
-        input.value,
+        input.value.value,
         Array(1, batchSize * inputChannels, imageSize)
       )
       val zero = ATen.zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options)
@@ -1060,7 +1058,7 @@ case class Conv1D(
       val extraPadding = out.sizes.apply(2) - outputSizeWithoutExtraPadding
       val tmp = ATen.conv_transpose1d(
         p.value,
-        weight.value,
+        weight.value.value,
         zeros,
         Array(stride),
         Array(padding),
@@ -1083,15 +1081,17 @@ case class Conv1D(
 
   val value =
     Variable(this, {
-      ATen.conv1d(
-        input.value,
-        weight.value,
-        bias.value,
-        Array(stride),
-        Array(padding),
-        Array(dilation),
-        groups
-      )
+      STen.owned(
+        ATen.conv1d(
+          input.value.value,
+          weight.value.value,
+          bias.value.value,
+          Array(stride),
+          Array(padding),
+          Array(dilation),
+          groups
+        )
+      )(scope)
     })(scope)
 }
 
@@ -1102,7 +1102,7 @@ case class Conv1D(
   * @param bias out_channels
   * @return Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)
   */
-case class Conv2D(
+class Conv2D(
     scope: Scope,
     input: Variable,
     weight: Variable,
@@ -1112,9 +1112,7 @@ case class Conv2D(
     dilation: Long,
     groups: Long
 ) extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(scope.level >= weight.scope.level)
-  assert(scope.level >= bias.scope.level)
+
   assert(input.shape.size == 4, "Input dimensions must be 3")
   assert(weight.shape.size == 4, "Weight dimensions must be 3")
   val batchSize = input.shape(0)
@@ -1138,7 +1136,7 @@ case class Conv2D(
         val tmp = ATen.cudnn_convolution_backward_weight(
           weight.shape.toArray,
           p.value,
-          input.value,
+          input.value.value,
           Array(padding, padding),
           Array(stride, stride),
           Array(dilation, dilation),
@@ -1164,7 +1162,7 @@ case class Conv2D(
             )
           )
         val input_viewed = ATen._unsafe_view(
-          input.value,
+          input.value.value,
           Array(1, batchSize * inputChannels, imageHeight, imageWidth)
         )
         val zero =
@@ -1233,7 +1231,7 @@ case class Conv2D(
         val tmp = ATen.cudnn_convolution_backward_input(
           input.shape.toArray,
           p.value,
-          weight.value,
+          weight.value.value,
           Array(padding, padding),
           Array(stride, stride),
           Array(dilation, dilation),
@@ -1252,7 +1250,7 @@ case class Conv2D(
         val extraPaddingW = out.sizes.apply(3) - outputSizeWithoutExtraPadding
         val tmp = ATen.conv_transpose2d(
           p.value,
-          weight.value,
+          weight.value.value,
           zeros,
           Array(stride),
           Array(padding),
@@ -1277,15 +1275,17 @@ case class Conv2D(
 
   val value =
     Variable(this, {
-      ATen.conv2d(
-        input.value,
-        weight.value,
-        bias.value,
-        Array(stride),
-        Array(padding),
-        Array(dilation),
-        groups
-      )
+      STen.owned(
+        ATen.conv2d(
+          input.value.value,
+          weight.value.value,
+          bias.value.value,
+          Array(stride),
+          Array(padding),
+          Array(dilation),
+          groups
+        )
+      )(scope)
     })(scope)
 }
 
@@ -1293,7 +1293,7 @@ case class Conv2D(
   *
   * @param input batch x in_channels x L
   */
-case class MaxPool1D(
+class MaxPool1D(
     scope: Scope,
     input: Variable,
     kernelSize: Long,
@@ -1301,7 +1301,7 @@ case class MaxPool1D(
     padding: Long = 0,
     dilation: Long = 1
 ) extends Op {
-  assert(scope.level >= input.scope.level)
+
   assert(input.shape.size == 3, "Input dimensions must be 3")
   val batchSize = input.shape(0)
   val inputChannels = input.shape(1)
@@ -1339,7 +1339,7 @@ case class MaxPool1D(
   )
 
   val (output, mask) = ATen.max_pool1d_with_indices(
-    input.value,
+    input.value.value,
     Array(kernelSize),
     Array(stride),
     Array(padding),
@@ -1348,14 +1348,14 @@ case class MaxPool1D(
   )
   scope.register(mask)
   val value =
-    Variable(this, output)(scope)
+    Variable(this, STen.owned(output)(scope))(scope)
 }
 
 /** 2D max pooling
   *
   * @param input batch x in_channels x h x w
   */
-case class MaxPool2D(
+class MaxPool2D(
     scope: Scope,
     input: Variable,
     kernelSize: Long,
@@ -1363,7 +1363,7 @@ case class MaxPool2D(
     padding: Long,
     dilation: Long
 ) extends Op {
-  assert(scope.level >= input.scope.level)
+
   assert(input.shape.size == 4, "Input dimensions must be 4")
   val batchSize = input.shape(0)
   val inputChannels = input.shape(1)
@@ -1375,7 +1375,7 @@ case class MaxPool2D(
         val tmp = STen.owned(
           ATen.max_pool2d_with_indices_backward(
             p.value,
-            input.value,
+            input.value.value,
             Array(kernelSize),
             Array(stride),
             Array(padding),
@@ -1391,7 +1391,7 @@ case class MaxPool2D(
   )
 
   val (output, mask) = ATen.max_pool2d_with_indices(
-    input.value,
+    input.value.value,
     Array(kernelSize),
     Array(stride),
     Array(padding),
@@ -1401,21 +1401,21 @@ case class MaxPool2D(
   scope.register(mask)
 
   val value =
-    Variable(this, output)(scope)
+    Variable(this, STen.owned(output)(scope))(scope)
 }
 
 /** 2D avg pooling
   *
   * @param input batch x in_channels x h x w
   */
-case class AvgPool2D(
+class AvgPool2D(
     scope: Scope,
     input: Variable,
     kernelSize: Long,
     stride: Long,
     padding: Long
 ) extends Op {
-  assert(scope.level >= input.scope.level)
+
   assert(input.shape.size == 4, "Input dimensions must be 4")
   val batchSize = input.shape(0)
   val inputChannels = input.shape(1)
@@ -1427,7 +1427,7 @@ case class AvgPool2D(
         val tmp = STen.owned(
           ATen.avg_pool2d_backward(
             p.value,
-            input.value,
+            input.value.value,
             Array(kernelSize),
             Array(stride),
             Array(padding),
@@ -1446,21 +1446,23 @@ case class AvgPool2D(
   val value =
     Variable(
       this,
-      ATen.avg_pool2d(
-        input.value,
-        Array(kernelSize),
-        Array(stride),
-        Array(padding),
-        false,
-        true,
-        Long.MinValue
-      )
+      STen.owned(
+        ATen.avg_pool2d(
+          input.value.value,
+          Array(kernelSize),
+          Array(stride),
+          Array(padding),
+          false,
+          true,
+          Long.MinValue
+        )
+      )(scope)
     )(scope)
 }
 
-case class FlattenLastDimensions(scope: Scope, input: Variable, last: Int)
+class FlattenLastDimensions(scope: Scope, input: Variable, last: Int)
     extends Op {
-  assert(scope.level >= input.scope.level)
+
   assert(input.shape.size >= 2, "Input dimensions must be 4")
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
@@ -1474,26 +1476,24 @@ case class FlattenLastDimensions(scope: Scope, input: Variable, last: Int)
   val value =
     Variable(
       this,
-      ATen._unsafe_view(input.value, Array(-1, size))
+      input.value.view(-1, size)(scope)
     )(scope)
 }
 
 /* 0-th dimension has samples. Everything else is flattened out into features. */
-case class BatchNorm(
+class BatchNorm(
     scope: Scope,
     input: Variable,
     weight: Variable,
     bias: Variable,
-    runningMean: Tensor,
-    runningVar: Tensor,
+    runningMean: STen,
+    runningVar: STen,
     training: Boolean,
     momentum: Double,
     eps: Double
 ) extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(scope.level >= weight.scope.level)
-  assert(scope.level >= bias.scope.level)
-  val input_flattened = ATen.flatten(input.value, 1, input.shape.size - 1)
+
+  val input_flattened = ATen.flatten(input.value.value, 1, input.shape.size - 1)
   val expectedShape = List(input_flattened.shape.last)
   assert(
     expectedShape == weight.shape,
@@ -1514,10 +1514,10 @@ case class BatchNorm(
 
   val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
     input_flattened,
-    weight.value,
-    bias.value,
-    runningMean,
-    runningVar,
+    weight.value.value,
+    bias.value.value,
+    runningMean.value,
+    runningVar.value,
     training,
     momentum,
     eps
@@ -1530,7 +1530,7 @@ case class BatchNorm(
   scope.register(output)
 
   override val value: Variable =
-    Variable(this, output_reshaped)(scope)
+    Variable(this, STen.owned(output_reshaped)(scope))(scope)
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
@@ -1539,9 +1539,9 @@ case class BatchNorm(
       val (gradInput, a, b) = ATen.native_batch_norm_backward(
         flattened_p,
         input_flattened,
-        weight.value,
-        runningMean,
-        runningVar,
+        weight.value.value,
+        runningMean.value,
+        runningVar.value,
         saveMean,
         saveInvstd,
         training,
@@ -1562,9 +1562,9 @@ case class BatchNorm(
       val (a, gradWeight, b) = ATen.native_batch_norm_backward(
         flattened_p,
         input_flattened,
-        weight.value,
-        runningMean,
-        runningVar,
+        weight.value.value,
+        runningMean.value,
+        runningVar.value,
         saveMean,
         saveInvstd,
         training,
@@ -1593,20 +1593,18 @@ case class BatchNorm(
 /** Batch Norm 2D
   * 0-th dimension are samples. 1-th are features, everything else is averaged out.
   */
-case class BatchNorm2D(
+class BatchNorm2D(
     scope: Scope,
     input: Variable,
     weight: Variable,
     bias: Variable,
-    runningMean: Tensor,
-    runningVar: Tensor,
+    runningMean: STen,
+    runningVar: STen,
     training: Boolean,
     momentum: Double,
     eps: Double
 ) extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(scope.level >= bias.scope.level)
-  assert(scope.level >= weight.scope.level)
+
   val inputShape = input.shape
   assert(inputShape.size >= 3, "Expected 3D or 4D tensor")
   val expectedShape = List(inputShape(1))
@@ -1628,11 +1626,11 @@ case class BatchNorm2D(
   )
 
   val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
-    input.value,
-    weight.value,
-    bias.value,
-    runningMean,
-    runningVar,
+    input.value.value,
+    weight.value.value,
+    bias.value.value,
+    runningMean.value,
+    runningVar.value,
     training,
     momentum,
     eps
@@ -1640,16 +1638,16 @@ case class BatchNorm2D(
   scope.register(saveMean)
   scope.register(saveInvstd)
   override val value: Variable =
-    Variable(this, output)(scope)
+    Variable(this, STen.owned(output)(scope))(scope)
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
       val (gradInput, a, b) = ATen.native_batch_norm_backward(
         p.value,
-        input.value,
-        weight.value,
-        runningMean,
-        runningVar,
+        input.value.value,
+        weight.value.value,
+        runningMean.value,
+        runningVar.value,
         saveMean,
         saveInvstd,
         training,
@@ -1667,10 +1665,10 @@ case class BatchNorm2D(
     weight.zipBackward { (p, out) =>
       val (a, gradWeight, b) = ATen.native_batch_norm_backward(
         p.value,
-        input.value,
-        weight.value,
-        runningMean,
-        runningVar,
+        input.value.value,
+        weight.value.value,
+        runningMean.value,
+        runningVar.value,
         saveMean,
         saveInvstd,
         training,
@@ -1696,10 +1694,8 @@ case class BatchNorm2D(
     }
   )
 }
-case class Embedding(scope: Scope, input: Variable, weight: Variable)
-    extends Op {
-  assert(scope.level >= input.scope.level)
-  assert(scope.level >= weight.scope.level)
+class Embedding(scope: Scope, input: Variable, weight: Variable) extends Op {
+
   assert(input.shape.size >= 1, "Input dimensions must be at least 1")
   assert(weight.shape.size == 2, "Weight must have 2 dimensions")
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
@@ -1709,7 +1705,7 @@ case class Embedding(scope: Scope, input: Variable, weight: Variable)
           ATen
             .embedding_backward(
               p.value,
-              input.value,
+              input.value.value,
               weight.shape(0),
               0L,
               false,
@@ -1728,7 +1724,10 @@ case class Embedding(scope: Scope, input: Variable, weight: Variable)
     try {
       Variable(
         this,
-        ATen.embedding(weight.value, input.value, 0L, false, false)
+        STen.owned(
+          ATen
+            .embedding(weight.value.value, input.value.value, 0L, false, false)
+        )(scope)
       )(scope)
     } catch {
       case e: Throwable =>

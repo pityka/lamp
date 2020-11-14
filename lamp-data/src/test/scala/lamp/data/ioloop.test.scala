@@ -3,14 +3,13 @@ package lamp.data
 import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
 import lamp.autograd.{const}
-import lamp.TensorHelpers
 import lamp.nn._
-import aten.ATen
 import aten.TensorOptions
 import lamp.CudaDevice
 import lamp.CPU
 import lamp.DoublePrecision
 import lamp.Scope
+import lamp.STen
 
 class IOLoopSuite extends AnyFunSuite {
   def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions)(
@@ -41,14 +40,16 @@ class IOLoopSuite extends AnyFunSuite {
         .right
         .get
       val x =
-        TensorHelpers.fromMat(data.filterIx(_ != "label").toMat, cuda)
-      val target = ATen.squeeze_0(
-        TensorHelpers.fromLongMat(
-          Mat(data.firstCol("label").toVec.map(_.toLong)),
-          cuda
-        )
-      )
-      val classWeights = ATen.ones(Array(10), x.options())
+        STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
+      val target =
+        STen
+          .fromLongMat(
+            Mat(data.firstCol("label").toVec.map(_.toLong)),
+            cuda
+          )
+          .squeeze
+
+      val classWeights = STen.ones(Array(10), x.options)
 
       val model = SupervisedModel(
         logisticRegression(
@@ -104,14 +105,16 @@ class IOLoopSuite extends AnyFunSuite {
         .right
         .get
       val x =
-        TensorHelpers.fromMat(data.filterIx(_ != "label").toMat, cuda)
-      val target = ATen.squeeze_0(
-        TensorHelpers.fromLongMat(
-          Mat(data.firstCol("label").toVec.map(_.toLong)),
-          cuda
-        )
-      )
-      val classWeights = ATen.ones(Array(10), x.options())
+        STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
+      val target =
+        STen
+          .fromLongMat(
+            Mat(data.firstCol("label").toVec.map(_.toLong)),
+            cuda
+          )
+          .squeeze
+
+      val classWeights = STen.ones(Array(10), x.options)
 
       val model = SupervisedModel(
         logisticRegression(
