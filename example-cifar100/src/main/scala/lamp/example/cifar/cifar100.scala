@@ -20,7 +20,6 @@ import lamp.nn.AdamW
 import lamp.nn.simple
 import lamp.nn.LossFunctions
 import lamp.data.BufferedImageHelper
-import lamp.nn.LearningRateSchedule
 
 import lamp.data.Reader
 import lamp.DoublePrecision
@@ -196,8 +195,7 @@ object Train extends App {
 
         val optimizer = AdamW.factory(
           weightDecay = simple(0.00),
-          learningRate = simple(config.learningRate),
-          scheduler = LearningRateSchedule.noop
+          learningRate = simple(config.learningRate)
         )
 
         IOLoops

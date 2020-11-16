@@ -254,7 +254,7 @@ object Umap {
             lossV.backprop()
             locations.partialDerivative
           }
-          optimizer.step(List(gradients))
+          optimizer.step(List(gradients), 1d)
         }
         i += 1
       }

@@ -22,9 +22,8 @@ class AdamWSuite extends AnyFunSuite {
         learningRate = simple(1d),
         weightDecay = simple(0.00),
         beta1 = simple(1d),
-        beta2 = simple(1d),
-        scheduler = _ => 1d
-      ).step(List(Some(gradients)))
+        beta2 = simple(1d)
+      ).step(List(Some(gradients)), 1d)
       val updatedParams = params.toMat
       assert(updatedParams == initParams)
     }
@@ -42,10 +41,10 @@ class AdamWSuite extends AnyFunSuite {
         beta2 = simple(0.9d),
         scheduler = _ => 1d
       )
-      opt.step(List(Some(gradients)))
+      opt.step(List(Some(gradients)), 1d)
       val updatedParams1 = params.toMat
       assert(updatedParams1 == Mat(Vec(0.9999990000002, 0.9999990000001333)).T)
-      opt.step(List(Some(gradients)))
+      opt.step(List(Some(gradients)), 1d)
       val updatedParams2 = params.toMat
       assert(
         updatedParams2 == Mat(Vec(0.9999969728373086, 0.999996902616711)).T
@@ -65,14 +64,14 @@ class AdamWSuite extends AnyFunSuite {
         beta2 = simple(0.9d),
         scheduler = _ => 1d
       )
-      opt.step(List(Some(gradients)))
+      opt.step(List(Some(gradients)), 1d)
       val updatedParams1 = params.toMat
       assert(
         updatedParams1.roundTo(10) == Mat(
           Vec(0.9999890000002, 0.9999890000001334)
         ).T.roundTo(10)
       )
-      opt.step(List(Some(gradients)))
+      opt.step(List(Some(gradients)), 1d)
       val updatedParams2 = params.toMat
       assert(
         updatedParams2.roundTo(10) == Mat(

@@ -74,7 +74,7 @@ class LogisticSuite extends AnyFunSuite {
         lastAccuracy = correct.mean2
         lastLoss = loss.value.toMat.raw(0)
         val gradients = model.gradients(loss)
-        optim.step(gradients)
+        optim.step(gradients, 1d)
         i += 1
       }
       assert(lastAccuracy > 0.6)

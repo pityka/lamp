@@ -25,12 +25,14 @@ object IOLoops {
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
-      returnDevice: Option[lamp.Device] = None
+      returnDevice: Option[lamp.Device] = None,
+      learningRateSchedule: LearningRateSchedule = LearningRateSchedule.noop
   ): IO[(Int, SupervisedModel[I, M])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
     def loop(
         epoch: Int,
+        lastValidationLoss: Option[Double],
         minValidationLoss: Option[Double],
         minValidationLossModel: Option[(Int, Seq[Tensor])]
     ): IO[(Int, SupervisedModel[I, M])] =
@@ -74,7 +76,9 @@ object IOLoops {
             trainBatchesOverEpoch(),
             trainingCallback,
             logger,
-            logFrequency
+            logFrequency,
+            learningRateSchedule
+              .factor(epoch = epoch, lastValidationLoss = lastValidationLoss)
           )
           _ <- if (checkpointFile.isDefined)
             writeCheckpoint(checkpointFile.get, model.module)
@@ -106,14 +110,15 @@ object IOLoops {
             else minValidationLossModel
           } else minValidationLossModel
           next <- loop(
-            epoch + 1,
-            nextMinValidationLoss,
-            nextMinValidationLossModel
+            epoch = epoch + 1,
+            lastValidationLoss = maybeValidationLoss,
+            minValidationLoss = nextMinValidationLoss,
+            minValidationLossModel = nextMinValidationLossModel
           )
         } yield next
       }
 
-    loop(0, None, None)
+    loop(0, None, None, None)
   }
 
   def oneEpoch[I, M <: GenericModule[I, Variable]](
@@ -121,7 +126,8 @@ object IOLoops {
       trainBatches: BatchStream[I],
       trainingCallback: TrainingCallback,
       logger: Option[Logger],
-      trainLogFrequency: Int
+      trainLogFrequency: Int,
+      learningRateScheduleFactor: Double
   ): IO[Unit] = {
 
     def loop(batchCount: Int): IO[Unit] = {
@@ -147,7 +153,9 @@ object IOLoops {
                     )
                   }
                 }
-                _ <- IO { model.optimizer.step(gradients) }
+                _ <- IO {
+                  model.optimizer.step(gradients, learningRateScheduleFactor)
+                }
               } yield ()
 
           }

@@ -50,7 +50,7 @@ case class AdamW(
     mt.foreach(_.release)
     vt.foreach(_.release)
   }
-  def step(gradients: Seq[Option[STen]]) = {
+  def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1
     parameters
@@ -81,7 +81,6 @@ case class AdamW(
           val vtcap = ATen.div_1(vt, 1d / (1 - math.pow(b2, stepCount)))
 
           // L11
-          val scheduleFactor = scheduler(stepCount)
 
           // L12
           ATen.sqrt_(vtcap)

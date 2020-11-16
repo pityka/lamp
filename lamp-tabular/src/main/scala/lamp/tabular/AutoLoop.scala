@@ -783,20 +783,20 @@ object AutoLoop {
           rng
         )
 
-      val batchesInEpoch = miniBatches._2
       val maxEpochs = epochs.max
 
       val modelWithOptimizer =
         SupervisedModel(model, lossFunction).zipOptimizer(
           AdamW.factory(
             weightDecay = simple(weightDecay),
-            learningRate = simple(learningRate),
-            scheduler = LearningRateSchedule.stepAfter(
-              steps = (maxEpochs * batchesInEpoch * 0.8).toLong,
-              factor = 0.1
-            )
+            learningRate = simple(learningRate)
           )
         )
+
+      val learningRateSchedule = LearningRateSchedule.stepAfter(
+        steps = (maxEpochs * 0.8).toLong,
+        factor = 0.1
+      )
 
       def batchStream = miniBatches._1
 
@@ -828,7 +828,8 @@ object AutoLoop {
               batchStream,
               trainingCallback,
               logger,
-              logFrequency
+              logFrequency,
+              learningRateSchedule.factor(epoch.toLong, None)
             )
             next <- loop(
               epoch + 1, {
