@@ -451,10 +451,42 @@
       </span>
       
       
-    </li><li name="lamp.STen#apply" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="apply[S](vs:Double*)(implicitevidence$10:lamp.Sc[S]):lamp.STen"></a><a id="apply[S](Double*)(Sc[S]):STen"></a>
+    </li><li name="lamp.STen#addcmulOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="addcmulOut(out:lamp.STen,self:lamp.STen,tensor1:lamp.STen,tensor2:lamp.STen,alpha:Double):Unit"></a><a id="addcmulOut(STen,STen,STen,STen,Double):Unit"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#apply[S](vs:Double*)(implicitevidence$10:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#addcmulOut(out:lamp.STen,self:lamp.STen,tensor1:lamp.STen,tensor2:lamp.STen,alpha:Double):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">addcmulOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="tensor1">tensor1: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="tensor2">tensor2: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="alpha">alpha: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#addmmOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="addmmOut(out:lamp.STen,self:lamp.STen,mat1:lamp.STen,mat2:lamp.STen,beta:Double,alpha:Double):Unit"></a><a id="addmmOut(STen,STen,STen,STen,Double,Double):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#addmmOut(out:lamp.STen,self:lamp.STen,mat1:lamp.STen,mat2:lamp.STen,beta:Double,alpha:Double):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">addmmOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="mat1">mat1: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="mat2">mat2: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="beta">beta: <span class="extype" name="scala.Double">Double</span></span>, <span name="alpha">alpha: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#apply" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="apply[S](vs:Double*)(implicitevidence$11:lamp.Sc[S]):lamp.STen"></a><a id="apply[S](Double*)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#apply[S](vs:Double*)(implicitevidence$11:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -468,9 +500,9 @@
       
       
     </li><li name="lamp.STen#arange" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="arange[S](start:Double,end:Double,step:Double,tensorOptions:aten.TensorOptions)(implicitevidence$19:lamp.Sc[S]):lamp.STen"></a><a id="arange[S](Double,Double,Double,TensorOptions)(Sc[S]):STen"></a>
+      <a id="arange[S](start:Double,end:Double,step:Double,tensorOptions:aten.TensorOptions)(implicitevidence$24:lamp.Sc[S]):lamp.STen"></a><a id="arange[S](Double,Double,Double,TensorOptions)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#arange[S](start:Double,end:Double,step:Double,tensorOptions:aten.TensorOptions)(implicitevidence$19:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#arange[S](start:Double,end:Double,step:Double,tensorOptions:aten.TensorOptions)(implicitevidence$24:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -499,10 +531,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.STen#cat" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="cat[S](tensors:Seq[lamp.STen],dim:Long)(implicitevidence$11:lamp.Sc[S]):lamp.STen"></a><a id="cat[S](Seq[STen],Long)(Sc[S]):STen"></a>
+    </li><li name="lamp.STen#bmmOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="bmmOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit"></a><a id="bmmOut(STen,STen,STen):Unit"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#cat[S](tensors:Seq[lamp.STen],dim:Long)(implicitevidence$11:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#bmmOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">bmmOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#cat" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="cat[S](tensors:Seq[lamp.STen],dim:Long)(implicitevidence$12:lamp.Sc[S]):lamp.STen"></a><a id="cat[S](Seq[STen],Long)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#cat[S](tensors:Seq[lamp.STen],dim:Long)(implicitevidence$12:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -512,6 +560,22 @@
       </span>
       <span class="symbol">
         <span class="name">cat</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="tensors">tensors: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="STen.html" class="extype" name="lamp.STen">STen</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.cat.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#catOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="catOut(out:lamp.STen,tensors:Seq[lamp.STen],dim:Int):Unit"></a><a id="catOut(STen,Seq[STen],Int):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#catOut(out:lamp.STen,tensors:Seq[lamp.STen],dim:Int):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">catOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="tensors">tensors: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="STen.html" class="extype" name="lamp.STen">STen</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       
       
@@ -539,6 +603,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.STen#divOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="divOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit"></a><a id="divOut(STen,STen,STen):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#divOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">divOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -572,9 +652,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.STen#eye" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="eye[S](n:Int,m:Int,tensorOptions:aten.TensorOptions)(implicitevidence$18:lamp.Sc[S]):lamp.STen"></a><a id="eye[S](Int,Int,TensorOptions)(Sc[S]):STen"></a>
+      <a id="eye[S](n:Int,m:Int,tensorOptions:aten.TensorOptions)(implicitevidence$23:lamp.Sc[S]):lamp.STen"></a><a id="eye[S](Int,Int,TensorOptions)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#eye[S](n:Int,m:Int,tensorOptions:aten.TensorOptions)(implicitevidence$18:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#eye[S](n:Int,m:Int,tensorOptions:aten.TensorOptions)(implicitevidence$23:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -588,9 +668,9 @@
       
       
     </li><li name="lamp.STen#eye" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="eye[S](n:Int,tensorOptions:aten.TensorOptions)(implicitevidence$17:lamp.Sc[S]):lamp.STen"></a><a id="eye[S](Int,TensorOptions)(Sc[S]):STen"></a>
+      <a id="eye[S](n:Int,tensorOptions:aten.TensorOptions)(implicitevidence$22:lamp.Sc[S]):lamp.STen"></a><a id="eye[S](Int,TensorOptions)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#eye[S](n:Int,tensorOptions:aten.TensorOptions)(implicitevidence$17:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#eye[S](n:Int,tensorOptions:aten.TensorOptions)(implicitevidence$22:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -641,10 +721,26 @@
       </span>
       
       
-    </li><li name="lamp.STen#fromLongMat" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fromLongMat[S](m:org.saddle.Mat[Long],cuda:Boolean)(implicitevidence$7:lamp.Sc[S]):lamp.STen"></a><a id="fromLongMat[S](Mat[Long],Boolean)(Sc[S]):STen"></a>
+    </li><li name="lamp.STen#fromFloatMat" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="fromFloatMat[S](m:org.saddle.Mat[Float],device:lamp.Device)(implicitevidence$4:lamp.Sc[S]):lamp.STen"></a><a id="fromFloatMat[S](Mat[Float],Device)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#fromLongMat[S](m:org.saddle.Mat[Long],cuda:Boolean)(implicitevidence$7:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#fromFloatMat[S](m:org.saddle.Mat[Float],device:lamp.Device)(implicitevidence$4:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">fromFloatMat</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="m">m: <span class="extype" name="org.saddle.Mat">Mat</span>[<span class="extype" name="scala.Float">Float</span>]</span>, <span name="device">device: <a href="Device.html" class="extype" name="lamp.Device">Device</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.fromFloatMat.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#fromLongMat" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="fromLongMat[S](m:org.saddle.Mat[Long],cuda:Boolean)(implicitevidence$8:lamp.Sc[S]):lamp.STen"></a><a id="fromLongMat[S](Mat[Long],Boolean)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#fromLongMat[S](m:org.saddle.Mat[Long],cuda:Boolean)(implicitevidence$8:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -658,9 +754,9 @@
       
       
     </li><li name="lamp.STen#fromLongMat" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fromLongMat[S](m:org.saddle.Mat[Long],device:lamp.Device)(implicitevidence$6:lamp.Sc[S]):lamp.STen"></a><a id="fromLongMat[S](Mat[Long],Device)(Sc[S]):STen"></a>
+      <a id="fromLongMat[S](m:org.saddle.Mat[Long],device:lamp.Device)(implicitevidence$7:lamp.Sc[S]):lamp.STen"></a><a id="fromLongMat[S](Mat[Long],Device)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#fromLongMat[S](m:org.saddle.Mat[Long],device:lamp.Device)(implicitevidence$6:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#fromLongMat[S](m:org.saddle.Mat[Long],device:lamp.Device)(implicitevidence$7:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -674,9 +770,9 @@
       
       
     </li><li name="lamp.STen#fromLongVec" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fromLongVec[S](m:org.saddle.Vec[Long],cuda:Boolean)(implicitevidence$9:lamp.Sc[S]):lamp.STen"></a><a id="fromLongVec[S](Vec[Long],Boolean)(Sc[S]):STen"></a>
+      <a id="fromLongVec[S](m:org.saddle.Vec[Long],cuda:Boolean)(implicitevidence$10:lamp.Sc[S]):lamp.STen"></a><a id="fromLongVec[S](Vec[Long],Boolean)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#fromLongVec[S](m:org.saddle.Vec[Long],cuda:Boolean)(implicitevidence$9:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#fromLongVec[S](m:org.saddle.Vec[Long],cuda:Boolean)(implicitevidence$10:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -690,9 +786,9 @@
       
       
     </li><li name="lamp.STen#fromLongVec" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fromLongVec[S](m:org.saddle.Vec[Long],device:lamp.Device)(implicitevidence$8:lamp.Sc[S]):lamp.STen"></a><a id="fromLongVec[S](Vec[Long],Device)(Sc[S]):STen"></a>
+      <a id="fromLongVec[S](m:org.saddle.Vec[Long],device:lamp.Device)(implicitevidence$9:lamp.Sc[S]):lamp.STen"></a><a id="fromLongVec[S](Vec[Long],Device)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#fromLongVec[S](m:org.saddle.Vec[Long],device:lamp.Device)(implicitevidence$8:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#fromLongVec[S](m:org.saddle.Vec[Long],device:lamp.Device)(implicitevidence$9:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -738,9 +834,9 @@
       
       
     </li><li name="lamp.STen#fromVec" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fromVec[S](m:org.saddle.Vec[Double],device:lamp.Device,precision:lamp.FloatingPointPrecision)(implicitevidence$5:lamp.Sc[S]):lamp.STen"></a><a id="fromVec[S](Vec[Double],Device,FloatingPointPrecision)(Sc[S]):STen"></a>
+      <a id="fromVec[S](m:org.saddle.Vec[Double],device:lamp.Device,precision:lamp.FloatingPointPrecision)(implicitevidence$6:lamp.Sc[S]):lamp.STen"></a><a id="fromVec[S](Vec[Double],Device,FloatingPointPrecision)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#fromVec[S](m:org.saddle.Vec[Double],device:lamp.Device,precision:lamp.FloatingPointPrecision)(implicitevidence$5:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#fromVec[S](m:org.saddle.Vec[Double],device:lamp.Device,precision:lamp.FloatingPointPrecision)(implicitevidence$6:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -754,9 +850,9 @@
       
       
     </li><li name="lamp.STen#fromVec" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fromVec[S](m:org.saddle.Vec[Double],cuda:Boolean)(implicitevidence$4:lamp.Sc[S]):lamp.STen"></a><a id="fromVec[S](Vec[Double],Boolean)(Sc[S]):STen"></a>
+      <a id="fromVec[S](m:org.saddle.Vec[Double],cuda:Boolean)(implicitevidence$5:lamp.Sc[S]):lamp.STen"></a><a id="fromVec[S](Vec[Double],Boolean)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#fromVec[S](m:org.saddle.Vec[Double],cuda:Boolean)(implicitevidence$4:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#fromVec[S](m:org.saddle.Vec[Double],cuda:Boolean)(implicitevidence$5:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -807,6 +903,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.STen#indexSelectOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="indexSelectOut(out:lamp.STen,self:lamp.STen,dim:Int,index:lamp.STen):Unit"></a><a id="indexSelectOut(STen,STen,Int,STen):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#indexSelectOut(out:lamp.STen,self:lamp.STen,dim:Int,index:lamp.STen):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">indexSelectOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="dim">dim: <span class="extype" name="scala.Int">Int</span></span>, <span name="index">index: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
@@ -823,10 +935,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.STen#linspace" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="linspace[S](start:Double,end:Double,steps:Long,tensorOptions:aten.TensorOptions)(implicitevidence$20:lamp.Sc[S]):lamp.STen"></a><a id="linspace[S](Double,Double,Long,TensorOptions)(Sc[S]):STen"></a>
+    </li><li name="lamp.STen#l1_loss_backward" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="l1_loss_backward[S](gradOutput:lamp.STen,self:lamp.STen,target:lamp.STen,reduction:Long)(implicitevidence$28:lamp.Sc[S]):lamp.STen"></a><a id="l1_loss_backward[S](STen,STen,STen,Long)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#linspace[S](start:Double,end:Double,steps:Long,tensorOptions:aten.TensorOptions)(implicitevidence$20:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#l1_loss_backward[S](gradOutput:lamp.STen,self:lamp.STen,target:lamp.STen,reduction:Long)(implicitevidence$28:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">l1_loss_backward</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="gradOutput">gradOutput: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="target">target: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.l1_loss_backward.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#linspace" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="linspace[S](start:Double,end:Double,steps:Long,tensorOptions:aten.TensorOptions)(implicitevidence$25:lamp.Sc[S]):lamp.STen"></a><a id="linspace[S](Double,Double,Long,TensorOptions)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#linspace[S](start:Double,end:Double,steps:Long,tensorOptions:aten.TensorOptions)(implicitevidence$25:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -836,6 +964,86 @@
       </span>
       <span class="symbol">
         <span class="name">linspace</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="start">start: <span class="extype" name="scala.Double">Double</span></span>, <span name="end">end: <span class="extype" name="scala.Double">Double</span></span>, <span name="steps">steps: <span class="extype" name="scala.Long">Long</span></span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.linspace.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#meanOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="meanOut(out:lamp.STen,self:lamp.STen,dim:Seq[Int],keepDim:Boolean):Unit"></a><a id="meanOut(STen,STen,Seq[Int],Boolean):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#meanOut(out:lamp.STen,self:lamp.STen,dim:Seq[Int],keepDim:Boolean):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">meanOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="dim">dim: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="keepDim">keepDim: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#mmOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="mmOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit"></a><a id="mmOut(STen,STen,STen):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#mmOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">mmOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#mse_loss" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="mse_loss[S](self:lamp.STen,target:lamp.STen,reduction:Long)(implicitevidence$30:lamp.Sc[S]):lamp.STen"></a><a id="mse_loss[S](STen,STen,Long)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#mse_loss[S](self:lamp.STen,target:lamp.STen,reduction:Long)(implicitevidence$30:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">mse_loss</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="target">target: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.mse_loss.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#mse_loss_backward" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="mse_loss_backward[S](gradOutput:lamp.STen,self:lamp.STen,target:lamp.STen,reduction:Long)(implicitevidence$29:lamp.Sc[S]):lamp.STen"></a><a id="mse_loss_backward[S](STen,STen,STen,Long)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#mse_loss_backward[S](gradOutput:lamp.STen,self:lamp.STen,target:lamp.STen,reduction:Long)(implicitevidence$29:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">mse_loss_backward</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="gradOutput">gradOutput: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="target">target: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.mse_loss_backward.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#mulOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="mulOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit"></a><a id="mulOut(STen,STen,STen):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#mulOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">mulOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       
       
@@ -855,6 +1063,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="lamp.STen#normal" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="normal[S](mean:Double,std:Double,size:Seq[Long],options:aten.TensorOptions)(implicitevidence$19:lamp.Sc[S]):lamp.STen"></a><a id="normal[S](Double,Double,Seq[Long],TensorOptions)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#normal[S](mean:Double,std:Double,size:Seq[Long],options:aten.TensorOptions)(implicitevidence$19:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">normal</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="mean">mean: <span class="extype" name="scala.Double">Double</span></span>, <span name="std">std: <span class="extype" name="scala.Double">Double</span></span>, <span name="size">size: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="options">options: <span class="extype" name="aten.TensorOptions">TensorOptions</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.normal.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#notify" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notify():Unit"></a>
       <span class="permalink">
@@ -894,9 +1118,9 @@
               
         </dd></dl></div>
     </li><li name="lamp.STen#ones" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ones[S](size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$12:lamp.Sc[S]):lamp.STen"></a><a id="ones[S](List[Int],TensorOptions)(Sc[S]):STen"></a>
+      <a id="ones[S](size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$15:lamp.Sc[S]):lamp.STen"></a><a id="ones[S](Seq[Long],TensorOptions)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#ones[S](size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$12:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#ones[S](size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$15:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -905,7 +1129,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">ones</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="size">size: <a href="../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.ones.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+        <span class="name">ones</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="size">size: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.ones.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
       </span>
       
       
@@ -925,10 +1149,10 @@
       </span>
       
       
-    </li><li name="lamp.STen#rand" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="rand[S](size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$14:lamp.Sc[S]):lamp.STen"></a><a id="rand[S](List[Int],TensorOptions)(Sc[S]):STen"></a>
+    </li><li name="lamp.STen#powOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="powOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit"></a><a id="powOut(STen,STen,STen):Unit"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#rand[S](size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$14:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#powOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -937,14 +1161,46 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">rand</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="size">size: <a href="../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.rand.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+        <span class="name">powOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#powOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="powOut(out:lamp.STen,self:lamp.STen,other:Double):Unit"></a><a id="powOut(STen,STen,Double):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#powOut(out:lamp.STen,self:lamp.STen,other:Double):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">powOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#rand" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="rand[S](size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$17:lamp.Sc[S]):lamp.STen"></a><a id="rand[S](Seq[Long],TensorOptions)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#rand[S](size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$17:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">rand</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="size">size: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.rand.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
       </span>
       
       
     </li><li name="lamp.STen#randint" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="randint[S](high:Long,size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$16:lamp.Sc[S]):lamp.STen"></a><a id="randint[S](Long,List[Int],TensorOptions)(Sc[S]):STen"></a>
+      <a id="randint[S](low:Long,high:Long,size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$21:lamp.Sc[S]):lamp.STen"></a><a id="randint[S](Long,Long,Seq[Long],TensorOptions)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#randint[S](high:Long,size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$16:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#randint[S](low:Long,high:Long,size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$21:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -953,14 +1209,30 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">randint</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="high">high: <span class="extype" name="scala.Long">Long</span></span>, <span name="size">size: <a href="../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.randint.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+        <span class="name">randint</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="low">low: <span class="extype" name="scala.Long">Long</span></span>, <span name="high">high: <span class="extype" name="scala.Long">Long</span></span>, <span name="size">size: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.randint.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#randint" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="randint[S](high:Long,size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$20:lamp.Sc[S]):lamp.STen"></a><a id="randint[S](Long,Seq[Long],TensorOptions)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#randint[S](high:Long,size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$20:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">randint</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="high">high: <span class="extype" name="scala.Long">Long</span></span>, <span name="size">size: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.randint.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
       </span>
       
       
     </li><li name="lamp.STen#randn" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="randn[S](size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$15:lamp.Sc[S]):lamp.STen"></a><a id="randn[S](List[Int],TensorOptions)(Sc[S]):STen"></a>
+      <a id="randn[S](size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$18:lamp.Sc[S]):lamp.STen"></a><a id="randn[S](Seq[Long],TensorOptions)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#randn[S](size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$15:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#randn[S](size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$18:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -969,7 +1241,135 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">randn</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="size">size: <a href="../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.randn.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+        <span class="name">randn</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="size">size: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.randn.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#remainderOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="remainderOut(out:lamp.STen,self:lamp.STen,other:Double):Unit"></a><a id="remainderOut(STen,STen,Double):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#remainderOut(out:lamp.STen,self:lamp.STen,other:Double):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">remainderOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#remainderOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="remainderOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit"></a><a id="remainderOut(STen,STen,STen):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#remainderOut(out:lamp.STen,self:lamp.STen,other:lamp.STen):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">remainderOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#scalarDouble" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="scalarDouble[S](value:Double,options:aten.TensorOptions)(implicitevidence$14:lamp.Sc[S]):lamp.STen"></a><a id="scalarDouble[S](Double,TensorOptions)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#scalarDouble[S](value:Double,options:aten.TensorOptions)(implicitevidence$14:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">scalarDouble</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="value">value: <span class="extype" name="scala.Double">Double</span></span>, <span name="options">options: <span class="extype" name="aten.TensorOptions">TensorOptions</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.scalarDouble.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#scalarLong" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="scalarLong(value:Long,options:aten.TensorOptions)(implicitscope:lamp.Scope):lamp.STen"></a><a id="scalarLong(Long,TensorOptions)(Scope):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#scalarLong(value:Long,options:aten.TensorOptions)(implicitscope:lamp.Scope):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">scalarLong</span><span class="params">(<span name="value">value: <span class="extype" name="scala.Long">Long</span></span>, <span name="options">options: <span class="extype" name="aten.TensorOptions">TensorOptions</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="scope">scope: <a href="Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#sparse_coo" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="sparse_coo[S](indices:lamp.STen,values:lamp.STen,dim:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$26:lamp.Sc[S]):lamp.STen"></a><a id="sparse_coo[S](STen,STen,Seq[Long],TensorOptions)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#sparse_coo[S](indices:lamp.STen,values:lamp.STen,dim:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$26:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">sparse_coo</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="indices">indices: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="values">values: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="dim">dim: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.sparse_coo.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#stack" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="stack[S](tensors:Seq[lamp.STen],dim:Long)(implicitevidence$13:lamp.Sc[S]):lamp.STen"></a><a id="stack[S](Seq[STen],Long)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#stack[S](tensors:Seq[lamp.STen],dim:Long)(implicitevidence$13:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">stack</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="tensors">tensors: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="STen.html" class="extype" name="lamp.STen">STen</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.stack.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#subOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="subOut(out:lamp.STen,self:lamp.STen,other:lamp.STen,alpha:Double):Unit"></a><a id="subOut(STen,STen,STen,Double):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#subOut(out:lamp.STen,self:lamp.STen,other:lamp.STen,alpha:Double):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">subOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="alpha">alpha: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#sumOut" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="sumOut(out:lamp.STen,self:lamp.STen,dim:Seq[Int],keepDim:Boolean):Unit"></a><a id="sumOut(STen,STen,Seq[Int],Boolean):Unit"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#sumOut(out:lamp.STen,self:lamp.STen,dim:Seq[Int],keepDim:Boolean):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">sumOut</span><span class="params">(<span name="out">out: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="dim">dim: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="keepDim">keepDim: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       
       
@@ -989,6 +1389,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="lamp.STen#tanh_backward" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="tanh_backward[S](gradOutput:lamp.STen,output:lamp.STen)(implicitevidence$27:lamp.Sc[S]):lamp.STen"></a><a id="tanh_backward[S](STen,STen)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#tanh_backward[S](gradOutput:lamp.STen,output:lamp.STen)(implicitevidence$27:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">tanh_backward</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="gradOutput">gradOutput: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="output">output: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.tanh_backward.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#toString" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="toString():String"></a>
       <span class="permalink">
@@ -1073,10 +1489,10 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.STen#zeroInplace" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="zeroInplace(self:lamp.STen):Unit"></a><a id="zeroInplace(STen):Unit"></a>
+    </li><li name="lamp.STen#where" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="where[S](condition:aten.Tensor,self:lamp.STen,other:lamp.STen)(implicitevidence$32:lamp.Sc[S]):lamp.STen"></a><a id="where[S](Tensor,STen,STen)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#zeroInplace(self:lamp.STen):Unit" title="Permalink">
+      <a href="../lamp/STen$.html#where[S](condition:aten.Tensor,self:lamp.STen,other:lamp.STen)(implicitevidence$32:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1085,14 +1501,30 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">zeroInplace</span><span class="params">(<span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+        <span class="name">where</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="condition">condition: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.where.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+      </span>
+      
+      
+    </li><li name="lamp.STen#where" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="where[S](condition:lamp.STen,self:lamp.STen,other:lamp.STen)(implicitevidence$31:lamp.Sc[S]):lamp.STen"></a><a id="where[S](STen,STen,STen)(Sc[S]):STen"></a>
+      <span class="permalink">
+      <a href="../lamp/STen$.html#where[S](condition:lamp.STen,self:lamp.STen,other:lamp.STen)(implicitevidence$31:lamp.Sc[S]):lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">where</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="condition">condition: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="self">self: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="other">other: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.where.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
       </span>
       
       
     </li><li name="lamp.STen#zeros" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="zeros[S](size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$13:lamp.Sc[S]):lamp.STen"></a><a id="zeros[S](List[Int],TensorOptions)(Sc[S]):STen"></a>
+      <a id="zeros[S](size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$16:lamp.Sc[S]):lamp.STen"></a><a id="zeros[S](Seq[Long],TensorOptions)(Sc[S]):STen"></a>
       <span class="permalink">
-      <a href="../lamp/STen$.html#zeros[S](size:List[Int],tensorOptions:aten.TensorOptions)(implicitevidence$13:lamp.Sc[S]):lamp.STen" title="Permalink">
+      <a href="../lamp/STen$.html#zeros[S](size:Seq[Long],tensorOptions:aten.TensorOptions)(implicitevidence$16:lamp.Sc[S]):lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1101,7 +1533,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">zeros</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="size">size: <a href="../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.zeros.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
+        <span class="name">zeros</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="size">size: <a href="../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="tensorOptions">tensorOptions: <span class="extype" name="aten.TensorOptions">TensorOptions</span> = <span class="symbol">TensorOptions.d</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.STen.zeros.S">S</span>]</span>)</span><span class="result">: <a href="STen.html" class="extype" name="lamp.STen">STen</a></span>
       </span>
       
       

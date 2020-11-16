@@ -166,7 +166,7 @@
                         <a class="class" href="GenericFun.html" title=""></a>
                         <a href="GenericFun.html" title="">GenericFun</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="GenericModule$.html" title=""></a>
                         <a class="trait" href="GenericModule.html" title=""></a>
                         <a href="GenericModule.html" title="">GenericModule</a>
                       </li><li class="current-entities indented2">
@@ -190,9 +190,9 @@
                         <a class="trait" href="LeafTag.html" title=""></a>
                         <a href="LeafTag.html" title="">LeafTag</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
                         <a class="object" href="LearningRateSchedule$.html" title=""></a>
-                        <a href="LearningRateSchedule$.html" title="">LearningRateSchedule</a>
+                        <a class="trait" href="LearningRateSchedule.html" title=""></a>
+                        <a href="LearningRateSchedule.html" title="">LearningRateSchedule</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="LiftedModule$.html" title=""></a>
                         <a class="class" href="LiftedModule.html" title=""></a>
@@ -246,7 +246,7 @@
                         <a class="trait" href="OptimizerHyperparameter.html" title=""></a>
                         <a href="OptimizerHyperparameter.html" title="">OptimizerHyperparameter</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="PTag$.html" title=""></a>
                         <a class="trait" href="PTag.html" title=""></a>
                         <a href="PTag.html" title="">PTag</a>
                       </li><li class="current-entities indented2">
@@ -394,7 +394,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">SGDW</span><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<span class="extype" name="aten.Tensor">Tensor</span>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="momentum">momentum: <span class="extype" name="scala.Option">Option</span>[<a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="scheduler">scheduler: (<span class="extype" name="scala.Long">Long</span>) ⇒ <span class="extype" name="scala.Double">Double</span> = <span class="symbol">_ =&gt; 1d</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">SGDW</span><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="momentum">momentum: <span class="extype" name="scala.Option">Option</span>[<a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="scheduler">scheduler: (<span class="extype" name="scala.Long">Long</span>) ⇒ <span class="extype" name="scala.Double">Double</span> = <span class="symbol">_ =&gt; 1d</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -450,9 +450,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.SGDW#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(parameters:Seq[(aten.Tensor,lamp.nn.PTag)],learningRate:lamp.nn.OptimizerHyperparameter,weightDecay:lamp.nn.OptimizerHyperparameter,momentum:Option[lamp.nn.OptimizerHyperparameter],scheduler:Long=&gt;Double,clip:Option[Double]):lamp.nn.SGDW"></a><a id="&lt;init&gt;:SGDW"></a>
+      <a id="&lt;init&gt;(parameters:Seq[(lamp.STen,lamp.nn.PTag)],learningRate:lamp.nn.OptimizerHyperparameter,weightDecay:lamp.nn.OptimizerHyperparameter,momentum:Option[lamp.nn.OptimizerHyperparameter],scheduler:Long=&gt;Double,clip:Option[Double]):lamp.nn.SGDW"></a><a id="&lt;init&gt;:SGDW"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/SGDW.html#&lt;init&gt;(parameters:Seq[(aten.Tensor,lamp.nn.PTag)],learningRate:lamp.nn.OptimizerHyperparameter,weightDecay:lamp.nn.OptimizerHyperparameter,momentum:Option[lamp.nn.OptimizerHyperparameter],scheduler:Long=&gt;Double,clip:Option[Double]):lamp.nn.SGDW" title="Permalink">
+      <a href="../../lamp/nn/SGDW.html#&lt;init&gt;(parameters:Seq[(lamp.STen,lamp.nn.PTag)],learningRate:lamp.nn.OptimizerHyperparameter,weightDecay:lamp.nn.OptimizerHyperparameter,momentum:Option[lamp.nn.OptimizerHyperparameter],scheduler:Long=&gt;Double,clip:Option[Double]):lamp.nn.SGDW" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -461,7 +461,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">SGDW</span><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<span class="extype" name="aten.Tensor">Tensor</span>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="momentum">momentum: <span class="extype" name="scala.Option">Option</span>[<a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="scheduler">scheduler: (<span class="extype" name="scala.Long">Long</span>) ⇒ <span class="extype" name="scala.Double">Double</span> = <span class="symbol">_ =&gt; 1d</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span>
+        <span class="name">SGDW</span><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="momentum">momentum: <span class="extype" name="scala.Option">Option</span>[<a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="scheduler">scheduler: (<span class="extype" name="scala.Long">Long</span>) ⇒ <span class="extype" name="scala.Double">Double</span> = <span class="symbol">_ =&gt; 1d</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span>
       </span>
       
       
@@ -739,9 +739,9 @@
               
         </dd></dl></div>
     </li><li name="lamp.nn.SGDW#parameters" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="parameters:Seq[(aten.Tensor,lamp.nn.PTag)]"></a><a id="parameters:Seq[(Tensor,PTag)]"></a>
+      <a id="parameters:Seq[(lamp.STen,lamp.nn.PTag)]"></a><a id="parameters:Seq[(STen,PTag)]"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/SGDW.html#parameters:Seq[(aten.Tensor,lamp.nn.PTag)]" title="Permalink">
+      <a href="../../lamp/nn/SGDW.html#parameters:Seq[(lamp.STen,lamp.nn.PTag)]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -750,7 +750,7 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">parameters</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<span class="extype" name="aten.Tensor">Tensor</span>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
+        <span class="name">parameters</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
       </span>
       
       
@@ -787,9 +787,9 @@
       
       
     </li><li name="lamp.nn.SGDW#step" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="step(gradients:Seq[Option[aten.Tensor]]):Unit"></a><a id="step(Seq[Option[Tensor]]):Unit"></a>
+      <a id="step(gradients:Seq[Option[lamp.STen]],scheduleFactor:Double):Unit"></a><a id="step(Seq[Option[STen]],Double):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/SGDW.html#step(gradients:Seq[Option[aten.Tensor]]):Unit" title="Permalink">
+      <a href="../../lamp/nn/SGDW.html#step(gradients:Seq[Option[lamp.STen]],scheduleFactor:Double):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -798,7 +798,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">step</span><span class="params">(<span name="gradients">gradients: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Option">Option</span>[<span class="extype" name="aten.Tensor">Tensor</span>]]</span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+        <span class="name">step</span><span class="params">(<span name="gradients">gradients: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Option">Option</span>[<a href="../STen.html" class="extype" name="lamp.STen">STen</a>]]</span>, <span name="scheduleFactor">scheduleFactor: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.nn.SGDW">SGDW</a> → <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a></dd></dl></div>

@@ -291,9 +291,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
     </li><li name="lamp.data.GraphBatchStream#bigGraphModeFullBatch" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="bigGraphModeFullBatch(nodes:aten.Tensor,edges:aten.Tensor,targetPerNode:aten.Tensor):lamp.data.BatchStream[(lamp.autograd.Variable,lamp.autograd.Variable)]"></a><a id="bigGraphModeFullBatch(Tensor,Tensor,Tensor):BatchStream[(Variable,Variable)]"></a>
+      <a id="bigGraphModeFullBatch(nodes:lamp.STen,edges:lamp.STen,targetPerNode:lamp.STen):lamp.data.BatchStream[(lamp.autograd.Variable,lamp.autograd.Variable)]"></a><a id="bigGraphModeFullBatch(STen,STen,STen):BatchStream[(Variable,Variable)]"></a>
       <span class="permalink">
-      <a href="../../lamp/data/GraphBatchStream$.html#bigGraphModeFullBatch(nodes:aten.Tensor,edges:aten.Tensor,targetPerNode:aten.Tensor):lamp.data.BatchStream[(lamp.autograd.Variable,lamp.autograd.Variable)]" title="Permalink">
+      <a href="../../lamp/data/GraphBatchStream$.html#bigGraphModeFullBatch(nodes:lamp.STen,edges:lamp.STen,targetPerNode:lamp.STen):lamp.data.BatchStream[(lamp.autograd.Variable,lamp.autograd.Variable)]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -302,7 +302,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">bigGraphModeFullBatch</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="edges">edges: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="targetPerNode">targetPerNode: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="result">: <a href="BatchStream.html" class="extype" name="lamp.data.BatchStream">BatchStream</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>)]</span>
+        <span class="name">bigGraphModeFullBatch</span><span class="params">(<span name="nodes">nodes: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="edges">edges: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="targetPerNode">targetPerNode: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result">: <a href="BatchStream.html" class="extype" name="lamp.data.BatchStream">BatchStream</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>)]</span>
       </span>
       
       <p class="shortcomment cmt">Forms full batches of one big graph.</p><div class="fullcomment"><div class="comment cmt"><p>Forms full batches of one big graph. Target is on node level</p><p>Returns a pair of node features, edge list
@@ -494,9 +494,9 @@
               
         </dd></dl></div>
     </li><li name="lamp.data.GraphBatchStream#smallGraphMode" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="smallGraphMode(minibatchSize:Int,graphNodesAndEdges:org.saddle.Vec[(aten.Tensor,aten.Tensor)],targetPerGraph:aten.Tensor,device:lamp.Device,rng:Option[org.saddle.spire.random.Generator]):lamp.data.BatchStream[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable)]"></a><a id="smallGraphMode(Int,Vec[(Tensor,Tensor)],Tensor,Device,Option[Generator]):BatchStream[(Variable,Variable,Variable)]"></a>
+      <a id="smallGraphMode(minibatchSize:Int,graphNodesAndEdges:org.saddle.Vec[(lamp.STen,lamp.STen)],targetPerGraph:lamp.STen,device:lamp.Device,rng:Option[org.saddle.spire.random.Generator]):lamp.data.BatchStream[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable)]"></a><a id="smallGraphMode(Int,Vec[(STen,STen)],STen,Device,Option[Generator]):BatchStream[(Variable,Variable,Variable)]"></a>
       <span class="permalink">
-      <a href="../../lamp/data/GraphBatchStream$.html#smallGraphMode(minibatchSize:Int,graphNodesAndEdges:org.saddle.Vec[(aten.Tensor,aten.Tensor)],targetPerGraph:aten.Tensor,device:lamp.Device,rng:Option[org.saddle.spire.random.Generator]):lamp.data.BatchStream[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable)]" title="Permalink">
+      <a href="../../lamp/data/GraphBatchStream$.html#smallGraphMode(minibatchSize:Int,graphNodesAndEdges:org.saddle.Vec[(lamp.STen,lamp.STen)],targetPerGraph:lamp.STen,device:lamp.Device,rng:Option[org.saddle.spire.random.Generator]):lamp.data.BatchStream[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable)]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -505,7 +505,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">smallGraphMode</span><span class="params">(<span name="minibatchSize">minibatchSize: <span class="extype" name="scala.Int">Int</span></span>, <span name="graphNodesAndEdges">graphNodesAndEdges: <span class="extype" name="org.saddle.Vec">Vec</span>[(<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>)]</span>, <span name="targetPerGraph">targetPerGraph: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="device">device: <a href="../Device.html" class="extype" name="lamp.Device">Device</a></span>, <span name="rng">rng: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="org.saddle.spire.random.Generator">Generator</span>]</span>)</span><span class="result">: <a href="BatchStream.html" class="extype" name="lamp.data.BatchStream">BatchStream</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>)]</span>
+        <span class="name">smallGraphMode</span><span class="params">(<span name="minibatchSize">minibatchSize: <span class="extype" name="scala.Int">Int</span></span>, <span name="graphNodesAndEdges">graphNodesAndEdges: <span class="extype" name="org.saddle.Vec">Vec</span>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>)]</span>, <span name="targetPerGraph">targetPerGraph: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="device">device: <a href="../Device.html" class="extype" name="lamp.Device">Device</a></span>, <span name="rng">rng: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="org.saddle.spire.random.Generator">Generator</span>]</span>)</span><span class="result">: <a href="BatchStream.html" class="extype" name="lamp.data.BatchStream">BatchStream</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>)]</span>
       </span>
       
       <p class="shortcomment cmt">Forms minibatches from multiple small graphs.</p><div class="fullcomment"><div class="comment cmt"><p>Forms minibatches from multiple small graphs. Assumes target is graph level.</p><p>Returns a triple of node features, edge list, graph indices

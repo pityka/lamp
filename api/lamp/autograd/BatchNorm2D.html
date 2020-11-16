@@ -167,8 +167,16 @@
                         <a href="ConstMult.html" title="">ConstMult</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="Constant.html" title=""></a>
+                        <a class="trait" href="Constant.html" title=""></a>
                         <a href="Constant.html" title="">Constant</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="ConstantWithGrad$.html" title=""></a>
+                        <a class="class" href="ConstantWithGrad.html" title=""></a>
+                        <a href="ConstantWithGrad.html" title="">ConstantWithGrad</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="ConstantWithoutGrad$.html" title=""></a>
+                        <a class="class" href="ConstantWithoutGrad.html" title=""></a>
+                        <a href="ConstantWithoutGrad.html" title="">ConstantWithoutGrad</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Conv1D.html" title="1D convolution"></a>
@@ -351,8 +359,12 @@
                         <a href="Transpose.html" title="">Transpose</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Variable$.html" title=""></a>
-                        <a class="class" href="Variable.html" title=""></a>
+                        <a class="trait" href="Variable.html" title=""></a>
                         <a href="Variable.html" title="">Variable</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="VariableNonConstant$.html" title=""></a>
+                        <a class="class" href="VariableNonConstant.html" title=""></a>
+                        <a href="VariableNonConstant.html" title="">VariableNonConstant</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Variance.html" title=""></a>
@@ -385,10 +397,10 @@
       <h4 id="signature" class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">case class</span>
+        <span class="kind">class</span>
       </span>
       <span class="symbol">
-        <span class="name">BatchNorm2D</span><span class="tparams">[<span name="s">s</span>]</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="runningMean">runningMean: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="runningVar">runningVar: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="training">training: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="momentum">momentum: <span class="extype" name="scala.Double">Double</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="evidence$60">evidence$60: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.BatchNorm2D.s">s</span>]</span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">BatchNorm2D</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
       </span>
       </h4>
 
@@ -399,7 +411,7 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a>, <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a>, <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -425,7 +437,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.autograd.BatchNorm2D"><span>BatchNorm2D</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.autograd.Op"><span>Op</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.autograd.BatchNorm2D"><span>BatchNorm2D</span></li><li class="in" name="lamp.autograd.Op"><span>Op</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -446,9 +458,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.autograd.BatchNorm2D#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(input:lamp.autograd.Variable,weight:lamp.autograd.Variable,bias:lamp.autograd.Variable,runningMean:aten.Tensor,runningVar:aten.Tensor,training:Boolean,momentum:Double,eps:Double)(implicitevidence$60:lamp.Sc[s]):lamp.autograd.BatchNorm2D[s]"></a><a id="&lt;init&gt;:BatchNorm2D[s]"></a>
+      <a id="&lt;init&gt;(scope:lamp.Scope,input:lamp.autograd.Variable,weight:lamp.autograd.Variable,bias:lamp.autograd.Variable,runningMean:lamp.STen,runningVar:lamp.STen,training:Boolean,momentum:Double,eps:Double):lamp.autograd.BatchNorm2D"></a><a id="&lt;init&gt;:BatchNorm2D"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#&lt;init&gt;(input:lamp.autograd.Variable,weight:lamp.autograd.Variable,bias:lamp.autograd.Variable,runningMean:aten.Tensor,runningVar:aten.Tensor,training:Boolean,momentum:Double,eps:Double)(implicitevidence$60:lamp.Sc[s]):lamp.autograd.BatchNorm2D[s]" title="Permalink">
+      <a href="../../lamp/autograd/BatchNorm2D.html#&lt;init&gt;(scope:lamp.Scope,input:lamp.autograd.Variable,weight:lamp.autograd.Variable,bias:lamp.autograd.Variable,runningMean:lamp.STen,runningVar:lamp.STen,training:Boolean,momentum:Double,eps:Double):lamp.autograd.BatchNorm2D" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -457,7 +469,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">BatchNorm2D</span><span class="params">(<span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="runningMean">runningMean: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="runningVar">runningVar: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="training">training: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="momentum">momentum: <span class="extype" name="scala.Double">Double</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.BatchNorm2D.s">s</span>]</span>)</span>
+        <span class="name">BatchNorm2D</span><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="runningMean">runningMean: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="runningVar">runningVar: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="training">training: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="momentum">momentum: <span class="extype" name="scala.Double">Double</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span></span>)</span>
       </span>
       
       
@@ -535,22 +547,6 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.autograd.BatchNorm2D#bias" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="bias:lamp.autograd.Variable"></a><a id="bias:Variable"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#bias:lamp.autograd.Variable" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">bias</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#clone" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a><a id="clone():AnyRef"></a>
       <span class="permalink">
@@ -575,22 +571,6 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.autograd.BatchNorm2D#eps" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="eps:Double"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#eps:Double" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">eps</span><span class="result">: <span class="extype" name="scala.Double">Double</span></span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -607,6 +587,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="scala.AnyRef#equals" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="equals(x$1:Any):Boolean"></a><a id="equals(Any):Boolean"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/BatchNorm2D.html#equals(x$1:Any):Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">equals</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.autograd.BatchNorm2D#expectedShape" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="expectedShape:List[Long]"></a>
       <span class="permalink">
@@ -664,22 +660,25 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.autograd.BatchNorm2D#input" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="input:lamp.autograd.Variable"></a><a id="input:Variable"></a>
+    </li><li name="scala.AnyRef#hashCode" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hashCode():Int"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#input:lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/BatchNorm2D.html#hashCode():Int" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">val</span>
+        <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">input</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">hashCode</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
       </span>
       
-      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd><dt>Annotations</dt><dd>
+                <span class="name">@native</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li><li name="lamp.autograd.BatchNorm2D#inputShape" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="inputShape:List[Long]"></a>
       <span class="permalink">
@@ -692,7 +691,7 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">inputShape</span><span class="result">: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Long">Long</span>]</span>
+        <span class="name">inputShape</span><span class="result">: <span class="extype" name="scala.collection.immutable.List">List</span>[<span class="extype" name="scala.Long">Long</span>]</span>
       </span>
       
       
@@ -712,22 +711,6 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.autograd.BatchNorm2D#momentum" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="momentum:Double"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#momentum:Double" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">momentum</span><span class="result">: <span class="extype" name="scala.Double">Double</span></span>
-      </span>
-      
-      
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -799,9 +782,9 @@
       
       
     </li><li name="lamp.autograd.BatchNorm2D#params" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="params:List[(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)]"></a><a id="params:List[(Variable,(Tensor,Tensor)⇒Unit)]"></a>
+      <a id="params:List[(lamp.autograd.Variable,(lamp.STen,lamp.STen)=&gt;Unit)]"></a><a id="params:List[(Variable,(STen,STen)⇒Unit)]"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#params:List[(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)]" title="Permalink">
+      <a href="../../lamp/autograd/BatchNorm2D.html#params:List[(lamp.autograd.Variable,(lamp.STen,lamp.STen)=&gt;Unit)]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -810,42 +793,10 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">params</span><span class="result">: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[(<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)]</span>
+        <span class="name">params</span><span class="result">: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[(<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, (<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)]</span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.BatchNorm2D">BatchNorm2D</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
-    </li><li name="lamp.autograd.BatchNorm2D#runningMean" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="runningMean:aten.Tensor"></a><a id="runningMean:Tensor"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#runningMean:aten.Tensor" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">runningMean</span><span class="result">: <span class="extype" name="aten.Tensor">Tensor</span></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.BatchNorm2D#runningVar" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="runningVar:aten.Tensor"></a><a id="runningVar:Tensor"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#runningVar:aten.Tensor" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">runningVar</span><span class="result">: <span class="extype" name="aten.Tensor">Tensor</span></span>
-      </span>
-      
-      
     </li><li name="lamp.autograd.BatchNorm2D#saveInvstd" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="saveInvstd:aten.Tensor"></a><a id="saveInvstd:Tensor"></a>
       <span class="permalink">
@@ -894,22 +845,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="lamp.autograd.BatchNorm2D#training" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="training:Boolean"></a>
+    </li><li name="scala.AnyRef#toString" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="toString():String"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#training:Boolean" title="Permalink">
+      <a href="../../lamp/autograd/BatchNorm2D.html#toString():String" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">val</span>
+        <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">training</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+        <span class="name">toString</span><span class="params">()</span><span class="result">: <span class="extype" name="java.lang.String">String</span></span>
       </span>
       
-      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.autograd.BatchNorm2D#value" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="value:lamp.autograd.Variable"></a><a id="value:Variable"></a>
       <span class="permalink">
@@ -994,22 +945,6 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.autograd.BatchNorm2D#weight" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="weight:lamp.autograd.Variable"></a><a id="weight:Variable"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/BatchNorm2D.html#weight:lamp.autograd.Variable" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">weight</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
-      </span>
-      
-      
     </li>
               </ol>
             </div>
@@ -1020,15 +955,7 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="scala.Serializable">
-              <h3>Inherited from <span class="extype" name="scala.Serializable">Serializable</span></h3>
-            </div><div class="parent" name="java.io.Serializable">
-              <h3>Inherited from <span class="extype" name="java.io.Serializable">Serializable</span></h3>
-            </div><div class="parent" name="scala.Product">
-              <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
-            </div><div class="parent" name="scala.Equals">
-              <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
-            </div><div class="parent" name="lamp.autograd.Op">
+        <div class="parent" name="lamp.autograd.Op">
               <h3>Inherited from <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></h3>
             </div><div class="parent" name="scala.AnyRef">
               <h3>Inherited from <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></h3>

@@ -156,7 +156,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">SequenceNLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">SequenceNLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -215,9 +215,9 @@ The returned loss is averaged over the batch and the time steps
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.LossFunctions.SequenceNLL#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor,ignore:Long):lamp.nn.LossFunctions.SequenceNLL"></a><a id="&lt;init&gt;:SequenceNLL"></a>
+      <a id="&lt;init&gt;(numClasses:Int,classWeights:lamp.STen,ignore:Long):lamp.nn.LossFunctions.SequenceNLL"></a><a id="&lt;init&gt;:SequenceNLL"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#&lt;init&gt;(numClasses:Int,classWeights:aten.Tensor,ignore:Long):lamp.nn.LossFunctions.SequenceNLL" title="Permalink">
+      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#&lt;init&gt;(numClasses:Int,classWeights:lamp.STen,ignore:Long):lamp.nn.LossFunctions.SequenceNLL" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -226,7 +226,7 @@ The returned loss is averaged over the batch and the time steps
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">SequenceNLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span>
+        <span class="name">SequenceNLL</span><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span>
       </span>
       
       
@@ -289,9 +289,9 @@ The returned loss is averaged over the batch and the time steps
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.nn.LossFunctions.SequenceNLL#apply" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="apply[S](out:lamp.autograd.Variable,target:aten.Tensor)(implicitevidence$5:lamp.Sc[S]):(lamp.autograd.Variable,Long)"></a><a id="apply[S](Variable,Tensor)(Sc[S]):(Variable,Long)"></a>
+      <a id="apply[S](out:lamp.autograd.Variable,target:lamp.STen)(implicitevidence$5:lamp.Sc[S]):(lamp.autograd.Variable,Long)"></a><a id="apply[S](Variable,STen)(Sc[S]):(Variable,Long)"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#apply[S](out:lamp.autograd.Variable,target:aten.Tensor)(implicitevidence$5:lamp.Sc[S]):(lamp.autograd.Variable,Long)" title="Permalink">
+      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#apply[S](out:lamp.autograd.Variable,target:lamp.STen)(implicitevidence$5:lamp.Sc[S]):(lamp.autograd.Variable,Long)" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -300,7 +300,7 @@ The returned loss is averaged over the batch and the time steps
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">apply</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="out">out: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.nn.LossFunctions.SequenceNLL.apply.S">S</span>]</span>)</span><span class="result">: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="scala.Long">Long</span>)</span>
+        <span class="name">apply</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="out">out: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.nn.LossFunctions.SequenceNLL.apply.S">S</span>]</span>)</span><span class="result">: (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <span class="extype" name="scala.Long">Long</span>)</span>
       </span>
       
       <p class="shortcomment cmt">Returns the loss averaged over examples and the number of examples
@@ -323,9 +323,9 @@ The returned loss is averaged over the batch and the time steps
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
     </li><li name="lamp.nn.LossFunctions.SequenceNLL#classWeights" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="classWeights:aten.Tensor"></a><a id="classWeights:Tensor"></a>
+      <a id="classWeights:lamp.STen"></a><a id="classWeights:STen"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#classWeights:aten.Tensor" title="Permalink">
+      <a href="../../lamp/nn/LossFunctions$$SequenceNLL.html#classWeights:lamp.STen" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -334,7 +334,7 @@ The returned loss is averaged over the batch and the time steps
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">classWeights</span><span class="result">: <span class="extype" name="aten.Tensor">Tensor</span></span>
+        <span class="name">classWeights</span><span class="result">: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>
       </span>
       
       

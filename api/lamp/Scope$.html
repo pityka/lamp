@@ -417,9 +417,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.Scope#apply" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="apply[A](op:lamp.Scope=&gt;A)(implicitevidence$13:lamp.Movable[A],implicitparent:lamp.Scope):A"></a><a id="apply[A]((Scope)⇒A)(Movable[A],Scope):A"></a>
+      <a id="apply[A](op:lamp.Scope=&gt;A)(implicitevidence$29:lamp.Movable[A],implicitparent:lamp.Scope):A"></a><a id="apply[A]((Scope)⇒A)(Movable[A],Scope):A"></a>
       <span class="permalink">
-      <a href="../lamp/Scope$.html#apply[A](op:lamp.Scope=&gt;A)(implicitevidence$13:lamp.Movable[A],implicitparent:lamp.Scope):A" title="Permalink">
+      <a href="../lamp/Scope$.html#apply[A](op:lamp.Scope=&gt;A)(implicitevidence$29:lamp.Movable[A],implicitparent:lamp.Scope):A" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -449,9 +449,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
     </li><li name="lamp.Scope#bracket" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="bracket[A](use:lamp.Scope=&gt;cats.effect.IO[A])(implicitevidence$12:lamp.Movable[A],implicitparent:lamp.Scope):cats.effect.IO[A]"></a><a id="bracket[A]((Scope)⇒IO[A])(Movable[A],Scope):IO[A]"></a>
+      <a id="bracket[A](parent:lamp.Scope)(use:lamp.Scope=&gt;cats.effect.IO[A])(implicitevidence$28:lamp.Movable[A]):cats.effect.IO[A]"></a><a id="bracket[A](Scope)((Scope)⇒IO[A])(Movable[A]):IO[A]"></a>
       <span class="permalink">
-      <a href="../lamp/Scope$.html#bracket[A](use:lamp.Scope=&gt;cats.effect.IO[A])(implicitevidence$12:lamp.Movable[A],implicitparent:lamp.Scope):cats.effect.IO[A]" title="Permalink">
+      <a href="../lamp/Scope$.html#bracket[A](parent:lamp.Scope)(use:lamp.Scope=&gt;cats.effect.IO[A])(implicitevidence$28:lamp.Movable[A]):cats.effect.IO[A]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -460,7 +460,23 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">bracket</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="use">use: (<a href="Scope.html" class="extype" name="lamp.Scope">Scope</a>) ⇒ <span class="extype" name="cats.effect.IO">IO</span>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="Movable.html" class="extype" name="lamp.Movable">Movable</a>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>, <span name="parent">parent: <a href="Scope.html" class="extype" name="lamp.Scope">Scope</a> = <span class="symbol">null</span></span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>
+        <span class="name">bracket</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="parent">parent: <a href="Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="params">(<span name="use">use: (<a href="Scope.html" class="extype" name="lamp.Scope">Scope</a>) ⇒ <span class="extype" name="cats.effect.IO">IO</span>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="Movable.html" class="extype" name="lamp.Movable">Movable</a>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>
+      </span>
+      
+      
+    </li><li name="lamp.Scope#bracket" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="bracket[A](use:lamp.Scope=&gt;cats.effect.IO[A])(implicitevidence$27:lamp.Movable[A],implicitparent:lamp.Scope):cats.effect.IO[A]"></a><a id="bracket[A]((Scope)⇒IO[A])(Movable[A],Scope):IO[A]"></a>
+      <span class="permalink">
+      <a href="../lamp/Scope$.html#bracket[A](use:lamp.Scope=&gt;cats.effect.IO[A])(implicitevidence$27:lamp.Movable[A],implicitparent:lamp.Scope):cats.effect.IO[A]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">bracket</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="use">use: (<a href="Scope.html" class="extype" name="lamp.Scope">Scope</a>) ⇒ <span class="extype" name="cats.effect.IO">IO</span>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="Movable.html" class="extype" name="lamp.Movable">Movable</a>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>, <span name="parent">parent: <a href="Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<span class="extype" name="lamp.Scope.bracket.A">A</span>]</span>
       </span>
       
       

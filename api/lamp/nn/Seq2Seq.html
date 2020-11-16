@@ -166,7 +166,7 @@
                         <a class="class" href="GenericFun.html" title=""></a>
                         <a href="GenericFun.html" title="">GenericFun</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="GenericModule$.html" title=""></a>
                         <a class="trait" href="GenericModule.html" title=""></a>
                         <a href="GenericModule.html" title="">GenericModule</a>
                       </li><li class="current-entities indented2">
@@ -190,9 +190,9 @@
                         <a class="trait" href="LeafTag.html" title=""></a>
                         <a href="LeafTag.html" title="">LeafTag</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
                         <a class="object" href="LearningRateSchedule$.html" title=""></a>
-                        <a href="LearningRateSchedule$.html" title="">LearningRateSchedule</a>
+                        <a class="trait" href="LearningRateSchedule.html" title=""></a>
+                        <a href="LearningRateSchedule.html" title="">LearningRateSchedule</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="LiftedModule$.html" title=""></a>
                         <a class="class" href="LiftedModule.html" title=""></a>
@@ -246,7 +246,7 @@
                         <a class="trait" href="OptimizerHyperparameter.html" title=""></a>
                         <a href="OptimizerHyperparameter.html" title="">OptimizerHyperparameter</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="PTag$.html" title=""></a>
                         <a class="trait" href="PTag.html" title=""></a>
                         <a href="PTag.html" title="">PTag</a>
                       </li><li class="current-entities indented2">
@@ -685,9 +685,9 @@
               
         </dd></dl></div>
     </li><li name="lamp.nn.GenericModule#gradients" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="gradients(loss:lamp.autograd.Variable,zeroGrad:Boolean):Seq[Option[aten.Tensor]]"></a><a id="gradients(Variable,Boolean):Seq[Option[Tensor]]"></a>
+      <a id="gradients(loss:lamp.autograd.Variable,zeroGrad:Boolean):Seq[Option[lamp.STen]]"></a><a id="gradients(Variable,Boolean):Seq[Option[STen]]"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/Seq2Seq.html#gradients(loss:lamp.autograd.Variable,zeroGrad:Boolean):Seq[Option[aten.Tensor]]" title="Permalink">
+      <a href="../../lamp/nn/Seq2Seq.html#gradients(loss:lamp.autograd.Variable,zeroGrad:Boolean):Seq[Option[lamp.STen]]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -696,7 +696,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">gradients</span><span class="params">(<span name="loss">loss: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="zeroGrad">zeroGrad: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Option">Option</span>[<span class="extype" name="aten.Tensor">Tensor</span>]]</span>
+        <span class="name">gradients</span><span class="params">(<span name="loss">loss: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="zeroGrad">zeroGrad: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Option">Option</span>[<a href="../STen.html" class="extype" name="lamp.STen">STen</a>]]</span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
@@ -787,9 +787,9 @@
               
         </dd></dl></div>
     </li><li name="lamp.nn.GenericModule#parameters" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="parameters:Seq[(lamp.autograd.Variable,lamp.nn.PTag)]"></a><a id="parameters:Seq[(Variable,PTag)]"></a>
+      <a id="parameters:Seq[(lamp.autograd.Constant,lamp.nn.PTag)]"></a><a id="parameters:Seq[(Constant,PTag)]"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/Seq2Seq.html#parameters:Seq[(lamp.autograd.Variable,lamp.nn.PTag)]" title="Permalink">
+      <a href="../../lamp/nn/Seq2Seq.html#parameters:Seq[(lamp.autograd.Constant,lamp.nn.PTag)]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -798,14 +798,14 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">parameters</span><span class="result">: <span class="extype" name="scala.collection.Seq">Seq</span>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
+        <span class="name">parameters</span><span class="result">: <span class="extype" name="scala.collection.Seq">Seq</span>[(<a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="lamp.nn.Seq2Seq#state" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="state:Seq[(lamp.autograd.Variable,lamp.nn.PTag)]"></a><a id="state:Seq[(Variable,PTag)]"></a>
+      <a id="state:Seq[(lamp.autograd.Constant,lamp.nn.PTag)]"></a><a id="state:Seq[(Constant,PTag)]"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/Seq2Seq.html#state:Seq[(lamp.autograd.Variable,lamp.nn.PTag)]" title="Permalink">
+      <a href="../../lamp/nn/Seq2Seq.html#state:Seq[(lamp.autograd.Constant,lamp.nn.PTag)]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -814,7 +814,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">state</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
+        <span class="name">state</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.nn.Seq2Seq">Seq2Seq</a> → <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>

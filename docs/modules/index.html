@@ -138,12 +138,12 @@ The most common combination of modules is to sequence them, that is function com
 This one can do with the apply methods in the <code>lamp.nn.sequence</code> object.</p>
 
 <p>As an example here is the complete source code of the linear layer:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.autograd.Variable
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.autograd.<span style="color:#f92672">{</span><span style="color:#a6e22e">Variable</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">Constant</span><span style="color:#f92672">}</span>
 <span style="color:#66d9ef">import</span> lamp.nn.Module
 <span style="color:#66d9ef">import</span> lamp.nn.Linear
 <span style="color:#66d9ef">import</span> lamp.Sc
 
-<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LinearDemo</span><span style="color:#f92672">(</span>weights<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Variable</span><span style="color:#f92672">,</span> bias<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Option</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Variable</span><span style="color:#f92672">])</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">Module</span> <span style="color:#f92672">{</span>
+<span style="color:#66d9ef">case</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LinearDemo</span><span style="color:#f92672">(</span>weights<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Constant</span><span style="color:#f92672">,</span> bias<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Option</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Constant</span><span style="color:#f92672">])</span> <span style="color:#66d9ef">extends</span> <span style="color:#a6e22e">Module</span> <span style="color:#f92672">{</span>
 
   <span style="color:#66d9ef">override</span> <span style="color:#66d9ef">val</span> state <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">List</span><span style="color:#f92672">(</span>
     weights <span style="color:#f92672">-&gt;</span> <span style="color:#a6e22e">Linear</span><span style="color:#f92672">.</span><span style="color:#a6e22e">Weights</span>

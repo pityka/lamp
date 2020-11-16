@@ -106,7 +106,7 @@
                         <a class="object" href="AutoLoop$.html" title=""></a>
                         <a href="AutoLoop$.html" title="">AutoLoop</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="BaseModel$.html" title=""></a>
                         <a class="trait" href="BaseModel.html" title=""></a>
                         <a href="BaseModel.html" title="">BaseModel</a>
                       </li><li class="current-entities indented2">
@@ -134,7 +134,7 @@
                         <a class="class" href="ExtratreesBase.html" title=""></a>
                         <a href="ExtratreesBase.html" title="">ExtratreesBase</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="KnnBase$.html" title=""></a>
                         <a class="class" href="KnnBase.html" title=""></a>
                         <a href="KnnBase.html" title="">KnnBase</a>
                       </li><li class="current-entities indented2">
@@ -142,7 +142,7 @@
                         <a class="trait" href="Metadata.html" title=""></a>
                         <a href="Metadata.html" title="">Metadata</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="NNBase$.html" title=""></a>
                         <a class="class" href="NNBase.html" title=""></a>
                         <a href="NNBase.html" title="">NNBase</a>
                       </li><li class="current-entities indented2">
@@ -539,9 +539,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.tabular.EnsembleModel#train" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="train(features:aten.Tensor,target:aten.Tensor,dataLayout:Seq[lamp.tabular.Metadata],targetType:lamp.tabular.TargetType,device:lamp.Device,logger:Option[scribe.Logger],logFrequency:Int,learningRate:Double,minibatchSize:Int,knnMinibatchSize:Int,rng:org.saddle.spire.random.Generator):cats.effect.IO[lamp.tabular.EnsembleModel]"></a><a id="train(Tensor,Tensor,Seq[Metadata],TargetType,Device,Option[Logger],Int,Double,Int,Int,Generator):IO[EnsembleModel]"></a>
+      <a id="train(features:lamp.STen,target:lamp.STen,dataLayout:Seq[lamp.tabular.Metadata],targetType:lamp.tabular.TargetType,device:lamp.Device,logger:Option[scribe.Logger],logFrequency:Int,learningRate:Double,minibatchSize:Int,knnMinibatchSize:Int,rng:org.saddle.spire.random.Generator)(implicitscope:lamp.Scope):cats.effect.IO[lamp.tabular.EnsembleModel]"></a><a id="train(STen,STen,Seq[Metadata],TargetType,Device,Option[Logger],Int,Double,Int,Int,Generator)(Scope):IO[EnsembleModel]"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/EnsembleModel$.html#train(features:aten.Tensor,target:aten.Tensor,dataLayout:Seq[lamp.tabular.Metadata],targetType:lamp.tabular.TargetType,device:lamp.Device,logger:Option[scribe.Logger],logFrequency:Int,learningRate:Double,minibatchSize:Int,knnMinibatchSize:Int,rng:org.saddle.spire.random.Generator):cats.effect.IO[lamp.tabular.EnsembleModel]" title="Permalink">
+      <a href="../../lamp/tabular/EnsembleModel$.html#train(features:lamp.STen,target:lamp.STen,dataLayout:Seq[lamp.tabular.Metadata],targetType:lamp.tabular.TargetType,device:lamp.Device,logger:Option[scribe.Logger],logFrequency:Int,learningRate:Double,minibatchSize:Int,knnMinibatchSize:Int,rng:org.saddle.spire.random.Generator)(implicitscope:lamp.Scope):cats.effect.IO[lamp.tabular.EnsembleModel]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -550,7 +550,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">train</span><span class="params">(<span name="features">features: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="dataLayout">dataLayout: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Metadata.html" class="extype" name="lamp.tabular.Metadata">Metadata</a>]</span>, <span name="targetType">targetType: <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a></span>, <span name="device">device: <a href="../Device.html" class="extype" name="lamp.Device">Device</a></span>, <span name="logger">logger: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scribe.Logger">Logger</span>]</span>, <span name="logFrequency">logFrequency: <span class="extype" name="scala.Int">Int</span></span>, <span name="learningRate">learningRate: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">0.0001</span></span>, <span name="minibatchSize">minibatchSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">512</span></span>, <span name="knnMinibatchSize">knnMinibatchSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">512</span></span>, <span name="rng">rng: <span class="extype" name="org.saddle.spire.random.Generator">Generator</span></span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<a href="EnsembleModel.html" class="extype" name="lamp.tabular.EnsembleModel">EnsembleModel</a>]</span>
+        <span class="name">train</span><span class="params">(<span name="features">features: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="dataLayout">dataLayout: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Metadata.html" class="extype" name="lamp.tabular.Metadata">Metadata</a>]</span>, <span name="targetType">targetType: <a href="TargetType.html" class="extype" name="lamp.tabular.TargetType">TargetType</a></span>, <span name="device">device: <a href="../Device.html" class="extype" name="lamp.Device">Device</a></span>, <span name="logger">logger: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scribe.Logger">Logger</span>]</span>, <span name="logFrequency">logFrequency: <span class="extype" name="scala.Int">Int</span></span>, <span name="learningRate">learningRate: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">0.0001</span></span>, <span name="minibatchSize">minibatchSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">512</span></span>, <span name="knnMinibatchSize">knnMinibatchSize: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">512</span></span>, <span name="rng">rng: <span class="extype" name="org.saddle.spire.random.Generator">Generator</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<a href="EnsembleModel.html" class="extype" name="lamp.tabular.EnsembleModel">EnsembleModel</a>]</span>
       </span>
       
       
@@ -622,6 +622,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.tabular.EnsembleModel.IsMovable" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="IsMovable"></a><a id="IsMovable:IsMovable"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/EnsembleModel$$IsMovable$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="EnsembleModel$$IsMovable$.html"><span class="name">IsMovable</span></a><span class="result"> extends <a href="../Movable.html" class="extype" name="lamp.Movable">Movable</a>[<a href="EnsembleModel.html" class="extype" name="lamp.tabular.EnsembleModel">EnsembleModel</a>]</span>
+      </span>
+      
+      
     </li>
               </ol>
             </div>

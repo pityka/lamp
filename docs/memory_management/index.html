@@ -153,6 +153,18 @@ before allocation and it provides a more fluent chainable API.</p>
     } // once the block exits all resources allocated within the block are released, with the exception of the 
       // return value which is moved to the parent scope
   }</code></pre></div>
+<p>With IO:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala mdoc" data-lang="scala mdoc">  def squaredEuclideanDistance(v1: STen, v2: STen)(
+      implicit parent: Scope // parent scope
+  ): IO[STen] = {
+    Scope.bracket(parent) { implicit scope =&gt; // this is a local scope cleared up when block ends
+      val outer = v1.mm(v2.t) // these allocations will get released at the end of the block
+      val n1 = (v1 * v1).rowSum
+      val n2 = (v2 * v2).rowSum
+      (n1 + n2.t - outer * 2) 
+    } // once the block exits all resources allocated within the block are released, with the exception of the 
+      // return value which is moved to the parent scope
+  }</code></pre></div>
 <h1 id="lamp-scope"><code>lamp.Scope</code></h1>
 
 <p>Both <code>STen</code> and <code>Variable</code> own references to <code>aten.Tensor</code>s which need to be managed (released) manually.
@@ -162,28 +174,19 @@ This simplifies memory management because a <code>Scope</code> instance can be i
 
 <p>A <code>Scope</code> may be built with any of the factory methods in its companion object:</p>
 
-<p><code>Scope.apply</code> , <code>Scope.leak</code> and <code>Scope.root</code>: these factories take a lambda, thus inject the <code>Scope</code> instance in the lexical scope of the lambda.</p>
+<p><code>Scope.apply</code> , <code>Scope.bracket</code> and <code>Scope.root</code>: these factories take a lambda, thus inject the <code>Scope</code> instance in the lexical scope of the lambda.</p>
 
-<p><code>Scope.apply</code> is meant to be used in scope which itself has a parent scope. It will not release the return value, but move it to its parent scope. Consequently the return type of the lambda it takes are restricted to members of the <code>Movable</code> type class:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">def</span> apply<span style="color:#f92672">[</span><span style="color:#66d9ef">A:</span> <span style="color:#66d9ef">Movable</span><span style="color:#f92672">](</span>
-      op<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Scope</span> <span style="color:#f92672">=&gt;</span> A
-  <span style="color:#f92672">)(</span><span style="color:#66d9ef">implicit</span> parent<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Scope</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">A</span></code></pre></div>
+<p><code>Scope.apply</code> is meant to be used in scope which itself has a parent scope. It will not release the return value, but move it to its parent scope. Consequently the return type of the lambda it takes are restricted to members of the <code>Movable</code> type class.</p>
+
 <p>The <code>Movable</code> type class provides compile time introspection so that the library can extract the list of Tensors from the return value and move them to the parent scope.
 It is defined as</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">trait</span> <span style="color:#a6e22e">Movable</span><span style="color:#f92672">[</span><span style="color:#66d9ef">-R</span><span style="color:#f92672">]</span> <span style="color:#f92672">{</span>
   <span style="color:#66d9ef">def</span> list<span style="color:#f92672">(</span>movable<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">R</span><span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">List</span><span style="color:#f92672">[</span><span style="color:#66d9ef">Tensor</span><span style="color:#f92672">]</span>
 <span style="color:#f92672">}</span></code></pre></div>
 <p>Most regular Scala types and primities have a <code>Movable</code> instance which return the empty list.
-<code>lamp.STen</code> is member of the <code>Movable</code> type class.
-On the contrary autograd Variables are not movable because their partial derivatives usually depend on a chain of other varibles thus they are not simple returnable from a code block.</p>
+<code>lamp.STen</code>, <code>Variable</code>s, and <code>lamp.GenericModule[_,_]</code> are members of the <code>Movable</code> type class.</p>
 
 <p><code>Scope.root</code> is meant to be used as the outermost Scope. It can not return anything, thus it takes a lambda with a Unit return type.</p>
-
-<p><code>Scope.leak</code> is mean to be used when the return value of the scope is managed by the VM, that is any regular Scala object or primitive. It is named <code>leak</code> to warn the programmer for possible resource leaks. It is always possible to use the <code>Scope.apply</code> factory by defining the necessary trivial <code>Movable</code> instance with <code>Movable.empty[T]</code>.</p>
-
-<p>For more complex control flows there is a <code>Scope.free</code> factory method which returns a free standing <code>Scope</code> instance not bound to any lexical scope. The programmer has to make sure to release it.</p>
-
-<p>The <code>Scope</code> companion object also has factories for cats effect Resources and brackets.</p>
 
 </div>
 </div>

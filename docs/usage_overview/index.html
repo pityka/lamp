@@ -129,13 +129,14 @@
 
 <h1 id="overview">Overview</h1>
 
-<p>Lamp&rsquo;s design closely follows the design of pytorch. It is organized into the following components:</p>
+<p>Lamp is organized into the following components:</p>
 
 <ol>
-<li>A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the <code>aten</code> package and in the class <code>lamp.STen</code>.</li>
+<li>A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the <code>aten</code> package.</li>
+<li>A wrapper (<code>lamp.STen</code>) providing lexical scope based memory management to those off-heap tensors.</li>
 <li>An algorithm to compute partial derivatives of composite functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package <code>lamp.autograd</code>.</li>
 <li>A set of building blocks to build neural networks in the package <code>lamp.nn</code>.</li>
-<li>Training loop and utilities to work with image and text data in <code>lamp.data</code>.</li>
+<li>Training loop and utilities to work with various kinds of data in <code>lamp.data</code>.</li>
 </ol>
 
 <h1 id="building-a-classifier">Building a classifier</h1>
@@ -201,37 +202,37 @@
 </span><span style="color:#75715e">// 97 -&gt; 8.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
 </span><span style="color:#75715e">// 98 -&gt; 3.0000 0.0000 0.0000 0.0000 0.0000  ... 0.0000 0.0000 0.0000 0.0000 0.0000 
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span></code></pre></div>
-<p>Copy those data <code>aten.Tensor</code>s of respective shape and type. Note that we specify device so it will end up on the desired device.
+<p>Next we copy those JVM objects into native tensors. Note that we specify device so it will end up on the desired device.
 The feature matrix is copied into a 2D floating point tensor and the target vector is holding the class labels is copied into a 1D integer (long) tensor.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp._
     <span style="color:#66d9ef">import</span> lamp.autograd._
-    <span style="color:#66d9ef">import</span> aten.ATen
     <span style="color:#66d9ef">import</span> org.saddle.Mat
-    <span style="color:#66d9ef">val</span> device <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">CPU</span>
+    <span style="color:#66d9ef">implicit</span> <span style="color:#66d9ef">val</span> scope <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">Scope</span><span style="color:#f92672">.</span>free <span style="color:#75715e">// Use Scope.root, Scope.apply in non-doc code
+</span><span style="color:#75715e">// scope: Scope = lamp.Scope@151ddfc6 // Use Scope.root, Scope.apply in non-doc code
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> device <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">CPU</span>
 <span style="color:#75715e">// device: CPU.type = CPU
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> precision <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SinglePrecision</span>
 <span style="color:#75715e">// precision: SinglePrecision.type = SinglePrecision
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testDataTensor <span style="color:#66d9ef">=</span>
-      <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span> precision<span style="color:#f92672">)</span>
-<span style="color:#75715e">// testDataTensor: aten.Tensor = Tensor at 140113388205216; CPUFloatType
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testTarget <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>squeeze_0<span style="color:#f92672">(</span>
-      <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
+      <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span> precision<span style="color:#f92672">)</span>
+<span style="color:#75715e">// testDataTensor: STen = STen(Tensor at 139783879216224; CPUFloatType)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testTarget <span style="color:#66d9ef">=</span> 
+      <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
         <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>firstCol<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toVec<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toLong<span style="color:#f92672">)),</span>
         device
-      <span style="color:#f92672">)</span>
-    <span style="color:#f92672">)</span>
-<span style="color:#75715e">// testTarget: aten.Tensor = Tensor at 140113387850016; CPULongType
-</span><span style="color:#75715e"></span>
+      <span style="color:#f92672">).</span>squeeze
+<span style="color:#75715e">// testTarget: STen = STen(Tensor at 139786984019136; CPULongType)
+</span><span style="color:#75715e"></span>    
+
     <span style="color:#66d9ef">val</span> trainDataTensor <span style="color:#66d9ef">=</span>
-      <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span>precision<span style="color:#f92672">)</span>
-<span style="color:#75715e">// trainDataTensor: aten.Tensor = Tensor at 140113388290704; CPUFloatType
-</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> trainTarget <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>squeeze_0<span style="color:#f92672">(</span>
-      <span style="color:#a6e22e">TensorHelpers</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
+      <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span>precision<span style="color:#f92672">)</span>
+<span style="color:#75715e">// trainDataTensor: STen = STen(Tensor at 139786984032832; CPUFloatType)
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> trainTarget <span style="color:#66d9ef">=</span> 
+      <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
         <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>firstCol<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toVec<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toLong<span style="color:#f92672">)),</span>
         device
-      <span style="color:#f92672">)</span>
-    <span style="color:#f92672">)</span>
-<span style="color:#f92672">//</span> trainTarget<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">140113404219760</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPULongType</span></code></pre></div>
+      <span style="color:#f92672">).</span>squeeze
+<span style="color:#f92672">//</span> trainTarget<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STen</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">STen</span><span style="color:#f92672">(</span><span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">139786984033936</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPULongType</span><span style="color:#f92672">)</span></code></pre></div>
 <h2 id="specify-the-model">Specify the model</h2>
 
 <p>Here we use the predefined modules in <code>lamp.nn</code>.</p>
@@ -243,16 +244,12 @@ We also have to give it an <code>aten.TensorOptions</code> which holds informati
 
 <p>Then we compose that function with a softmax, and provide a suitable loss function.</p>
 
-<p>Loss functions in lamp are of the type <code>(lamp.autograd.Variable, aten.Tensor) =&gt; lamp.autograd.Variable</code>. The first <code>Variable</code> argument is the output of the model, the second <code>Tensor</code> argument is the target. It returns a new <code>Variable</code> which is the loss. An autograd <code>Variable</code> holds a tensor and has the ability to compute partial derivatives. The training loop will take the loss and compute the partial derivative of all learnable parameters.</p>
-
-<p>We also have to provide an instance of <code>lamp.Scope</code> which is used to keep track of allocated tensors.</p>
+<p>Loss functions in lamp are of the type <code>(lamp.autograd.Variable, lamp.STen) =&gt; lamp.autograd.Variable</code>. The first <code>Variable</code> argument is the output of the model, the second <code>STen</code> argument is the target. It returns a new <code>Variable</code> which is the loss. An autograd <code>Variable</code> holds a tensor and has the ability to compute partial derivatives. The training loop will take the loss and compute the partial derivative of all learnable parameters.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.nn._
 <span style="color:#66d9ef">val</span> tensorOptions <span style="color:#66d9ef">=</span> device<span style="color:#f92672">.</span>options<span style="color:#f92672">(</span><span style="color:#a6e22e">SinglePrecision</span><span style="color:#f92672">)</span>
-<span style="color:#75715e">// tensorOptions: aten.TensorOptions = aten.TensorOptions@167c0e2e
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classWeights <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">Array</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">)</span>
-<span style="color:#75715e">// classWeights: aten.Tensor = Tensor at 140113404219792; CPUFloatType
-</span><span style="color:#75715e"></span><span style="color:#66d9ef">implicit</span> <span style="color:#66d9ef">val</span> scope <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">Scope</span><span style="color:#f92672">.</span>free
-<span style="color:#75715e">// scope: Scope = lamp.Scope@2c60c2dd
+<span style="color:#75715e">// tensorOptions: aten.TensorOptions = aten.TensorOptions@4e572e47
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classWeights <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">List</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">)</span>
+<span style="color:#75715e">// classWeights: STen = STen(Tensor at 139786979725216; CPUFloatType)
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> model <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SupervisedModel</span><span style="color:#f92672">(</span>
   sequence<span style="color:#f92672">(</span>
       <span style="color:#a6e22e">MLP</span><span style="color:#f92672">(</span>in <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">784</span><span style="color:#f92672">,</span> out <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">10</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">List</span><span style="color:#f92672">(</span><span style="color:#ae81ff">64</span><span style="color:#f92672">,</span> <span style="color:#ae81ff">32</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">,</span> dropout <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">0.2</span><span style="color:#f92672">),</span>
@@ -267,48 +264,46 @@ We also have to give it an <code>aten.TensorOptions</code> which holds informati
 </span><span style="color:#75715e">//         List(
 </span><span style="color:#75715e">//           Seq4(
 </span><span style="color:#75715e">//             Linear(
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113389433744; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113389433744; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 true
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786986194944; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786986196208; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               None
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             BatchNorm(
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113390490496; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113390490496; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 true
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786986183312; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786977834096; CPUFloatType)
 </span><span style="color:#75715e">//               ),
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113390490944; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113390490944; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 true
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786977834128; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786986187984; CPUFloatType)
 </span><span style="color:#75715e">//               ),
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113390491968; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113390491968; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 false
-</span><span style="color:#75715e">//               ),
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113397189808; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113397189808; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 false
-</span><span style="color:#75715e">//               ),
+</span><span style="color:#75715e">//               ConstantWithoutGrad(STen(Tensor at 139786967949376; CPUFloatType)),
+</span><span style="color:#75715e">//               ConstantWithoutGrad(STen(Tensor at 139786967950256; CPUFloatType)),
 </span><span style="color:#75715e">//               true,
 </span><span style="color:#75715e">//               0.1,
 </span><span style="color:#75715e">//               1.0E-5
 </span><span style="color:#75715e">//             ),
-</span><span style="color:#75715e">//             Fun(lamp.nn.MLP$$$Lambda$2014/1956205887@594c66ea),
+</span><span style="color:#75715e">//             Fun(lamp.nn.MLP$$$Lambda$2035/1525539311@1f0630a9),
 </span><span style="color:#75715e">//             Dropout(0.2, true)
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           Seq4(
 </span><span style="color:#75715e">//             Linear(
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786977834064; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989226176; CPUFloatType)
+</span><span style="color:#75715e">//               ),
+</span><span style="color:#75715e">//               None
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             BatchNorm(
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989243248; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989244000; CPUFloatType)
+</span><span style="color:#75715e">//               ),
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989217408; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989218160; CPUFloatType)
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">...</span></code></pre></div>
 <h2 id="create-mini-batches">Create mini-batches</h2>
 
@@ -317,8 +312,7 @@ In particular the trainig loop expects a type of <code>Unit =&gt; lamp.data.Batc
 where the BatchStream represent a stream of batches over the full set of training data.
 This factory function will then be called in each epoch.</p>
 
-<p>Lamp provides a helper which chops up the full batch of data - which we created earlier -
-into appropriately sized mini-batches.</p>
+<p>Lamp provides a helper which chops up the full batch of data into mini-batches.</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.data._
 <span style="color:#66d9ef">val</span> makeTrainingBatch <span style="color:#66d9ef">=</span> <span style="color:#f92672">()</span> <span style="color:#66d9ef">=&gt;</span>
       <span style="color:#a6e22e">BatchStream</span><span style="color:#f92672">.</span>minibatchesFromFull<span style="color:#f92672">(</span>
@@ -348,12 +342,12 @@ into appropriately sized mini-batches.</p>
 <span style="color:#75715e">// trainedModelIO: IO[(Int, SupervisedModel[Variable, Seq2[Variable, Variable, Variable, Seq2[Variable, Variable, Variable, Sequential[Variable, Seq4[Variable, Variable, Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable], nn.Dropout with GenericModule[Variable, Variable]]] with GenericModule[Variable, Variable], EitherModule[Variable, Variable, Seq4[Variable, Variable, Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable], nn.Dropout with GenericModule[Variable, Variable]], Seq2[Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable]]] with GenericModule[Variable, Variable]] with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable]]])] = Bind(
 </span><span style="color:#75715e">//   Bind(
 </span><span style="color:#75715e">//     Async(
-</span><span style="color:#75715e">//       cats.effect.internals.IOBracket$$$Lambda$2061/1923171143@3d2ee1a8,
+</span><span style="color:#75715e">//       cats.effect.internals.IOBracket$$$Lambda$2083/617980186@598ad90e,
 </span><span style="color:#75715e">//       false
 </span><span style="color:#75715e">//     ),
-</span><span style="color:#75715e">//     lamp.data.IOLoops$$$Lambda$2062/766585947@76fabd1
+</span><span style="color:#75715e">//     lamp.data.IOLoops$$$Lambda$2084/437899454@772739ee
 </span><span style="color:#75715e">//   ),
-</span><span style="color:#75715e">//   lamp.data.IOLoops$$$Lambda$2063/2079057374@20309fde
+</span><span style="color:#75715e">//   lamp.data.IOLoops$$$Lambda$2085/478106312@f406ea2
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">)</span></code></pre></div>
 <p>Lamp provides two optimizers: SgdW and AdamW. They can take a learning rate schedule as well.
 For other capabilities of this training loop see the scaladoc of <code>IOLoops.epochs</code>.</p>
@@ -368,48 +362,46 @@ For other capabilities of this training loop see the scaladoc of <code>IOLoops.e
 </span><span style="color:#75715e">//         List(
 </span><span style="color:#75715e">//           Seq4(
 </span><span style="color:#75715e">//             Linear(
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113389433744; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113389433744; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 true
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786986194944; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786986196208; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               None
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             BatchNorm(
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113390490496; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113390490496; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 true
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786986183312; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786977834096; CPUFloatType)
 </span><span style="color:#75715e">//               ),
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113390490944; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113390490944; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 true
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786977834128; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786986187984; CPUFloatType)
 </span><span style="color:#75715e">//               ),
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113390491968; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113390491968; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 false
-</span><span style="color:#75715e">//               ),
-</span><span style="color:#75715e">//               Variable(
-</span><span style="color:#75715e">//                 Constant(Tensor at 140113397189808; CPUFloatType),
-</span><span style="color:#75715e">//                 Tensor at 140113397189808; CPUFloatType,
-</span><span style="color:#75715e">//                 lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//                 false
-</span><span style="color:#75715e">//               ),
+</span><span style="color:#75715e">//               ConstantWithoutGrad(STen(Tensor at 139786967949376; CPUFloatType)),
+</span><span style="color:#75715e">//               ConstantWithoutGrad(STen(Tensor at 139786967950256; CPUFloatType)),
 </span><span style="color:#75715e">//               true,
 </span><span style="color:#75715e">//               0.1,
 </span><span style="color:#75715e">//               1.0E-5
 </span><span style="color:#75715e">//             ),
-</span><span style="color:#75715e">//             Fun(lamp.nn.MLP$$$Lambda$2014/1956205887@594c66ea),
+</span><span style="color:#75715e">//             Fun(lamp.nn.MLP$$$Lambda$2035/1525539311@1f0630a9),
 </span><span style="color:#75715e">//             Dropout(0.2, true)
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           Seq4(
 </span><span style="color:#75715e">//             Linear(
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786977834064; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989226176; CPUFloatType)
+</span><span style="color:#75715e">//               ),
+</span><span style="color:#75715e">//               None
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             BatchNorm(
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989243248; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989244000; CPUFloatType)
+</span><span style="color:#75715e">//               ),
+</span><span style="color:#75715e">//               ConstantWithGrad(
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989217408; CPUFloatType),
+</span><span style="color:#75715e">//                 STen(Tensor at 139786989218160; CPUFloatType)
 </span><span style="color:#75715e">// ...
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> module <span style="color:#66d9ef">=</span> trainedModel<span style="color:#f92672">.</span>module
 <span style="color:#75715e">// module: Seq2[Variable, Variable, Variable, Seq2[Variable, Variable, Variable, Sequential[Variable, Seq4[Variable, Variable, Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable], nn.Dropout with GenericModule[Variable, Variable]]] with GenericModule[Variable, Variable], EitherModule[Variable, Variable, Seq4[Variable, Variable, Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable], nn.Dropout with GenericModule[Variable, Variable]], Seq2[Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable]]] with GenericModule[Variable, Variable]] with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable]] with GenericModule[Variable, Variable] = Seq2(
@@ -418,53 +410,53 @@ For other capabilities of this training loop see the scaladoc of <code>IOLoops.e
 </span><span style="color:#75715e">//       List(
 </span><span style="color:#75715e">//         Seq4(
 </span><span style="color:#75715e">//           Linear(
-</span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140113389433744; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140113389433744; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//               true
+</span><span style="color:#75715e">//             ConstantWithGrad(
+</span><span style="color:#75715e">//               STen(Tensor at 139786986194944; CPUFloatType),
+</span><span style="color:#75715e">//               STen(Tensor at 139786986196208; CPUFloatType)
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             None
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           BatchNorm(
-</span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140113390490496; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140113390490496; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//               true
+</span><span style="color:#75715e">//             ConstantWithGrad(
+</span><span style="color:#75715e">//               STen(Tensor at 139786986183312; CPUFloatType),
+</span><span style="color:#75715e">//               STen(Tensor at 139786977834096; CPUFloatType)
 </span><span style="color:#75715e">//             ),
-</span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140113390490944; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140113390490944; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//               true
+</span><span style="color:#75715e">//             ConstantWithGrad(
+</span><span style="color:#75715e">//               STen(Tensor at 139786977834128; CPUFloatType),
+</span><span style="color:#75715e">//               STen(Tensor at 139786986187984; CPUFloatType)
 </span><span style="color:#75715e">//             ),
-</span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140113390491968; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140113390491968; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//               false
-</span><span style="color:#75715e">//             ),
-</span><span style="color:#75715e">//             Variable(
-</span><span style="color:#75715e">//               Constant(Tensor at 140113397189808; CPUFloatType),
-</span><span style="color:#75715e">//               Tensor at 140113397189808; CPUFloatType,
-</span><span style="color:#75715e">//               lamp.Scope@2c60c2dd,
-</span><span style="color:#75715e">//               false
-</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             ConstantWithoutGrad(STen(Tensor at 139786967949376; CPUFloatType)),
+</span><span style="color:#75715e">//             ConstantWithoutGrad(STen(Tensor at 139786967950256; CPUFloatType)),
 </span><span style="color:#75715e">//             true,
 </span><span style="color:#75715e">//             0.1,
 </span><span style="color:#75715e">//             1.0E-5
 </span><span style="color:#75715e">//           ),
-</span><span style="color:#75715e">//           Fun(lamp.nn.MLP$$$Lambda$2014/1956205887@594c66ea),
+</span><span style="color:#75715e">//           Fun(lamp.nn.MLP$$$Lambda$2035/1525539311@1f0630a9),
 </span><span style="color:#75715e">//           Dropout(0.2, true)
 </span><span style="color:#75715e">//         ),
 </span><span style="color:#75715e">//         Seq4(
 </span><span style="color:#75715e">//           Linear(
-</span><span style="color:#75715e">//             Variable(
+</span><span style="color:#75715e">//             ConstantWithGrad(
+</span><span style="color:#75715e">//               STen(Tensor at 139786977834064; CPUFloatType),
+</span><span style="color:#75715e">//               STen(Tensor at 139786989226176; CPUFloatType)
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             None
+</span><span style="color:#75715e">//           ),
+</span><span style="color:#75715e">//           BatchNorm(
+</span><span style="color:#75715e">//             ConstantWithGrad(
+</span><span style="color:#75715e">//               STen(Tensor at 139786989243248; CPUFloatType),
+</span><span style="color:#75715e">//               STen(Tensor at 139786989244000; CPUFloatType)
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             ConstantWithGrad(
+</span><span style="color:#75715e">//               STen(Tensor at 139786989217408; CPUFloatType),
+</span><span style="color:#75715e">//               STen(Tensor at 139786989218160; CPUFloatType)
+</span><span style="color:#75715e">//             ),
+</span><span style="color:#75715e">//             ConstantWithoutGrad(STen(Tensor at 139786989218912; CPUFloatType)),
+</span><span style="color:#75715e">//             ConstantWithoutGrad(STen(Tensor at 139786989219632; CPUFloatType)),
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">...</span></code></pre></div>
 <p>The trained model we can use for prediction:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> bogusData <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">Array</span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span><span style="color:#f92672">,</span><span style="color:#ae81ff">784</span><span style="color:#f92672">),</span>tensorOptions<span style="color:#f92672">)</span>
-<span style="color:#75715e">// bogusData: aten.Tensor = Tensor at 140113383917968; CPUFloatType
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> bogusData <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">Array</span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span><span style="color:#f92672">,</span><span style="color:#ae81ff">784</span><span style="color:#f92672">),</span>tensorOptions<span style="color:#f92672">)</span>
+<span style="color:#75715e">// bogusData: STen = STen(Tensor at 139786976499088; CPUFloatType)
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classProbabilities <span style="color:#66d9ef">=</span> module<span style="color:#f92672">.</span>forward<span style="color:#f92672">(</span>const<span style="color:#f92672">(</span>bogusData<span style="color:#f92672">)).</span>toMat<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>math<span style="color:#f92672">.</span>exp<span style="color:#f92672">)</span>
 <span style="color:#75715e">// classProbabilities: Mat[Double] = [1 x 10]
 </span><span style="color:#75715e">// 0.1000 0.1000 0.1000 0.1000  ... 0.1000 0.1000 0.1000 0.1000 

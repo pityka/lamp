@@ -167,8 +167,16 @@
                         <a href="ConstMult.html" title="">ConstMult</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="Constant.html" title=""></a>
+                        <a class="trait" href="Constant.html" title=""></a>
                         <a href="Constant.html" title="">Constant</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="ConstantWithGrad$.html" title=""></a>
+                        <a class="class" href="ConstantWithGrad.html" title=""></a>
+                        <a href="ConstantWithGrad.html" title="">ConstantWithGrad</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="ConstantWithoutGrad$.html" title=""></a>
+                        <a class="class" href="ConstantWithoutGrad.html" title=""></a>
+                        <a href="ConstantWithoutGrad.html" title="">ConstantWithoutGrad</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Conv1D.html" title="1D convolution"></a>
@@ -351,8 +359,12 @@
                         <a href="Transpose.html" title="">Transpose</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="" title=""></a>
-                        <a class="class" href="Variable.html" title=""></a>
+                        <a class="trait" href="Variable.html" title=""></a>
                         <a href="Variable.html" title="">Variable</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="VariableNonConstant$.html" title=""></a>
+                        <a class="class" href="VariableNonConstant.html" title=""></a>
+                        <a href="VariableNonConstant.html" title="">VariableNonConstant</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Variance.html" title=""></a>
@@ -372,15 +384,15 @@
           <div id="content">
             <body class="object value">
       <div id="definition">
-        <a href="Variable.html" title="See companion class"><div class="big-circle object-companion-class">o</div></a>
+        <a href="Variable.html" title="See companion trait"><div class="big-circle object-companion-trait">o</div></a>
         <p id="owner"><a href="../index.html" class="extype" name="lamp">lamp</a>.<a href="index.html" class="extype" name="lamp.autograd">autograd</a></p>
-        <h1><a href="Variable.html" title="See companion class">Variable</a><span class="permalink">
+        <h1><a href="Variable.html" title="See companion trait">Variable</a><span class="permalink">
       <a href="../../lamp/autograd/Variable$.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span></h1>
         <h3><span class="morelinks"><div>
-            Companion <a href="Variable.html" title="See companion class">class Variable</a>
+            Companion <a href="Variable.html" title="See companion trait">trait Variable</a>
           </div></span></h3>
       </div>
 
@@ -390,7 +402,7 @@
         <span class="kind">object</span>
       </span>
       <span class="symbol">
-        <span class="name">Variable</span><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Variable</span>
       </span>
       </h4>
 
@@ -399,7 +411,7 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
+          <div class="superTypes hiddenContent"><a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
         
 
@@ -425,7 +437,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.autograd.Variable"><span>Variable</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.autograd.Variable"><span>Variable</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -501,9 +513,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.autograd.Variable#apply" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="apply(op:lamp.autograd.Op,value:aten.Tensor,needsGrad:Boolean)(implicitsc:lamp.Scope):lamp.autograd.Variable"></a><a id="apply(Op,Tensor,Boolean)(Scope):Variable"></a>
+      <a id="apply(op:lamp.autograd.Op,value:lamp.STen)(implicitscope:lamp.Scope):lamp.autograd.Variable"></a><a id="apply(Op,STen)(Scope):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable$.html#apply(op:lamp.autograd.Op,value:aten.Tensor,needsGrad:Boolean)(implicitsc:lamp.Scope):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable$.html#apply(op:lamp.autograd.Op,value:lamp.STen)(implicitscope:lamp.Scope):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -512,7 +524,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">apply</span><span class="params">(<span name="op">op: <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>, <span name="value">value: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="needsGrad">needsGrad: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sc">sc: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">apply</span><span class="params">(<span name="op">op: <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>, <span name="value">value: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
@@ -532,6 +544,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="lamp.autograd.Variable#cat" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="cat(inputs:Seq[lamp.autograd.Variable],dim:Long)(implicitscope:lamp.Scope):lamp.autograd.Variable"></a><a id="cat(Seq[Variable],Long)(Scope):Variable"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Variable$.html#cat(inputs:Seq[lamp.autograd.Variable],dim:Long)(implicitscope:lamp.Scope):lamp.autograd.Variable" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">cat</span><span class="params">(<span name="inputs">inputs: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#clone" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a><a id="clone():AnyRef"></a>
       <span class="permalink">
@@ -556,6 +584,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.autograd.Variable#concatenateAddNewDim" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="concatenateAddNewDim(inputs:Seq[lamp.autograd.Variable])(implicitscope:lamp.Scope):lamp.autograd.Variable"></a><a id="concatenateAddNewDim(Seq[Variable])(Scope):Variable"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Variable$.html#concatenateAddNewDim(inputs:Seq[lamp.autograd.Variable])(implicitscope:lamp.Scope):lamp.autograd.Variable" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">concatenateAddNewDim</span><span class="params">(<span name="inputs">inputs: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -828,11 +872,7 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="scala.Serializable">
-              <h3>Inherited from <span class="extype" name="scala.Serializable">Serializable</span></h3>
-            </div><div class="parent" name="java.io.Serializable">
-              <h3>Inherited from <span class="extype" name="java.io.Serializable">Serializable</span></h3>
-            </div><div class="parent" name="scala.AnyRef">
+        <div class="parent" name="scala.AnyRef">
               <h3>Inherited from <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></h3>
             </div><div class="parent" name="scala.Any">
               <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>

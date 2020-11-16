@@ -167,8 +167,16 @@
                         <a href="ConstMult.html" title="">ConstMult</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="Constant.html" title=""></a>
+                        <a class="trait" href="Constant.html" title=""></a>
                         <a href="Constant.html" title="">Constant</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="ConstantWithGrad$.html" title=""></a>
+                        <a class="class" href="ConstantWithGrad.html" title=""></a>
+                        <a href="ConstantWithGrad.html" title="">ConstantWithGrad</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="ConstantWithoutGrad$.html" title=""></a>
+                        <a class="class" href="ConstantWithoutGrad.html" title=""></a>
+                        <a href="ConstantWithoutGrad.html" title="">ConstantWithoutGrad</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Conv1D.html" title="1D convolution"></a>
@@ -351,8 +359,12 @@
                         <a href="Transpose.html" title="">Transpose</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Variable$.html" title=""></a>
-                        <a class="class" href="" title=""></a>
+                        <a class="trait" href="" title=""></a>
                         <a href="" title="">Variable</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="VariableNonConstant$.html" title=""></a>
+                        <a class="class" href="VariableNonConstant.html" title=""></a>
+                        <a href="VariableNonConstant.html" title="">VariableNonConstant</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Variance.html" title=""></a>
@@ -370,9 +382,9 @@
             </div>
           </div>
           <div id="content">
-            <body class="class type">
+            <body class="trait type">
       <div id="definition">
-        <a href="Variable$.html" title="See companion object"><div class="big-circle class-companion-object">c</div></a>
+        <a href="Variable$.html" title="See companion object"><div class="big-circle trait-companion-object">t</div></a>
         <p id="owner"><a href="../index.html" class="extype" name="lamp">lamp</a>.<a href="index.html" class="extype" name="lamp.autograd">autograd</a></p>
         <h1><a href="Variable$.html" title="See companion object">Variable</a><span class="permalink">
       <a href="../../lamp/autograd/Variable.html" title="Permalink">
@@ -387,10 +399,10 @@
       <h4 id="signature" class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">case class</span>
+        <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <span class="name">Variable</span><span class="params">(<span name="op">op: <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>, <span name="value">value: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="needsGrad">needsGrad: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Variable</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       </h4>
 
@@ -399,8 +411,13 @@
           <span class="toggle">
             Linear Supertypes
           </span>
-          <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
-        </div></div>
+          <div class="superTypes hiddenContent"><a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a>, <span class="extype" name="scala.Any">Any</span></div>
+        </div><div class="toggleContainer block">
+            <span class="toggle">
+              Known Subclasses
+            </span>
+            <div class="subClasses hiddenContent"><a href="Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a>, <a href="ConstantWithGrad.html" class="extype" name="lamp.autograd.ConstantWithGrad">ConstantWithGrad</a>, <a href="ConstantWithoutGrad.html" class="extype" name="lamp.autograd.ConstantWithoutGrad">ConstantWithoutGrad</a>, <a href="VariableNonConstant.html" class="extype" name="lamp.autograd.VariableNonConstant">VariableNonConstant</a></div>
+          </div></div>
         
 
       <div id="mbrsel">
@@ -425,7 +442,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.autograd.Variable"><span>Variable</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.autograd.Variable"><span>Variable</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -443,33 +460,65 @@
 
       <div id="template">
         <div id="allMembers">
-        <div id="constructors" class="members">
-              <h3>Instance Constructors</h3>
-              <ol><li name="lamp.autograd.Variable#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(op:lamp.autograd.Op,value:aten.Tensor,scope:lamp.Scope,needsGrad:Boolean):lamp.autograd.Variable"></a><a id="&lt;init&gt;:Variable"></a>
+        
+
+        
+
+        <div class="values members">
+              <h3>Abstract Value Members</h3>
+              <ol><li name="lamp.autograd.Variable#op" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="op:Option[lamp.autograd.Op]"></a><a id="op:Option[Op]"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#&lt;init&gt;(op:lamp.autograd.Op,value:aten.Tensor,scope:lamp.Scope,needsGrad:Boolean):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#op:Option[lamp.autograd.Op]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
       <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">new</span>
+        <span class="modifier">abstract </span>
+        <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">Variable</span><span class="params">(<span name="op">op: <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>, <span name="value">value: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="needsGrad">needsGrad: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span>
+        <span class="name">op</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a>]</span>
+      </span>
+      
+      
+    </li><li name="lamp.autograd.Variable#partialDerivative" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="partialDerivative:Option[lamp.STen]"></a><a id="partialDerivative:Option[STen]"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Variable.html#partialDerivative:Option[lamp.STen]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">partialDerivative</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<a href="../STen.html" class="extype" name="lamp.STen">STen</a>]</span>
+      </span>
+      
+      
+    </li><li name="lamp.autograd.Variable#value" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="value:lamp.STen"></a><a id="value:STen"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Variable.html#value:lamp.STen" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">value</span><span class="result">: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>
       </span>
       
       
     </li></ol>
             </div>
 
-        
-
-        
-
         <div class="values members">
-              <h3>Value Members</h3>
+              <h3>Concrete Value Members</h3>
               <ol>
                 <li name="scala.AnyRef#!=" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="!=(x$1:Any):Boolean"></a><a id="!=(Any):Boolean"></a>
@@ -616,9 +665,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.autograd.Variable#accumulateGrad" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="accumulateGrad(incoming:aten.Tensor,computeGrad:(aten.Tensor,aten.Tensor)=&gt;Unit):Unit"></a><a id="accumulateGrad(Tensor,(Tensor,Tensor)⇒Unit):Unit"></a>
+      <a id="accumulateGrad(incoming:lamp.STen,computeGrad:(lamp.STen,lamp.STen)=&gt;Unit):Unit"></a><a id="accumulateGrad(STen,(STen,STen)⇒Unit):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#accumulateGrad(incoming:aten.Tensor,computeGrad:(aten.Tensor,aten.Tensor)=&gt;Unit):Unit" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#accumulateGrad(incoming:lamp.STen,computeGrad:(lamp.STen,lamp.STen)=&gt;Unit):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -627,7 +676,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">accumulateGrad</span><span class="params">(<span name="incoming">incoming: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="computeGrad">computeGrad: (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+        <span class="name">accumulateGrad</span><span class="params">(<span name="incoming">incoming: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="computeGrad">computeGrad: (<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
       </span>
       
       
@@ -832,9 +881,9 @@
       
       
     </li><li name="lamp.autograd.Variable#detached" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="detached:lamp.autograd.Variable"></a><a id="detached:Variable"></a>
+      <a id="detached:lamp.autograd.Constant"></a><a id="detached:Constant"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#detached:lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#detached:lamp.autograd.Constant" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -843,7 +892,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">detached</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">detached</span><span class="result">: <a href="Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>
       </span>
       
       
@@ -879,6 +928,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="scala.AnyRef#equals" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="equals(x$1:Any):Boolean"></a><a id="equals(Any):Boolean"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Variable.html#equals(x$1:Any):Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">equals</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
     </li><li name="lamp.autograd.Variable#euclideanDistance" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="euclideanDistance[S](b:lamp.autograd.Variable,dim:Int)(implicitevidence$40:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="euclideanDistance[S](Variable,Int)(Sc[S]):Variable"></a>
       <span class="permalink">
@@ -912,9 +977,9 @@
       
       
     </li><li name="lamp.autograd.Variable#expandAs" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="expandAs[S](other:aten.Tensor)(implicitevidence$27:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="expandAs[S](Tensor)(Sc[S]):Variable"></a>
+      <a id="expandAs[S](other:lamp.STen)(implicitevidence$27:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="expandAs[S](STen)(Sc[S]):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#expandAs[S](other:aten.Tensor)(implicitevidence$27:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#expandAs[S](other:lamp.STen)(implicitevidence$27:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -923,7 +988,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">expandAs</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="other">other: <span class="extype" name="aten.Tensor">Tensor</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.expandAs.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">expandAs</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="other">other: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.expandAs.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
@@ -1000,6 +1065,25 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="scala.AnyRef#hashCode" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hashCode():Int"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Variable.html#hashCode():Int" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hashCode</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd><dt>Annotations</dt><dd>
+                <span class="name">@native</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li><li name="lamp.autograd.Variable#id" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="id:java.util.UUID"></a><a id="id:UUID"></a>
       <span class="permalink">
@@ -1065,9 +1149,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
     </li><li name="lamp.autograd.Variable#l1Loss" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="l1Loss[S](target:aten.Tensor,reduction:lamp.autograd.Reduction)(implicitevidence$45:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="l1Loss[S](Tensor,Reduction)(Sc[S]):Variable"></a>
+      <a id="l1Loss[S](target:lamp.STen,reduction:lamp.autograd.Reduction)(implicitevidence$45:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="l1Loss[S](STen,Reduction)(Sc[S]):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#l1Loss[S](target:aten.Tensor,reduction:lamp.autograd.Reduction)(implicitevidence$45:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#l1Loss[S](target:lamp.STen,reduction:lamp.autograd.Reduction)(implicitevidence$45:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1076,7 +1160,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">l1Loss</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="Mean$.html">Mean</a></span></span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.l1Loss.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">l1Loss</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="Mean$.html">Mean</a></span></span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.l1Loss.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
@@ -1193,9 +1277,9 @@
       
       
     </li><li name="lamp.autograd.Variable#mseLoss" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="mseLoss[S](target:aten.Tensor,reduction:lamp.autograd.Reduction)(implicitevidence$44:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="mseLoss[S](Tensor,Reduction)(Sc[S]):Variable"></a>
+      <a id="mseLoss[S](target:lamp.STen,reduction:lamp.autograd.Reduction)(implicitevidence$44:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="mseLoss[S](STen,Reduction)(Sc[S]):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#mseLoss[S](target:aten.Tensor,reduction:lamp.autograd.Reduction)(implicitevidence$44:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#mseLoss[S](target:lamp.STen,reduction:lamp.autograd.Reduction)(implicitevidence$44:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1204,7 +1288,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">mseLoss</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="Mean$.html">Mean</a></span></span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.mseLoss.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">mseLoss</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="Mean$.html">Mean</a></span></span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.mseLoss.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
@@ -1233,33 +1317,17 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">val</span>
+        <span class="kind">def</span>
       </span>
       <span class="symbol">
         <span class="name">needsGrad</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
       
-    </li><li name="lamp.autograd.Variable#needsNoGrad" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="needsNoGrad:lamp.autograd.Variable"></a><a id="needsNoGrad:Variable"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#needsNoGrad:lamp.autograd.Variable" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">needsNoGrad</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
-      </span>
-      
-      
     </li><li name="lamp.autograd.Variable#nllLoss" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="nllLoss[S](target:aten.Tensor,numClasses:Int,weights:aten.Tensor,reduction:lamp.autograd.Reduction,ignore:Long)(implicitevidence$43:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="nllLoss[S](Tensor,Int,Tensor,Reduction,Long)(Sc[S]):Variable"></a>
+      <a id="nllLoss[S](target:lamp.STen,weights:lamp.STen,reduction:lamp.autograd.Reduction,ignore:Long)(implicitevidence$43:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="nllLoss[S](STen,STen,Reduction,Long)(Sc[S]):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#nllLoss[S](target:aten.Tensor,numClasses:Int,weights:aten.Tensor,reduction:lamp.autograd.Reduction,ignore:Long)(implicitevidence$43:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#nllLoss[S](target:lamp.STen,weights:lamp.STen,reduction:lamp.autograd.Reduction,ignore:Long)(implicitevidence$43:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1268,7 +1336,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">nllLoss</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="target">target: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="weights">weights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="Mean$.html">Mean</a></span></span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.nllLoss.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+        <span class="name">nllLoss</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="weights">weights: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="Mean$.html">Mean</a></span></span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.nllLoss.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
       
@@ -1342,22 +1410,6 @@
       </span>
       
       
-    </li><li name="lamp.autograd.Variable#op" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="op:lamp.autograd.Op"></a><a id="op:Op"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#op:lamp.autograd.Op" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">op</span><span class="result">: <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
-      </span>
-      
-      
     </li><li name="lamp.autograd.Variable#options" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="options:aten.TensorOptions"></a><a id="options:TensorOptions"></a>
       <span class="permalink">
@@ -1371,38 +1423,6 @@
       </span>
       <span class="symbol">
         <span class="name">options</span><span class="result">: <span class="extype" name="aten.TensorOptions">TensorOptions</span></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.Variable#partialDerivative" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="partialDerivative:Option[aten.Tensor]"></a><a id="partialDerivative:Option[Tensor]"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#partialDerivative:Option[aten.Tensor]" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">var</span>
-      </span>
-      <span class="symbol">
-        <span class="name">partialDerivative</span><span class="result">: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="aten.Tensor">Tensor</span>]</span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.Variable#pool" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="pool:lamp.Scope"></a><a id="pool:Scope"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#pool:lamp.Scope" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">pool</span><span class="result">: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>
       </span>
       
       
@@ -1486,22 +1506,6 @@
       </span>
       
       
-    </li><li name="lamp.autograd.Variable#scope" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="scope:lamp.Scope"></a><a id="scope:Scope"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#scope:lamp.Scope" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">scope</span><span class="result">: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>
-      </span>
-      
-      
     </li><li name="lamp.autograd.Variable#select" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="select[S](dim:Long,index:Long)(implicitevidence$3:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="select[S](Long,Long)(Sc[S]):Variable"></a>
       <span class="permalink">
@@ -1530,7 +1534,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">shape</span><span class="result">: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Long">Long</span>]</span>
+        <span class="name">shape</span><span class="result">: <span class="extype" name="scala.collection.immutable.List">List</span>[<span class="extype" name="scala.Long">Long</span>]</span>
       </span>
       
       
@@ -1578,7 +1582,7 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">sizes</span><span class="result">: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Long">Long</span>]</span>
+        <span class="name">sizes</span><span class="result">: <span class="extype" name="scala.collection.immutable.List">List</span>[<span class="extype" name="scala.Long">Long</span>]</span>
       </span>
       
       
@@ -1631,9 +1635,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
     </li><li name="lamp.autograd.Variable#t" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="t[S](implicitevidence$1:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="t[S](Sc[S]):Variable"></a>
+      <a id="t[S](implicitevidence$2:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="t[S](Sc[S]):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#t[S](implicitevidence$1:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#t[S](implicitevidence$2:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1727,9 +1731,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.Variable">Variable</a> → AnyRef → Any</dd></dl></div>
     </li><li name="lamp.autograd.Variable#transpose" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="transpose[S](dim1:Int,dim2:Int)(implicitevidence$2:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="transpose[S](Int,Int)(Sc[S]):Variable"></a>
+      <a id="transpose[S](dim1:Int,dim2:Int)(implicitevidence$1:lamp.Sc[S]):lamp.autograd.Variable"></a><a id="transpose[S](Int,Int)(Sc[S]):Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#transpose[S](dim1:Int,dim2:Int)(implicitevidence$2:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#transpose[S](dim1:Int,dim2:Int)(implicitevidence$1:lamp.Sc[S]):lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1739,22 +1743,6 @@
       </span>
       <span class="symbol">
         <span class="name">transpose</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="dim1">dim1: <span class="extype" name="scala.Int">Int</span></span>, <span name="dim2">dim2: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.autograd.Variable.transpose.S">S</span>]</span>)</span><span class="result">: <a href="" class="extype" name="lamp.autograd.Variable">Variable</a></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.Variable#value" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="value:aten.Tensor"></a><a id="value:Tensor"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#value:aten.Tensor" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">value</span><span class="result">: <span class="extype" name="aten.Tensor">Tensor</span></span>
       </span>
       
       
@@ -1891,9 +1879,9 @@
       
       
     </li><li name="lamp.autograd.Variable#zipBackward" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="zipBackward(fn:(aten.Tensor,aten.Tensor)=&gt;Unit):(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)"></a><a id="zipBackward((Tensor,Tensor)⇒Unit):(Variable,(Tensor,Tensor)⇒Unit)"></a>
+      <a id="zipBackward(fn:(lamp.STen,lamp.STen)=&gt;Unit):(lamp.autograd.Variable,(lamp.STen,lamp.STen)=&gt;Unit)"></a><a id="zipBackward((STen,STen)⇒Unit):(Variable,(STen,STen)⇒Unit)"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/Variable.html#zipBackward(fn:(aten.Tensor,aten.Tensor)=&gt;Unit):(lamp.autograd.Variable,(aten.Tensor,aten.Tensor)=&gt;Unit)" title="Permalink">
+      <a href="../../lamp/autograd/Variable.html#zipBackward(fn:(lamp.STen,lamp.STen)=&gt;Unit):(lamp.autograd.Variable,(lamp.STen,lamp.STen)=&gt;Unit)" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -1902,7 +1890,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">zipBackward</span><span class="params">(<span name="fn">fn: (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: (<a href="" class="extype" name="lamp.autograd.Variable">Variable</a>, (<span class="extype" name="aten.Tensor">Tensor</span>, <span class="extype" name="aten.Tensor">Tensor</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)</span>
+        <span class="name">zipBackward</span><span class="params">(<span name="fn">fn: (<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: (<a href="" class="extype" name="lamp.autograd.Variable">Variable</a>, (<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)</span>
       </span>
       
       
@@ -1916,15 +1904,7 @@
         </div>
 
         <div id="inheritedMembers">
-        <div class="parent" name="scala.Serializable">
-              <h3>Inherited from <span class="extype" name="scala.Serializable">Serializable</span></h3>
-            </div><div class="parent" name="java.io.Serializable">
-              <h3>Inherited from <span class="extype" name="java.io.Serializable">Serializable</span></h3>
-            </div><div class="parent" name="scala.Product">
-              <h3>Inherited from <span class="extype" name="scala.Product">Product</span></h3>
-            </div><div class="parent" name="scala.Equals">
-              <h3>Inherited from <span class="extype" name="scala.Equals">Equals</span></h3>
-            </div><div class="parent" name="scala.AnyRef">
+        <div class="parent" name="scala.AnyRef">
               <h3>Inherited from <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></h3>
             </div><div class="parent" name="scala.Any">
               <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>

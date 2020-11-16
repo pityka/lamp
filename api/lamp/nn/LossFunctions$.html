@@ -166,7 +166,7 @@
                         <a class="class" href="GenericFun.html" title=""></a>
                         <a href="GenericFun.html" title="">GenericFun</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="GenericModule$.html" title=""></a>
                         <a class="trait" href="GenericModule.html" title=""></a>
                         <a href="GenericModule.html" title="">GenericModule</a>
                       </li><li class="current-entities indented2">
@@ -190,9 +190,9 @@
                         <a class="trait" href="LeafTag.html" title=""></a>
                         <a href="LeafTag.html" title="">LeafTag</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
                         <a class="object" href="LearningRateSchedule$.html" title=""></a>
-                        <a href="LearningRateSchedule$.html" title="">LearningRateSchedule</a>
+                        <a class="trait" href="LearningRateSchedule.html" title=""></a>
+                        <a href="LearningRateSchedule.html" title="">LearningRateSchedule</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="LiftedModule$.html" title=""></a>
                         <a class="class" href="LiftedModule.html" title=""></a>
@@ -246,7 +246,7 @@
                         <a class="trait" href="OptimizerHyperparameter.html" title=""></a>
                         <a href="OptimizerHyperparameter.html" title="">OptimizerHyperparameter</a>
                       </li><li class="current-entities indented2">
-                        <span class="separator"></span>
+                        <a class="object" href="PTag$.html" title=""></a>
                         <a class="trait" href="PTag.html" title=""></a>
                         <a href="PTag.html" title="">PTag</a>
                       </li><li class="current-entities indented2">
@@ -461,7 +461,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="LossFunctions$$NLL.html"><span class="name">NLL</span></a><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="reduction">reduction: <a href="../autograd/Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="../index.html">Mean</a></span></span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="LossFunctions$$NLL.html"><span class="name">NLL</span></a><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="../autograd/Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a> = <span class="symbol"><span class="name"><a href="../index.html">Mean</a></span></span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -477,7 +477,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="Return a loss function which takes outputs of time step x batch x classes and targets of time step x batch The returned loss is averaged over the batch and the time steps" href="LossFunctions$$SequenceNLL.html"><span class="name">SequenceNLL</span></a><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <span class="extype" name="aten.Tensor">Tensor</span></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="Return a loss function which takes outputs of time step x batch x classes and targets of time step x batch The returned loss is averaged over the batch and the time steps" href="LossFunctions$$SequenceNLL.html"><span class="name">SequenceNLL</span></a><span class="params">(<span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>, <span name="classWeights">classWeights: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">-100L</span></span>)</span><span class="result"> extends <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       <p class="shortcomment cmt">Return a loss function which takes outputs of time step x batch x classes
