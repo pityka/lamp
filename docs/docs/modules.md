@@ -21,12 +21,12 @@ This one can do with the apply methods in the `lamp.nn.sequence` object.
 As an example here is the complete source code of the linear layer:
 
 ```scala mdoc:compile-only
-import lamp.autograd.Variable
+import lamp.autograd.{Variable, Constant}
 import lamp.nn.Module
 import lamp.nn.Linear
 import lamp.Sc
 
-case class LinearDemo(weights: Variable, bias: Option[Variable]) extends Module {
+case class LinearDemo(weights: Constant, bias: Option[Constant]) extends Module {
 
   override val state = List(
     weights -> Linear.Weights

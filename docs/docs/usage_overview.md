@@ -5,12 +5,13 @@ weight: 2
 
 # Overview
 
-Lamp's design closely follows the design of pytorch. It is organized into the following components:
+Lamp is organized into the following components:
 
-1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the `aten` package and in the class `lamp.STen`. 
-2. An algorithm to compute partial derivatives of composite functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package `lamp.autograd`.
-3. A set of building blocks to build neural networks in the package `lamp.nn`.
-4. Training loop and utilities to work with image and text data in `lamp.data`.
+1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the `aten` package.
+2. A wrapper (`lamp.STen`) providing lexical scope based memory management to those off-heap tensors.
+3. An algorithm to compute partial derivatives of composite functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package `lamp.autograd`.
+5. A set of building blocks to build neural networks in the package `lamp.nn`.
+6. Training loop and utilities to work with various kinds of data in `lamp.data`.
 
 # Building a classifier
 
@@ -49,32 +50,32 @@ First get some tabular data into the JVM memory:
       .get
 ```
 
-Copy those data `aten.Tensor`s of respective shape and type. Note that we specify device so it will end up on the desired device.
+Next we copy those JVM objects into native tensors. Note that we specify device so it will end up on the desired device.
 The feature matrix is copied into a 2D floating point tensor and the target vector is holding the class labels is copied into a 1D integer (long) tensor.
 ```scala mdoc
     import lamp._
     import lamp.autograd._
-    import aten.ATen
     import org.saddle.Mat
+    implicit val scope = Scope.free // Use Scope.root, Scope.apply in non-doc code
     val device = CPU
     val precision = SinglePrecision
     val testDataTensor =
-      TensorHelpers.fromMat(testData.filterIx(_ != "label").toMat, device, precision)
-    val testTarget = ATen.squeeze_0(
-      TensorHelpers.fromLongMat(
+      STen.fromMat(testData.filterIx(_ != "label").toMat, device, precision)
+    val testTarget = 
+      STen.fromLongMat(
         Mat(testData.firstCol("label").toVec.map(_.toLong)),
         device
-      )
-    )
+      ).squeeze
+    
 
     val trainDataTensor =
-      TensorHelpers.fromMat(trainData.filterIx(_ != "label").toMat, device,precision)
-    val trainTarget = ATen.squeeze_0(
-      TensorHelpers.fromLongMat(
+      STen.fromMat(trainData.filterIx(_ != "label").toMat, device,precision)
+    val trainTarget = 
+      STen.fromLongMat(
         Mat(trainData.firstCol("label").toVec.map(_.toLong)),
         device
-      )
-    )
+      ).squeeze
+    
 ```
 
 ## Specify the model
@@ -88,16 +89,14 @@ We also have to give it an `aten.TensorOptions` which holds information of what 
 
 Then we compose that function with a softmax, and provide a suitable loss function. 
 
-Loss functions in lamp are of the type `(lamp.autograd.Variable, aten.Tensor) => lamp.autograd.Variable`. The first `Variable` argument is the output of the model, the second `Tensor` argument is the target. It returns a new `Variable` which is the loss. An autograd `Variable` holds a tensor and has the ability to compute partial derivatives. The training loop will take the loss and compute the partial derivative of all learnable parameters.
+Loss functions in lamp are of the type `(lamp.autograd.Variable, lamp.STen) => lamp.autograd.Variable`. The first `Variable` argument is the output of the model, the second `STen` argument is the target. It returns a new `Variable` which is the loss. An autograd `Variable` holds a tensor and has the ability to compute partial derivatives. The training loop will take the loss and compute the partial derivative of all learnable parameters.
 
-We also have to provide an instance of `lamp.Scope` which is used to keep track of allocated tensors. 
 
 
 ```scala mdoc
 import lamp.nn._
 val tensorOptions = device.options(SinglePrecision)
-val classWeights = ATen.ones(Array(10), tensorOptions)
-implicit val scope = Scope.free
+val classWeights = STen.ones(List(10), tensorOptions)
 val model = SupervisedModel(
   sequence(
       MLP(in = 784, out = 10, List(64, 32), tensorOptions, dropout = 0.2),
@@ -114,8 +113,7 @@ In particular the trainig loop expects a type of `Unit => lamp.data.BatchStream`
 where the BatchStream represent a stream of batches over the full set of training data. 
 This factory function will then be called in each epoch.
 
-Lamp provides a helper which chops up the full batch of data - which we created earlier - 
-into appropriately sized mini-batches.
+Lamp provides a helper which chops up the full batch of data into mini-batches.
 ```scala mdoc
 import lamp.data._
 val makeTrainingBatch = () =>
@@ -160,7 +158,7 @@ val module = trainedModel.module
 
 The trained model we can use for prediction:
 ```scala mdoc
-val bogusData = ATen.ones(Array(1,784),tensorOptions)
+val bogusData = STen.ones(Array(1,784),tensorOptions)
 val classProbabilities = module.forward(const(bogusData)).toMat.map(math.exp)
 println(classProbabilities)
 ```
