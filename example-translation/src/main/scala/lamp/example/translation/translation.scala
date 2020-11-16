@@ -6,7 +6,6 @@ import lamp.nn.SupervisedModel
 import lamp.nn.LossFunctions
 import java.io.File
 import lamp.nn.AdamW
-import lamp.nn.LearningRateSchedule
 import lamp.nn.simple
 import cats.effect.Resource
 import cats.effect.IO
@@ -286,7 +285,6 @@ object Train extends App {
         val optimizer = AdamW.factory(
           weightDecay = simple(0.00),
           learningRate = simple(config.learningRate),
-          scheduler = LearningRateSchedule.cyclicSchedule(10d, 300),
           clip = Some(1d)
         )
 

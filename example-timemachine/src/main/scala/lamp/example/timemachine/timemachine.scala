@@ -7,7 +7,6 @@ import lamp.nn.LossFunctions
 import lamp.data.{Reader, Text, IOLoops}
 import java.io.File
 import lamp.nn.AdamW
-import lamp.nn.LearningRateSchedule
 import lamp.nn.simple
 import cats.effect.Resource
 import cats.effect.IO
@@ -182,7 +181,6 @@ object Train extends App {
         val optimizer = AdamW.factory(
           weightDecay = simple(0.00),
           learningRate = simple(config.learningRate),
-          scheduler = LearningRateSchedule.cyclicSchedule(10d, 200L),
           clip = Some(1d)
         )
 

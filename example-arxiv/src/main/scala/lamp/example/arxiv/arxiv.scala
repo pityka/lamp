@@ -139,8 +139,7 @@ object Train extends App {
               optimizerFactory = AdamW
                 .factory(
                   learningRate = simple(0.01),
-                  weightDecay = simple(1e-4),
-                  scheduler = LearningRateSchedule.decrement(40, 0.01)
+                  weightDecay = simple(1e-4)
                 ),
               trainBatchesOverEpoch = makeTrainingBatch,
               validationBatchesOverEpoch = Some(makeValidationBatch),

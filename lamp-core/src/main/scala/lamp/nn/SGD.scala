@@ -34,10 +34,9 @@ case class SGDW(
   def release = {
     velocity.foreach(_.foreach(_._1.release))
   }
-  def step(gradients: Seq[Option[STen]]) = {
+  def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1L
-    val scheduleFactor = scheduler(stepCount)
 
     parameters.zip(gradients).zip(velocity).filter(_._1._2.isDefined).foreach {
       case (((param, tag), Some(gradients)), None) =>

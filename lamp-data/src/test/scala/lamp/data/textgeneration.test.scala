@@ -10,7 +10,6 @@ import lamp.nn.SupervisedModel
 import lamp.nn.LossFunctions
 import lamp.nn.AdamW
 import lamp.nn.simple
-import lamp.nn.LearningRateSchedule
 import cats.effect.IO
 import scala.collection.mutable
 import cats.effect.Resource
@@ -85,7 +84,6 @@ class TextGenerationSuite extends AnyFunSuite {
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
         learningRate = simple(0.1),
-        scheduler = LearningRateSchedule.noop,
         clip = Some(1d)
       )
 
@@ -171,7 +169,6 @@ class TextGenerationSuite extends AnyFunSuite {
       val optimizer = AdamW.factory(
         weightDecay = simple(0.00),
         learningRate = simple(0.0001),
-        scheduler = LearningRateSchedule.noop,
         clip = Some(1d)
       )
 
