@@ -1103,6 +1103,41 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  testGradientAndValue("repeat interleave")(mat2x3, 54d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.fromMat(m, cuda))
+        val index =
+          param(
+            STen.owned(
+              NDArray.tensorFromLongNDArray(
+                NDArray(
+                  Array(2L, 3L),
+                  List(2)
+                ),
+                cuda
+              )
+            )
+          )
+        val output = input.repeatInterleave(index, 0)
+        assert(
+          output.toMat.roundTo(4) == Mat(
+            Vec(1d, 1d, 2d, 2d, 2d),
+            Vec(3d, 3d, 4d, 4d, 4d),
+            Vec.apply[Double](5d, 5d, 6d, 6d, 6d)
+          )
+        )
+        val L = output.sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          input.partialDerivative.map(t => t.toMat)
+        )
+      }
+  }
   testGradientAndValueND("index_select")(nd1x2x2, 6d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val input =
