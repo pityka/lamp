@@ -143,7 +143,8 @@ class IOLoopSuite extends AnyFunSuite {
         trainingCallback = TrainingCallback.noop,
         validationCallback = ValidationCallback.noop,
         checkpointFile = None,
-        minimumCheckpointFile = None
+        minimumCheckpointFile = None,
+        prefetchData = true
       )
 
       val (loss, _, _) = trainedModel

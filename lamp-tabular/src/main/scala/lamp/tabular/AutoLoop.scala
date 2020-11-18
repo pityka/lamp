@@ -829,7 +829,8 @@ object AutoLoop {
               trainingCallback,
               logger,
               logFrequency,
-              learningRateSchedule.factor(epoch.toLong, None)
+              learningRateSchedule.factor(epoch.toLong, None),
+              None
             )
             next <- loop(
               epoch + 1, {
