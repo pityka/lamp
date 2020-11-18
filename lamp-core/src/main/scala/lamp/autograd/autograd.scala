@@ -245,6 +245,8 @@ trait Variable {
     new View(extractScope, this, shape.map(_.toLong).toArray).value
   def flattenLastDimensions[S: Sc](dims: Int) =
     new FlattenLastDimensions(extractScope, this, dims).value
+  def repeatInterleave[S: Sc](repeats: Variable, dim: Int) =
+    new RepeatInterleave(extractScope, this, repeats, dim).value
 
   def toMat = value.toMat
   def toLongMat = value.toLongMat

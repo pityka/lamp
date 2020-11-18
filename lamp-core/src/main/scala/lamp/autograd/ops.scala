@@ -262,6 +262,33 @@ class IndexAdd(
     Variable(this, result)(scope)
   }
 }
+class RepeatInterleave(
+    scope: Scope,
+    self: Variable,
+    repeats: Variable,
+    dim: Int
+) extends Op {
+
+  val params = List(
+    self.zipBackward { (p, out) =>
+      Scope.root {
+        implicit scope =>
+          val plainIndices =
+            STen.arange(0, self.shape(0), 1d, self.options.toLong)
+          val repeatedIndices = plainIndices.repeatInterleave(repeats.value, 0)
+          val zeros = STen.zeros(out.shape, out.options)
+          val added = zeros.indexAdd(0, repeatedIndices, p)
+          out += added
+      }
+
+    }
+  )
+
+  val value = Variable(
+    this,
+    self.value.repeatInterleave(repeats.value, dim)(scope)
+  )(scope)
+}
 
 class Add(scope: Scope, a: Variable, b: Variable) extends Op {
 
