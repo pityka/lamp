@@ -60,25 +60,25 @@ case class ConstantWithoutGrad(
 ) extends Constant {
   val partialDerivative = None
 }
-object ConstantWithoutGrad {
-  implicit val movable =
-    Movable.nonEmpty[ConstantWithoutGrad](constant =>
-      List(constant.value.value)
-    )
-}
+
 case class ConstantWithGrad(
     value: STen,
     pd: STen
 ) extends Constant {
   val partialDerivative = Some(pd)
 }
-object ConstantWithGrad {
-  implicit val movable =
-    Movable.nonEmpty[ConstantWithGrad](p => List(p.value.value, p.pd.value))
+
+sealed trait Constant extends Variable {
+  final def op = None
 }
 
-trait Constant extends Variable {
-  final def op = None
+object Constant {
+  implicit val movable =
+    Movable.nonEmpty[Constant] {
+      case p: ConstantWithGrad    => List(p.value.value, p.pd.value)
+      case p: ConstantWithoutGrad => List(p.value.value)
+    }
+
 }
 
 case class VariableNonConstant(
