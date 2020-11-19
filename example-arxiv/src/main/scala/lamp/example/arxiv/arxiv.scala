@@ -148,7 +148,8 @@ object Train extends App {
               validationCallback = ValidationCallback.noop,
               checkpointFile = None,
               minimumCheckpointFile = None,
-              logger = Some(scribe.Logger("b"))
+              logger = Some(scribe.Logger("b")),
+              prefetchData = true
             )
             .unsafeRunSync()
 
