@@ -49,7 +49,7 @@ object ValidationCallback {
         }
       }
       val corrects = prediction.zipMap(
-        validationTarget.toVec
+        validationTarget.toLongVec
       )((a, b) => if (a == b) 1d else 0d)
       logger.info(
         s"epoch: $epochCount, validation loss: $validationLoss, corrects: ${corrects.mean}"
