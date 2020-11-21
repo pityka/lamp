@@ -218,8 +218,26 @@ class GCNSuite extends AnyFunSuite {
       }
 
       val accuracy = {
+        val input = (const(featureT), const(edges))
         val output =
-          trainedModel.asEval.forward((const(featureT), const(edges)))
+          trainedModel.asEval.forward(input)
+        val file = java.io.File.createTempFile("dfs", ".onnx")
+        lamp.onnx.serializeToFile(
+          file,
+          output
+        ) {
+          case x if x == output =>
+            lamp.onnx.VariableInfo(output, "output", input = false)
+          case x if x == input._1 =>
+            lamp.onnx.VariableInfo(input._1, "node features", input = true)
+          case x if x.value.options.isSparse =>
+            lamp.onnx.VariableInfo(x, "graph adj", input = true)
+          case x: ConstantWithoutGrad
+              if x.value.shape.head == input._1.shape.head =>
+            lamp.onnx.VariableInfo(x, "graph degree", input = true)
+        }
+        println(file)
+
         val prediction = {
           val argm = ATen.argmax(output.value.value, 1, false)
           val r = TensorHelpers.toLongMat(argm).toVec

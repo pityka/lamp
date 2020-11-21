@@ -20,7 +20,7 @@ class MLPSuite extends AnyFunSuite {
     )
 
   def test1(id: String)(fun: Boolean => Unit) = {
-    test(id, SlowTest) { fun(false) }
+    test(id) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }
   }
 
@@ -102,30 +102,47 @@ class MLPSuite extends AnyFunSuite {
       val validationCallback =
         ValidationCallback.logAccuracy(logger)
 
-      val trainedModel = IOLoops.epochs(
-        model = model,
-        optimizerFactory = SGDW
-          .factory(
-            learningRate = simple(0.0001),
-            weightDecay = simple(0.001d)
-          ),
-        trainBatchesOverEpoch = makeTrainingBatch,
-        validationBatchesOverEpoch = Some(makeValidationBatch),
-        epochs = 10,
-        trainingCallback = TrainingCallback.noop,
-        validationCallback = validationCallback,
-        checkpointFile = None,
-        minimumCheckpointFile = None
-      )
-      val (loss, _, _) = trainedModel
-        .flatMap(
-          _._2
-            .lossAndOutput(const(testDataTensor), testTarget)
-            .allocated
-            .map(_._1)
+      val (_, trainedModel) = IOLoops
+        .epochs(
+          model = model,
+          optimizerFactory = SGDW
+            .factory(
+              learningRate = simple(0.0001),
+              weightDecay = simple(0.001d)
+            ),
+          trainBatchesOverEpoch = makeTrainingBatch,
+          validationBatchesOverEpoch = Some(makeValidationBatch),
+          epochs = 10,
+          trainingCallback = TrainingCallback.noop,
+          validationCallback = validationCallback,
+          checkpointFile = None,
+          minimumCheckpointFile = None
         )
+        .unsafeRunSync()
+      val (loss, _, _) = trainedModel
+        .lossAndOutput(const(testDataTensor), testTarget)
+        .allocated
+        .map(_._1)
         .unsafeRunSync
       assert(loss < 3)
+
+      {
+        val input = const(testDataTensor)
+        val output = trainedModel.module.forward(input)
+        val file = java.io.File.createTempFile("dfs", ".onnx")
+        lamp.onnx.serializeToFile(
+          file,
+          output
+        ) {
+          case x if x == output =>
+            lamp.onnx.VariableInfo(output, "output", input = false)
+          case x if x == input =>
+            lamp.onnx.VariableInfo(input, "node features", input = true)
+
+        }
+        println(file)
+
+      }
     }
   }
 }

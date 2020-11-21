@@ -10,7 +10,7 @@ import lamp.SinglePrecision
 import lamp.Scope
 import lamp.STen
 
-class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
+case class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
     extends Op {
 
   val params = List(
@@ -25,7 +25,7 @@ class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
   )(scope)
 }
 
-class View(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
+case class View(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -36,7 +36,7 @@ class View(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
   val value = Variable(this, a.value.view(shape: _*)(scope))(scope)
 }
 
-class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
+case class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
   val ashapes = a.map(_.shape(dim.toInt))
   val boundaries =
     ashapes.scanLeft(0L)(_ + _).sliding(2).toList.map(g => g(0) -> g(1))
@@ -50,35 +50,19 @@ class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
     Variable(this, STen.cat(a.map(_.value), dim)(scope))(scope)
 }
 
-/** Prepends a new dimension and concatenates the tensors along that axis
-  */
-class ConcatenateAddNewDim(scope: Scope, a: Seq[Variable]) extends Op {
+case class Stack(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
   val params = a.zipWithIndex.toList.map {
     case (a, idx) =>
       a.zipBackward { (p, out) =>
-        Scope.root { implicit scope => out += p.select(0, idx) }
+        Scope.root { implicit scope => out += p.select(dim, idx) }
       }
   }
-  val shapes = a.map(_.shape)
-
-  assert(
-    shapes.distinct.size == 1,
-    "Concatenable tensors must have the same shape."
-  )
-  val shape = List(a.size.toLong) ++ shapes.head
-  val shape1 = List(1L) ++ shapes.head
-  val zeros = STen.zeros(shape, a.head.options)(scope)
-  Scope.root { implicit scope =>
-    a.foldLeft(0) { (offset, v) =>
-      val viewed = v.value.view(shape1: _*)
-      val idx = STen.scalarLong(offset, a.head.options.toLong)
-      zeros.index_copy_(0, idx, viewed)
-      offset + 1
-    }
-  }
-  val value = Variable(this, zeros)(scope)
+  val value =
+    Variable(this, STen.stack(a.map(_.value), dim)(scope))(scope)
 }
-class Select(scope: Scope, a: Variable, dim: Long, index: Long) extends Op {
+
+case class Select(scope: Scope, a: Variable, dim: Long, index: Long)
+    extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -99,7 +83,7 @@ class Select(scope: Scope, a: Variable, dim: Long, index: Long) extends Op {
   val value =
     Variable(this, a.value.select(dim, index)(scope))(scope)
 }
-class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
+case class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
 
   val params = List()
   val value = Variable(this, {
@@ -111,7 +95,7 @@ class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
     }
   })(scope)
 }
-class MaskFill(scope: Scope, input: Variable, mask: Variable, fill: Double)
+case class MaskFill(scope: Scope, input: Variable, mask: Variable, fill: Double)
     extends Op {
 
   val params = List(
@@ -123,7 +107,7 @@ class MaskFill(scope: Scope, input: Variable, mask: Variable, fill: Double)
   val value =
     Variable(this, input.value.maskFill(mask.value, fill)(scope))(scope)
 }
-class IndexFill(
+case class IndexFill(
     scope: Scope,
     input: Variable,
     dim: Long,
@@ -142,7 +126,7 @@ class IndexFill(
       scope
     )
 }
-class IndexSelect(
+case class IndexSelect(
     scope: Scope,
     input: Variable,
     dim: Long,
@@ -161,7 +145,7 @@ class IndexSelect(
   val value =
     Variable(this, input.value.indexSelect(dim, index.value)(scope))(scope)
 }
-class ArgMax(scope: Scope, a: Variable, dim: Long, keepDim: Boolean)
+case class ArgMax(scope: Scope, a: Variable, dim: Long, keepDim: Boolean)
     extends Op {
 
   val params = List(
@@ -173,7 +157,7 @@ class ArgMax(scope: Scope, a: Variable, dim: Long, keepDim: Boolean)
     Variable(this, a.value.argmax(dim, keepDim)(scope))(scope)
 }
 
-class Assign(scope: Scope, abandon: Variable, keep: Variable) extends Op {
+case class Assign(scope: Scope, abandon: Variable, keep: Variable) extends Op {
 
   val params = List(
     abandon.zipBackward { (_, _) => () },
@@ -181,7 +165,7 @@ class Assign(scope: Scope, abandon: Variable, keep: Variable) extends Op {
   )
   val value = Variable(this, keep.value)(scope)
 }
-class OneHot(scope: Scope, a: Variable, numClasses: Int) extends Op {
+case class OneHot(scope: Scope, a: Variable, numClasses: Int) extends Op {
 
   val params = List(
     a.zipBackward { (_, _) =>
@@ -191,7 +175,7 @@ class OneHot(scope: Scope, a: Variable, numClasses: Int) extends Op {
   val value =
     Variable(this, a.value.oneHot(numClasses)(scope))(scope)
 }
-class CastToPrecision(
+case class CastToPrecision(
     scope: Scope,
     a: Variable,
     precision: FloatingPointPrecision
@@ -210,7 +194,7 @@ class CastToPrecision(
   })(scope)
 }
 
-class ScatterAdd(
+case class ScatterAdd(
     scope: Scope,
     src: Variable,
     index: Variable,
@@ -236,7 +220,7 @@ class ScatterAdd(
     Variable(this, result)(scope)
   }
 }
-class IndexAdd(
+case class IndexAdd(
     scope: Scope,
     src: Variable,
     index: Variable,
@@ -262,7 +246,7 @@ class IndexAdd(
     Variable(this, result)(scope)
   }
 }
-class RepeatInterleave(
+case class RepeatInterleave(
     scope: Scope,
     self: Variable,
     repeats: Variable,
@@ -290,7 +274,7 @@ class RepeatInterleave(
   )(scope)
 }
 
-class Add(scope: Scope, a: Variable, b: Variable) extends Op {
+case class Add(scope: Scope, a: Variable, b: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -305,7 +289,7 @@ class Add(scope: Scope, a: Variable, b: Variable) extends Op {
     Variable(this, a.value.+(b.value)(scope))(scope)
 
 }
-class ConstAdd(scope: Scope, a: Variable, b: Double) extends Op {
+case class ConstAdd(scope: Scope, a: Variable, b: Double) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -316,7 +300,7 @@ class ConstAdd(scope: Scope, a: Variable, b: Double) extends Op {
   val value = Variable(this, a.value.+(b)(scope))(scope)
 
 }
-class Minus(scope: Scope, a: Variable, b: Variable) extends Op {
+case class Minus(scope: Scope, a: Variable, b: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -332,7 +316,7 @@ class Minus(scope: Scope, a: Variable, b: Variable) extends Op {
     Variable(this, a.value.-(b.value)(scope))(scope)
 
 }
-class ConstMult(scope: Scope, a: Variable, b: Double) extends Op {
+case class ConstMult(scope: Scope, a: Variable, b: Double) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -344,7 +328,7 @@ class ConstMult(scope: Scope, a: Variable, b: Double) extends Op {
   val value = Variable(this, a.value.*(b)(scope))(scope)
 
 }
-class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
+case class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -360,7 +344,7 @@ class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
   val value = Variable(this, a.value.*(b.value)(scope))(scope)
 
 }
-class Div(scope: Scope, a: Variable, b: Variable) extends Op {
+case class Div(scope: Scope, a: Variable, b: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -381,30 +365,16 @@ class Div(scope: Scope, a: Variable, b: Variable) extends Op {
   val value = Variable(this, a.value./(b.value)(scope))(scope)
 }
 
-class Sum(scope: Scope, a: Variable) extends Op {
+case class Sum(scope: Scope, a: Variable, dim: List[Int], keepDim: Boolean)
+    extends Op {
 
   val params = List(a.zipBackward { (p, out) => out += p })
 
-  val value = Variable(this, a.value.sum(scope))(scope)
+  val value = Variable(this, a.value.sum(dim, keepDim)(scope))(scope)
 
 }
-class ColSum(scope: Scope, a: Variable) extends Op {
 
-  val params = List(a.zipBackward { (p, out) => out += p })
-
-  val value =
-    Variable(this, a.value.sum(List(0), true)(scope))(scope)
-
-}
-class RowSum(scope: Scope, a: Variable) extends Op {
-
-  val params = List(a.zipBackward { (p, out) => out += p })
-
-  val value =
-    Variable(this, a.value.sum(List(1), true)(scope))(scope)
-
-}
-class ExpandAs(scope: Scope, a: Variable, as: STen) extends Op {
+case class ExpandAs(scope: Scope, a: Variable, as: STen) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope => out += p.unbroadcast(a.shape) }
@@ -414,7 +384,7 @@ class ExpandAs(scope: Scope, a: Variable, as: STen) extends Op {
 }
 
 // http://cs231n.stanford.edu/handouts/derivatives.pdf
-class MatMul(scope: Scope, a: Variable, b: Variable) extends Op {
+case class MatMul(scope: Scope, a: Variable, b: Variable) extends Op {
 
   val params =
     List(
@@ -445,7 +415,7 @@ class MatMul(scope: Scope, a: Variable, b: Variable) extends Op {
   val value = Variable(this, a.value.mm(b.value)(scope))(scope)
 
 }
-class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
+case class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
 
   val params =
     List(
@@ -474,7 +444,7 @@ class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
   val value = Variable(this, a.value.bmm(b.value)(scope))(scope)
 
 }
-class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
+case class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
     extends Op {
 
   val params =
@@ -503,14 +473,14 @@ class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
 
 }
 
-class Exp(scope: Scope, a: Variable) extends Op {
+case class Exp(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     out.addcmulSelf(p, value.value, 1d)
   })
   val value = Variable(this, a.value.exp(scope))(scope)
 }
-class CappedShiftedNegativeExponential(
+case class CappedShiftedNegativeExponential(
     scope: Scope,
     a: Variable,
     shift: Double
@@ -535,7 +505,7 @@ class CappedShiftedNegativeExponential(
   val result = ATen.where_0(pred, ones, above)
   val value = Variable(this, STen.owned(result)(scope))(scope)
 }
-class Log(scope: Scope, a: Variable) extends Op {
+case class Log(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
@@ -545,7 +515,7 @@ class Log(scope: Scope, a: Variable) extends Op {
   })
   val value = Variable(this, a.value.log(scope))(scope)
 }
-class Log1p(scope: Scope, a: Variable) extends Op {
+case class Log1p(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
@@ -557,7 +527,7 @@ class Log1p(scope: Scope, a: Variable) extends Op {
   })
   val value = Variable(this, a.value.log1p(scope))(scope)
 }
-class Sin(scope: Scope, a: Variable) extends Op {
+case class Sin(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
@@ -568,7 +538,7 @@ class Sin(scope: Scope, a: Variable) extends Op {
   })
   val value = Variable(this, a.value.sin(scope))(scope)
 }
-class Cos(scope: Scope, a: Variable) extends Op {
+case class Cos(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
@@ -579,7 +549,7 @@ class Cos(scope: Scope, a: Variable) extends Op {
   })
   val value = Variable(this, a.value.cos(scope))(scope)
 }
-class Tan(scope: Scope, a: Variable) extends Op {
+case class Tan(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
@@ -592,7 +562,7 @@ class Tan(scope: Scope, a: Variable) extends Op {
   })
   val value = Variable(this, a.value.tan(scope))(scope)
 }
-class Tanh(scope: Scope, a: Variable) extends Op {
+case class Tanh(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
@@ -602,7 +572,7 @@ class Tanh(scope: Scope, a: Variable) extends Op {
   })
   val value = Variable(this, a.value.tanh(scope))(scope)
 }
-class ArcTan(scope: Scope, a: Variable) extends Op {
+case class ArcTan(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
@@ -617,7 +587,7 @@ class ArcTan(scope: Scope, a: Variable) extends Op {
   })
   val value = Variable(this, a.value.atan(scope))(scope)
 }
-class PowConst(scope: Scope, a: Variable, exponent: Double) extends Op {
+case class PowConst(scope: Scope, a: Variable, exponent: Double) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
@@ -628,7 +598,7 @@ class PowConst(scope: Scope, a: Variable, exponent: Double) extends Op {
   })
   val value = Variable(this, a.value.pow(exponent)(scope))(scope)
 }
-class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
+case class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -656,7 +626,7 @@ class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
   val value =
     Variable(this, a.value.pow(exponent.value)(scope))(scope)
 }
-class Relu(scope: Scope, a: Variable) extends Op {
+case class Relu(scope: Scope, a: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -674,7 +644,7 @@ class Relu(scope: Scope, a: Variable) extends Op {
   val value = Variable(this, a.value.relu(scope))(scope)
 }
 
-class LogSoftMax(scope: Scope, a: Variable, dim: Int) extends Op {
+case class LogSoftMax(scope: Scope, a: Variable, dim: Int) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -695,7 +665,7 @@ class LogSoftMax(scope: Scope, a: Variable, dim: Int) extends Op {
   val value = Variable(this, a.value.logSoftMax(dim)(scope))(scope)
 
 }
-class Gelu(scope: Scope, a: Variable) extends Op {
+case class Gelu(scope: Scope, a: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -708,7 +678,7 @@ class Gelu(scope: Scope, a: Variable) extends Op {
   val value = Variable(this, a.value.gelu(scope))(scope)
 
 }
-class Sigmoid(scope: Scope, a: Variable) extends Op {
+case class Sigmoid(scope: Scope, a: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -723,7 +693,8 @@ class Sigmoid(scope: Scope, a: Variable) extends Op {
 
 }
 
-class Mean(scope: Scope, a: Variable, dim: List[Int]) extends Op {
+case class Mean(scope: Scope, a: Variable, dim: List[Int], keepDim: Boolean)
+    extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -734,11 +705,11 @@ class Mean(scope: Scope, a: Variable, dim: List[Int]) extends Op {
   val value =
     Variable(
       this,
-      a.value.mean(dim, true)(scope)
+      a.value.mean(dim, keepDim)(scope)
     )(scope)
 
 }
-class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
+case class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
@@ -762,7 +733,7 @@ class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
     )(scope)
 
 }
-class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
+case class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
     extends Op {
 
   val params = List(
@@ -779,7 +750,8 @@ class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
 }
 
 // https://arxiv.org/pdf/1602.07868.pdf
-class WeightNorm(scope: Scope, v: Variable, g: Variable, dim: Long) extends Op {
+case class WeightNorm(scope: Scope, v: Variable, g: Variable, dim: Long)
+    extends Op {
 
   assert(v.sizes.size == 2, "WeightNorm: v should have 2 dimensions")
   assert(
@@ -845,7 +817,7 @@ case object Sum extends Reduction {
   def asLong = 2L
 }
 
-class MseLoss(
+case class MseLoss(
     scope: Scope,
     input: Variable,
     target: STen,
@@ -876,7 +848,7 @@ class MseLoss(
       STen.mse_loss(input.value, targetViewed, reduction.asLong)(scope)
     )(scope)
 }
-class L1Loss(
+case class L1Loss(
     scope: Scope,
     input: Variable,
     target: STen,
@@ -911,7 +883,7 @@ class L1Loss(
       )(scope)
     )(scope)
 }
-class NllLoss(
+case class NllLoss(
     scope: Scope,
     input: Variable,
     target: STen,
@@ -923,11 +895,11 @@ class NllLoss(
 
   assert(
     input.sizes.size == 2,
-    "Nll Loss assumes 2D input (samples x classes). Higher dimensions not implemented."
+    "Nll Loss assumes 2D input (samples x case classes). Higher dimensions not implemented."
   )
   assert(
     target.sizes.size == 1,
-    "Target should be a 1D tensor with [0,C-1] integers, C number of classes."
+    "Target should be a 1D tensor with [0,C-1] integers, C number of case classes."
   )
 
   val params = List(
@@ -968,7 +940,7 @@ class NllLoss(
 
 }
 
-class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
+case class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     out.addcmulSelf(p, a.value, 2d)
@@ -988,7 +960,7 @@ class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
   * @param bias out_channels
   * @return Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)
   */
-class Conv1D(
+case class Conv1D(
     scope: Scope,
     input: Variable,
     weight: Variable,
@@ -1016,6 +988,26 @@ class Conv1D(
   )
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      val pSize = p.sizes
+      val zeros = ATen.zeros(Array(inputChannels), p.options)
+      val outputSizeWithoutExtraPadding =
+        (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
+      val extraPadding = out.sizes.apply(2) - outputSizeWithoutExtraPadding
+      val tmp = ATen.conv_transpose1d(
+        p.value,
+        weight.value.value,
+        zeros,
+        Array(stride),
+        Array(padding),
+        Array(extraPadding),
+        groups,
+        Array(dilation)
+      )
+      ATen.add_out(out.value, out.value, tmp, 1d)
+      tmp.release
+      zeros.release()
+    },
     weight.zipBackward { (p, out) =>
       val p_repeated =
         ATen.repeat_interleave_2(p.value, inputChannels / groups, 1)
@@ -1077,26 +1069,6 @@ class Conv1D(
       p_repeated.release
 
     },
-    input.zipBackward { (p, out) =>
-      val pSize = p.sizes
-      val zeros = ATen.zeros(Array(inputChannels), p.options)
-      val outputSizeWithoutExtraPadding =
-        (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
-      val extraPadding = out.sizes.apply(2) - outputSizeWithoutExtraPadding
-      val tmp = ATen.conv_transpose1d(
-        p.value,
-        weight.value.value,
-        zeros,
-        Array(stride),
-        Array(padding),
-        Array(extraPadding),
-        groups,
-        Array(dilation)
-      )
-      ATen.add_out(out.value, out.value, tmp, 1d)
-      tmp.release
-      zeros.release()
-    },
     bias.zipBackward { (p, out) =>
       val p2 = ub(p.value, List(out.sizes.toList.head, 1))
       val p3 = ATen._unsafe_view(p2, out.sizes.toArray)
@@ -1129,7 +1101,7 @@ class Conv1D(
   * @param bias out_channels
   * @return Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)
   */
-class Conv2D(
+case class Conv2D(
     scope: Scope,
     input: Variable,
     weight: Variable,
@@ -1140,8 +1112,8 @@ class Conv2D(
     groups: Long
 ) extends Op {
 
-  assert(input.shape.size == 4, "Input dimensions must be 3")
-  assert(weight.shape.size == 4, "Weight dimensions must be 3")
+  assert(input.shape.size == 4, "Input dimensions must be 4")
+  assert(weight.shape.size == 4, "Weight dimensions must be 4")
   val batchSize = input.shape(0)
   val inputChannels = input.shape(1)
   val imageHeight = input.shape(2)
@@ -1158,6 +1130,43 @@ class Conv2D(
   )
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      if (p.options.isCuda()) {
+        val tmp = ATen.cudnn_convolution_backward_input(
+          input.shape.toArray,
+          p.value,
+          weight.value.value,
+          Array(padding, padding),
+          Array(stride, stride),
+          Array(dilation, dilation),
+          groups,
+          false,
+          false
+        )
+        ATen.add_out(out.value, out.value, tmp, 1d)
+        tmp.release
+      } else {
+        val pSize = p.sizes
+        val zeros = ATen.zeros(Array(inputChannels), p.options)
+        val outputSizeWithoutExtraPadding =
+          (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
+        val extraPaddingH = out.sizes.apply(2) - outputSizeWithoutExtraPadding
+        val extraPaddingW = out.sizes.apply(3) - outputSizeWithoutExtraPadding
+        val tmp = ATen.conv_transpose2d(
+          p.value,
+          weight.value.value,
+          zeros,
+          Array(stride),
+          Array(padding),
+          Array(extraPaddingH, extraPaddingW),
+          groups,
+          Array(dilation)
+        )
+        ATen.add_out(out.value, out.value, tmp, 1d)
+        tmp.release
+        zeros.release()
+      }
+    },
     weight.zipBackward { (p, out) =>
       if (p.options.isCuda()) {
         val tmp = ATen.cudnn_convolution_backward_weight(
@@ -1253,43 +1262,6 @@ class Conv2D(
         zero.release
       }
     },
-    input.zipBackward { (p, out) =>
-      if (p.options.isCuda()) {
-        val tmp = ATen.cudnn_convolution_backward_input(
-          input.shape.toArray,
-          p.value,
-          weight.value.value,
-          Array(padding, padding),
-          Array(stride, stride),
-          Array(dilation, dilation),
-          groups,
-          false,
-          false
-        )
-        ATen.add_out(out.value, out.value, tmp, 1d)
-        tmp.release
-      } else {
-        val pSize = p.sizes
-        val zeros = ATen.zeros(Array(inputChannels), p.options)
-        val outputSizeWithoutExtraPadding =
-          (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
-        val extraPaddingH = out.sizes.apply(2) - outputSizeWithoutExtraPadding
-        val extraPaddingW = out.sizes.apply(3) - outputSizeWithoutExtraPadding
-        val tmp = ATen.conv_transpose2d(
-          p.value,
-          weight.value.value,
-          zeros,
-          Array(stride),
-          Array(padding),
-          Array(extraPaddingH, extraPaddingW),
-          groups,
-          Array(dilation)
-        )
-        ATen.add_out(out.value, out.value, tmp, 1d)
-        tmp.release
-        zeros.release()
-      }
-    },
     bias.zipBackward { (p, out) =>
       val p2 = ub(p.value, List(out.sizes.toList.head, 1, 1))
       val p3 = ATen._unsafe_view(p2, out.sizes.toArray)
@@ -1320,7 +1292,7 @@ class Conv2D(
   *
   * @param input batch x in_channels x L
   */
-class MaxPool1D(
+case class MaxPool1D(
     scope: Scope,
     input: Variable,
     kernelSize: Long,
@@ -1382,7 +1354,7 @@ class MaxPool1D(
   *
   * @param input batch x in_channels x h x w
   */
-class MaxPool2D(
+case class MaxPool2D(
     scope: Scope,
     input: Variable,
     kernelSize: Long,
@@ -1435,7 +1407,7 @@ class MaxPool2D(
   *
   * @param input batch x in_channels x h x w
   */
-class AvgPool2D(
+case class AvgPool2D(
     scope: Scope,
     input: Variable,
     kernelSize: Long,
@@ -1487,7 +1459,7 @@ class AvgPool2D(
     )(scope)
 }
 
-class FlattenLastDimensions(scope: Scope, input: Variable, last: Int)
+case class Flatten(scope: Scope, input: Variable, startDim: Int, endDim: Int)
     extends Op {
 
   assert(input.shape.size >= 2, "Input dimensions must be 4")
@@ -1498,17 +1470,15 @@ class FlattenLastDimensions(scope: Scope, input: Variable, last: Int)
     }
   )
 
-  val size = input.shape.takeRight(last).reduce(_ * _)
-
   val value =
     Variable(
       this,
-      input.value.view(-1, size)(scope)
+      input.value.flatten(startDim, endDim)(scope)
     )(scope)
 }
 
 /* 0-th dimension has samples. Everything else is flattened out into features. */
-class BatchNorm(
+case class BatchNorm(
     scope: Scope,
     input: Variable,
     weight: Variable,
@@ -1620,7 +1590,7 @@ class BatchNorm(
 /** Batch Norm 2D
   * 0-th dimension are samples. 1-th are features, everything else is averaged out.
   */
-class BatchNorm2D(
+case class BatchNorm2D(
     scope: Scope,
     input: Variable,
     weight: Variable,
@@ -1721,7 +1691,8 @@ class BatchNorm2D(
     }
   )
 }
-class Embedding(scope: Scope, input: Variable, weight: Variable) extends Op {
+case class Embedding(scope: Scope, input: Variable, weight: Variable)
+    extends Op {
 
   assert(input.shape.size >= 1, "Input dimensions must be at least 1")
   assert(weight.shape.size == 2, "Weight must have 2 dimensions")

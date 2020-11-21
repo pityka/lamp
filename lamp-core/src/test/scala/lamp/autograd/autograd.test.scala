@@ -1960,8 +1960,7 @@ class GradientSuite extends AnyFunSuite {
       val input =
         param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-      val output =
-        new FlattenLastDimensions(scope, input, 3).value
+      val output = input.flattenLastDimensions(3)(scope)
 
       assert(output.shape == List(1, 18))
 
@@ -2017,15 +2016,36 @@ class GradientSuite extends AnyFunSuite {
         )
       }
   }
-  testGradientAndValueND("cat 0 ")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
+
+  testGradientAndValueND("stack 0")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val input =
         param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
       val output =
-        new ConcatenateAddNewDim(scope, List(input, input)).value
+        new Stack(scope, List(input, input), 0).value
 
       assert(output.shape == List(2, 1, 2, 3))
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+      )
+    }
+  }
+  testGradientAndValueND("stack 1")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val input =
+        param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+
+      val output =
+        new Stack(scope, List(input, input), 1).value
+
+      assert(output.shape == List(1, 2, 2, 3))
 
       val L = output.sum
       if (doBackprop) {

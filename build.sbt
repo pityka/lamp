@@ -86,7 +86,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+56-4dbef375",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+58-b6a682ab",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
       "org.typelevel" %% "cats-core" % "2.1.1",
@@ -132,7 +132,7 @@ lazy val data = project
     testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil
   )
-  .dependsOn(core % "test->test;compile->compile")
+  .dependsOn(core % "test->test;compile->compile", onnx % "test")
 
 lazy val e2etest = project
   .in(file("endtoendtest"))
@@ -198,6 +198,29 @@ lazy val umap = project
   .dependsOn(data, knn)
   .dependsOn(core % "test->test;compile->compile")
 
+lazy val onnx = project
+  .in(file("lamp-onnx"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-onnx",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.1.2" % "test",
+      "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.5.2" % "test"
+    ),
+    PB.targets in Compile := Seq(
+      scalapb.gen() -> (sourceManaged in Compile).value / "scalapb"
+    ),
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
+    testOptions in AllTest := Nil
+  )
+  .dependsOn(core % "test->test;compile->compile")
+
 lazy val forest = project
   .in(file("extratrees"))
   .settings(commonSettings: _*)
@@ -243,7 +266,7 @@ lazy val example_cifar100 = project
       "com.outr" %% "scribe" % "2.7.3"
     )
   )
-  .dependsOn(core, data)
+  .dependsOn(core, data, onnx)
 lazy val example_timemachine = project
   .in(file("example-timemachine"))
   .settings(commonSettings: _*)
@@ -315,6 +338,7 @@ lazy val root = project
     knn,
     forest,
     umap,
+    onnx,
     docs,
     example_cifar100,
     example_timemachine,

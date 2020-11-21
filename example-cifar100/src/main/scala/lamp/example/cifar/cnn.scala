@@ -49,7 +49,7 @@ object Residual {
             tOpt = tOpt
           ),
           BatchNorm2D(outChannels, tOpt = tOpt),
-          Fun(implicit pool => _.gelu),
+          Fun(implicit pool => _.relu),
           Dropout(dropout, true),
           Conv2D(
             inChannels = outChannels,
@@ -78,7 +78,7 @@ object Residual {
               )
             )
       ),
-      Fun(implicit pool => _.gelu),
+      Fun(implicit pool => _.relu),
       Dropout(dropout, true)
     )
 
@@ -150,7 +150,7 @@ object Cnn {
         tOpt = tOpt
       ),
       BatchNorm2D(6, tOpt),
-      Fun(implicit pool => _.gelu),
+      Fun(implicit pool => _.relu),
       Dropout(dropOut, training = true),
       Fun(implicit pool =>
         new MaxPool2D(
@@ -170,7 +170,7 @@ object Cnn {
         tOpt = tOpt
       ),
       BatchNorm2D(16, tOpt),
-      Fun(implicit pool => _.gelu),
+      Fun(implicit pool => _.relu),
       Dropout(dropOut, training = true),
       Fun(implicit pool =>
         new MaxPool2D(
@@ -185,11 +185,11 @@ object Cnn {
       Fun(implicit pool => _.flattenLastDimensions(3)),
       Linear(1024, 120, tOpt = tOpt),
       BatchNorm(120, tOpt),
-      Fun(implicit pool => _.gelu),
+      Fun(implicit pool => _.relu),
       Dropout(dropOut, training = true),
       Linear(120, 84, tOpt = tOpt),
       BatchNorm(84, tOpt),
-      Fun(implicit pool => _.gelu),
+      Fun(implicit pool => _.relu),
       Dropout(dropOut, training = true),
       Linear(84, numClasses, tOpt = tOpt),
       Fun(implicit pool => _.logSoftMax(dim = 1))
