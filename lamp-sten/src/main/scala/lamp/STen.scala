@@ -52,6 +52,18 @@ object STen {
       cuda: Boolean = false
   ) = owned(TensorHelpers.fromLongVec(m, cuda))
 
+  def fromLongArray[S: Sc](ar: Array[Long], dim: Seq[Long], device: Device) =
+    TensorHelpers.fromLongArray(ar, dim, device).owned
+  def fromDoubleArray[S: Sc](
+      ar: Array[Double],
+      dim: Seq[Long],
+      device: Device,
+      precision: FloatingPointPrecision
+  ) =
+    TensorHelpers.fromDoubleArray(ar, dim, device, precision).owned
+  def fromFloatArray[S: Sc](ar: Array[Float], dim: Seq[Long], device: Device) =
+    TensorHelpers.fromFloatArray(ar, dim, device).owned
+
   def free(value: Tensor) = STen(value)
 
   def apply[S: Sc](vs: Double*) = fromVec(Vec(vs: _*))
@@ -299,12 +311,17 @@ case class STen private (
   def numel = value.numel
 
   def toMat = TensorHelpers.toMat(value)
+  def toFloatMat = TensorHelpers.toFloatMat(value)
   def toLongMat = TensorHelpers.toLongMat(value)
   def toVec = TensorHelpers.toVec(value)
+  def toFloatVec = TensorHelpers.toFloatVec(value)
   def toLongVec = TensorHelpers.toLongVec(value)
   val shape = value.sizes.toList
   def sizes = shape
   val options = value.options()
+  def coalesce[S: Sc] = value.coalesce.owned
+  def indices[S: Sc] = value.indices.owned
+  def values[S: Sc] = value.indices.owned
 
   def copyToDevice(device: Device)(implicit scope: Scope) = {
     STen.owned(device.to(value))

@@ -27,6 +27,7 @@ import lamp.FloatingPointPrecision
 import lamp.SinglePrecision
 import lamp.Scope
 import lamp.STen
+import lamp.onnx.VariableInfo
 
 object Cifar {
   def loadImageFile(
@@ -198,7 +199,7 @@ object Train extends App {
           learningRate = simple(config.learningRate)
         )
 
-        IOLoops
+        val (_, trained) = IOLoops
           .epochs(
             model = model,
             optimizerFactory = optimizer,
@@ -214,6 +215,36 @@ object Train extends App {
             logger = Some(scribe.Logger("training"))
           )
           .unsafeRunSync()
+
+        testEpochs().nextBatch.use {
+          case batch =>
+            IO {
+              val output = trained.module.forward(batch.get._1)
+              val file = new java.io.File("cifar10.lamp.example.onnx")
+              lamp.onnx.serializeToFile(
+                file,
+                output,
+                info = List(
+                  VariableInfo(
+                    variable = output,
+                    name = "output",
+                    input = false,
+                    docString = "log probabilities"
+                  ),
+                  VariableInfo(
+                    variable = batch.get._1,
+                    name = "input",
+                    input = true,
+                    docString = "Nx3xHxW"
+                  )
+                ),
+                domain = "lamp.example.cifar"
+              )
+              println("Model exported to ONNX into file" + file.getAbsolutePath)
+            }
+
+        }.unsafeRunSync
+
         ()
       }
     case _ =>

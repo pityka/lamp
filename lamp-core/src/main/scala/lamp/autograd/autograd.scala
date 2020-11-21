@@ -49,7 +49,10 @@ object Variable {
     )
 
   def concatenateAddNewDim(inputs: Seq[Variable])(implicit scope: Scope) =
-    new ConcatenateAddNewDim(scope, inputs).value
+    new Stack(scope, inputs, 0).value
+
+  def stack(inputs: Seq[Variable], dim: Int)(implicit scope: Scope) =
+    new Stack(scope, inputs, dim).value
 
   def cat(inputs: Seq[Variable], dim: Long)(implicit scope: Scope) =
     new Concatenate(scope, inputs, dim).value
@@ -187,11 +190,13 @@ trait Variable {
     new ScatterAdd(extractScope, this, index, dim, maxIndex).value
   def indexAdd[S: Sc](index: Variable, dim: Int, maxIndex: Long) =
     new IndexAdd(extractScope, this, index, dim, maxIndex).value
-  def sum[S: Sc] = new Sum(extractScope, this).value
+  def sum[S: Sc] = new Sum(extractScope, this, Nil, false).value
+  def sum[S: Sc](dim: List[Int], keepDim: Boolean) =
+    new Sum(extractScope, this, dim, keepDim).value
   def expandAs[S: Sc](other: STen) =
     new ExpandAs(extractScope, this, other).value
-  def rowSum[S: Sc] = new RowSum(extractScope, this).value
-  def colSum[S: Sc] = new ColSum(extractScope, this).value
+  def rowSum[S: Sc] = sum(List(1), true)
+  def colSum[S: Sc] = sum(List(0), true)
   def exp[S: Sc] = new Exp(extractScope, this).value
   def log[S: Sc] = new Log(extractScope, this).value
   def log1p[S: Sc] = new Log1p(extractScope, this).value
@@ -235,16 +240,30 @@ trait Variable {
     new L1Loss(extractScope, this, target, reduction).value
   def squaredFrobenius[S: Sc] =
     new SquaredFrobeniusMatrixNorm(extractScope, this).value
-  def mean[S: Sc](dim: List[Int]) = new Mean(extractScope, this, dim).value
+  def mean[S: Sc](dim: List[Int]) =
+    new Mean(extractScope, this, dim, true).value
+  def mean[S: Sc](dim: List[Int], keepDim: Boolean) =
+    new Mean(extractScope, this, dim, keepDim).value
   def variance[S: Sc](dim: List[Int]) =
     new Variance(extractScope, this, dim).value
   def normalize[S: Sc](dim: List[Int]) = {
     (this - this.mean(dim)) / ((this.variance(dim) + 1e-6).pow(0.5))
   }
-  def view[S: Sc](shape: List[Int]) =
-    new View(extractScope, this, shape.map(_.toLong).toArray).value
+  def view[S: Sc](shape: List[Long]) =
+    new View(extractScope, this, shape.toArray).value
+  def flatten[S: Sc] =
+    new Flatten(extractScope, this, startDim = 0, endDim = -1).value
+  def flatten[S: Sc](startDim: Int) =
+    new Flatten(extractScope, this, startDim = startDim, endDim = -1).value
+  def flatten[S: Sc](startDim: Int, endDim: Int) =
+    new Flatten(extractScope, this, startDim = startDim, endDim = endDim).value
   def flattenLastDimensions[S: Sc](dims: Int) =
-    new FlattenLastDimensions(extractScope, this, dims).value
+    new Flatten(
+      extractScope,
+      this,
+      startDim = shape.size - dims,
+      endDim = -1
+    ).value
   def repeatInterleave[S: Sc](repeats: Variable, dim: Int) =
     new RepeatInterleave(extractScope, this, repeats, dim).value
 

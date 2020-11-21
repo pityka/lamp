@@ -81,7 +81,7 @@ object Text {
                   val lastTimeStep1 =
                     output.select(0, output.shape(0) - 1)
 
-                  lastTimeStep1.view((1L :: lastTimeStep1.shape).map(_.toInt))
+                  lastTimeStep1.view((1L :: lastTimeStep1.shape))
 
                 } else output
 

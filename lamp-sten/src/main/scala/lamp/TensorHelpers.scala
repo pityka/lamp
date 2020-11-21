@@ -86,11 +86,21 @@ object TensorHelpers {
   def toLongVec(t: Tensor) = {
     assert(
       t.options.scalarTypeByte == 4,
-      s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+      s"Expected Long Tensor. Got scalartype: ${t.options.scalarTypeByte}"
     )
     assert(t.numel <= Int.MaxValue, "Tensor too long to fit into a java array")
     val arr = Array.ofDim[Long](t.numel.toInt)
     assert(t.copyToLongArray(arr))
+    arr.toVec
+  }
+  def toFloatVec(t: Tensor) = {
+    assert(
+      t.options.scalarTypeByte == 6,
+      s"Expected Float Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+    )
+    assert(t.numel <= Int.MaxValue, "Tensor too long to fit into a java array")
+    val arr = Array.ofDim[Float](t.numel.toInt)
+    assert(t.copyToFloatArray(arr))
     arr.toVec
   }
   def toFloatMat(t: Tensor) = {
@@ -257,6 +267,67 @@ object TensorHelpers {
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = t.to(device.options(precision), true)
+      t.release
+      t2
+    } else t
+  }
+  def fromDoubleArray(
+      arr: Array[Double],
+      dim: Seq[Long],
+      device: Device,
+      precision: FloatingPointPrecision
+  ) = {
+    require(
+      arr.length == dim.foldLeft(1L)(_ * _).toInt,
+      s"incorrect dimensions $dim got ${arr.length} elements."
+    )
+    val t = ATen.zeros(
+      dim.toArray,
+      TensorOptions.dtypeDouble
+    )
+    assert(t.copyFromDoubleArray(arr))
+    if (device != CPU || precision != DoublePrecision) {
+      val t2 = t.to(device.options(precision), true)
+      t.release
+      t2
+    } else t
+  }
+  def fromFloatArray(
+      arr: Array[Float],
+      dim: Seq[Long],
+      device: Device
+  ) = {
+    require(
+      arr.length == dim.foldLeft(1L)(_ * _).toInt,
+      s"incorrect dimensions $dim got ${arr.length} elements."
+    )
+    val t = ATen.zeros(
+      dim.toArray,
+      TensorOptions.dtypeFloat
+    )
+    assert(t.copyFromFloatArray(arr))
+    if (device != CPU) {
+      val t2 = device.to(t)
+      t.release
+      t2
+    } else t
+  }
+  def fromLongArray(
+      arr: Array[Long],
+      dim: Seq[Long],
+      device: Device
+  ) = {
+    require(
+      arr.length == dim.foldLeft(1L)(_ * _).toInt,
+      s"incorrect dimensions $dim got ${arr.length} elements."
+    )
+    val t = ATen.zeros(
+      dim.toArray,
+      TensorOptions.dtypeLong
+    )
+    assert(t.copyFromLongArray(arr))
+    if (device != CPU) {
+      val t2 = device.to(t)
       t.release
       t2
     } else t

@@ -91,7 +91,7 @@ object Attention {
             )
 
         val catted = xt.cat(context, dim = 1)
-        val viewed = catted.view((1L :: catted.shape).map(_.toInt))
+        val viewed = catted.view((1L :: catted.shape))
         val (output, nextHidden) = decoder.forward((viewed, h))
 
         outputs.append(output.select(0, 0))
