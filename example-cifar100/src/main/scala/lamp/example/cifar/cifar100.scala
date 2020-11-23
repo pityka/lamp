@@ -224,22 +224,23 @@ object Train extends App {
               lamp.onnx.serializeToFile(
                 file,
                 output,
-                info = List(
+                domain = "lamp.example.cifar"
+              ) {
+                case x if x == output =>
                   VariableInfo(
                     variable = output,
                     name = "output",
                     input = false,
                     docString = "log probabilities"
-                  ),
+                  )
+                case x if x == batch.get._1 =>
                   VariableInfo(
                     variable = batch.get._1,
                     name = "input",
                     input = true,
                     docString = "Nx3xHxW"
                   )
-                ),
-                domain = "lamp.example.cifar"
-              )
+              }
               println("Model exported to ONNX into file" + file.getAbsolutePath)
             }
 
