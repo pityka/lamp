@@ -291,7 +291,7 @@ class NNSuite extends AnyFunSuite {
     mat2x3,
     implicit pool =>
       Linear(
-        param(STen.ones(Array(1, 3), TensorOptions.dtypeDouble)),
+        param(STen.ones(Array(3, 1), TensorOptions.dtypeDouble)),
         Some(param(STen.ones(Array(1), TensorOptions.dtypeDouble)))
       ),
     23d
@@ -607,7 +607,7 @@ case class LogisticRegression2(dim: Int, k: Int, y: Variable)(
 ) extends Module {
   val mod = sequence(
     Linear(
-      param(STen.ones(Array(k, dim), y.options)(pool))(pool),
+      param(STen.ones(Array(dim, k), y.options)(pool))(pool),
       Some(param(STen.ones(Array(1, k), y.options)(pool))(pool))
     ),
     Fun(scope => input => input.logSoftMax(dim = 1)(scope))
@@ -634,13 +634,13 @@ case class Mlp1(dim: Int, k: Int, y: Variable)(
 
   val mod = Sequential(
     Linear(
-      param(STen.ones(Array(32, dim), y.options)(pool))(pool),
+      param(STen.ones(Array(dim, 32), y.options)(pool))(pool),
       Some(param(STen.ones(Array(1, 32), y.options)(pool))(pool))
     ),
     Fun(scope => input => input.logSoftMax(dim = 1)(scope)),
     Fun(scope => input => input.gelu(scope)),
     Linear(
-      param(STen.ones(Array(k, 32), y.options)(pool))(pool),
+      param(STen.ones(Array(32, k), y.options)(pool))(pool),
       Some(param(STen.ones(Array(1, k), y.options)(pool))(pool))
     )
   )
