@@ -11,7 +11,7 @@ case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
   ) ++ bias.toList.map(b => (b, Linear.Bias))
 
   def forward[S: Sc](x: Variable): Variable = {
-    val v = x.mm(weights.t)
+    val v = x.mm(weights)
     bias.map(_ + v).getOrElse(v)
 
   }
@@ -33,7 +33,7 @@ object Linear {
   ): Linear =
     Linear(
       weights = param(
-        STen.normal(0d, math.sqrt(2d / (in + out)), List(out, in), tOpt)
+        STen.normal(0d, math.sqrt(2d / (in + out)), List(in, out), tOpt)
       ),
       bias =
         if (bias)

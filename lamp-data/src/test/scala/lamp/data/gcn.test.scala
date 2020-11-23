@@ -86,7 +86,7 @@ class GCNSuite extends AnyFunSuite {
         ResidualModule(
           sequence(
             Linear(
-              weights = param(STen.ones(Array(3, 4), tOpt)),
+              weights = param(STen.ones(Array(4, 3), tOpt)),
               bias = Some(param(STen.ones(Array(1, 3), tOpt)))
             ),
             Fun(implicit scope => variable => variable.relu)
@@ -436,7 +436,7 @@ class GCNSuite extends AnyFunSuite {
         ResidualModule(
           sequence(
             Linear(
-              weights = param(STen.ones(Array(3, 2), tOpt)),
+              weights = param(STen.ones(Array(2, 3), tOpt)),
               bias = Some(param(STen.ones(Array(1, 3), tOpt)))
             ),
             Fun(implicit scope => _.relu)
