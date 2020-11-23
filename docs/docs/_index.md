@@ -10,7 +10,7 @@ weight: 1
 [![doc](https://img.shields.io/badge/api-scaladoc-green)](https://pityka.github.io/lamp/api/lamp/index.html)
 [![doc](https://img.shields.io/badge/docs-green)](https://pityka.github.io/lamp)
 
-Lamp is small a deep learning library for Scala with native CPU and GPU backend. 
+Lamp is a deep learning library for Scala with native CPU and GPU backend. 
 
 Lamp is inspired by [pytorch](https://pytorch.org/). 
 The foundation of lamp is a [JNI binding to ATen](https://github.com/pityka/aten-scala), the C++ tensor backend of torch ([see here](https://pytorch.org/cppdocs/#aten])).
@@ -28,4 +28,4 @@ On top of that it provides a small set of components to build neural networks:
 - dropout
 - SgdW and AdamW optimizers (see [here](https://arxiv.org/abs/1711.05101))
 - training loop and data loaders on top of cats-effect
-- checkpointing
+- checkpointing, ONNX export

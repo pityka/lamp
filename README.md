@@ -26,13 +26,13 @@ It provides components to build neural networks:
 - dropout
 - SgdW and AdamW optimizers (see [here](https://arxiv.org/abs/1711.05101))
 - training loop and data loaders on top of cats-effect
-- checkpointing
+- checkpointing, ONNX export
 
 With the above components Lamp is feature complete to build machine learning models on tabular, image, text and graph domains.
 
 This repository also hosts some other loosely related libraries. 
 
-- an fast GPU compatible implementation of UMAP ([see](https://arxiv.org/abs/1802.03426))
+- a fast GPU compatible implementation of UMAP ([see](https://arxiv.org/abs/1802.03426))
 - an implementation of extratrees ([see](https://hal.archives-ouvertes.fr/hal-00341932)). This is a JVM implementation with no further dependencies.
 
 # Platforms
