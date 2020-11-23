@@ -147,16 +147,8 @@
                         <a href="CastToPrecision.html" title="">CastToPrecision</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="ColSum.html" title=""></a>
-                        <a href="ColSum.html" title="">ColSum</a>
-                      </li><li class="current-entities indented2">
-                        <span class="separator"></span>
                         <a class="class" href="Concatenate.html" title=""></a>
                         <a href="Concatenate.html" title="">Concatenate</a>
-                      </li><li class="current-entities indented2">
-                        <span class="separator"></span>
-                        <a class="class" href="ConcatenateAddNewDim.html" title="Prepends a new dimension and concatenates the tensors along that axis"></a>
-                        <a href="ConcatenateAddNewDim.html" title="Prepends a new dimension and concatenates the tensors along that axis">ConcatenateAddNewDim</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="ConstAdd.html" title=""></a>
@@ -219,8 +211,8 @@
                         <a href="ExpandAs.html" title="">ExpandAs</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="FlattenLastDimensions.html" title=""></a>
-                        <a href="FlattenLastDimensions.html" title="">FlattenLastDimensions</a>
+                        <a class="class" href="Flatten.html" title=""></a>
+                        <a href="Flatten.html" title="">Flatten</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Gelu.html" title=""></a>
@@ -323,10 +315,6 @@
                         <a href="RepeatInterleave.html" title="">RepeatInterleave</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="RowSum.html" title=""></a>
-                        <a href="RowSum.html" title="">RowSum</a>
-                      </li><li class="current-entities indented2">
-                        <span class="separator"></span>
                         <a class="class" href="ScatterAdd.html" title=""></a>
                         <a href="ScatterAdd.html" title="">ScatterAdd</a>
                       </li><li class="current-entities indented2">
@@ -345,6 +333,10 @@
                         <span class="separator"></span>
                         <a class="class" href="SquaredFrobeniusMatrixNorm.html" title=""></a>
                         <a href="SquaredFrobeniusMatrixNorm.html" title="">SquaredFrobeniusMatrixNorm</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="Stack.html" title=""></a>
+                        <a href="Stack.html" title="">Stack</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Sum$.html" title=""></a>
                         <a class="class" href="Sum.html" title=""></a>
@@ -442,6 +434,22 @@
       </span>
       <span class="symbol">
         <a title="" href="../nn/index.html"><span class="name">nn</span></a>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+    </li><li name="lamp.onnx" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="onnx"></a><a id="onnx:onnx"></a>
+      <span class="permalink">
+      <a href="../../lamp/onnx/index.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="../onnx/index.html"><span class="name">onnx</span></a>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
@@ -574,7 +582,7 @@
         <div id="types" class="types members">
               <h3>Type Members</h3>
               <ol><li name="lamp.autograd.Add" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="AddextendsOp"></a><a id="Add:Add"></a>
+      <a id="AddextendsOpwithProductwithSerializable"></a><a id="Add:Add"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Add.html" title="Permalink">
         <i class="material-icons"></i>
@@ -582,15 +590,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Add.html"><span class="name">Add</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Add.html"><span class="name">Add</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.ArcTan" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ArcTanextendsOp"></a><a id="ArcTan:ArcTan"></a>
+      <a id="ArcTanextendsOpwithProductwithSerializable"></a><a id="ArcTan:ArcTan"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/ArcTan.html" title="Permalink">
         <i class="material-icons"></i>
@@ -598,15 +606,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="ArcTan.html"><span class="name">ArcTan</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="ArcTan.html"><span class="name">ArcTan</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.ArgMax" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ArgMaxextendsOp"></a><a id="ArgMax:ArgMax"></a>
+      <a id="ArgMaxextendsOpwithProductwithSerializable"></a><a id="ArgMax:ArgMax"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/ArgMax.html" title="Permalink">
         <i class="material-icons"></i>
@@ -614,15 +622,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="ArgMax.html"><span class="name">ArgMax</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="ArgMax.html"><span class="name">ArgMax</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>, <span name="keepDim">keepDim: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Assign" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="AssignextendsOp"></a><a id="Assign:Assign"></a>
+      <a id="AssignextendsOpwithProductwithSerializable"></a><a id="Assign:Assign"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Assign.html" title="Permalink">
         <i class="material-icons"></i>
@@ -630,15 +638,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Assign.html"><span class="name">Assign</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Assign.html"><span class="name">Assign</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="abandon">abandon: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="keep">keep: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
-    </li><li name="lamp.autograd.AvgPool2D" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="AvgPool2DextendsOp"></a><a id="AvgPool2D:AvgPool2D"></a>
+    </li><li name="lamp.autograd.AvgPool2D" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="AvgPool2DextendsOpwithProductwithSerializable"></a><a id="AvgPool2D:AvgPool2D"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/AvgPool2D.html" title="Permalink">
         <i class="material-icons"></i>
@@ -646,16 +654,17 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="2D avg pooling" href="AvgPool2D.html"><span class="name">AvgPool2D</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="2D avg pooling" href="AvgPool2D.html"><span class="name">AvgPool2D</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="kernelSize">kernelSize: <span class="extype" name="scala.Long">Long</span></span>, <span name="stride">stride: <span class="extype" name="scala.Long">Long</span></span>, <span name="padding">padding: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       <p class="shortcomment cmt">2D avg pooling
-</p>
+</p><div class="fullcomment"><div class="comment cmt"><p>2D avg pooling
+</p></div><dl class="paramcmts block"><dt class="param">input</dt><dd class="cmt"><p>batch x in_channels x h x w</p></dd></dl></div>
     </li><li name="lamp.autograd.BatchNorm" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="BatchNormextendsOp"></a><a id="BatchNorm:BatchNorm"></a>
+      <a id="BatchNormextendsOpwithProductwithSerializable"></a><a id="BatchNorm:BatchNorm"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/BatchNorm.html" title="Permalink">
         <i class="material-icons"></i>
@@ -663,15 +672,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="BatchNorm.html"><span class="name">BatchNorm</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="BatchNorm.html"><span class="name">BatchNorm</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="runningMean">runningMean: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="runningVar">runningVar: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="training">training: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="momentum">momentum: <span class="extype" name="scala.Double">Double</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.BatchNorm2D" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="BatchNorm2DextendsOp"></a><a id="BatchNorm2D:BatchNorm2D"></a>
+      <a id="BatchNorm2DextendsOpwithProductwithSerializable"></a><a id="BatchNorm2D:BatchNorm2D"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/BatchNorm2D.html" title="Permalink">
         <i class="material-icons"></i>
@@ -679,10 +688,10 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="Batch Norm 2D 0-th dimension are samples." href="BatchNorm2D.html"><span class="name">BatchNorm2D</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="Batch Norm 2D 0-th dimension are samples." href="BatchNorm2D.html"><span class="name">BatchNorm2D</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="runningMean">runningMean: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="runningVar">runningVar: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="training">training: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="momentum">momentum: <span class="extype" name="scala.Double">Double</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       <p class="shortcomment cmt">Batch Norm 2D
@@ -690,7 +699,7 @@
 0-th dimension are samples. 1-th are features, everything else is averaged out.
 </p></div></div>
     </li><li name="lamp.autograd.BatchedMatMul" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="BatchedMatMulextendsOp"></a><a id="BatchedMatMul:BatchedMatMul"></a>
+      <a id="BatchedMatMulextendsOpwithProductwithSerializable"></a><a id="BatchedMatMul:BatchedMatMul"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/BatchedMatMul.html" title="Permalink">
         <i class="material-icons"></i>
@@ -698,15 +707,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="BatchedMatMul.html"><span class="name">BatchedMatMul</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="BatchedMatMul.html"><span class="name">BatchedMatMul</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.CappedShiftedNegativeExponential" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="CappedShiftedNegativeExponentialextendsOp"></a><a id="CappedShiftedNegativeExponential:CappedShiftedNegativeExponential"></a>
+      <a id="CappedShiftedNegativeExponentialextendsOpwithProductwithSerializable"></a><a id="CappedShiftedNegativeExponential:CappedShiftedNegativeExponential"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/CappedShiftedNegativeExponential.html" title="Permalink">
         <i class="material-icons"></i>
@@ -714,15 +723,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="CappedShiftedNegativeExponential.html"><span class="name">CappedShiftedNegativeExponential</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="CappedShiftedNegativeExponential.html"><span class="name">CappedShiftedNegativeExponential</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="shift">shift: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.CastToPrecision" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="CastToPrecisionextendsOp"></a><a id="CastToPrecision:CastToPrecision"></a>
+      <a id="CastToPrecisionextendsOpwithProductwithSerializable"></a><a id="CastToPrecision:CastToPrecision"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/CastToPrecision.html" title="Permalink">
         <i class="material-icons"></i>
@@ -730,31 +739,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="CastToPrecision.html"><span class="name">CastToPrecision</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.ColSum" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ColSumextendsOp"></a><a id="ColSum:ColSum"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/ColSum.html" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">class</span>
-      </span>
-      <span class="symbol">
-        <a title="" href="ColSum.html"><span class="name">ColSum</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="CastToPrecision.html"><span class="name">CastToPrecision</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="precision">precision: <a href="../FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Concatenate" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ConcatenateextendsOp"></a><a id="Concatenate:Concatenate"></a>
+      <a id="ConcatenateextendsOpwithProductwithSerializable"></a><a id="Concatenate:Concatenate"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Concatenate.html" title="Permalink">
         <i class="material-icons"></i>
@@ -762,32 +755,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Concatenate.html"><span class="name">Concatenate</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Concatenate.html"><span class="name">Concatenate</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
-    </li><li name="lamp.autograd.ConcatenateAddNewDim" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ConcatenateAddNewDimextendsOp"></a><a id="ConcatenateAddNewDim:ConcatenateAddNewDim"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/ConcatenateAddNewDim.html" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">class</span>
-      </span>
-      <span class="symbol">
-        <a title="Prepends a new dimension and concatenates the tensors along that axis" href="ConcatenateAddNewDim.html"><span class="name">ConcatenateAddNewDim</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
-      </span>
-      
-      <p class="shortcomment cmt">Prepends a new dimension and concatenates the tensors along that axis
-</p>
     </li><li name="lamp.autograd.ConstAdd" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ConstAddextendsOp"></a><a id="ConstAdd:ConstAdd"></a>
+      <a id="ConstAddextendsOpwithProductwithSerializable"></a><a id="ConstAdd:ConstAdd"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/ConstAdd.html" title="Permalink">
         <i class="material-icons"></i>
@@ -795,15 +771,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="ConstAdd.html"><span class="name">ConstAdd</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="ConstAdd.html"><span class="name">ConstAdd</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.ConstMult" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ConstMultextendsOp"></a><a id="ConstMult:ConstMult"></a>
+      <a id="ConstMultextendsOpwithProductwithSerializable"></a><a id="ConstMult:ConstMult"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/ConstMult.html" title="Permalink">
         <i class="material-icons"></i>
@@ -811,10 +787,10 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="ConstMult.html"><span class="name">ConstMult</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="ConstMult.html"><span class="name">ConstMult</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -867,7 +843,7 @@
       
       
     </li><li name="lamp.autograd.Conv1D" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="Conv1DextendsOp"></a><a id="Conv1D:Conv1D"></a>
+      <a id="Conv1DextendsOpwithProductwithSerializable"></a><a id="Conv1D:Conv1D"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Conv1D.html" title="Permalink">
         <i class="material-icons"></i>
@@ -875,17 +851,17 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="1D convolution" href="Conv1D.html"><span class="name">Conv1D</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="1D convolution" href="Conv1D.html"><span class="name">Conv1D</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="stride">stride: <span class="extype" name="scala.Long">Long</span></span>, <span name="padding">padding: <span class="extype" name="scala.Long">Long</span></span>, <span name="dilation">dilation: <span class="extype" name="scala.Long">Long</span></span>, <span name="groups">groups: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       <p class="shortcomment cmt">1D convolution
 </p><div class="fullcomment"><div class="comment cmt"><p>1D convolution
-</p></div><dl class="paramcmts block"><dt>returns</dt><dd class="cmt"><p>Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)</p></dd></dl></div>
+</p></div><dl class="paramcmts block"><dt class="param">input</dt><dd class="cmt"><p>batch x in_channels x L</p></dd><dt class="param">weight</dt><dd class="cmt"><p>out_channels x in_channels x kernel_size</p></dd><dt class="param">bias</dt><dd class="cmt"><p>out_channels</p></dd><dt>returns</dt><dd class="cmt"><p>Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)</p></dd></dl></div>
     </li><li name="lamp.autograd.Conv2D" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="Conv2DextendsOp"></a><a id="Conv2D:Conv2D"></a>
+      <a id="Conv2DextendsOpwithProductwithSerializable"></a><a id="Conv2D:Conv2D"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Conv2D.html" title="Permalink">
         <i class="material-icons"></i>
@@ -893,17 +869,17 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="2D convolution" href="Conv2D.html"><span class="name">Conv2D</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="2D convolution" href="Conv2D.html"><span class="name">Conv2D</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="stride">stride: <span class="extype" name="scala.Long">Long</span></span>, <span name="padding">padding: <span class="extype" name="scala.Long">Long</span></span>, <span name="dilation">dilation: <span class="extype" name="scala.Long">Long</span></span>, <span name="groups">groups: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       <p class="shortcomment cmt">2D convolution
 </p><div class="fullcomment"><div class="comment cmt"><p>2D convolution
-</p></div><dl class="paramcmts block"><dt>returns</dt><dd class="cmt"><p>Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)</p></dd></dl></div>
+</p></div><dl class="paramcmts block"><dt class="param">input</dt><dd class="cmt"><p>batch x in_channels x height x width</p></dd><dt class="param">weight</dt><dd class="cmt"><p>out_channels x in_channels x kernel_size x kernel_size</p></dd><dt class="param">bias</dt><dd class="cmt"><p>out_channels</p></dd><dt>returns</dt><dd class="cmt"><p>Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)</p></dd></dl></div>
     </li><li name="lamp.autograd.Cos" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="CosextendsOp"></a><a id="Cos:Cos"></a>
+      <a id="CosextendsOpwithProductwithSerializable"></a><a id="Cos:Cos"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Cos.html" title="Permalink">
         <i class="material-icons"></i>
@@ -911,15 +887,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Cos.html"><span class="name">Cos</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Cos.html"><span class="name">Cos</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Div" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="DivextendsOp"></a><a id="Div:Div"></a>
+      <a id="DivextendsOpwithProductwithSerializable"></a><a id="Div:Div"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Div.html" title="Permalink">
         <i class="material-icons"></i>
@@ -927,15 +903,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Div.html"><span class="name">Div</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Div.html"><span class="name">Div</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Dropout" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="DropoutextendsOp"></a><a id="Dropout:Dropout"></a>
+      <a id="DropoutextendsOpwithProductwithSerializable"></a><a id="Dropout:Dropout"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Dropout.html" title="Permalink">
         <i class="material-icons"></i>
@@ -943,15 +919,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Dropout.html"><span class="name">Dropout</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Dropout.html"><span class="name">Dropout</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="prob">prob: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Embedding" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="EmbeddingextendsOp"></a><a id="Embedding:Embedding"></a>
+      <a id="EmbeddingextendsOpwithProductwithSerializable"></a><a id="Embedding:Embedding"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Embedding.html" title="Permalink">
         <i class="material-icons"></i>
@@ -959,15 +935,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Embedding.html"><span class="name">Embedding</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Embedding.html"><span class="name">Embedding</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.EqWhere" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="EqWhereextendsOp"></a><a id="EqWhere:EqWhere"></a>
+      <a id="EqWhereextendsOpwithProductwithSerializable"></a><a id="EqWhere:EqWhere"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/EqWhere.html" title="Permalink">
         <i class="material-icons"></i>
@@ -975,15 +951,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="EqWhere.html"><span class="name">EqWhere</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="EqWhere.html"><span class="name">EqWhere</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.EuclideanDistance" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="EuclideanDistanceextendsOp"></a><a id="EuclideanDistance:EuclideanDistance"></a>
+      <a id="EuclideanDistanceextendsOpwithProductwithSerializable"></a><a id="EuclideanDistance:EuclideanDistance"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/EuclideanDistance.html" title="Permalink">
         <i class="material-icons"></i>
@@ -991,15 +967,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="EuclideanDistance.html"><span class="name">EuclideanDistance</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="EuclideanDistance.html"><span class="name">EuclideanDistance</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Exp" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ExpextendsOp"></a><a id="Exp:Exp"></a>
+      <a id="ExpextendsOpwithProductwithSerializable"></a><a id="Exp:Exp"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Exp.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1007,15 +983,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Exp.html"><span class="name">Exp</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Exp.html"><span class="name">Exp</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.ExpandAs" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ExpandAsextendsOp"></a><a id="ExpandAs:ExpandAs"></a>
+      <a id="ExpandAsextendsOpwithProductwithSerializable"></a><a id="ExpandAs:ExpandAs"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/ExpandAs.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1023,31 +999,31 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="ExpandAs.html"><span class="name">ExpandAs</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="ExpandAs.html"><span class="name">ExpandAs</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="as">as: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
-    </li><li name="lamp.autograd.FlattenLastDimensions" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="FlattenLastDimensionsextendsOp"></a><a id="FlattenLastDimensions:FlattenLastDimensions"></a>
+    </li><li name="lamp.autograd.Flatten" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="FlattenextendsOpwithProductwithSerializable"></a><a id="Flatten:Flatten"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/FlattenLastDimensions.html" title="Permalink">
+      <a href="../../lamp/autograd/Flatten.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="FlattenLastDimensions.html"><span class="name">FlattenLastDimensions</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Flatten.html"><span class="name">Flatten</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="startDim">startDim: <span class="extype" name="scala.Int">Int</span></span>, <span name="endDim">endDim: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Gelu" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="GeluextendsOp"></a><a id="Gelu:Gelu"></a>
+      <a id="GeluextendsOpwithProductwithSerializable"></a><a id="Gelu:Gelu"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Gelu.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1055,15 +1031,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Gelu.html"><span class="name">Gelu</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Gelu.html"><span class="name">Gelu</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.IndexAdd" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="IndexAddextendsOp"></a><a id="IndexAdd:IndexAdd"></a>
+      <a id="IndexAddextendsOpwithProductwithSerializable"></a><a id="IndexAdd:IndexAdd"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/IndexAdd.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1071,15 +1047,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="IndexAdd.html"><span class="name">IndexAdd</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="IndexAdd.html"><span class="name">IndexAdd</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="src">src: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="index">index: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Int">Int</span></span>, <span name="maxIndex">maxIndex: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.IndexFill" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="IndexFillextendsOp"></a><a id="IndexFill:IndexFill"></a>
+      <a id="IndexFillextendsOpwithProductwithSerializable"></a><a id="IndexFill:IndexFill"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/IndexFill.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1087,15 +1063,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="IndexFill.html"><span class="name">IndexFill</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="IndexFill.html"><span class="name">IndexFill</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>, <span name="index">index: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="fill">fill: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.IndexSelect" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="IndexSelectextendsOp"></a><a id="IndexSelect:IndexSelect"></a>
+      <a id="IndexSelectextendsOpwithProductwithSerializable"></a><a id="IndexSelect:IndexSelect"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/IndexSelect.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1103,15 +1079,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="IndexSelect.html"><span class="name">IndexSelect</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="IndexSelect.html"><span class="name">IndexSelect</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>, <span name="index">index: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.L1Loss" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="L1LossextendsOp"></a><a id="L1Loss:L1Loss"></a>
+      <a id="L1LossextendsOpwithProductwithSerializable"></a><a id="L1Loss:L1Loss"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/L1Loss.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1119,15 +1095,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="L1Loss.html"><span class="name">L1Loss</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="L1Loss.html"><span class="name">L1Loss</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Log" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="LogextendsOp"></a><a id="Log:Log"></a>
+      <a id="LogextendsOpwithProductwithSerializable"></a><a id="Log:Log"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Log.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1135,15 +1111,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Log.html"><span class="name">Log</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Log.html"><span class="name">Log</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Log1p" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Log1pextendsOp"></a><a id="Log1p:Log1p"></a>
+      <a id="Log1pextendsOpwithProductwithSerializable"></a><a id="Log1p:Log1p"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Log1p.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1151,15 +1127,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Log1p.html"><span class="name">Log1p</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Log1p.html"><span class="name">Log1p</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.LogSoftMax" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="LogSoftMaxextendsOp"></a><a id="LogSoftMax:LogSoftMax"></a>
+      <a id="LogSoftMaxextendsOpwithProductwithSerializable"></a><a id="LogSoftMax:LogSoftMax"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/LogSoftMax.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1167,15 +1143,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="LogSoftMax.html"><span class="name">LogSoftMax</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="LogSoftMax.html"><span class="name">LogSoftMax</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.MaskFill" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MaskFillextendsOp"></a><a id="MaskFill:MaskFill"></a>
+      <a id="MaskFillextendsOpwithProductwithSerializable"></a><a id="MaskFill:MaskFill"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/MaskFill.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1183,15 +1159,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="MaskFill.html"><span class="name">MaskFill</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="MaskFill.html"><span class="name">MaskFill</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="mask">mask: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="fill">fill: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.MatMul" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MatMulextendsOp"></a><a id="MatMul:MatMul"></a>
+      <a id="MatMulextendsOpwithProductwithSerializable"></a><a id="MatMul:MatMul"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/MatMul.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1199,15 +1175,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="MatMul.html"><span class="name">MatMul</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="MatMul.html"><span class="name">MatMul</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
-    </li><li name="lamp.autograd.MaxPool1D" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MaxPool1DextendsOp"></a><a id="MaxPool1D:MaxPool1D"></a>
+    </li><li name="lamp.autograd.MaxPool1D" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="MaxPool1DextendsOpwithProductwithSerializable"></a><a id="MaxPool1D:MaxPool1D"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/MaxPool1D.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1215,16 +1191,17 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="1D max pooling" href="MaxPool1D.html"><span class="name">MaxPool1D</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="1D max pooling" href="MaxPool1D.html"><span class="name">MaxPool1D</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="kernelSize">kernelSize: <span class="extype" name="scala.Long">Long</span></span>, <span name="stride">stride: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">1</span></span>, <span name="padding">padding: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">0</span></span>, <span name="dilation">dilation: <span class="extype" name="scala.Long">Long</span> = <span class="symbol">1</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       <p class="shortcomment cmt">1D max pooling
-</p>
-    </li><li name="lamp.autograd.MaxPool2D" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MaxPool2DextendsOp"></a><a id="MaxPool2D:MaxPool2D"></a>
+</p><div class="fullcomment"><div class="comment cmt"><p>1D max pooling
+</p></div><dl class="paramcmts block"><dt class="param">input</dt><dd class="cmt"><p>batch x in_channels x L</p></dd></dl></div>
+    </li><li name="lamp.autograd.MaxPool2D" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="MaxPool2DextendsOpwithProductwithSerializable"></a><a id="MaxPool2D:MaxPool2D"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/MaxPool2D.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1232,16 +1209,17 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="2D max pooling" href="MaxPool2D.html"><span class="name">MaxPool2D</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="2D max pooling" href="MaxPool2D.html"><span class="name">MaxPool2D</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="kernelSize">kernelSize: <span class="extype" name="scala.Long">Long</span></span>, <span name="stride">stride: <span class="extype" name="scala.Long">Long</span></span>, <span name="padding">padding: <span class="extype" name="scala.Long">Long</span></span>, <span name="dilation">dilation: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       <p class="shortcomment cmt">2D max pooling
-</p>
+</p><div class="fullcomment"><div class="comment cmt"><p>2D max pooling
+</p></div><dl class="paramcmts block"><dt class="param">input</dt><dd class="cmt"><p>batch x in_channels x h x w</p></dd></dl></div>
     </li><li name="lamp.autograd.Mean" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MeanextendsOp"></a><a id="Mean:Mean"></a>
+      <a id="MeanextendsOpwithProductwithSerializable"></a><a id="Mean:Mean"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Mean.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1249,15 +1227,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Mean.html"><span class="name">Mean</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Mean.html"><span class="name">Mean</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="keepDim">keepDim: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Minus" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MinusextendsOp"></a><a id="Minus:Minus"></a>
+      <a id="MinusextendsOpwithProductwithSerializable"></a><a id="Minus:Minus"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Minus.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1265,15 +1243,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Minus.html"><span class="name">Minus</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Minus.html"><span class="name">Minus</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.MseLoss" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MseLossextendsOp"></a><a id="MseLoss:MseLoss"></a>
+      <a id="MseLossextendsOpwithProductwithSerializable"></a><a id="MseLoss:MseLoss"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/MseLoss.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1281,15 +1259,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="MseLoss.html"><span class="name">MseLoss</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="MseLoss.html"><span class="name">MseLoss</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Mult" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="MultextendsOp"></a><a id="Mult:Mult"></a>
+      <a id="MultextendsOpwithProductwithSerializable"></a><a id="Mult:Mult"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Mult.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1297,15 +1275,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Mult.html"><span class="name">Mult</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Mult.html"><span class="name">Mult</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="b">b: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.NllLoss" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="NllLossextendsOp"></a><a id="NllLoss:NllLoss"></a>
+      <a id="NllLossextendsOpwithProductwithSerializable"></a><a id="NllLoss:NllLoss"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/NllLoss.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1313,15 +1291,15 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="NllLoss.html"><span class="name">NllLoss</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="NllLoss.html"><span class="name">NllLoss</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="weights">weights: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>, <span name="ignore">ignore: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.OneHot" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="OneHotextendsOp"></a><a id="OneHot:OneHot"></a>
+      <a id="OneHotextendsOpwithProductwithSerializable"></a><a id="OneHot:OneHot"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/OneHot.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1329,10 +1307,10 @@
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="OneHot.html"><span class="name">OneHot</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="OneHot.html"><span class="name">OneHot</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="numClasses">numClasses: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -1365,7 +1343,7 @@ The Op fills in the symbolic part and the multiplication.</p><p>The shape of the
 The shape of the return is the shape of the argument (parameter) with respect the
 derivative is taken (dy/dw1)</p></div></div>
     </li><li name="lamp.autograd.Pow" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="PowextendsOp"></a><a id="Pow:Pow"></a>
+      <a id="PowextendsOpwithProductwithSerializable"></a><a id="Pow:Pow"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Pow.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1373,15 +1351,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Pow.html"><span class="name">Pow</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Pow.html"><span class="name">Pow</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="exponent">exponent: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.PowConst" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="PowConstextendsOp"></a><a id="PowConst:PowConst"></a>
+      <a id="PowConstextendsOpwithProductwithSerializable"></a><a id="PowConst:PowConst"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/PowConst.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1389,10 +1367,10 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="PowConst.html"><span class="name">PowConst</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="PowConst.html"><span class="name">PowConst</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="exponent">exponent: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -1413,7 +1391,7 @@ derivative is taken (dy/dw1)</p></div></div>
       
       
     </li><li name="lamp.autograd.Relu" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ReluextendsOp"></a><a id="Relu:Relu"></a>
+      <a id="ReluextendsOpwithProductwithSerializable"></a><a id="Relu:Relu"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Relu.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1421,15 +1399,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Relu.html"><span class="name">Relu</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Relu.html"><span class="name">Relu</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.RepeatInterleave" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="RepeatInterleaveextendsOp"></a><a id="RepeatInterleave:RepeatInterleave"></a>
+      <a id="RepeatInterleaveextendsOpwithProductwithSerializable"></a><a id="RepeatInterleave:RepeatInterleave"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/RepeatInterleave.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1437,31 +1415,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="RepeatInterleave.html"><span class="name">RepeatInterleave</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.RowSum" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="RowSumextendsOp"></a><a id="RowSum:RowSum"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/RowSum.html" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">class</span>
-      </span>
-      <span class="symbol">
-        <a title="" href="RowSum.html"><span class="name">RowSum</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="RepeatInterleave.html"><span class="name">RepeatInterleave</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="self">self: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="repeats">repeats: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.ScatterAdd" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ScatterAddextendsOp"></a><a id="ScatterAdd:ScatterAdd"></a>
+      <a id="ScatterAddextendsOpwithProductwithSerializable"></a><a id="ScatterAdd:ScatterAdd"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/ScatterAdd.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1469,15 +1431,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="ScatterAdd.html"><span class="name">ScatterAdd</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="ScatterAdd.html"><span class="name">ScatterAdd</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="src">src: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="index">index: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Int">Int</span></span>, <span name="maxIndex">maxIndex: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Select" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="SelectextendsOp"></a><a id="Select:Select"></a>
+      <a id="SelectextendsOpwithProductwithSerializable"></a><a id="Select:Select"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Select.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1485,15 +1447,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Select.html"><span class="name">Select</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Select.html"><span class="name">Select</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>, <span name="index">index: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Sigmoid" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="SigmoidextendsOp"></a><a id="Sigmoid:Sigmoid"></a>
+      <a id="SigmoidextendsOpwithProductwithSerializable"></a><a id="Sigmoid:Sigmoid"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Sigmoid.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1501,15 +1463,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Sigmoid.html"><span class="name">Sigmoid</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Sigmoid.html"><span class="name">Sigmoid</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Sin" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="SinextendsOp"></a><a id="Sin:Sin"></a>
+      <a id="SinextendsOpwithProductwithSerializable"></a><a id="Sin:Sin"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Sin.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1517,15 +1479,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Sin.html"><span class="name">Sin</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Sin.html"><span class="name">Sin</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.SquaredFrobeniusMatrixNorm" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="SquaredFrobeniusMatrixNormextendsOp"></a><a id="SquaredFrobeniusMatrixNorm:SquaredFrobeniusMatrixNorm"></a>
+      <a id="SquaredFrobeniusMatrixNormextendsOpwithProductwithSerializable"></a><a id="SquaredFrobeniusMatrixNorm:SquaredFrobeniusMatrixNorm"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/SquaredFrobeniusMatrixNorm.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1533,15 +1495,31 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="SquaredFrobeniusMatrixNorm.html"><span class="name">SquaredFrobeniusMatrixNorm</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="SquaredFrobeniusMatrixNorm.html"><span class="name">SquaredFrobeniusMatrixNorm</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.autograd.Stack" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="StackextendsOpwithProductwithSerializable"></a><a id="Stack:Stack"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Stack.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Stack.html"><span class="name">Stack</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Sum" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="SumextendsOp"></a><a id="Sum:Sum"></a>
+      <a id="SumextendsOpwithProductwithSerializable"></a><a id="Sum:Sum"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Sum.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1549,15 +1527,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Sum.html"><span class="name">Sum</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Sum.html"><span class="name">Sum</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>, <span name="keepDim">keepDim: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Tan" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="TanextendsOp"></a><a id="Tan:Tan"></a>
+      <a id="TanextendsOpwithProductwithSerializable"></a><a id="Tan:Tan"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Tan.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1565,15 +1543,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Tan.html"><span class="name">Tan</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Tan.html"><span class="name">Tan</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Tanh" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="TanhextendsOp"></a><a id="Tanh:Tanh"></a>
+      <a id="TanhextendsOpwithProductwithSerializable"></a><a id="Tanh:Tanh"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Tanh.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1581,15 +1559,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Tanh.html"><span class="name">Tanh</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Tanh.html"><span class="name">Tanh</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.Transpose" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="TransposeextendsOp"></a><a id="Transpose:Transpose"></a>
+      <a id="TransposeextendsOpwithProductwithSerializable"></a><a id="Transpose:Transpose"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Transpose.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1597,10 +1575,10 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Transpose.html"><span class="name">Transpose</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Transpose.html"><span class="name">Transpose</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim1">dim1: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">0</span></span>, <span name="dim2">dim2: <span class="extype" name="scala.Int">Int</span> = <span class="symbol">1</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -1637,7 +1615,7 @@ derivative is taken (dy/dw1)</p></div></div>
       
       
     </li><li name="lamp.autograd.Variance" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="VarianceextendsOp"></a><a id="Variance:Variance"></a>
+      <a id="VarianceextendsOpwithProductwithSerializable"></a><a id="Variance:Variance"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/Variance.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1645,15 +1623,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Variance.html"><span class="name">Variance</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="Variance.html"><span class="name">Variance</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.View" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="ViewextendsOp"></a><a id="View:View"></a>
+      <a id="ViewextendsOpwithProductwithSerializable"></a><a id="View:View"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/View.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1661,15 +1639,15 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="View.html"><span class="name">View</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="View.html"><span class="name">View</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="shape">shape: <span class="extype" name="scala.Array">Array</span>[<span class="extype" name="scala.Long">Long</span>]</span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
     </li><li name="lamp.autograd.WeightNorm" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="WeightNormextendsOp"></a><a id="WeightNorm:WeightNorm"></a>
+      <a id="WeightNormextendsOpwithProductwithSerializable"></a><a id="WeightNorm:WeightNorm"></a>
       <span class="permalink">
       <a href="../../lamp/autograd/WeightNorm.html" title="Permalink">
         <i class="material-icons"></i>
@@ -1677,10 +1655,10 @@ derivative is taken (dy/dw1)</p></div></div>
     </span>
       <span class="modifier_kind">
         <span class="modifier"></span>
-        <span class="kind">class</span>
+        <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="WeightNorm.html"><span class="name">WeightNorm</span></a><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></span>
+        <a title="" href="WeightNorm.html"><span class="name">WeightNorm</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="v">v: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="g">g: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="dim">dim: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
