@@ -6,36 +6,41 @@ import aten.ATen
 import aten.TensorOptions
 
 object TensorHelpers {
-  def unbroadcast(p: Tensor, desiredShape: List[Long]) = {
-    def zip(a: List[Long], b: List[Long]) = {
-      val l = b.length
-      val padded = a.reverse.padTo(l, 1L).reverse
-      padded.zip(b)
-    }
+  def unbroadcast(p: Tensor, desiredShape: List[Long]): Option[Tensor] =
+    if (desiredShape == p.sizes.toList) None
+    else {
+      def zip(a: List[Long], b: List[Long]) = {
+        val l = b.length
+        val padded = a.reverse.padTo(l, 1L).reverse
+        padded.zip(b)
+      }
 
-    val sP = p.sizes.toList
-    val zipped = zip(desiredShape, sP)
-    val compatible = zipped.forall(x => x._1 >= x._2)
+      val sP = p.sizes.toList
+      val zipped = zip(desiredShape, sP)
+      val compatible = zipped.forall(x => x._1 >= x._2)
 
-    if (compatible) {
-      ATen._unsafe_view(p, desiredShape.toArray)
-    } else {
-      val dims = zipped.zipWithIndex
-        .filter { case ((a, b), _) => a == 1 && b > 1 }
-      val narrowed = dims.map(_._2).foldLeft(p) { (t, dim) =>
-        val r = ATen.sum_1(t, Array(dim), true)
-        if (t != p) {
-          t.release
+      if (compatible) {
+        Some(ATen._unsafe_view(p, desiredShape.toArray))
+      } else {
+        val dims = zipped.zipWithIndex
+          .filter { case ((a, b), _) => a == 1 && b > 1 }
+        val narrowed =
+          if (dims.isEmpty) p
+          else {
+            ATen.sum_1(p, dims.map(_._2.toLong).toArray, true)
+          }
+
+        val viewed =
+          if (narrowed.sizes != desiredShape.toArray)
+            ATen._unsafe_view(narrowed, desiredShape.toArray)
+          else narrowed
+        if (narrowed != p) {
+          narrowed.release
         }
-        r
+        if (viewed == p) None
+        else Some(viewed)
       }
-      val viewed = ATen._unsafe_view(narrowed, desiredShape.toArray)
-      if (narrowed != p) {
-        narrowed.release
-      }
-      viewed
     }
-  }
 
   def toMat(t: Tensor) = {
     if (t.options.scalarTypeByte() == 6) toFloatMat(t).map(_.toDouble)

@@ -338,7 +338,10 @@ case class STen private (
     s"STen(shape=$shape,value=$value)"
 
   def unbroadcast[S: Sc](sizes: Seq[Long]) =
-    TensorHelpers.unbroadcast(value, sizes.toList).owned
+    TensorHelpers.unbroadcast(value, sizes.toList) match {
+      case None    => this
+      case Some(t) => t.owned
+    }
 
   def t[S: Sc] = owned(ATen.t(value))
   def transpose[S: Sc](dim1: Int, dim2: Int) =

@@ -1070,10 +1070,12 @@ case class Conv1D(
 
     },
     bias.zipBackward { (p, out) =>
-      val p2 = ub(p.value, List(out.sizes.toList.head, 1))
+      val p2 = ub(p.value, List(out.sizes.toList.head, 1)).getOrElse(p.value)
       val p3 = ATen._unsafe_view(p2, out.sizes.toArray)
       ATen.add_out(out.value, out.value, p3, 1d)
-      p2.release()
+      if (p2 != p.value) {
+        p2.release()
+      }
       p3.release()
     }
   )
@@ -1263,11 +1265,13 @@ case class Conv2D(
       }
     },
     bias.zipBackward { (p, out) =>
-      val p2 = ub(p.value, List(out.sizes.toList.head, 1, 1))
+      val p2 = ub(p.value, List(out.sizes.toList.head, 1, 1)).getOrElse(p.value)
       val p3 = ATen._unsafe_view(p2, out.sizes.toArray)
 
       ATen.add_out(out.value, out.value, p3, 1d)
-      p2.release()
+      if (p2 != p.value) {
+        p2.release()
+      }
       p3.release()
     }
   )
@@ -1579,9 +1583,11 @@ case class BatchNorm(
     bias.zipBackward { (p, out) =>
       val flattened_p =
         ATen.flatten(p.value, 1, p.shape.size - 1)
-      val tmp = ub(flattened_p, out.shape)
+      val tmp = ub(flattened_p, out.shape).getOrElse(flattened_p)
       ATen.add_out(out.value, out.value, tmp, 1d)
-      tmp.release
+      if (tmp != flattened_p) {
+        tmp.release
+      }
       flattened_p.release
     }
   )
@@ -1681,12 +1687,15 @@ case class BatchNorm2D(
     },
     bias.zipBackward { (p, out) =>
       val tmp = ub(p.value, (out.shape ++ (1 to p.shape.size - 2).map(_ => 1L)))
+        .getOrElse(p.value)
       val tmp_viewed = ATen._unsafe_view(
         tmp,
         out.shape.toArray
       )
       ATen.add_out(out.value, out.value, tmp_viewed, 1d)
-      tmp.release
+      if (p.value != tmp) {
+        tmp.release
+      }
       tmp_viewed.release
     }
   )
