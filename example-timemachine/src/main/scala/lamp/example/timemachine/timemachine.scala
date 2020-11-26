@@ -10,8 +10,6 @@ import lamp.nn.AdamW
 import lamp.nn.simple
 import cats.effect.Resource
 import cats.effect.IO
-import lamp.data.TrainingCallback
-import lamp.data.ValidationCallback
 import lamp.nn.Fun
 import lamp.DoublePrecision
 import lamp.SinglePrecision
@@ -24,6 +22,7 @@ import lamp.nn.LSTM
 import lamp.nn.statefulSequence
 import lamp.Scope
 import lamp.STen
+import lamp.data.ValidationBatchCallback
 
 case class CliConfig(
     trainData: String = "",
@@ -184,13 +183,14 @@ object Train extends App {
           clip = Some(1d)
         )
 
-        val validationCallback = new ValidationCallback {
+        val validationBatchCallback = new ValidationBatchCallback {
 
           override def apply(
               validationOutput: STen,
               validationTarget: STen,
               validationLoss: Double,
-              epochCount: Long
+              epochCount: Long,
+              batchCount: Long
           ): Unit = {
             if (false) {
               val targetString =
@@ -208,20 +208,18 @@ object Train extends App {
 
         }
 
-        val (_, trainedModel) = IOLoops
+        val (_, trainedModel, _) = IOLoops
           .epochs(
             model = model,
             optimizerFactory = optimizer,
             trainBatchesOverEpoch = trainEpochs,
             validationBatchesOverEpoch = Some(testEpochs),
             epochs = config.epochs,
-            trainingCallback = TrainingCallback.noop,
-            validationCallback = validationCallback,
+            validationBatchCallback = validationBatchCallback,
             checkpointFile = config.checkpointSave.map(s => new File(s)),
             minimumCheckpointFile =
               config.checkpointSave.map(s => new File(s + ".min")),
             logger = Some(scribe.Logger("training")),
-            logFrequency = 10,
             validationFrequency = 1
           )
           .unsafeRunSync()

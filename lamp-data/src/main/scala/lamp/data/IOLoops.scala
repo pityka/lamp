@@ -19,18 +19,20 @@ object IOLoops {
       trainBatchesOverEpoch: () => BatchStream[I],
       validationBatchesOverEpoch: Option[() => BatchStream[I]],
       epochs: Int,
+      trainingBatchCallback: TrainingBatchCallback = TrainingBatchCallback.noop,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
+      validationBatchCallback: ValidationBatchCallback =
+        ValidationBatchCallback.noop,
       checkpointFile: Option[File] = None,
       minimumCheckpointFile: Option[File] = None,
-      logFrequency: Int = 1,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
       returnDevice: Option[lamp.Device] = None,
       learningRateSchedule: LearningRateSchedule = LearningRateSchedule.noop,
       prefetchData: Boolean = false
-  ): IO[(Int, SupervisedModel[I, M])] = {
+  ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
     val ec =
@@ -52,13 +54,21 @@ object IOLoops {
           epoch: Int,
           lastValidationLoss: Option[Double],
           minValidationLoss: Option[Double],
-          minValidationLossModel: Option[(Int, Seq[Tensor])]
-      ): IO[(Int, SupervisedModel[I, M])] =
-        if (epoch >= epochs)
+          minValidationLossModel: Option[(Int, Seq[Tensor])],
+          learningCurve: List[(Int, Double, Option[Double])]
+      ): IO[
+        (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])
+      ] = {
+        val learningRateFactor = learningRateSchedule.factor(
+          epoch = epoch,
+          lastValidationLoss = lastValidationLoss
+        )
+        if (epoch >= epochs || learningRateFactor <= 0d)
           IO.pure {
             modelWithOptimizer.optimizer.release()
             minValidationLossModel match {
-              case None => (epoch - 1, modelWithOptimizer.model)
+              case None =>
+                (epoch - 1, modelWithOptimizer.model, learningCurve.reverse)
               case Some((epochOfMinValidation, state)) =>
                 Scope.root { implicit scope =>
                   val stateOnDevice = state.map { t =>
@@ -74,7 +84,11 @@ object IOLoops {
                   }
                   model.module.load(stateOnDevice)
                 }
-                (epochOfMinValidation, modelWithOptimizer.model)
+                (
+                  epochOfMinValidation,
+                  modelWithOptimizer.model,
+                  learningCurve.reverse
+                )
             }
           }
         else {
@@ -91,16 +105,17 @@ object IOLoops {
           }
 
           for {
-            _ <- oneEpoch(
+            trainingLoss <- oneEpoch(
+              epoch,
+              trainingCallback,
               modelWithOptimizer,
               trainBatchesOverEpoch(),
-              trainingCallback,
+              trainingBatchCallback,
               logger,
-              logFrequency,
-              learningRateSchedule
-                .factor(epoch = epoch, lastValidationLoss = lastValidationLoss),
+              learningRateFactor,
               prefetchEC = maybeExecutionContext
             )
+
             _ <- if (checkpointFile.isDefined)
               writeCheckpoint(checkpointFile.get, model.module)
             else IO.unit
@@ -109,15 +124,22 @@ object IOLoops {
                 model = modelWithOptimizer.model,
                 validationBatches = validationBatchesOverEpoch.get(),
                 validationCallback = validationCallback,
+                validationBatchCallback = validationBatchCallback,
                 logger = logger,
-                validationLogFrequency = logFrequency,
                 epochCount = epoch,
                 minimumCheckpointFile = minimumCheckpointFile,
                 minimumValidationLossSoFar = minValidationLoss
               ).map(Some(_))
             else IO.pure(None)
 
-            nextMinValidationLoss = if (maybeValidationLoss.isEmpty)
+            _ <- IO {
+              maybeValidationLoss.foreach(validationLoss =>
+                validationCallback.apply(epoch, validationLoss)
+              )
+            }
+
+            nextMinValidationLoss = if (maybeValidationLoss.isEmpty || !returnMinValidationLossModel
+                                          .contains(epoch))
               minValidationLoss
             else if (minValidationLoss.isEmpty) maybeValidationLoss
             else Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
@@ -134,78 +156,79 @@ object IOLoops {
               epoch = epoch + 1,
               lastValidationLoss = maybeValidationLoss,
               minValidationLoss = nextMinValidationLoss,
-              minValidationLossModel = nextMinValidationLossModel
+              minValidationLossModel = nextMinValidationLossModel,
+              learningCurve =
+                (epoch, trainingLoss, maybeValidationLoss) :: learningCurve
             )
           } yield next
         }
+      }
 
-      loop(0, None, None, None)
+      loop(0, None, None, None, Nil)
+
     }
   }
 
   def oneEpoch[I, M <: GenericModule[I, Variable]](
+      epochCount: Long,
+      trainingCallback: TrainingCallback,
       model: ModelWithOptimizer[I, M],
       trainBatches: BatchStream[I],
-      trainingCallback: TrainingCallback,
+      trainingBatchCallback: TrainingBatchCallback,
       logger: Option[Logger],
-      trainLogFrequency: Int,
       learningRateScheduleFactor: Double,
       prefetchEC: Option[(ExecutionContext, ExecutionContext)]
-  ): IO[Unit] = {
+  ): IO[Double] = {
 
     def processBatch(
         batchCount: Int,
         option: Option[(I, STen)]
-    ): IO[Option[Unit]] = {
+    ): IO[Option[(Double, Long)]] = {
       val io = option.map {
         case (sample, target) =>
-          val (loss, gradients) =
+          val (avgLoss, numInstances, gradients) =
             model.model.lossAndGradients(sample, target)
-
           for {
             _ <- IO {
-              if (batchCount % trainLogFrequency == 0) {
-                trainingCallback(loss, batchCount)
-              }
+              trainingBatchCallback(avgLoss, batchCount)
             }
-            _ <- IO {
-              if (batchCount % trainLogFrequency == 0) {
-                logger.foreach(
-                  _.info(
-                    s"Training loss in batch $batchCount: $loss (exp: ${math.exp(loss)})"
-                  )
-                )
-              }
-            }
+
             _ <- IO {
               model.optimizer.step(gradients, learningRateScheduleFactor)
             }
-          } yield ()
+          } yield (avgLoss, numInstances)
 
       }
       io.map(_.map(Some(_))).getOrElse(IO.pure(None))
     }
 
-    def simpleLoop(batchCount: Int): IO[Unit] = {
+    def simpleLoop(batchCount: Int, acc: (Double, Long)): IO[(Double, Long)] = {
       trainBatches.nextBatch
         .use { option => processBatch(batchCount, option) }
         .flatMap {
-          case None => IO.unit
-          case _    => simpleLoop(batchCount + 1)
+          case None => IO.pure(acc)
+          case Some((avgLoss, numInstances)) =>
+            simpleLoop(
+              batchCount + 1,
+              (avgLoss * numInstances + acc._1, numInstances + acc._2)
+            )
         }
     }
 
-    def prefetch[A](
+    def prefetch[A, B](
         fetch: () => Resource[IO, Option[A]],
-        transform: (Int, Option[A]) => IO[Option[Unit]],
+        transform: (Int, Option[A]) => IO[Option[B]],
+        reduce: (B, B) => B,
+        zero: B,
         cs1: ContextShift[IO],
         cs2: ContextShift[IO]
-    ): IO[Unit] = {
+    ): IO[B] = {
 
       def loop(
           counter: Int,
+          acc: B,
           prefetching: Fiber[IO, (Option[A], IO[Unit])]
-      ): IO[Unit] =
+      ): IO[B] =
         for {
           fetched <- prefetching.join
           _ <- cs2.shift
@@ -217,18 +240,18 @@ object IOLoops {
             a
           )
           _ <- release
-          _ <- done match {
-            case None    => IO.unit
-            case Some(_) => loop(counter + 1, nextPrefetch)
+          loopDone <- done match {
+            case None    => IO.pure(acc)
+            case Some(b) => loop(counter + 1, reduce(b, acc), nextPrefetch)
           }
-        } yield ()
+        } yield loopDone
 
       for {
         _ <- cs2.shift
         f <- IO { fetch().allocated }
         f <- f.start(cs1)
-        _ <- loop(0, f)
-      } yield ()
+        l <- loop(0, zero, f)
+      } yield l
 
     }
 
@@ -237,25 +260,46 @@ object IOLoops {
         IO.contextShift(ec1)
       val cs2 =
         IO.contextShift(ec2)
-      prefetch[(I, STen)](
+      prefetch[(I, STen), (Double, Long)](
         fetch = () => trainBatches.nextBatch,
         transform = (count, batch) => processBatch(count, batch),
+        reduce = (b, acc) => (b._1 * b._2 + acc._1, acc._2 + b._2),
+        zero = (0d, 0L),
         cs1 = cs1,
         cs2 = cs2
       )
     }
 
-    if (prefetchEC.isDefined) {
-      val (a, b) = prefetchEC.get
-      prefetchLoop(a, b)
-    } else simpleLoop(0)
+    val epochLoop = (if (prefetchEC.isDefined) {
+                       val (a, b) = prefetchEC.get
+                       prefetchLoop(a, b)
+                     } else simpleLoop(0, (0d, 0L)))
+
+    for {
+      pair <- epochLoop
+      (totalLoss, numInstances) = pair
+      trainingLoss = totalLoss / numInstances
+
+      _ <- IO {
+        logger.foreach(
+          _.info(
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss"
+          )
+        )
+      }
+      _ <- IO {
+        trainingCallback(epochCount, trainingLoss)
+      }
+
+    } yield trainingLoss
+
   }
   def validationOneEpoch[I, M <: GenericModule[I, Variable]](
       model: SupervisedModel[I, M],
       validationBatches: BatchStream[I],
+      validationBatchCallback: ValidationBatchCallback,
       validationCallback: ValidationCallback,
       logger: Option[Logger],
-      validationLogFrequency: Int,
       epochCount: Long,
       minimumCheckpointFile: Option[File],
       minimumValidationLossSoFar: Option[Double]
@@ -278,14 +322,13 @@ object IOLoops {
                   case (validationLoss, validationOutput, numExamples) =>
                     for {
                       _ <- IO {
-                        if (batchCount % validationLogFrequency == 0) {
-                          validationCallback(
-                            validationOutput,
-                            validationTarget,
-                            validationLoss,
-                            epochCount
-                          )
-                        }
+                        validationBatchCallback(
+                          validationOutput,
+                          validationTarget,
+                          validationLoss,
+                          epochCount,
+                          batchCount
+                        )
                       }
 
                     } yield (validationLoss * numExamples, numExamples)
@@ -315,6 +358,9 @@ object IOLoops {
                 s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
               )
             )
+          }
+          _ <- IO {
+            validationCallback(epochCount, validationLoss)
           }
 
           _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))

@@ -13,8 +13,6 @@ import lamp.CPU
 import lamp.data.BatchStream
 import lamp.data.IOLoops
 import lamp.nn.SupervisedModel
-import lamp.data.TrainingCallback
-import lamp.data.ValidationCallback
 import aten.Tensor
 import lamp.nn.AdamW
 import lamp.nn.simple
@@ -28,6 +26,7 @@ import lamp.SinglePrecision
 import lamp.Scope
 import lamp.STen
 import lamp.onnx.VariableInfo
+import lamp.data.ValidationBatchCallback
 
 object Cifar {
   def loadImageFile(
@@ -199,16 +198,15 @@ object Train extends App {
           learningRate = simple(config.learningRate)
         )
 
-        val (_, trained) = IOLoops
+        val (_, trained, _) = IOLoops
           .epochs(
             model = model,
             optimizerFactory = optimizer,
             trainBatchesOverEpoch = trainEpochs,
             validationBatchesOverEpoch = Some(testEpochs),
             epochs = config.epochs,
-            trainingCallback = TrainingCallback.noop,
-            validationCallback =
-              ValidationCallback.logAccuracy(scribe.Logger("validation")),
+            validationBatchCallback =
+              ValidationBatchCallback.logAccuracy(scribe.Logger("validation")),
             checkpointFile = config.checkpointSave.map(s => new File(s)),
             minimumCheckpointFile =
               config.checkpointSave.map(s => new File(s + ".min")),

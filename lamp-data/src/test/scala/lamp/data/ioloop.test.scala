@@ -60,7 +60,7 @@ class IOLoopSuite extends AnyFunSuite {
         LossFunctions.NLL(10, classWeights)
       )
 
-      val (epoch, trainedModel) = IOLoops
+      val (epoch, trainedModel, learningCurve) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = SGDW
@@ -86,6 +86,8 @@ class IOLoopSuite extends AnyFunSuite {
 
       assert(epoch == 25)
       println(loss)
+
+      assert(learningCurve.size == 50)
 
       assert(loss < 50)
     }

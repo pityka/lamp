@@ -28,14 +28,14 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
   def lossAndGradients(
       samples: I,
       target: STen
-  ): (Double, Seq[Option[STen]]) =
+  ): (Double, Long, Seq[Option[STen]]) =
     Scope.leak { implicit scope =>
       val output = module.forward(samples)
-      val (loss, _) = lossFunction(output, target)
+      val (loss, numInstances) = lossFunction(output, target)
       val lossAsDouble = loss.value.toMat.raw(0)
 
       val gradients = module.gradients(loss)
-      (lossAsDouble, gradients)
+      (lossAsDouble, numInstances, gradients)
     }
 
   def zipOptimizer(optimizerFactory: Seq[(STen, PTag)] => Optimizer) =

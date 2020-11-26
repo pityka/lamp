@@ -94,7 +94,7 @@ class TextGenerationSuite extends AnyFunSuite {
           optimizerFactory = optimizer,
           trainBatchesOverEpoch = trainEpochs,
           validationBatchesOverEpoch = None,
-          trainingCallback = new TrainingCallback {
+          trainingBatchCallback = new TrainingBatchCallback {
 
             override def apply(trainingLoss: Double, batchCount: Int): Unit = {
               buffer.append(trainingLoss)
@@ -179,7 +179,7 @@ class TextGenerationSuite extends AnyFunSuite {
           optimizerFactory = optimizer,
           trainBatchesOverEpoch = trainEpochs,
           validationBatchesOverEpoch = None,
-          trainingCallback = new TrainingCallback {
+          trainingBatchCallback = new TrainingBatchCallback {
 
             override def apply(trainingLoss: Double, batchCount: Int): Unit = {
               buffer.append(trainingLoss)

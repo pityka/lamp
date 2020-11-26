@@ -135,8 +135,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
           target: STen,
           dataLayout: Seq[Metadata],
           targetType: TargetType,
-          device: Device,
-          logFrequency: Int
+          device: Device
       ) = {
         val precision =
           if (features.options.isDouble) DoublePrecision
@@ -174,7 +173,6 @@ class TabularResidualModuleSuite extends AnyFunSuite {
           device = device,
           precision = precision,
           minibatchSize = minibatchSize,
-          logFrequency = logFrequency,
           logger = None,
           ensembleFolds = ensembleFolds,
           learningRate = 0.0001,
@@ -218,8 +216,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
         target,
         0 until features.sizes.apply(1).toInt map (_ => Numerical),
         Classification(10, vec.ones(10).toSeq),
-        device,
-        logFrequency = 100
+        device
       ).unsafeRunSync()
 
       val dataTest = org.saddle.csv.CsvParser

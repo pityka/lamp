@@ -19,8 +19,7 @@ object TestTrain {
       target: STen,
       dataLayout: Seq[Metadata],
       targetType: TargetType,
-      device: Device,
-      logFrequency: Int
+      device: Device
   )(implicit scope: Scope) = {
     val precision =
       if (features.options.isDouble) DoublePrecision
@@ -59,7 +58,6 @@ object TestTrain {
       device = device,
       precision = precision,
       minibatchSize = minibatchSize,
-      logFrequency = logFrequency,
       logger = None,
       ensembleFolds = ensembleFolds,
       learningRate = 0.001,
@@ -145,8 +143,7 @@ class HousePricesSuite extends AnyFunSuite {
             trainTarget,
             metadata,
             ECDFRegression,
-            device,
-            logFrequency = 10
+            device
           )
           _ = {
             // println("Validation losses: " + trained.validationLosses)

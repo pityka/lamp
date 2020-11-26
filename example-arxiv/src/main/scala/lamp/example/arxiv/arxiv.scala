@@ -133,7 +133,7 @@ object Train extends App {
               targetPerNode = validL
             )
 
-          val (_, trainedModel) = IOLoops
+          val (_, trainedModel, _) = IOLoops
             .epochs(
               model = model,
               optimizerFactory = AdamW
@@ -144,10 +144,6 @@ object Train extends App {
               trainBatchesOverEpoch = makeTrainingBatch,
               validationBatchesOverEpoch = Some(makeValidationBatch),
               epochs = 500,
-              trainingCallback = TrainingCallback.noop,
-              validationCallback = ValidationCallback.noop,
-              checkpointFile = None,
-              minimumCheckpointFile = None,
               logger = Some(scribe.Logger("b")),
               prefetchData = true
             )

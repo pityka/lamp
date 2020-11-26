@@ -26,6 +26,7 @@ import _root_.lamp.ClassificationTree
 import lamp.Scope
 import lamp.STen
 import lamp.Movable
+import lamp.data.TrainingBatchCallback
 
 sealed trait BaseModel
 case class KnnBase(
@@ -97,7 +98,6 @@ object EnsembleModel {
       targetType: TargetType,
       device: Device,
       logger: Option[Logger],
-      logFrequency: Int,
       learningRate: Double = 0.0001,
       minibatchSize: Int = 512,
       knnMinibatchSize: Int = 512,
@@ -146,7 +146,6 @@ object EnsembleModel {
         precision = precision,
         minibatchSize = minibatchSize,
         knnMinibatchSize = knnMinibatchSize,
-        logFrequency = logFrequency,
         logger = logger,
         ensembleFolds = ensembleFolds,
         rng = rng
@@ -710,7 +709,6 @@ object AutoLoop {
       device: Device,
       precision: FloatingPointPrecision,
       minibatchSize: Int,
-      logFrequency: Int,
       logger: Option[Logger],
       rng: org.saddle.spire.random.Generator
   )(implicit scope: Scope) =
@@ -800,8 +798,6 @@ object AutoLoop {
 
       def batchStream = miniBatches._1
 
-      val trainingCallback = TrainingCallback.noop
-
       val (predictNumerical, predictCategorical) = Scope { implicit scope =>
         val (num, cat) = separateFeatures(predictables, dataLayout)
         if (predictablesPredictionsOnBasemodels.isEmpty) (num, cat.map(_._1))
@@ -824,11 +820,12 @@ object AutoLoop {
         } else {
           for {
             _ <- IOLoops.oneEpoch(
+              epoch,
+              TrainingCallback.noop,
               modelWithOptimizer,
               batchStream,
-              trainingCallback,
+              TrainingBatchCallback.noop,
               logger,
-              logFrequency,
               learningRateSchedule.factor(epoch.toLong, None),
               None
             )
@@ -1187,7 +1184,6 @@ object AutoLoop {
       device: Device,
       precision: FloatingPointPrecision,
       minibatchSize: Int,
-      logFrequency: Int,
       logger: Option[Logger],
       rng: org.saddle.spire.random.Generator
   )(outerScope: Scope) = {
@@ -1238,7 +1234,6 @@ object AutoLoop {
                   device = device,
                   precision = precision,
                   minibatchSize = minibatchSize,
-                  logFrequency = logFrequency,
                   logger = logger,
                   rng = rng
                 ).map(_.map(v => (v._1, v._2, v._3, predictIdx)))
@@ -1329,7 +1324,6 @@ object AutoLoop {
       device: Device,
       precision: FloatingPointPrecision,
       minibatchSize: Int,
-      logFrequency: Int,
       logger: Option[Logger],
       ensembleFolds: Seq[(Seq[Int], Seq[Int])],
       rng: org.saddle.spire.random.Generator
@@ -1366,7 +1360,6 @@ object AutoLoop {
               device = device,
               precision = precision,
               minibatchSize = minibatchSize,
-              logFrequency = logFrequency,
               logger = logger,
               rng = rng
             )(scope)
@@ -1462,7 +1455,6 @@ object AutoLoop {
                 device = device,
                 precision = precision,
                 minibatchSize = minibatchSize,
-                logFrequency = logFrequency,
                 logger = logger,
                 rng = rng
               )(scope)

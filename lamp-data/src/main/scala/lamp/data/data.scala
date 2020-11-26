@@ -4,14 +4,14 @@ import scribe.Logger
 import lamp.STen
 import lamp.Scope
 
-trait TrainingCallback {
+trait TrainingBatchCallback {
   def apply(
       trainingLoss: Double,
       batchCount: Int
   ): Unit
 }
-object TrainingCallback {
-  val noop = new TrainingCallback {
+object TrainingBatchCallback {
+  val noop = new TrainingBatchCallback {
     def apply(
         trainingLoss: Double,
         batchCount: Int
@@ -20,28 +20,48 @@ object TrainingCallback {
 }
 
 trait ValidationCallback {
+  def apply(epochCount: Long, validationLoss: Double): Unit
+}
+object ValidationCallback {
+  val noop = new ValidationCallback {
+    def apply(epochCount: Long, validationLoss: Double): Unit = ()
+  }
+}
+trait TrainingCallback {
+  def apply(epochCount: Long, trainingLoss: Double): Unit
+}
+object TrainingCallback {
+  val noop = new TrainingCallback {
+    def apply(epochCount: Long, trainingLoss: Double): Unit = ()
+  }
+}
+
+trait ValidationBatchCallback {
   def apply(
       validationOutput: STen,
       validationTarget: STen,
       validationLoss: Double,
-      epochCount: Long
+      epochCount: Long,
+      batchCount: Long
   ): Unit
 }
-object ValidationCallback {
-  val noop = new ValidationCallback {
+object ValidationBatchCallback {
+  val noop = new ValidationBatchCallback {
     def apply(
         validationOutput: STen,
         validationTarget: STen,
         validationLoss: Double,
-        epochCount: Long
+        epochCount: Long,
+        batchCount: Long
     ) = ()
   }
-  def logAccuracy(logger: Logger) = new ValidationCallback {
+  def logAccuracy(logger: Logger) = new ValidationBatchCallback {
     def apply(
         validationOutput: STen,
         validationTarget: STen,
         validationLoss: Double,
-        epochCount: Long
+        epochCount: Long,
+        batchCount: Long
     ): Unit = {
       val prediction = {
         Scope.leak { implicit scope =>

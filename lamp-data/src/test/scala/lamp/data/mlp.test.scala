@@ -6,7 +6,6 @@ import lamp.autograd.{const}
 import lamp.nn._
 import lamp.{CPU, CudaDevice, DoublePrecision}
 import aten.TensorOptions
-import scribe.Level
 import lamp.Scope
 import lamp.STen
 
@@ -94,15 +93,7 @@ class MLPSuite extends AnyFunSuite {
           rng
         )
 
-      val logger = scribe
-        .Logger("test")
-        .clearHandlers()
-        .clearModifiers()
-        .withMinimumLevel(Level.Error)
-      val validationCallback =
-        ValidationCallback.logAccuracy(logger)
-
-      val (_, trainedModel) = IOLoops
+      val (_, trainedModel, _) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = SGDW
@@ -112,11 +103,7 @@ class MLPSuite extends AnyFunSuite {
             ),
           trainBatchesOverEpoch = makeTrainingBatch,
           validationBatchesOverEpoch = Some(makeValidationBatch),
-          epochs = 10,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback = validationCallback,
-          checkpointFile = None,
-          minimumCheckpointFile = None
+          epochs = 10
         )
         .unsafeRunSync()
       val (loss, _, _) = trainedModel

@@ -24,8 +24,7 @@ class GreenerManufacturingSuite extends AnyFunSuite {
         dataLayout: Seq[Metadata],
         targetType: TargetType,
         device: Device,
-        logger: Option[Logger],
-        logFrequency: Int
+        logger: Option[Logger]
     )(implicit scope: Scope) = {
 
       val precision =
@@ -65,7 +64,6 @@ class GreenerManufacturingSuite extends AnyFunSuite {
         device = device,
         precision = precision,
         minibatchSize = minibatchSize,
-        logFrequency = logFrequency,
         logger = logger,
         ensembleFolds = ensembleFolds,
         learningRate = 0.001,
@@ -156,8 +154,7 @@ class GreenerManufacturingSuite extends AnyFunSuite {
             metadata,
             ECDFRegression,
             device,
-            Some(scribe.Logger("test")),
-            logFrequency = 10
+            Some(scribe.Logger("test"))
           )
           predicted <- trained.predict(testFeatures).map { modelOutput =>
             modelOutput.toMat
