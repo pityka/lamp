@@ -61,7 +61,7 @@ class IOLoopSuite extends AnyFunSuite {
       )
 
       val (epoch, trainedModel, learningCurve) = IOLoops
-        .epochs(
+        .withSWA(
           model = model,
           optimizerFactory = SGDW
             .factory(
@@ -72,7 +72,8 @@ class IOLoopSuite extends AnyFunSuite {
             () => BatchStream.fromFullBatch(x, target, device),
           validationBatchesOverEpoch =
             Some(() => BatchStream.fromFullBatch(x, target, device)),
-          epochs = 50,
+          warmupEpochs = 50,
+          swaEpochs = 20,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
           checkpointFile = None,
@@ -87,7 +88,7 @@ class IOLoopSuite extends AnyFunSuite {
       assert(epoch == 25)
       println(loss)
 
-      assert(learningCurve.size == 50)
+      assert(learningCurve.size == 70)
 
       assert(loss < 50)
     }
