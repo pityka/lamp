@@ -94,12 +94,16 @@ object IOLoops {
         else {
 
           def copyModel = {
+            val device =
+              returnDevice.getOrElse(
+                TensorHelpers.device(
+                  model.module.state.head._1.value.value
+                )
+              )
             logger.foreach(_.info(s"Copying model at epoch $epoch"))
             minValidationLossModel.foreach(_._2.foreach(_.release))
             val copiedState =
-              model.module.state.map(_._1.value).map { t =>
-                lamp.CPU.to(t.value)
-              }
+              model.module.state.map(_._1.value).map { t => device.to(t.value) }
 
             (epoch, copiedState)
           }
