@@ -196,7 +196,7 @@ class GCNSuite extends AnyFunSuite {
           )
 
         val (_, trainedModel, _) = IOLoops
-          .epochs(
+          .withSWA(
             model = model,
             optimizerFactory = AdamW
               .factory(
@@ -204,13 +204,8 @@ class GCNSuite extends AnyFunSuite {
                 weightDecay = simple(5e-3d)
               ),
             trainBatchesOverEpoch = makeTrainingBatch,
-            validationBatchesOverEpoch = None,
-            epochs = 150,
-            trainingCallback = TrainingCallback.noop,
-            validationCallback = ValidationCallback.noop,
-            checkpointFile = None,
-            minimumCheckpointFile = None,
-            logger = None
+            warmupEpochs = 150,
+            swaEpochs = 20
           )
           .unsafeRunSync()
 

@@ -6,12 +6,87 @@ import java.io.File
 import scribe.Logger
 import Writer.writeCheckpoint
 import lamp.autograd.Variable
-import lamp.TensorHelpers
 import lamp.STen
 import lamp.Scope
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.Executors
 object IOLoops {
+
+  def withSWA[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
+      model: SupervisedModel[I, M],
+      optimizerFactory: Seq[(STen, PTag)] => Optimizer,
+      trainBatchesOverEpoch: () => BatchStream[I],
+      warmupEpochs: Int,
+      swaEpochs: Int,
+      validationBatchesOverEpoch: Option[() => BatchStream[I]] = None,
+      trainingBatchCallback: TrainingBatchCallback = TrainingBatchCallback.noop,
+      trainingCallback: TrainingCallback = TrainingCallback.noop,
+      validationCallback: ValidationCallback = ValidationCallback.noop,
+      validationBatchCallback: ValidationBatchCallback =
+        ValidationBatchCallback.noop,
+      checkpointFile: Option[File] = None,
+      minimumCheckpointFile: Option[File] = None,
+      logger: Option[Logger] = None,
+      returnMinValidationLossModel: Seq[Int] = Nil,
+      learningRateSchedule: LearningRateSchedule =
+        LearningRateSchedule.decrement(20, 0.5),
+      swaLearningRateSchedule: SWA.SWALearningRateSchedule =
+        SWA.SWALearningRateSchedule.cyclic(
+          minFactor = 0.01,
+          maxFactor = 1d,
+          cycleLength = 10
+        ),
+      prefetchData: Boolean = true
+  ) = {
+    for {
+      warmedup <- epochs(
+        model,
+        optimizerFactory,
+        trainBatchesOverEpoch,
+        validationBatchesOverEpoch,
+        warmupEpochs,
+        trainingBatchCallback,
+        trainingCallback,
+        validationCallback,
+        validationBatchCallback,
+        checkpointFile,
+        minimumCheckpointFile,
+        1,
+        logger,
+        returnMinValidationLossModel,
+        learningRateSchedule,
+        prefetchData
+      )
+      warmupEpochReturned = warmedup._1
+      warmedupModel = warmedup._2
+      warmupLearningCurve = warmedup._3
+      swaResult <- SWA.epochs(
+        warmedupModel,
+        optimizerFactory,
+        trainBatchesOverEpoch,
+        validationBatchesOverEpoch,
+        swaEpochs,
+        trainingBatchCallback,
+        trainingCallback,
+        validationCallback,
+        validationBatchCallback,
+        checkpointFile,
+        minimumCheckpointFile,
+        1,
+        logger,
+        swaLearningRateSchedule,
+        prefetchData
+      )
+    } yield {
+      val swaModel = swaResult._1
+      val swaLearningCurve = swaResult._2
+      val m = warmupLearningCurve.map(_._1).max + 1
+      val concat = warmupLearningCurve ++ swaLearningCurve.map {
+        case (epoch, l1, l2) => (epoch + m, l1, l2)
+      }
+      (warmupEpochReturned, swaModel, concat)
+    }
+  }
 
   def epochs[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
       model: SupervisedModel[I, M],
@@ -29,7 +104,6 @@ object IOLoops {
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
-      returnDevice: Option[lamp.Device] = None,
       learningRateSchedule: LearningRateSchedule = LearningRateSchedule.noop,
       prefetchData: Boolean = false
   ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
@@ -71,17 +145,7 @@ object IOLoops {
                 (epoch - 1, modelWithOptimizer.model, learningCurve.reverse)
               case Some((epochOfMinValidation, state)) =>
                 Scope.root { implicit scope =>
-                  val stateOnDevice = state.map { t =>
-                    val device =
-                      returnDevice.getOrElse(
-                        TensorHelpers.device(
-                          model.module.state.head._1.value.value
-                        )
-                      )
-                    val t2 = device.to(t)
-                    t.release
-                    STen.owned(t2)
-                  }
+                  val stateOnDevice = state.map { t => STen.owned(t) }
                   model.module.load(stateOnDevice)
                 }
                 (
@@ -94,16 +158,13 @@ object IOLoops {
         else {
 
           def copyModel = {
-            val device =
-              returnDevice.getOrElse(
-                TensorHelpers.device(
-                  model.module.state.head._1.value.value
-                )
-              )
+
             logger.foreach(_.info(s"Copying model at epoch $epoch"))
             minValidationLossModel.foreach(_._2.foreach(_.release))
             val copiedState =
-              model.module.state.map(_._1.value).map { t => device.to(t.value) }
+              model.module.state.map(_._1.value).map { t =>
+                aten.ATen.clone(t.value)
+              }
 
             (epoch, copiedState)
           }

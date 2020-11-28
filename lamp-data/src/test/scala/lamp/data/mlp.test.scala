@@ -94,7 +94,7 @@ class MLPSuite extends AnyFunSuite {
         )
 
       val (_, trainedModel, _) = IOLoops
-        .epochs(
+        .withSWA(
           model = model,
           optimizerFactory = SGDW
             .factory(
@@ -103,7 +103,8 @@ class MLPSuite extends AnyFunSuite {
             ),
           trainBatchesOverEpoch = makeTrainingBatch,
           validationBatchesOverEpoch = Some(makeValidationBatch),
-          epochs = 10
+          warmupEpochs = 10,
+          swaEpochs = 10
         )
         .unsafeRunSync()
       val (loss, _, _) = trainedModel

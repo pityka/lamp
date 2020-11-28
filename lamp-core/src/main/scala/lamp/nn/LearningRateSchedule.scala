@@ -21,7 +21,7 @@ object LearningRateSchedule {
   def noop = fromEpochCount((_: Long) => 1d)
   def decrement(every: Int, decrementFraction: Double) =
     fromEpochCount((stepCount: Long) =>
-      math.pow(1d - decrementFraction, (stepCount / every).toDouble)
+      math.pow(decrementFraction, (stepCount / every).toDouble)
     )
   def linear(start: Double, end: Double, maxSteps: Long) =
     fromEpochCount((stepCount: Long) => {
