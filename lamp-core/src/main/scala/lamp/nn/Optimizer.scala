@@ -3,7 +3,10 @@ package lamp.nn
 import lamp.STen
 
 trait Optimizer {
-  def step(gradients: Seq[Option[STen]], scheduleFactor: Double): Unit
+  def step(
+      gradients: Seq[Option[STen]],
+      scheduleFactor: Double
+  ): Unit
   def release(): Unit
 }
 

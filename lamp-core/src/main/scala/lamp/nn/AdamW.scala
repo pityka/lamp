@@ -11,7 +11,6 @@ object AdamW {
       beta1: OptimizerHyperparameter = simple(0.9),
       beta2: OptimizerHyperparameter = simple(0.999),
       eps: Double = 1e-8,
-      scheduler: Long => Double = _ => 1d,
       clip: Option[Double] = None
   ) =
     (parameters: Seq[(STen, PTag)]) =>
@@ -22,7 +21,6 @@ object AdamW {
         beta1,
         beta2,
         eps,
-        scheduler,
         clip
       )
 }
@@ -35,7 +33,6 @@ case class AdamW(
     beta1: OptimizerHyperparameter = simple(0.9),
     beta2: OptimizerHyperparameter = simple(0.999),
     eps: Double = 1e-8,
-    scheduler: Long => Double = _ => 1d,
     clip: Option[Double] = None
 ) extends Optimizer {
   val mt: List[Tensor] = parameters.toList.map {
