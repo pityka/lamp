@@ -8,11 +8,10 @@ object SGDW {
       learningRate: OptimizerHyperparameter,
       weightDecay: OptimizerHyperparameter,
       momentum: Option[OptimizerHyperparameter] = None,
-      scheduler: Long => Double = _ => 1d,
       clip: Option[Double] = None
   ) =
     (parameters: Seq[(STen, PTag)]) =>
-      SGDW(parameters, learningRate, weightDecay, momentum, scheduler, clip)
+      SGDW(parameters, learningRate, weightDecay, momentum, clip)
 }
 
 // https://arxiv.org/pdf/1711.05101.pdf algorithm 1
@@ -21,7 +20,6 @@ case class SGDW(
     learningRate: OptimizerHyperparameter,
     weightDecay: OptimizerHyperparameter,
     momentum: Option[OptimizerHyperparameter] = None,
-    scheduler: Long => Double = _ => 1d,
     clip: Option[Double] = None
 ) extends Optimizer {
   val velocity: Seq[Option[(Tensor, OptimizerHyperparameter)]] =

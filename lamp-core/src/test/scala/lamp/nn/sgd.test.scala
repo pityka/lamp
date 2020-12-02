@@ -67,8 +67,7 @@ class SGDSuite extends AnyFunSuite {
         parameters = List((params, NoTag)),
         learningRate = simple(1d),
         weightDecay = simple(0.1),
-        momentum = None,
-        scheduler = _ => 1d
+        momentum = None
       )
       optim.step(List(Some(gradients)), 1d)
       val updatedParams1 = params.toMat

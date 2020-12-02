@@ -38,8 +38,7 @@ class AdamWSuite extends AnyFunSuite {
         learningRate = simple(0.1d),
         weightDecay = simple(0.00),
         beta1 = simple(0.999d),
-        beta2 = simple(0.9d),
-        scheduler = _ => 1d
+        beta2 = simple(0.9d)
       )
       opt.step(List(Some(gradients)), 1d)
       val updatedParams1 = params.toMat
@@ -61,8 +60,7 @@ class AdamWSuite extends AnyFunSuite {
         learningRate = simple(0.1d),
         weightDecay = simple(0.00001),
         beta1 = simple(0.999d),
-        beta2 = simple(0.9d),
-        scheduler = _ => 1d
+        beta2 = simple(0.9d)
       )
       opt.step(List(Some(gradients)), 1d)
       val updatedParams1 = params.toMat
