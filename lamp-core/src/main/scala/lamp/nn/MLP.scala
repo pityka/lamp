@@ -16,14 +16,28 @@ import aten.TensorOptions
   * @param dropout dropout applied to each block
   */
 object MLP {
+  sealed trait ActivationFunction
+  case object Relu extends ActivationFunction
+  case object Gelu extends ActivationFunction
+  case object Swish1 extends ActivationFunction
+  case object Sigmoid extends ActivationFunction
   def apply[S: Sc](
       in: Int,
       out: Int,
       hidden: Seq[Int],
       tOpt: TensorOptions,
       dropout: Double = 0d,
-      lastNonLinearity: Boolean = false
-  ) =
+      lastNonLinearity: Boolean = false,
+      activationFunction: ActivationFunction = Relu
+  ) = {
+
+    def act() = activationFunction match {
+      case Gelu    => Fun(scope => input => input.gelu(scope))
+      case Relu    => Fun(scope => input => input.relu(scope))
+      case Swish1  => Fun(scope => input => input.swish1(scope))
+      case Sigmoid => Fun(scope => input => input.sigmoid(scope))
+    }
+
     sequence(
       Sequential(
         (List(in) ++ hidden)
@@ -36,7 +50,7 @@ object MLP {
             sequence(
               Linear(in = in, out = out, tOpt = tOpt, bias = false),
               BatchNorm(out, tOpt = tOpt),
-              Fun(scope => input => input.gelu(scope)),
+              act(),
               Dropout(dropout, training = true)
             )
           }: _*
@@ -52,7 +66,7 @@ object MLP {
                 bias = false
               ),
               BatchNorm(out, tOpt = tOpt),
-              Fun(scope => input => input.gelu(scope)),
+              act(),
               Dropout(dropout, training = true)
             )
           )
@@ -70,5 +84,6 @@ object MLP {
           )
       )
     )
+  }
 
 }
