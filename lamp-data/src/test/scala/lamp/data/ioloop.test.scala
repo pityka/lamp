@@ -39,6 +39,10 @@ class IOLoopSuite extends AnyFunSuite {
         )
         .right
         .get
+
+      import scala.concurrent.duration._
+      val tensorLogger =
+        TensorLogger.start(1.seconds)(s => scribe.info(s))
       val x =
         STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
       val target =
@@ -84,6 +88,8 @@ class IOLoopSuite extends AnyFunSuite {
 
       val (loss, _, _) =
         trainedModel.lossAndOutput(const(x), target).allocated.unsafeRunSync._1
+
+      tensorLogger.cancel
 
       assert(epoch == 25)
       println(loss)

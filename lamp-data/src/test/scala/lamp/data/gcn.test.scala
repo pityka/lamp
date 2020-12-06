@@ -113,6 +113,10 @@ class GCNSuite extends AnyFunSuite {
   }
 
   test1("cora") { cuda =>
+    import scala.concurrent.duration._
+    val tensorLogger =
+      TensorLogger.start(1.seconds)(s => scribe.info(s))
+
     val device = if (cuda) CudaDevice(0) else CPU
     val precision = SinglePrecision
 
@@ -246,6 +250,11 @@ class GCNSuite extends AnyFunSuite {
       println(accuracy)
       assert(accuracy > 0.7)
     }
+
+    tensorLogger.cancel
+    TensorLogger.detailAllTensors(s => scribe.info(s))
+    Thread.sleep(10000)
+    TensorLogger.detailAllTensors(s => scribe.info(s))
   }
   test1("cora ngcn") { cuda =>
     val device = if (cuda) CudaDevice(0) else CPU
