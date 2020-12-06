@@ -125,7 +125,9 @@ object SWA {
                     avg.release
                     val tmp2 = ATen.add_0(tmp1, current, 1d)
                     tmp1.release
-                    ATen.div_1(tmp2, numberOfAveragedModels + 1)
+                    val t = ATen.div_1(tmp2, numberOfAveragedModels + 1)
+                    tmp2.release
+                    t
                 }
             }
 
