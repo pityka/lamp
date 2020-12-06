@@ -250,7 +250,7 @@ class GCNSuite extends AnyFunSuite {
       println(accuracy)
       assert(accuracy > 0.7)
     }
-
+    Scope.waitAllOutstandingReleases()
     tensorLogger.cancel
     TensorLogger.detailAllTensors(s => scribe.info(s))
   }

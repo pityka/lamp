@@ -45,6 +45,10 @@ import aten.Tensor
 import cats.effect.Resource
 import cats.effect.IO
 import scala.collection.JavaConverters._
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Try
+import scala.concurrent.Await
 
 trait Movable[-R] {
   def list(movable: R): List[Tensor]
@@ -168,18 +172,9 @@ final class Scope private {
         ] // compiler doesn't know `finally` will throw
     } finally {
       closed = true
-      var rs = resources.asScala.toList.distinct
+      val rs = resources.asScala.toList.distinct
       resources = null // allow GC, in case something is holding a reference to `this`
-      while (rs.nonEmpty) {
-        val resource = rs.head
-        rs = rs.tail
-        try resource.release()
-        catch {
-          case t: Throwable =>
-            if (toThrow == null) toThrow = t
-            else toThrow = t
-        }
-      }
+      Scope.delayedRelease(rs.toArray)
       if (toThrow != null) throw toThrow
     }
   }
@@ -202,20 +197,11 @@ final class Scope private {
       .flatMap {
         case (last, movables, error) =>
           closed = true
-          var rs = resources.asScala.toList.distinct
+          val rs = resources.asScala.toList.distinct
           this.resources = null // allow GC, in case something is holding a reference to `this`
-          var toThrow: Throwable = null
-          while (rs.nonEmpty) {
-            val resource = rs.head
-            rs = rs.tail
-            try resource.release()
-            catch {
-              case t: Throwable =>
-                toThrow = t
-            }
-          }
-          if (toThrow != null) IO.raiseError(toThrow)
-          else if (error.isDefined) IO.raiseError(error.get)
+          Scope.delayedRelease(rs.toArray)
+
+          if (error.isDefined) IO.raiseError(error.get)
           else IO.pure((last.get, movables))
       }
 
@@ -232,24 +218,66 @@ final class Scope private {
         null.asInstanceOf[A] // compiler doesn't know `finally` will throw
     } finally {
       closed = true
-      var rs = resources.asScala.toList.distinct
+      val rs = resources.asScala.toList.distinct
+      Scope.delayedRelease(rs.toArray)
       resources = null // allow GC, in case something is holding a reference to `this`
-      while (rs.nonEmpty) {
-        val resource = rs.head
-        rs = rs.tail
-        try resource.release()
-        catch {
-          case t: Throwable =>
-            if (toThrow == null) toThrow = t
-            else toThrow = t
-        }
-      }
+
       if (toThrow != null) throw toThrow
     }
   }
 }
 
 object Scope {
+
+  var asyncReleases = true
+
+  import java.util.concurrent.{Future => _, _}
+  import scala.concurrent.ExecutionContext
+  val executorService = new ThreadPoolExecutor(
+    4,
+    4,
+    30,
+    TimeUnit.SECONDS,
+    new ArrayBlockingQueue[Runnable](100),
+    new ThreadPoolExecutor.CallerRunsPolicy
+  )
+  val executionContext =
+    ExecutionContext.fromExecutorService(executorService)
+
+  private val delayedReleases =
+    new java.util.concurrent.LinkedBlockingQueue[Future[Unit]]()
+
+  protected def delayedRelease(rs: Array[Tensor]) = {
+    if (asyncReleases) {
+      val f = Future
+        .apply(Tensor.releaseAll(rs))(Scope.executionContext)
+      delayedReleases.add(f)
+
+      f.onComplete {
+        case Failure(exception) =>
+          println("Exception during release: " + exception)
+        case _ =>
+          delayedReleases.remove(f)
+      }(scala.concurrent.ExecutionContext.Implicits.global)
+    } else {
+      Try(Tensor.releaseAll(rs)).failed.foreach { ex =>
+        println("Exception during release: " + ex)
+
+      }
+    }
+  }
+  import scala.concurrent.duration._
+  def waitAllOutstandingReleases(
+      duration: scala.concurrent.duration.Duration = 5 seconds
+  ) = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Try(
+      Await.result(
+        Future.sequence(delayedReleases.asScala.toList),
+        atMost = duration
+      )
+    )
+  }
 
   def free = new Scope
 
