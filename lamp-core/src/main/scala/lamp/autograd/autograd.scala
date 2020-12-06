@@ -5,6 +5,8 @@ import lamp.Scope
 import lamp.Sc
 import lamp.STen
 import lamp.Movable
+import scala.concurrent.Future
+import java.util.UUID
 
 /**
   * Params: the input and the function which calculates the partial derivative
@@ -128,7 +130,9 @@ trait Variable {
 
   lazy val wengert = Autograd.topologicalSort(this)
 
-  def backprop(): Unit = {
+  def backprop(): Unit = parallelBackprop()
+
+  def serialBackprop(): Unit = {
     if (partialDerivative.isDefined) {
       partialDerivative.get.fill_(1d)
       wengert.foreach { v =>
@@ -142,12 +146,75 @@ trait Variable {
 
   }
 
+  def parallelBackprop(): Unit = {
+    if (partialDerivative.isDefined) {
+      partialDerivative.get.fill_(1d)
+
+      implicit val myscope = Scope.free
+      implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
+      val computePartialDerivative
+          : (STen, Variable, (STen, STen) => Unit) => STen =
+        (incoming, operand, computeGrad) => {
+          val target = STen.zeros(
+            operand.partialDerivative.get.shape,
+            operand.partialDerivative.get.options
+          )
+          computeGrad(
+            incoming,
+            target
+          )
+          target
+        }
+      def loop(
+          futures: List[(UUID, Future[STen])],
+          tail: List[Variable]
+      ): Future[List[(UUID, STen)]] = {
+        tail match {
+          case Nil =>
+            Future.sequence(futures.map(v => v._2.map(s => (v._1, s))))
+          case head :: xs =>
+            if (head.partialDerivative.isDefined) {
+              val headPD = Future
+                .sequence(futures.filter(_._1 == head.id).map(_._2))
+                .map(_.reduce(_ + _))
+              headPD
+                .map { headPD =>
+                  head.partialDerivative.get.copyFrom(headPD); headPD
+                }
+                .flatMap { headPD =>
+                  val fs = head.op.toList
+                    .flatMap(_.params)
+                    .filter(_._1.partialDerivative.isDefined)
+                    .map {
+                      case (operand, computeGrad) =>
+                        val f = Future {
+                          computePartialDerivative(headPD, operand, computeGrad)
+                        }
+                        (operand.id, f)
+                    }
+                  loop(fs ++ futures, xs)
+                }
+            } else loop(futures, xs)
+        }
+      }
+
+      val done = loop(
+        futures = List(id -> Future.successful(partialDerivative.get)),
+        tail = wengert.toList
+      )
+      import scala.concurrent.duration._
+      scala.concurrent.Await.result(done, atMost = 1 hour)
+      myscope.release
+    }
+
+  }
+
   def zipBackward(fn: (STen, STen) => Unit) = (this, fn)
 
   def accumulateGrad(
       incoming: STen,
       computeGrad: (STen, STen) => Unit
-  ) = if (needsGrad) {
+  ) = if (partialDerivative.isDefined) {
     computeGrad(incoming, partialDerivative.get)
   }
 

@@ -44,6 +44,7 @@ package lamp
 import aten.Tensor
 import cats.effect.Resource
 import cats.effect.IO
+import scala.collection.JavaConverters._
 
 trait Movable[-R] {
   def list(movable: R): List[Tensor]
@@ -131,7 +132,8 @@ object Movable {
 final class Scope private {
 
   private var closed = false
-  private var resources: List[Tensor] = Nil
+  private var resources: java.util.concurrent.ConcurrentLinkedQueue[Tensor] =
+    new java.util.concurrent.ConcurrentLinkedQueue[Tensor]()
 
   def apply(resource: Tensor): Tensor = {
     register(resource)
@@ -142,7 +144,7 @@ final class Scope private {
     if (resource == null) throw new NullPointerException("null resource")
     if (closed)
       throw new IllegalStateException("already been closed")
-    resources = resource :: resources
+    resources.add(resource) //resource :: resources
   }
 
   def release(): Unit = manage[Unit](_ => ())
@@ -154,9 +156,9 @@ final class Scope private {
     try {
       val last = op(this)
       val lastResources = movable.list(last)
-      val (movableResources, releasableResources) =
-        resources.partition(r => lastResources.exists(_ eq r))
-      resources = releasableResources
+      val (movableResources, _) =
+        resources.asScala.toList.partition(r => lastResources.exists(_ eq r))
+      movableResources.foreach { m => resources.remove(m) }
       (last, movableResources)
     } catch {
       case t: Throwable =>
@@ -166,7 +168,7 @@ final class Scope private {
         ] // compiler doesn't know `finally` will throw
     } finally {
       closed = true
-      var rs = resources.distinct
+      var rs = resources.asScala.toList.distinct
       resources = null // allow GC, in case something is holding a reference to `this`
       while (rs.nonEmpty) {
         val resource = rs.head
@@ -189,17 +191,18 @@ final class Scope private {
     op(this)
       .map { last =>
         val lastResources = movable.list(last)
-        val (movables, releasable) =
-          resources.partition(r => lastResources.exists(_ eq r))
-        (Option(last), movables, releasable, Option.empty[Throwable])
+        val (movables, _) =
+          resources.asScala.toList.partition(r => lastResources.exists(_ eq r))
+        movables.foreach { m => resources.remove(m) }
+        (Option(last), movables, Option.empty[Throwable])
       }
       .recover {
-        case t: Throwable => (Option.empty[A], Nil, resources, Some(t))
+        case t: Throwable => (Option.empty[A], Nil, Some(t))
       }
       .flatMap {
-        case (last, movables, releasable, error) =>
+        case (last, movables, error) =>
           closed = true
-          var rs = releasable.distinct
+          var rs = resources.asScala.toList.distinct
           this.resources = null // allow GC, in case something is holding a reference to `this`
           var toThrow: Throwable = null
           while (rs.nonEmpty) {
@@ -229,7 +232,7 @@ final class Scope private {
         null.asInstanceOf[A] // compiler doesn't know `finally` will throw
     } finally {
       closed = true
-      var rs = resources.distinct
+      var rs = resources.asScala.toList.distinct
       resources = null // allow GC, in case something is holding a reference to `this`
       while (rs.nonEmpty) {
         val resource = rs.head
