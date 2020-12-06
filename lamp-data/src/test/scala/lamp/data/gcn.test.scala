@@ -253,8 +253,6 @@ class GCNSuite extends AnyFunSuite {
 
     tensorLogger.cancel
     TensorLogger.detailAllTensors(s => scribe.info(s))
-    Thread.sleep(10000)
-    TensorLogger.detailAllTensors(s => scribe.info(s))
   }
   test1("cora ngcn") { cuda =>
     val device = if (cuda) CudaDevice(0) else CPU
