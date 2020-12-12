@@ -26,7 +26,6 @@ import _root_.lamp.ClassificationTree
 import lamp.Scope
 import lamp.STen
 import lamp.Movable
-import lamp.data.TrainingBatchCallback
 
 sealed trait BaseModel
 case class KnnBase(
@@ -824,7 +823,6 @@ object AutoLoop {
               TrainingCallback.noop,
               modelWithOptimizer,
               batchStream,
-              TrainingBatchCallback.noop,
               logger,
               learningRateSchedule.factor(epoch.toLong, None),
               None

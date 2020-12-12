@@ -107,11 +107,14 @@ class MLPSuite extends AnyFunSuite {
           swaEpochs = 10
         )
         .unsafeRunSync()
-      val (loss, _, _) = trainedModel
-        .lossAndOutput(const(testDataTensor), testTarget)
-        .allocated
-        .map(_._1)
-        .unsafeRunSync
+      val acc = STen.scalarDouble(0d, testDataTensor.options)
+      val (numExamples, _) = trainedModel
+        .addTotalLossAndReturnGradientsAndNumExamples(
+          const(testDataTensor),
+          testTarget,
+          acc
+        )
+      val loss = acc.toMat.raw(0) / numExamples
       assert(loss < 3)
 
       {

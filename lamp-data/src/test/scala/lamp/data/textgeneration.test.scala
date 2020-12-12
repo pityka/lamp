@@ -11,7 +11,6 @@ import lamp.nn.LossFunctions
 import lamp.nn.AdamW
 import lamp.nn.simple
 import cats.effect.IO
-import scala.collection.mutable
 import cats.effect.Resource
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.Charset
@@ -87,25 +86,17 @@ class TextGenerationSuite extends AnyFunSuite {
         clip = Some(1d)
       )
 
-      val buffer = mutable.ArrayBuffer[Double]()
-      IOLoops
+      val (_, _, learningCurve) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = optimizer,
           trainBatchesOverEpoch = trainEpochs,
           validationBatchesOverEpoch = None,
-          trainingBatchCallback = new TrainingBatchCallback {
-
-            override def apply(trainingLoss: Double, batchCount: Int): Unit = {
-              buffer.append(trainingLoss)
-            }
-
-          },
           epochs = 15
         )
         .unsafeRunSync()
 
-      assert(buffer.last < 3d)
+      assert(learningCurve.last._2 < 3d)
     }
   }
   test("text learning", SlowTest) {
@@ -172,27 +163,17 @@ class TextGenerationSuite extends AnyFunSuite {
         clip = Some(1d)
       )
 
-      val buffer = mutable.ArrayBuffer[Double]()
-      IOLoops
+      val (_, _, learningCurve) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = optimizer,
           trainBatchesOverEpoch = trainEpochs,
           validationBatchesOverEpoch = None,
-          trainingBatchCallback = new TrainingBatchCallback {
-
-            override def apply(trainingLoss: Double, batchCount: Int): Unit = {
-              buffer.append(trainingLoss)
-            }
-
-          },
           epochs = 1
-          // checkpointFile = Some(new java.io.File("checkpoint.test")),
-          // logger = Some(scribe.Logger("training"))
         )
         .unsafeRunSync()
 
-      assert(buffer.last < 8d)
+      assert(learningCurve.last._2 < 8d)
     }
   }
   test("text generation") {

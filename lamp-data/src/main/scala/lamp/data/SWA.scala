@@ -47,11 +47,8 @@ object SWA {
       trainBatchesOverEpoch: () => BatchStream[I],
       validationBatchesOverEpoch: Option[() => BatchStream[I]],
       epochs: Int,
-      trainingBatchCallback: TrainingBatchCallback = TrainingBatchCallback.noop,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      validationBatchCallback: ValidationBatchCallback =
-        ValidationBatchCallback.noop,
       checkpointFile: Option[File] = None,
       minimumCheckpointFile: Option[File] = None,
       validationFrequency: Int = 1,
@@ -139,7 +136,6 @@ object SWA {
               trainingCallback,
               modelWithOptimizer,
               trainBatchesOverEpoch(),
-              trainingBatchCallback,
               logger,
               learningRateFactor,
               prefetchEC = maybeExecutionContext
@@ -154,7 +150,6 @@ object SWA {
                   model = modelWithOptimizer.model,
                   validationBatches = validationBatchesOverEpoch.get(),
                   validationCallback = validationCallback,
-                  validationBatchCallback = validationBatchCallback,
                   logger = logger,
                   epochCount = epoch,
                   minimumCheckpointFile = minimumCheckpointFile,

@@ -86,9 +86,11 @@ class IOLoopSuite extends AnyFunSuite {
         )
         .unsafeRunSync()
 
-      val (loss, _, _) =
-        trainedModel.lossAndOutput(const(x), target).allocated.unsafeRunSync._1
-
+      val acc = STen.scalarDouble(0d, x.options)
+      val (n, _) =
+        trainedModel
+          .addTotalLossAndReturnGradientsAndNumExamples(const(x), target, acc)
+      val loss = acc.toMat.raw(0) / n
       tensorLogger.cancel
 
       assert(epoch == 25)
@@ -136,29 +138,32 @@ class IOLoopSuite extends AnyFunSuite {
 
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
 
-      val trainedModel = IOLoops.epochs(
-        model = model,
-        optimizerFactory = SGDW
-          .factory(
-            learningRate = simple(0.0001),
-            weightDecay = simple(0.001d)
+      val (_, trainedModel, _) = IOLoops
+        .epochs(
+          model = model,
+          optimizerFactory = SGDW
+            .factory(
+              learningRate = simple(0.0001),
+              weightDecay = simple(0.001d)
+            ),
+          trainBatchesOverEpoch = () =>
+            BatchStream.minibatchesFromFull(200, true, x, target, device, rng),
+          validationBatchesOverEpoch = Some(() =>
+            BatchStream.minibatchesFromFull(200, true, x, target, device, rng)
           ),
-        trainBatchesOverEpoch = () =>
-          BatchStream.minibatchesFromFull(200, true, x, target, device, rng),
-        validationBatchesOverEpoch = Some(() =>
-          BatchStream.minibatchesFromFull(200, true, x, target, device, rng)
-        ),
-        epochs = 50,
-        trainingCallback = TrainingCallback.noop,
-        validationCallback = ValidationCallback.noop,
-        checkpointFile = None,
-        minimumCheckpointFile = None,
-        prefetchData = true
-      )
+          epochs = 50,
+          trainingCallback = TrainingCallback.noop,
+          validationCallback = ValidationCallback.noop,
+          checkpointFile = None,
+          minimumCheckpointFile = None,
+          prefetchData = true
+        )
+        .unsafeRunSync()
 
-      val (loss, _, _) = trainedModel
-        .flatMap(_._2.lossAndOutput(const(x), target).allocated.map(_._1))
-        .unsafeRunSync
+      val acc = STen.scalarDouble(0d, x.options)
+      val (n, _) = trainedModel
+        .addTotalLossAndReturnGradientsAndNumExamples(const(x), target, acc)
+      val loss = acc.toMat.raw(0) / n
       assert(loss < 50)
     }
   }
