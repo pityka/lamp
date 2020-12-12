@@ -25,7 +25,6 @@ import lamp.data.Text
 import lamp.data.Reader
 import lamp.data.IOLoops
 import lamp.STen
-import lamp.data.ValidationBatchCallback
 
 case class CliConfig(
     trainData: String = "",
@@ -287,31 +286,6 @@ object Train extends App {
           clip = Some(1d)
         )
 
-        val validationBatchCallback = new ValidationBatchCallback {
-
-          override def apply(
-              validationOutput: STen,
-              validationTarget: STen,
-              validationLoss: Double,
-              epochCount: Long,
-              batchCount: Long
-          ): Unit = {
-            if (true) {
-              val targetString =
-                Text.convertIntegersToText(validationTarget, rvocab)
-              val outputString =
-                Text.convertLogitsToText(validationOutput, rvocab)
-              scribe.info(
-                (targetString zip outputString)
-                  .map(x => "'" + x._1 + "'  -->  '" + x._2 + "'")
-                  .mkString("\n")
-              )
-            }
-
-          }
-
-        }
-
         val (_, trainedModel, _) = IOLoops
           .epochs(
             model = model,
@@ -319,7 +293,6 @@ object Train extends App {
             trainBatchesOverEpoch = trainEpochs,
             validationBatchesOverEpoch = testEpochs,
             epochs = config.epochs,
-            validationBatchCallback = validationBatchCallback,
             checkpointFile = config.checkpointSave.map(s => new File(s)),
             minimumCheckpointFile =
               config.checkpointSave.map(s => new File(s + ".min")),

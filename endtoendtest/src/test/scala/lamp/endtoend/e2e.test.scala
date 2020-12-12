@@ -90,13 +90,6 @@ class EndToEndClassificationSuite extends AnyFunSuite {
 
       val testFeaturesTensor =
         STen.fromMat(testFeatures.toMat, device, SinglePrecision)
-      val testTargetTensor =
-        STen
-          .fromLongMat(
-            Mat(testTarget.toVec.map(_.toLong)),
-            device
-          )
-          .squeeze
 
       def mlp(dim: Int, k: Int, tOpt: TensorOptions) =
         sequence(
@@ -146,12 +139,9 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         epochs = 50,
         logger = None //Some(logger)
       )
-      val (_, output, _) = trainedModel
-        .flatMap(
-          _._2
-            .lossAndOutput(const(testFeaturesTensor), testTargetTensor)
-            .allocated
-            .map(_._1)
+      val output = trainedModel
+        .map(
+          _._2.module.forward(const(testFeaturesTensor))
         )
         .unsafeRunSync
       val prediction = output.toMat.rows.map(_.argmax).toVec

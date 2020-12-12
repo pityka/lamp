@@ -19,11 +19,8 @@ object IOLoops {
       warmupEpochs: Int,
       swaEpochs: Int,
       validationBatchesOverEpoch: Option[() => BatchStream[I]] = None,
-      trainingBatchCallback: TrainingBatchCallback = TrainingBatchCallback.noop,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      validationBatchCallback: ValidationBatchCallback =
-        ValidationBatchCallback.noop,
       checkpointFile: Option[File] = None,
       minimumCheckpointFile: Option[File] = None,
       logger: Option[Logger] = None,
@@ -45,10 +42,8 @@ object IOLoops {
         trainBatchesOverEpoch,
         validationBatchesOverEpoch,
         warmupEpochs,
-        trainingBatchCallback,
         trainingCallback,
         validationCallback,
-        validationBatchCallback,
         checkpointFile,
         minimumCheckpointFile,
         1,
@@ -66,10 +61,8 @@ object IOLoops {
         trainBatchesOverEpoch,
         validationBatchesOverEpoch,
         swaEpochs,
-        trainingBatchCallback,
         trainingCallback,
         validationCallback,
-        validationBatchCallback,
         checkpointFile,
         minimumCheckpointFile,
         1,
@@ -94,11 +87,8 @@ object IOLoops {
       trainBatchesOverEpoch: () => BatchStream[I],
       validationBatchesOverEpoch: Option[() => BatchStream[I]],
       epochs: Int,
-      trainingBatchCallback: TrainingBatchCallback = TrainingBatchCallback.noop,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      validationBatchCallback: ValidationBatchCallback =
-        ValidationBatchCallback.noop,
       checkpointFile: Option[File] = None,
       minimumCheckpointFile: Option[File] = None,
       validationFrequency: Int = 1,
@@ -175,7 +165,6 @@ object IOLoops {
               trainingCallback,
               modelWithOptimizer,
               trainBatchesOverEpoch(),
-              trainingBatchCallback,
               logger,
               learningRateFactor,
               prefetchEC = maybeExecutionContext
@@ -189,7 +178,6 @@ object IOLoops {
                 model = modelWithOptimizer.model,
                 validationBatches = validationBatchesOverEpoch.get(),
                 validationCallback = validationCallback,
-                validationBatchCallback = validationBatchCallback,
                 logger = logger,
                 epochCount = epoch,
                 minimumCheckpointFile = minimumCheckpointFile,
@@ -239,43 +227,39 @@ object IOLoops {
       trainingCallback: TrainingCallback,
       model: ModelWithOptimizer[I, M],
       trainBatches: BatchStream[I],
-      trainingBatchCallback: TrainingBatchCallback,
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
       prefetchEC: Option[(ExecutionContext, ExecutionContext)]
   ): IO[Double] = {
 
     def processBatch(
-        batchCount: Int,
-        option: Option[(I, STen)]
-    ): IO[Option[(Double, Long)]] = {
-      val io = option.map {
+        option: Option[(I, STen)],
+        lossAcc: STen
+    ): Option[Long] = {
+      option.map {
         case (sample, target) =>
-          val (avgLoss, numInstances, gradients) =
-            model.model.lossAndGradients(sample, target)
-          for {
-            _ <- IO {
-              trainingBatchCallback(avgLoss, batchCount)
-            }
+          val (numInstances, gradients) =
+            model.model.addTotalLossAndReturnGradientsAndNumExamples(
+              sample,
+              target,
+              lossAcc
+            )
 
-            _ <- IO {
-              model.optimizer.step(gradients, learningRateScheduleFactor)
-            }
-          } yield (avgLoss, numInstances)
+          model.optimizer.step(gradients, learningRateScheduleFactor)
+          numInstances
 
       }
-      io.map(_.map(Some(_))).getOrElse(IO.pure(None))
     }
 
-    def simpleLoop(batchCount: Int, acc: (Double, Long)): IO[(Double, Long)] = {
+    def simpleLoop(lossAcc: STen, numInstancesAcc: Long): IO[Long] = {
       trainBatches.nextBatch
-        .use { option => processBatch(batchCount, option) }
+        .use { option => IO { processBatch(option, lossAcc) } }
         .flatMap {
-          case None => IO.pure(acc)
-          case Some((avgLoss, numInstances)) =>
+          case None => IO.pure(numInstancesAcc)
+          case Some(numInstances) =>
             simpleLoop(
-              batchCount + 1,
-              (avgLoss * numInstances + acc._1, numInstances + acc._2)
+              lossAcc,
+              numInstances + numInstancesAcc
             )
         }
     }
@@ -320,26 +304,38 @@ object IOLoops {
 
     }
 
-    def prefetchLoop(ec1: ExecutionContext, ec2: ExecutionContext) = {
+    def prefetchLoop(
+        lossAcc: STen,
+        ec1: ExecutionContext,
+        ec2: ExecutionContext
+    ) = {
       val cs1 =
         IO.contextShift(ec1)
       val cs2 =
         IO.contextShift(ec2)
-      prefetch[(I, STen), (Double, Long)](
+      prefetch[(I, STen), Long](
         fetch = () => trainBatches.nextBatch,
-        transform = (count, batch) => processBatch(count, batch),
-        reduce = (b, acc) => (b._1 * b._2 + acc._1, acc._2 + b._2),
-        zero = (0d, 0L),
+        transform = (_, batch) => IO { processBatch(batch, lossAcc) },
+        reduce = (b, acc) => (acc + b),
+        zero = 0L,
         cs1 = cs1,
         cs2 = cs2
       )
     }
 
-    val epochLoop = (if (prefetchEC.isDefined) {
-                       val (a, b) = prefetchEC.get
-                       prefetchLoop(a, b)
-                     } else simpleLoop(0, (0d, 0L)))
+    val epochLoop = Scope.inResource.use { implicit scope =>
+      val lossAcc =
+        STen.scalarDouble(0d, model.model.module.state.head._1.options)
+      val loopDone = (if (prefetchEC.isDefined) {
+                        val (a, b) = prefetchEC.get
+                        prefetchLoop(lossAcc, a, b)
+                      } else simpleLoop(lossAcc, 0L))
 
+      loopDone.map { numInstances =>
+        val totalLoss = lossAcc.toMat.raw(0)
+        (totalLoss, numInstances)
+      }
+    }
     for {
       pair <- epochLoop
       (totalLoss, numInstances) = pair
@@ -362,7 +358,6 @@ object IOLoops {
   def validationOneEpoch[I, M <: GenericModule[I, Variable]](
       model: SupervisedModel[I, M],
       validationBatches: BatchStream[I],
-      validationBatchCallback: ValidationBatchCallback,
       validationCallback: ValidationCallback,
       logger: Option[Logger],
       epochCount: Long,
@@ -371,73 +366,64 @@ object IOLoops {
   ): IO[Double] = {
     def loop(
         batchCount: Int,
-        totalLoss: Double,
+        totalLoss: STen,
         totalExamples: Long
-    ): IO[(Double, Long)] = {
+    ): IO[(STen, Long)] = {
       validationBatches.nextBatch
         .use { option =>
-          val io = option.map {
-            case (validationSample, validationTarget) =>
-              model.asEval
-                .lossAndOutput(
-                  validationSample,
-                  validationTarget
-                )
-                .use {
-                  case (validationLoss, validationOutput, numExamples) =>
-                    for {
-                      _ <- IO {
-                        validationBatchCallback(
-                          validationOutput,
-                          validationTarget,
-                          validationLoss,
-                          epochCount,
-                          batchCount
-                        )
-                      }
-
-                    } yield (validationLoss * numExamples, numExamples)
-                }
+          IO {
+            option.map {
+              case (validationSample, validationTarget) =>
+                val numExamples = model.asEval
+                  .addTotalLossAndReturnNumExamples(
+                    validationSample,
+                    validationTarget,
+                    totalLoss
+                  )
+                numExamples
+            }
           }
-          io.map(_.map(Some(_))).getOrElse(IO.pure(None))
         }
         .flatMap {
           case None => IO.pure((totalLoss, totalExamples))
-          case Some((lossInBatch, examples)) =>
+          case Some(examples) =>
             loop(
               batchCount + 1,
-              totalLoss + lossInBatch,
+              totalLoss,
               totalExamples + examples
             )
         }
 
     }
 
-    loop(0, 0d, 0L).flatMap {
-      case (totalLoss, totalExamples) =>
-        val validationLoss = totalLoss / totalExamples
-        for {
-          _ <- IO {
-            logger.foreach(
-              _.info(
-                s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
-              )
-            )
-          }
-          _ <- IO {
-            validationCallback(epochCount, validationLoss)
-          }
+    Scope.inResource.use { implicit scope =>
+      loop(0, STen.scalarDouble(0d, model.module.state.head._1.options), 0L)
+        .flatMap {
+          case (totalLoss, totalExamples) =>
+            val validationLoss = totalLoss.toMat.raw(0) / totalExamples
+            for {
+              _ <- IO {
+                logger.foreach(
+                  _.info(
+                    s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
+                  )
+                )
+              }
+              _ <- IO {
+                validationCallback(epochCount, validationLoss)
+              }
 
-          _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
-            IO {
-              scribe.info(
-                s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
-              )
-            }.flatMap(_ =>
-              writeCheckpoint(minimumCheckpointFile.get, model.module)
-            )
-          else IO.unit
-        } yield totalLoss / totalExamples
+              _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
+                IO {
+                  scribe.info(
+                    s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
+                  )
+                }.flatMap(_ =>
+                  writeCheckpoint(minimumCheckpointFile.get, model.module)
+                )
+              else IO.unit
+            } yield validationLoss
+        }
     }
   }
 

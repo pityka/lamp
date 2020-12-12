@@ -1,7 +1,5 @@
 package lamp.nn
 import lamp.autograd.Variable
-import cats.effect.Resource
-import cats.effect.IO
 import lamp.Scope
 import lamp.STen
 
@@ -11,31 +9,32 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
 )(implicit tm: TrainingMode[M]) {
   def asEval = copy(module = module.asEval)
   def asTraining = copy(module = module.asTraining)
-  def lossAndOutput(
+  def addTotalLossAndReturnNumExamples(
       samples: I,
-      target: STen
-  ): Resource[IO, (Double, STen, Long)] = {
+      target: STen,
+      acc: STen
+  ): Long = {
 
-    Scope.inResource.map { implicit scope =>
+    Scope.leak { implicit scope =>
       val output = module.forward(samples)
       val (loss, examples) = lossFunction(output, target)
-      val lossAsDouble = loss.value.toMat.raw(0)
-      val outputCloned = output.value.cloneTensor
-      (lossAsDouble, outputCloned, examples)
-
+      acc += (loss.value * examples)
+      examples
     }
   }
-  def lossAndGradients(
+
+  def addTotalLossAndReturnGradientsAndNumExamples(
       samples: I,
-      target: STen
-  ): (Double, Long, Seq[Option[STen]]) =
+      target: STen,
+      acc: STen
+  ): (Long, Seq[Option[STen]]) =
     Scope.leak { implicit scope =>
       val output = module.forward(samples)
       val (loss, numInstances) = lossFunction(output, target)
-      val lossAsDouble = loss.value.toMat.raw(0)
+      acc += (loss.value * numInstances)
 
       val gradients = module.gradients(loss)
-      (lossAsDouble, numInstances, gradients)
+      (numInstances, gradients)
     }
 
   def zipOptimizer(optimizerFactory: Seq[(STen, PTag)] => Optimizer) =

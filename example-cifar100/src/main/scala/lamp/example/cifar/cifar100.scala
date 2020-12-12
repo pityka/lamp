@@ -26,7 +26,6 @@ import lamp.SinglePrecision
 import lamp.Scope
 import lamp.STen
 import lamp.onnx.VariableInfo
-import lamp.data.ValidationBatchCallback
 
 object Cifar {
   def loadImageFile(
@@ -205,8 +204,6 @@ object Train extends App {
             trainBatchesOverEpoch = trainEpochs,
             validationBatchesOverEpoch = Some(testEpochs),
             epochs = config.epochs,
-            validationBatchCallback =
-              ValidationBatchCallback.logAccuracy(scribe.Logger("validation")),
             checkpointFile = config.checkpointSave.map(s => new File(s)),
             minimumCheckpointFile =
               config.checkpointSave.map(s => new File(s + ".min")),
