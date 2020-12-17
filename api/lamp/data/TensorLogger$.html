@@ -324,6 +324,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.data.TensorLogger#detailAllTensorOptions" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="detailAllTensorOptions(logger:String=&gt;Unit):Unit"></a><a id="detailAllTensorOptions((String)⇒Unit):Unit"></a>
+      <span class="permalink">
+      <a href="../../lamp/data/TensorLogger$.html#detailAllTensorOptions(logger:String=&gt;Unit):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">detailAllTensorOptions</span><span class="params">(<span name="logger">logger: (<span class="extype" name="scala.Predef.String">String</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
     </li><li name="lamp.data.TensorLogger#detailAllTensors" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="detailAllTensors(logger:String=&gt;Unit):Unit"></a><a id="detailAllTensors((String)⇒Unit):Unit"></a>
       <span class="permalink">
@@ -480,10 +496,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="lamp.data.TensorLogger#log" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="log(logger:String=&gt;Unit):Unit"></a><a id="log((String)⇒Unit):Unit"></a>
+    </li><li name="lamp.data.TensorLogger#logTensorOptions" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="logTensorOptions(logger:String=&gt;Unit,filter:(aten.TensorTraceData,Double)=&gt;Boolean,detailMinMs:Double,detailMaxMs:Double,detailNum:Int):Unit"></a><a id="logTensorOptions((String)⇒Unit,(TensorTraceData,Double)⇒Boolean,Double,Double,Int):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/data/TensorLogger$.html#log(logger:String=&gt;Unit):Unit" title="Permalink">
+      <a href="../../lamp/data/TensorLogger$.html#logTensorOptions(logger:String=&gt;Unit,filter:(aten.TensorTraceData,Double)=&gt;Boolean,detailMinMs:Double,detailMaxMs:Double,detailNum:Int):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -492,14 +508,46 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">log</span><span class="params">(<span name="logger">logger: (<span class="extype" name="scala.Predef.String">String</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+        <span class="name">logTensorOptions</span><span class="params">(<span name="logger">logger: (<span class="extype" name="scala.Predef.String">String</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>, <span name="filter">filter: (<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>, <span class="extype" name="scala.Double">Double</span>) ⇒ <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="detailMinMs">detailMinMs: <span class="extype" name="scala.Double">Double</span></span>, <span name="detailMaxMs">detailMaxMs: <span class="extype" name="scala.Double">Double</span></span>, <span name="detailNum">detailNum: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.data.TensorLogger#logTensors" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="logTensors(logger:String=&gt;Unit,filter:(aten.TensorTraceData,Double)=&gt;Boolean,detailMinMs:Double,detailMaxMs:Double,detailNum:Int):Unit"></a><a id="logTensors((String)⇒Unit,(TensorTraceData,Double)⇒Boolean,Double,Double,Int):Unit"></a>
+      <span class="permalink">
+      <a href="../../lamp/data/TensorLogger$.html#logTensors(logger:String=&gt;Unit,filter:(aten.TensorTraceData,Double)=&gt;Boolean,detailMinMs:Double,detailMaxMs:Double,detailNum:Int):Unit" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">logTensors</span><span class="params">(<span name="logger">logger: (<span class="extype" name="scala.Predef.String">String</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>, <span name="filter">filter: (<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>, <span class="extype" name="scala.Double">Double</span>) ⇒ <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="detailMinMs">detailMinMs: <span class="extype" name="scala.Double">Double</span></span>, <span name="detailMaxMs">detailMaxMs: <span class="extype" name="scala.Double">Double</span></span>, <span name="detailNum">detailNum: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.data.TensorLogger#makeLog" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="makeLog(nanoTime:Long,data:Seq[aten.TensorTraceData],filter:(aten.TensorTraceData,Double)=&gt;Boolean,detailMinMs:Double,detailMaxMs:Double,detailNum:Int):String"></a><a id="makeLog(Long,Seq[TensorTraceData],(TensorTraceData,Double)⇒Boolean,Double,Double,Int):String"></a>
+      <span class="permalink">
+      <a href="../../lamp/data/TensorLogger$.html#makeLog(nanoTime:Long,data:Seq[aten.TensorTraceData],filter:(aten.TensorTraceData,Double)=&gt;Boolean,detailMinMs:Double,detailMaxMs:Double,detailNum:Int):String" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">makeLog</span><span class="params">(<span name="nanoTime">nanoTime: <span class="extype" name="scala.Long">Long</span></span>, <span name="data">data: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>]</span>, <span name="filter">filter: (<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>, <span class="extype" name="scala.Double">Double</span>) ⇒ <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="detailMinMs">detailMinMs: <span class="extype" name="scala.Double">Double</span></span>, <span name="detailMaxMs">detailMaxMs: <span class="extype" name="scala.Double">Double</span></span>, <span name="detailNum">detailNum: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <span class="extype" name="scala.Predef.String">String</span></span>
       </span>
       
       
     </li><li name="lamp.data.TensorLogger#makeStatistic" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="makeStatistic():(List[(Double,Double,Int)],scala.collection.immutable.Vector[(aten.TensorTraceData,Double)])"></a><a id="makeStatistic():(List[(Double,Double,Int)],Vector[(TensorTraceData,Double)])"></a>
+      <a id="makeStatistic(nanoTime:Long,actives:Seq[aten.TensorTraceData])(filter:(aten.TensorTraceData,Double)=&gt;Boolean):(List[(Double,Double,Int)],Seq[(aten.TensorTraceData,Double)])"></a><a id="makeStatistic(Long,Seq[TensorTraceData])((TensorTraceData,Double)⇒Boolean):(List[(Double,Double,Int)],Seq[(TensorTraceData,Double)])"></a>
       <span class="permalink">
-      <a href="../../lamp/data/TensorLogger$.html#makeStatistic():(List[(Double,Double,Int)],scala.collection.immutable.Vector[(aten.TensorTraceData,Double)])" title="Permalink">
+      <a href="../../lamp/data/TensorLogger$.html#makeStatistic(nanoTime:Long,actives:Seq[aten.TensorTraceData])(filter:(aten.TensorTraceData,Double)=&gt;Boolean):(List[(Double,Double,Int)],Seq[(aten.TensorTraceData,Double)])" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -508,7 +556,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">makeStatistic</span><span class="params">()</span><span class="result">: (<span class="extype" name="scala.collection.immutable.List">List</span>[(<span class="extype" name="scala.Double">Double</span>, <span class="extype" name="scala.Double">Double</span>, <span class="extype" name="scala.Int">Int</span>)], <span class="extype" name="scala.collection.immutable.Vector">Vector</span>[(<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>, <span class="extype" name="scala.Double">Double</span>)])</span>
+        <span class="name">makeStatistic</span><span class="params">(<span name="nanoTime">nanoTime: <span class="extype" name="scala.Long">Long</span></span>, <span name="actives">actives: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>]</span>)</span><span class="params">(<span name="filter">filter: (<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>, <span class="extype" name="scala.Double">Double</span>) ⇒ <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result">: (<span class="extype" name="scala.collection.immutable.List">List</span>[(<span class="extype" name="scala.Double">Double</span>, <span class="extype" name="scala.Double">Double</span>, <span class="extype" name="scala.Int">Int</span>)], <span class="extype" name="scala.collection.Seq">Seq</span>[(<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>, <span class="extype" name="scala.Double">Double</span>)])</span>
       </span>
       
       
@@ -566,6 +614,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.data.TensorLogger#queryActiveTensorOptions" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="queryActiveTensorOptions():Vector[aten.TensorTraceData]"></a><a id="queryActiveTensorOptions():Vector[TensorTraceData]"></a>
+      <span class="permalink">
+      <a href="../../lamp/data/TensorLogger$.html#queryActiveTensorOptions():Vector[aten.TensorTraceData]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">queryActiveTensorOptions</span><span class="params">()</span><span class="result">: <a href="../../scala/index.html#Vector[+A]=scala.collection.immutable.Vector[A]" class="extmbr" name="scala.Vector">Vector</a>[<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>]</span>
+      </span>
+      
+      
     </li><li name="lamp.data.TensorLogger#queryActiveTensors" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="queryActiveTensors():Vector[aten.TensorTraceData]"></a><a id="queryActiveTensors():Vector[TensorTraceData]"></a>
       <span class="permalink">
@@ -583,9 +647,9 @@
       
       
     </li><li name="lamp.data.TensorLogger#start" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="start(frequency:scala.concurrent.duration.FiniteDuration)(logger:String=&gt;Unit):lamp.data.TensorLogger"></a><a id="start(FiniteDuration)((String)⇒Unit):TensorLogger"></a>
+      <a id="start(frequency:scala.concurrent.duration.FiniteDuration)(logger:String=&gt;Unit,filter:(aten.TensorTraceData,Double)=&gt;Boolean,detailMinMs:Double,detailMaxMs:Double,detailNum:Int):lamp.data.TensorLogger"></a><a id="start(FiniteDuration)((String)⇒Unit,(TensorTraceData,Double)⇒Boolean,Double,Double,Int):TensorLogger"></a>
       <span class="permalink">
-      <a href="../../lamp/data/TensorLogger$.html#start(frequency:scala.concurrent.duration.FiniteDuration)(logger:String=&gt;Unit):lamp.data.TensorLogger" title="Permalink">
+      <a href="../../lamp/data/TensorLogger$.html#start(frequency:scala.concurrent.duration.FiniteDuration)(logger:String=&gt;Unit,filter:(aten.TensorTraceData,Double)=&gt;Boolean,detailMinMs:Double,detailMaxMs:Double,detailNum:Int):lamp.data.TensorLogger" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -594,7 +658,7 @@
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">start</span><span class="params">(<span name="frequency">frequency: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="symbol"><span class="name"><a href="../../scala/index.html">5 seconds</a></span></span></span>)</span><span class="params">(<span name="logger">logger: (<span class="extype" name="scala.Predef.String">String</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>)</span><span class="result">: <a href="TensorLogger.html" class="extype" name="lamp.data.TensorLogger">TensorLogger</a></span>
+        <span class="name">start</span><span class="params">(<span name="frequency">frequency: <span class="extype" name="scala.concurrent.duration.FiniteDuration">FiniteDuration</span> = <span class="symbol"><span class="name"><a href="../../scala/index.html">5 seconds</a></span></span></span>)</span><span class="params">(<span name="logger">logger: (<span class="extype" name="scala.Predef.String">String</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>, <span name="filter">filter: (<span class="extype" name="aten.TensorTraceData">TensorTraceData</span>, <span class="extype" name="scala.Double">Double</span>) ⇒ <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="detailMinMs">detailMinMs: <span class="extype" name="scala.Double">Double</span></span>, <span name="detailMaxMs">detailMaxMs: <span class="extype" name="scala.Double">Double</span></span>, <span name="detailNum">detailNum: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <a href="TensorLogger.html" class="extype" name="lamp.data.TensorLogger">TensorLogger</a></span>
       </span>
       
       
