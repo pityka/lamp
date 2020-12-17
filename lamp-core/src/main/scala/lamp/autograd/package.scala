@@ -1,5 +1,4 @@
 package lamp
-import aten.TensorOptions
 package object autograd {
 
   def const(m: STen): Constant =
@@ -7,19 +6,19 @@ package object autograd {
 
   def const(
       m: Double,
-      tOpt: TensorOptions = TensorOptions.dtypeDouble()
+      tOpt: STenOptions = STenOptions.d
   )(implicit scope: Scope): Constant =
     ConstantWithoutGrad(STen.scalarDouble(m, tOpt))
 
   def param(m: STen)(implicit scope: Scope): ConstantWithGrad =
-    ConstantWithGrad(m, STen.zeros(m.shape, m.options)(scope))
+    ConstantWithGrad(m, STen.zerosLike(m)(scope))
   def param(
       m: Double,
-      tOpt: TensorOptions = TensorOptions.dtypeDouble()
+      tOpt: STenOptions = STenOptions.d
   )(implicit scope: Scope): ConstantWithGrad =
     Scope { implicit scope =>
       val scalar = STen.scalarDouble(m, tOpt).view(1)
-      ConstantWithGrad(scalar, STen.zeros(scalar.shape, scalar.options)(scope))
+      ConstantWithGrad(scalar, STen.zerosLike(scalar)(scope))
     }
 
   def measure[T](tag: String)(body: => T): T = {

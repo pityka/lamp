@@ -2,9 +2,9 @@ package lamp.nn
 
 import lamp.autograd.{Variable, Constant, BatchNorm2D => BN, param, const}
 import lamp.Sc
-import aten.TensorOptions
 import lamp.scope
 import lamp.STen
+import lamp.STenOptions
 
 case class BatchNorm2D(
     weight: Constant,
@@ -55,7 +55,7 @@ object BatchNorm2D {
   case object Bias extends LeafTag
   def apply[S: Sc](
       features: Int,
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       training: Boolean = true,
       momentum: Double = 0.1,
       eps: Double = 1e-5

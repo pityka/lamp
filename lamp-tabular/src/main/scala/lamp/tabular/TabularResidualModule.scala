@@ -1,10 +1,10 @@
 package lamp.tabular
 
 import lamp.nn._
-import aten.TensorOptions
 import lamp.autograd.Variable
 import lamp.Sc
 import lamp.Scope
+import lamp.STenOptions
 
 case class TabularResidual[Block <: Module, B2 <: Module](
     straight: B2 with Module,
@@ -24,7 +24,7 @@ object TabularResidual {
       inChannels: Int,
       hiddenChannels: Int,
       outChannels: Int,
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       dropout: Double
   )(implicit scope: Scope) =
     TabularResidual(

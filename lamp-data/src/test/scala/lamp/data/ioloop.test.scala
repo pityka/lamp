@@ -4,15 +4,15 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
 import lamp.autograd.{const}
 import lamp.nn._
-import aten.TensorOptions
 import lamp.CudaDevice
 import lamp.CPU
 import lamp.DoublePrecision
 import lamp.Scope
 import lamp.STen
+import lamp.STenOptions
 
 class IOLoopSuite extends AnyFunSuite {
-  def logisticRegression(dim: Int, k: Int, tOpt: TensorOptions)(
+  def logisticRegression(dim: Int, k: Int, tOpt: STenOptions)(
       implicit pool: Scope
   ) =
     Seq2(
@@ -42,7 +42,13 @@ class IOLoopSuite extends AnyFunSuite {
 
       import scala.concurrent.duration._
       val tensorLogger =
-        TensorLogger.start(1.seconds)(s => scribe.info(s))
+        TensorLogger.start(1.seconds)(
+          s => scribe.info(s),
+          (_, _) => true,
+          5000,
+          60000,
+          1
+        )
       val x =
         STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
       val target =

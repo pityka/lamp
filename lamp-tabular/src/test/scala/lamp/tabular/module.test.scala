@@ -5,7 +5,6 @@ import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
 import lamp.autograd._
-import aten.TensorOptions
 import lamp.util.NDArray
 import aten.Tensor
 import lamp.nn._
@@ -17,6 +16,7 @@ import lamp.DoublePrecision
 import java.io.File
 import lamp.Scope
 import lamp.STen
+import lamp.STenOptions
 
 class TabularResidualModuleSuite extends AnyFunSuite {
 
@@ -104,15 +104,14 @@ class TabularResidualModuleSuite extends AnyFunSuite {
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
   testGradientAndValue("tabular residual block")(
     mat2x3,
-    implicit scope =>
-      TabularResidual.make(3, 16, 2, TensorOptions.dtypeDouble, 0d)
+    implicit scope => TabularResidual.make(3, 16, 2, STenOptions.d, 0d)
   )
 
   test("tabular embedding") {
     Scope.root { implicit scope =>
       val mat2x1L = Mat(Vec(1L, 2L))
       val mod =
-        TabularEmbedding.make(List(3 -> 2), TensorOptions.dtypeDouble())
+        TabularEmbedding.make(List(3 -> 2), STenOptions.d)
 
       val result = mod
         .forward(
@@ -207,7 +206,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
             data.filterIx(_ != "label").toMat,
             false
           )
-          .copyTo(TensorOptions.dtypeFloat())
+          .copyTo(STenOptions.d)
 
       val device = if (Tensor.cudnnAvailable()) CudaDevice(0) else CPU
 
@@ -237,7 +236,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
             dataTest.filterIx(_ != "label").toMat,
             false
           )
-          .copyTo(TensorOptions.dtypeFloat())
+          .copyTo(STenOptions.d)
 
       val savePath = File.createTempFile("lampsave", "data").getAbsolutePath
       Serialization.saveModel(trained, savePath)

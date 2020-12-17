@@ -1,11 +1,10 @@
 package lamp
 
 import aten.Tensor
-import aten.TensorOptions
 
 sealed trait FloatingPointPrecision {
   def convertTensor(t: Tensor): Tensor
-  def convertOption(t: TensorOptions): TensorOptions
+  def convertOption[S: Sc](t: STenOptions): STenOptions
 }
 
 case object DoublePrecision extends FloatingPointPrecision {
@@ -13,8 +12,8 @@ case object DoublePrecision extends FloatingPointPrecision {
     val opt = t.options().toDouble()
     t.to(opt, true)
   }
-  def convertOption(t: TensorOptions): TensorOptions = {
-    t.toDouble()
+  def convertOption[S: Sc](t: STenOptions): STenOptions = {
+    t.toDouble
   }
 }
 case object SinglePrecision extends FloatingPointPrecision {
@@ -22,22 +21,22 @@ case object SinglePrecision extends FloatingPointPrecision {
     val opt = t.options().toFloat()
     t.to(opt, true)
   }
-  def convertOption(t: TensorOptions): TensorOptions = {
-    t.toFloat()
+  def convertOption[S: Sc](t: STenOptions): STenOptions = {
+    t.toFloat
   }
 }
 
 sealed trait Device { self =>
   def to(t: Tensor): Tensor
   def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))
-  def options(precision: FloatingPointPrecision): TensorOptions
+  def options[S: Sc](precision: FloatingPointPrecision): STenOptions
 }
 case object CPU extends Device {
   def to(t: Tensor) = {
     t.cpu
   }
-  def options(precision: FloatingPointPrecision): TensorOptions =
-    precision.convertOption(TensorOptions.d.cpu)
+  def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
+    precision.convertOption(STenOptions.d)
 }
 case class CudaDevice(i: Int) extends Device {
   assert(
@@ -48,6 +47,6 @@ case class CudaDevice(i: Int) extends Device {
     val topt = t.options().cuda_index(i.toShort)
     t.to(topt, true)
   }
-  def options(precision: FloatingPointPrecision): TensorOptions =
-    precision.convertOption(TensorOptions.d.cuda_index(i.toShort))
+  def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
+    precision.convertOption(STenOptions.d.cudaIndex(i.toShort))
 }

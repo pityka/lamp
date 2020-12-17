@@ -124,21 +124,23 @@ object Reader {
       if (data.size != numel) {
         Left("Premature end of input")
       } else {
-        val dopt = device.options(SinglePrecision)
-        val topt = implicitly[ST[T]] match {
-          case ScalarTagDouble => dopt.toDouble
-          case ScalarTagFloat  => dopt.toFloat()
-          case ScalarTagLong   => dopt.toLong()
+        Scope.leak { implicit scope =>
+          val dopt = device.options(SinglePrecision)
+          val topt = implicitly[ST[T]] match {
+            case ScalarTagDouble => dopt.toDouble
+            case ScalarTagFloat  => dopt.toFloat
+            case ScalarTagLong   => dopt.toLong
+          }
+          val t = ATen.zeros(shape.map(_.toLong).toArray, topt.cpu.value)
+          implicitly[ST[T]] match {
+            case ScalarTagDouble => t.copyFromDoubleArray(data)
+            case ScalarTagFloat  => t.copyFromFloatArray(data)
+            case ScalarTagLong   => t.copyFromLongArray(data)
+          }
+          val tdevice = t.to(topt.value, true)
+          t.release
+          Right(tdevice)
         }
-        val t = ATen.zeros(shape.map(_.toLong).toArray, topt.cpu)
-        implicitly[ST[T]] match {
-          case ScalarTagDouble => t.copyFromDoubleArray(data)
-          case ScalarTagFloat  => t.copyFromFloatArray(data)
-          case ScalarTagLong   => t.copyFromLongArray(data)
-        }
-        val tdevice = t.to(topt, true)
-        t.release
-        Right(tdevice)
       }
     }
   }
@@ -221,7 +223,11 @@ object Reader {
           Reader
             .readTensorsFromChannel(
               oldTensors
-                .map(t => scalarTypeToScalarTag(t.options.scalarTypeByte())),
+                .map(t =>
+                  Scope.leak { implicit scope =>
+                    scalarTypeToScalarTag(t.options.scalarTypeByte)
+                  }
+                ),
               channel,
               device
             )

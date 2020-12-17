@@ -1,7 +1,7 @@
 package lamp.nn
 
 import lamp.Sc
-import aten.TensorOptions
+import lamp.STenOptions
 
 /** Factory for multilayer fully connected feed forward networks
   *
@@ -25,7 +25,7 @@ object MLP {
       in: Int,
       out: Int,
       hidden: Seq[Int],
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       dropout: Double = 0d,
       lastNonLinearity: Boolean = false,
       activationFunction: ActivationFunction = Relu

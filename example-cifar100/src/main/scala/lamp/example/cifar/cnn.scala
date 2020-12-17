@@ -1,12 +1,12 @@
 package lamp.example.cifar
 
 import lamp.nn._
-import aten.TensorOptions
 import lamp.autograd.MaxPool2D
 import lamp.autograd.Variable
 import lamp.autograd.AvgPool2D
 import lamp.Sc
 import lamp.Scope
+import lamp.STenOptions
 
 case class Residual[M1 <: Module, M2 <: Module](
     right: M1 with Module,
@@ -33,7 +33,7 @@ object Residual {
   def make(
       inChannels: Int,
       outChannels: Int,
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       dropout: Double,
       stride: Int
   )(implicit pool: Scope) =
@@ -89,7 +89,7 @@ object Cnn {
   def resnet(
       numClasses: Int,
       dropout: Double,
-      tOpt: TensorOptions
+      tOpt: STenOptions
   )(implicit pool: Scope) =
     sequence(
       Conv2D(
@@ -139,7 +139,7 @@ object Cnn {
   def lenet(
       numClasses: Int,
       dropOut: Double,
-      tOpt: TensorOptions
+      tOpt: STenOptions
   )(implicit pool: Scope) =
     Sequential(
       Conv2D(

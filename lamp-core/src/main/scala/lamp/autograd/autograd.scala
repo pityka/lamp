@@ -45,7 +45,7 @@ object Variable {
     VariableNonConstant(
       op,
       value,
-      STen.zeros(value.shape, value.options)(scope)
+      STen.zerosLike(value)(scope)
     )
 
   def concatenateAddNewDim(inputs: Seq[Variable])(implicit scope: Scope) =
@@ -113,7 +113,7 @@ trait Variable {
   override def toString =
     s"Var(shape=$shape,value=$value,needsGrad=$needsGrad)"
 
-  val options = value.options
+  def options[S: Sc] = value.options
 
   val sizes = value.sizes.toList
 

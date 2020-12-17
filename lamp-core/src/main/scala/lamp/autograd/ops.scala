@@ -68,7 +68,7 @@ case class Select(scope: Scope, a: Variable, dim: Long, index: Long)
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
         val tmp = STen.zeros(out.sizes, a.options)
-        val scalar = STen.scalarLong(index, a.options.toLong())
+        val scalar = STen.scalarLong(index, a.options)
         val pshape = p.shape
         val reshape =
           pshape.take(dim.toInt) ::: (1L :: pshape.drop(dim.toInt))
@@ -255,14 +255,13 @@ case class RepeatInterleave(
 
   val params = List(
     self.zipBackward { (p, out) =>
-      Scope.root {
-        implicit scope =>
-          val plainIndices =
-            STen.arange(0, self.shape(0), 1d, self.options.toLong)
-          val repeatedIndices = plainIndices.repeatInterleave(repeats.value, 0)
-          val zeros = STen.zeros(out.shape, out.options)
-          val added = zeros.indexAdd(0, repeatedIndices, p)
-          out += added
+      Scope.root { implicit scope =>
+        val plainIndices =
+          STen.arange(0, self.shape(0), 1d, self.options.toLong)
+        val repeatedIndices = plainIndices.repeatInterleave(repeats.value, 0)
+        val zeros = STen.zerosLike(out)
+        val added = zeros.indexAdd(0, repeatedIndices, p)
+        out += added
       }
 
     }
@@ -489,17 +488,18 @@ case class CappedShiftedNegativeExponential(
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val zeros = STen.zeros(List(1), a.options)
+        val zeros = STen.zeros(List(1), aOpt)
         val nonzeros = STen.owned(ATen.mul_1(result, -1d))
         val tmp = STen.where(pred, zeros, nonzeros)
         out.addcmulSelf(p, tmp, 1d)
       }
     }
   )
+  val aOpt = a.options(scope)
   val pred = scope.apply(ATen.le_0(a.value.value, shift))
   val ones =
-    scope.apply(ATen.ones(Array(1), a.options))
-  val scalar = scope.apply(ATen.scalar_tensor(shift, a.options))
+    scope.apply(ATen.ones(Array(1), aOpt.value))
+  val scalar = scope.apply(ATen.scalar_tensor(shift, aOpt.value))
   val above = scope.apply(ATen.sub_0(scalar, a.value.value, 1d))
   ATen.exp_(above)
   val result = ATen.where_0(pred, ones, above)
@@ -633,14 +633,15 @@ case class Relu(scope: Scope, a: Variable) extends Op {
       Scope.root { implicit scope =>
         val pred = a.value.lt(0d)
         val ones =
-          STen.ones(List(1), a.options)
+          STen.ones(List(1), aOpt)
         val zeros =
-          STen.zeros(List(1), a.options)
+          STen.zeros(List(1), aOpt)
         val tmp = STen.where(pred, zeros, ones)
         out.addcmulSelf(p, tmp, 1d)
       }
     }
   )
+  val aOpt = a.options(scope)
   val value = Variable(this, a.value.relu(scope))(scope)
 }
 
@@ -740,7 +741,7 @@ case class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
     a.zipBackward { (p, out) => out.addcmulSelf(p, mask, 1d) }
   )
   val mask = {
-    val ones = STen.ones(a.shape, a.options)(scope)
+    val ones = STen.onesLike(a.value)(scope)
     ones.dropout_(prob, train)
     ones
   }
@@ -795,7 +796,12 @@ case class WeightNorm(scope: Scope, v: Variable, g: Variable, dim: Long)
   // https://arxiv.org/pdf/1602.07868.pdf eq2
   val norm =
     scope(
-      ATen.norm_2(v.value.value, Array(dim), false, v.options.scalarTypeByte)
+      ATen.norm_2(
+        v.value.value,
+        Array(dim),
+        false,
+        v.options(scope).scalarTypeByte
+      )
     )
   val w = ATen.mul_0(v.value.value, g.value.value)
   ATen.div_out(w, w, norm)
@@ -990,7 +996,7 @@ case class Conv1D(
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
       val pSize = p.sizes
-      val zeros = ATen.zeros(Array(inputChannels), p.options)
+      val zeros = ATen.zeros(Array(inputChannels), p.options(scope).value)
       val outputSizeWithoutExtraPadding =
         (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
       val extraPadding = out.sizes.apply(2) - outputSizeWithoutExtraPadding
@@ -1021,7 +1027,8 @@ case class Conv1D(
         input.value.value,
         Array(1, batchSize * inputChannels, imageSize)
       )
-      val zero = ATen.zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options)
+      val zero = ATen
+        .zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options(scope).value)
       val conv_0 = ATen.conv1d(
         input_viewed,
         p_repeated_viewed,
@@ -1133,7 +1140,7 @@ case class Conv2D(
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      if (p.options.isCuda()) {
+      if (p.options(scope).value.isCuda()) {
         val tmp = ATen.cudnn_convolution_backward_input(
           input.shape.toArray,
           p.value,
@@ -1149,7 +1156,7 @@ case class Conv2D(
         tmp.release
       } else {
         val pSize = p.sizes
-        val zeros = ATen.zeros(Array(inputChannels), p.options)
+        val zeros = ATen.zeros(Array(inputChannels), p.options(scope).value)
         val outputSizeWithoutExtraPadding =
           (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
         val extraPaddingH = out.sizes.apply(2) - outputSizeWithoutExtraPadding
@@ -1170,7 +1177,7 @@ case class Conv2D(
       }
     },
     weight.zipBackward { (p, out) =>
-      if (p.options.isCuda()) {
+      if (p.options(scope).value.isCuda()) {
         val tmp = ATen.cudnn_convolution_backward_weight(
           weight.shape.toArray,
           p.value,
@@ -1204,7 +1211,10 @@ case class Conv2D(
           Array(1, batchSize * inputChannels, imageHeight, imageWidth)
         )
         val zero =
-          ATen.zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options)
+          ATen.zeros(
+            Array(p_repeated_viewed.sizes.apply(0)),
+            p.options(scope).value
+          )
         val conv_0 = ATen.conv2d(
           input_viewed,
           p_repeated_viewed,
@@ -1312,7 +1322,7 @@ case class MaxPool1D(
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      val zeros = ATen.zeros_like(out.value, input.options)
+      val zeros = ATen.zeros_like(out.value, input.options(scope).value)
       val p_flatten = ATen.flatten(p.value, 0, 1)
       val mask_flatten = ATen.flatten(mask, 0, 1)
       val zeros_flatten = ATen.flatten(zeros, 0, 1)

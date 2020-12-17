@@ -397,33 +397,36 @@ object IOLoops {
     }
 
     Scope.inResource.use { implicit scope =>
-      loop(0, STen.scalarDouble(0d, model.module.state.head._1.options), 0L)
-        .flatMap {
-          case (totalLoss, totalExamples) =>
-            val validationLoss = totalLoss.toMat.raw(0) / totalExamples
-            for {
-              _ <- IO {
-                logger.foreach(
-                  _.info(
-                    s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
-                  )
+      loop(
+        0,
+        STen.scalarDouble(0d, model.module.state.head._1.options),
+        0L
+      ).flatMap {
+        case (totalLoss, totalExamples) =>
+          val validationLoss = totalLoss.toMat.raw(0) / totalExamples
+          for {
+            _ <- IO {
+              logger.foreach(
+                _.info(
+                  s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
                 )
-              }
-              _ <- IO {
-                validationCallback(epochCount, validationLoss)
-              }
+              )
+            }
+            _ <- IO {
+              validationCallback(epochCount, validationLoss)
+            }
 
-              _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
-                IO {
-                  scribe.info(
-                    s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
-                  )
-                }.flatMap(_ =>
-                  writeCheckpoint(minimumCheckpointFile.get, model.module)
+            _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
+              IO {
+                scribe.info(
+                  s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
                 )
-              else IO.unit
-            } yield validationLoss
-        }
+              }.flatMap(_ =>
+                writeCheckpoint(minimumCheckpointFile.get, model.module)
+              )
+            else IO.unit
+          } yield validationLoss
+      }
     }
   }
 

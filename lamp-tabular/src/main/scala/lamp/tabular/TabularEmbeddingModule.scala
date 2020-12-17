@@ -1,11 +1,11 @@
 package lamp.tabular
 
 import lamp.nn._
-import aten.TensorOptions
 import lamp.autograd.Variable
 import lamp.Sc
 import lamp.Scope
 import lamp.STen
+import lamp.STenOptions
 
 case class TabularEmbedding(
     categoricalEmbeddings: Seq[Embedding]
@@ -30,7 +30,7 @@ case class TabularEmbedding(
 object TabularEmbedding {
   def make(
       categoricalClassesWithEmbeddingDimensions: Seq[(Int, Int)],
-      tOpt: TensorOptions
+      tOpt: STenOptions
   )(implicit scope: Scope) =
     TabularEmbedding(
       categoricalEmbeddings = categoricalClassesWithEmbeddingDimensions.map {

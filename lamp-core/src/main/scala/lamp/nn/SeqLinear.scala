@@ -2,8 +2,8 @@ package lamp.nn
 
 import lamp.autograd.{Variable, Constant, param}
 import lamp.Sc
-import aten.TensorOptions
 import lamp.STen
+import lamp.STenOptions
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * output dim)
@@ -45,7 +45,7 @@ object SeqLinear {
   def apply[S: Sc](
       in: Int,
       out: Int,
-      tOpt: TensorOptions
+      tOpt: STenOptions
   ): SeqLinear =
     SeqLinear(
       weight = param(

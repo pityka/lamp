@@ -2,7 +2,7 @@ package lamp.nn
 
 import lamp.autograd.{Variable, Constant, param}
 import scala.collection.mutable
-import aten.TensorOptions
+import lamp.STenOptions
 import lamp.Sc
 import lamp.STen
 
@@ -93,7 +93,7 @@ object GRU {
   def apply[S: Sc](
       in: Int,
       hiddenSize: Int,
-      tOpt: TensorOptions
+      tOpt: STenOptions
   ): GRU =
     GRU(
       weightXh = param(

@@ -3,13 +3,13 @@ package lamp.nn
 import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
 import lamp.autograd.{Variable, const}
-import aten.TensorOptions
 import lamp.Sc
 import lamp.Scope
 import lamp.STen
+import lamp.STenOptions
 class LogisticSuite extends AnyFunSuite {
 
-  def logisticRegression[S: Sc](dim: Int, k: Int, tOpt: TensorOptions) =
+  def logisticRegression[S: Sc](dim: Int, k: Int, tOpt: STenOptions) =
     Sequential(
       Linear(dim, k, tOpt = tOpt),
       Fun(scope => input => input.logSoftMax(dim = 1)(scope))
@@ -47,7 +47,7 @@ class LogisticSuite extends AnyFunSuite {
       val model = logisticRegression(
         x.sizes(1).toInt,
         10,
-        if (cuda) TensorOptions.d.cuda else TensorOptions.d.cpu
+        if (cuda) STenOptions.d.cudaIndex(0) else STenOptions.d
       )
 
       val optim = SGDW(

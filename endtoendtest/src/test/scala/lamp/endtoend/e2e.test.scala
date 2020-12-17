@@ -5,7 +5,6 @@ import org.saddle.order._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.autograd._
-import aten.TensorOptions
 
 import lamp.nn._
 import lamp.SinglePrecision
@@ -18,6 +17,7 @@ import java.io.FileOutputStream
 import org.saddle.index.InnerJoin
 import lamp.Scope
 import lamp.STen
+import lamp.STenOptions
 
 class EndToEndClassificationSuite extends AnyFunSuite {
 
@@ -91,7 +91,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       val testFeaturesTensor =
         STen.fromMat(testFeatures.toMat, device, SinglePrecision)
 
-      def mlp(dim: Int, k: Int, tOpt: TensorOptions) =
+      def mlp(dim: Int, k: Int, tOpt: STenOptions) =
         sequence(
           MLP(dim, k, List(4, 4), tOpt, dropout = 0.0),
           Fun(implicit scope => _.logSoftMax(dim = 1))

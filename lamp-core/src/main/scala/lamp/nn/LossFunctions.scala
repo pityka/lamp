@@ -59,8 +59,8 @@ object LossFunctions {
       classWeights: STen,
       ignore: Long = -100L
   ) extends LossFunction {
-    val ignoreScalar = Tensor.scalarLong(ignore, classWeights.options)
     def apply[S: Sc](out: Variable, target: STen) = {
+      val ignoreScalar = Tensor.scalarLong(ignore, classWeights.options.value)
       val timeSteps = out.shape(0)
       val batches = out.shape(1)
       val lossesAtTimeSteps = (0 until timeSteps.toInt).map { t =>

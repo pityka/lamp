@@ -27,7 +27,7 @@ package object onnx {
     }
   }
 
-  def tensorAsByteString(t: STen): ByteString = {
+  def tensorAsByteString(t: STen): ByteString = Scope.leak { implicit scope =>
     t.options.scalarTypeByte match {
       case 4 =>
         val array = t.toLongVec.toArray
@@ -83,10 +83,12 @@ package object onnx {
       ox.TypeProto(value =
         ox.TypeProto.Value.TensorType(value =
           ox.TypeProto.Tensor(
-            elemType = v.value.options.scalarTypeByte() match {
-              case 4 => Some(DataType.INT64.index)
-              case 6 => Some(DataType.FLOAT.index)
-              case 7 => Some(DataType.DOUBLE.index)
+            elemType = Scope.leak { implicit scope =>
+              v.value.options.scalarTypeByte match {
+                case 4 => Some(DataType.INT64.index)
+                case 6 => Some(DataType.FLOAT.index)
+                case 7 => Some(DataType.DOUBLE.index)
+              }
             },
             shape = Some(
               TensorShapeProto(dim =
@@ -152,7 +154,7 @@ package object onnx {
           name = Some("graph1"),
           node = nodes,
           initializer = constants ++ (nonInputConstantNodes ++ parameters)
-            .filterNot(_.options.isSparse)
+            .filterNot(v => Scope.leak { implicit scope => v.options.isSparse })
             .map { variable =>
               ox.TensorProto(
                 name = Some(makeName(variable.id)),
@@ -160,16 +162,18 @@ package object onnx {
                   .find(_.variable.id == variable.id)
                   .map(_.docString),
                 dims = variable.shape,
-                dataType = variable.options.scalarTypeByte match {
-                  case 4 => Some(ox.TensorProto.DataType.INT64.index)
-                  case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
-                  case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
+                dataType = Scope.leak { implicit scope =>
+                  variable.options.scalarTypeByte match {
+                    case 4 => Some(ox.TensorProto.DataType.INT64.index)
+                    case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
+                    case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
+                  }
                 },
                 rawData = Some(tensorAsByteString(variable.value))
               )
             },
           sparseInitializer = (nonInputConstantNodes ++ parameters)
-            .filter(_.options.isSparse)
+            .filter(v => Scope.leak { implicit scope => v.options.isSparse })
             .map { variable =>
               Scope.leak {
                 implicit scope =>

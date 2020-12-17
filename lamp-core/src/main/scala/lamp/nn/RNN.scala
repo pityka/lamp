@@ -2,9 +2,9 @@ package lamp.nn
 
 import lamp.autograd.{Variable, Constant, param}
 import scala.collection.mutable
-import aten.TensorOptions
 import lamp.Sc
 import lamp.STen
+import lamp.STenOptions
 
 /** Inputs of size (sequence length * batch * in dim)
   * Outputs of size (sequence length * batch * hidden dim)
@@ -64,7 +64,7 @@ object RNN {
   def apply[S: Sc](
       in: Int,
       hiddenSize: Int,
-      tOpt: TensorOptions
+      tOpt: STenOptions
   ): RNN =
     RNN(
       weightXh = param(

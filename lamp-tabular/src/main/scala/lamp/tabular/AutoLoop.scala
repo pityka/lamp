@@ -3,7 +3,6 @@ package lamp.tabular
 import aten.Tensor
 import lamp.TensorHelpers
 import org.saddle._
-import aten.TensorOptions
 import lamp.autograd.const
 import lamp.nn._
 import lamp.Device
@@ -26,6 +25,7 @@ import _root_.lamp.ClassificationTree
 import lamp.Scope
 import lamp.STen
 import lamp.Movable
+import lamp.STenOptions
 
 sealed trait BaseModel
 case class KnnBase(
@@ -178,10 +178,10 @@ case class EnsembleModel(
           val t = selectionModels.head match {
             case NNBase(_, state)        => state.head.options
             case KnnBase(_, state, _, _) => state.options
-            case _                       => TensorOptions.d
+            case _                       => STen.dOptions
           }
           if (t.isCPU) CPU
-          else CudaDevice(t.deviceIndex())
+          else CudaDevice(t.deviceIndex)
         }
         val dataOnDevice = device.to(data)
         val tOpt = device.options(precision)
@@ -475,7 +475,7 @@ object AutoLoop {
       outputSize: Int,
       softmax: Boolean,
       selectFirstOutputDimension: Boolean,
-      modelTensorOptions: TensorOptions
+      modelTensorOptions: STenOptions
   )(implicit pool: Scope) = {
     val numericalCount = dataLayout.count {
       case Numerical => true
@@ -1363,8 +1363,8 @@ object AutoLoop {
             )(scope)
             predictionsInFolds.map(_.map {
               case (epoch, prediction, models) =>
-                assert(prediction.options.isCPU())
-                assert(models.forall(_.state.forall(_.options.isCPU)))
+                assert(prediction.isCPU)
+                assert(models.forall(_.state.forall(_.isCPU)))
                 (epoch, prediction, models)
             })
         }
@@ -1389,9 +1389,9 @@ object AutoLoop {
           )(scope)
           predictionsInFolds.map(_.map {
             case (epoch, prediction, models) =>
-              assert(prediction.options.isCPU())
-              assert(models.forall(_.features.options.isCPU))
-              assert(models.forall(_.target.options.isCPU))
+              assert(prediction.isCPU)
+              assert(models.forall(_.features.isCPU))
+              assert(models.forall(_.target.isCPU))
               (epoch, prediction, models)
           })
         }
@@ -1417,7 +1417,7 @@ object AutoLoop {
             )(scope)
             predictionsInFolds.map(_.map {
               case (epoch, prediction, models) =>
-                assert(prediction.options.isCPU())
+                assert(prediction.isCPU)
                 (epoch, prediction, models)
             })
         }
@@ -1460,8 +1460,8 @@ object AutoLoop {
               withValidationErrors <- IO {
                 trainedEnsembleFolds.map {
                   case (_, pred, models) =>
-                    assert(pred.options.isCPU())
-                    assert(models.forall(_.state.forall(_.options.isCPU)))
+                    assert(pred.isCPU)
+                    assert(models.forall(_.state.forall(_.isCPU)))
                     val lossM = computeValidationErrors(
                       pred,
                       targetType,
@@ -1499,9 +1499,9 @@ object AutoLoop {
             withValidationErrors <- IO {
               trainedEnsembleFolds.map {
                 case (_, pred, models) =>
-                  assert(pred.options.isCPU())
-                  assert(models.forall(_.features.options.isCPU))
-                  assert(models.forall(_.target.options.isCPU))
+                  assert(pred.isCPU)
+                  assert(models.forall(_.features.isCPU))
+                  assert(models.forall(_.target.isCPU))
                   val lossM = computeValidationErrors(
                     pred,
                     targetType,
@@ -1540,7 +1540,7 @@ object AutoLoop {
               withValidationErrors <- IO {
                 trainedEnsembleFolds.map {
                   case (_, pred, models) =>
-                    assert(pred.options.isCPU())
+                    assert(pred.isCPU)
                     val lossM = computeValidationErrors(
                       pred,
                       targetType,

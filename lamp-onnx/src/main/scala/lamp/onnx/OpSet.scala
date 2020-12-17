@@ -6,6 +6,7 @@ import java.util.UUID
 import lamp.STen
 import lamp.SinglePrecision
 import lamp.DoublePrecision
+import lamp.Scope
 
 trait NameMap {
   def apply(u: UUID): String
@@ -162,10 +163,12 @@ object Ops {
         "Literal or constant converted to a tensor to match ONNX operator signatures."
       ),
       dims = d.shape,
-      dataType = d.options.scalarTypeByte match {
-        case 4 => Some(ox.TensorProto.DataType.INT64.index)
-        case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
-        case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
+      dataType = Scope.leak { implicit scope =>
+        d.options.scalarTypeByte match {
+          case 4 => Some(ox.TensorProto.DataType.INT64.index)
+          case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
+          case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
+        }
       },
       rawData = Some(tensorAsByteString(d))
     )
@@ -241,18 +244,22 @@ trait DefaultOpSet1 extends OpSet {
           .appendInput(
             Ops.tensorFromDoubleVec(
               List(0d, 1d),
-              op.value.options.scalarTypeByte()
+              Scope.leak { implicit scope => op.value.options.scalarTypeByte }
             )
           ) :: Nil
 
       case op: ConstAdd =>
         Ops(out, "Add")(nm).appendInput(
-          Ops.tensorFromDoubleScalar(op.b, op.a.options.scalarTypeByte())
+          Ops.tensorFromDoubleScalar(op.b, Scope.leak { implicit scope =>
+            op.a.options.scalarTypeByte
+          })
         ) :: Nil
 
       case op: ConstMult =>
         Ops(out, "Mul")(nm).appendInput(
-          Ops.tensorFromDoubleScalar(op.b, op.a.options.scalarTypeByte())
+          Ops.tensorFromDoubleScalar(op.b, Scope.leak { implicit scope =>
+            op.a.options.scalarTypeByte
+          })
         ) :: Nil
 
       case op: Sum =>
@@ -279,7 +286,9 @@ trait DefaultOpSet1 extends OpSet {
 
       case op: PowConst =>
         Ops(out, "Pow")(nm).appendInput(
-          Ops.tensorFromDoubleScalar(op.exponent, op.a.options.scalarTypeByte())
+          Ops.tensorFromDoubleScalar(op.exponent, Scope.leak { implicit scope =>
+            op.a.options.scalarTypeByte
+          })
         ) :: Nil
       case op: LogSoftMax =>
         Ops(out, "LogSoftmax", attributes = List(Ops.attr("axis", op.dim)))(nm) :: Nil

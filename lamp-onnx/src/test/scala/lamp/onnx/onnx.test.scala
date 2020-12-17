@@ -9,7 +9,6 @@ import ai.onnxruntime._
 // import org.saddle._
 import scala.collection.JavaConverters._
 import java.nio._
-import aten.TensorOptions
 
 class OnnxSuite extends AnyFunSuite {
 
@@ -21,7 +20,7 @@ class OnnxSuite extends AnyFunSuite {
       env.createSession(file.getAbsolutePath, new OrtSession.SessionOptions())
 
     def stenToORT(t: STen) = {
-      t.options.scalarTypeByte() match {
+      t.scalarTypeByte match {
         case 4 =>
           val buffer = LongBuffer.wrap(t.toLongVec.toArray)
           OnnxTensor.createTensor(env, buffer, t.shape.toArray)
@@ -66,7 +65,7 @@ class OnnxSuite extends AnyFunSuite {
       shape2: Seq[Long],
       op: Scope => (Variable, Variable) => Variable,
       expectNoImplemenation: Boolean = false,
-      tOpt: TensorOptions = TensorOptions.f
+      tOpt: STenOptions = STenOptions.f
   ) =
     test(
       name + (if (expectNoImplemenation) " !!! No runtime implementation !!!"
@@ -105,7 +104,7 @@ class OnnxSuite extends AnyFunSuite {
 
         try {
           val result =
-            runModel(file, Map("t1" -> tt1), output.options.scalarTypeByte())
+            runModel(file, Map("t1" -> tt1), output.value.scalarTypeByte)
           assert(result.shape == output.shape)
           assert((result * 10000).round.equalDeep((output.value * 10000).round))
         } catch {
@@ -236,7 +235,7 @@ class OnnxSuite extends AnyFunSuite {
     List(3),
     List(1),
     implicit scope => (a, _) => a.oneHot(2),
-    tOpt = TensorOptions.l
+    tOpt = STenOptions.l
   )
   testBinaryOps(
     "sum 1",
@@ -316,7 +315,7 @@ class OnnxSuite extends AnyFunSuite {
     List(1, 1, 3),
     implicit scope =>
       (a, b) => {
-        val bb = const(STen.zeros(List(1), TensorOptions.f))
+        val bb = const(STen.zeros(List(1), STenOptions.f))
         new Conv1D(scope, a, b, bb, 1, 1, 1, 1).value
       }
   )
@@ -326,7 +325,7 @@ class OnnxSuite extends AnyFunSuite {
     List(1, 1, 3, 3),
     implicit scope =>
       (a, b) => {
-        val bb = const(STen.zeros(List(1), TensorOptions.f))
+        val bb = const(STen.zeros(List(1), STenOptions.f))
         new Conv2D(scope, a, b, bb, 1, 1, 1, 1).value
       }
   )
@@ -363,9 +362,9 @@ class OnnxSuite extends AnyFunSuite {
     List(5),
     implicit scope =>
       (a, b) => {
-        val bias = const(STen.zeros(List(5), TensorOptions.f))
-        val m = STen.zeros(List(5), TensorOptions.f)
-        val v = STen.zeros(List(5), TensorOptions.f)
+        val bias = const(STen.zeros(List(5), STenOptions.f))
+        val m = STen.zeros(List(5), STenOptions.f)
+        val v = STen.zeros(List(5), STenOptions.f)
         new BatchNorm(scope, a, b, bias, m, v, false, 0.99, 1e-5).value
       }
   )
@@ -375,9 +374,9 @@ class OnnxSuite extends AnyFunSuite {
     List(3),
     implicit scope =>
       (a, b) => {
-        val bias = const(STen.zeros(List(3), TensorOptions.f))
-        val m = STen.zeros(List(3), TensorOptions.f)
-        val v = STen.zeros(List(3), TensorOptions.f)
+        val bias = const(STen.zeros(List(3), STenOptions.f))
+        val m = STen.zeros(List(3), STenOptions.f)
+        val v = STen.zeros(List(3), STenOptions.f)
         new BatchNorm2D(scope, a, b, bias, m, v, false, 0.99, 1e-5).value
       }
   )
@@ -406,7 +405,7 @@ class OnnxSuite extends AnyFunSuite {
     List(2, 3),
     implicit scope =>
       (a, _) => {
-        val i = const(STen.zeros(List(5), TensorOptions.l))
+        val i = const(STen.zeros(List(5), STenOptions.l))
         a.indexSelect(0, i)
       }
   )

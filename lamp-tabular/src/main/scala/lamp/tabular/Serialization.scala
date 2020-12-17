@@ -11,11 +11,11 @@ import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 import java.io.FileInputStream
 import org.saddle.scalar.ScalarTagLong
-import aten.TensorOptions
 import lamp.ClassificationTree
 import lamp.RegressionTree
 import lamp.STen
 import lamp.Scope
+import lamp.STenOptions
 
 object Serialization {
 
@@ -151,7 +151,7 @@ object Serialization {
     }
   }
   def saveModel(model: EnsembleModel, outPath: String) = {
-    def dataType(b: TensorOptions) = b.scalarTypeByte() match {
+    def dataType(b: STenOptions) = b.scalarTypeByte match {
       case 6 => "single"
       case 7 => "double"
       case 4 => "long"
@@ -169,7 +169,7 @@ object Serialization {
           hiddenSize,
           tensors.size,
           path,
-          tensors.map(t => dataType(t.options))
+          tensors.map(t => Scope.leak { implicit scope => dataType(t.options) })
         )
       case (KnnBase(k, tensor1, tensors, tensor2), idx) =>
         val path = outPath + ".selection.knn." + idx
@@ -184,7 +184,9 @@ object Serialization {
         KnnDto(
           k,
           path,
-          (List(tensor1, tensor2) ++ tensors).map(t => dataType(t.options))
+          (List(tensor1, tensor2) ++ tensors).map(t =>
+            Scope.leak { implicit scope => dataType(t.options) }
+          )
         )
     }
     val baseFiles = model.baseModels.zipWithIndex.map {
@@ -205,7 +207,9 @@ object Serialization {
             KnnDto(
               k,
               path,
-              (List(tensor1, tensor2) ++ tensors).map(t => dataType(t.options))
+              (List(tensor1, tensor2) ++ tensors).map(t =>
+                Scope.leak { implicit scope => dataType(t.options) }
+              )
             )
           case (NNBase(hiddenSize, tensors), idx1) =>
             val path = outPath + ".base.nn." + idx0 + "." + idx1
@@ -218,7 +222,9 @@ object Serialization {
               hiddenSize,
               tensors.size,
               path,
-              tensors.map(t => dataType(t.options))
+              tensors.map(t =>
+                Scope.leak { implicit scope => dataType(t.options) }
+              )
             )
         }
         paths

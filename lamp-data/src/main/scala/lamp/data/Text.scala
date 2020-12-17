@@ -87,7 +87,8 @@ object Text {
 
                 (0 until lastChar.shape(2).toInt).map { i =>
                   val selected = lastChar.select(2L, i.toLong)
-                  val tmp = Tensor.scalarLong(i.toLong, selected.options.toLong)
+                  val tmp =
+                    Tensor.scalarLong(i.toLong, selected.options.toLong.value)
                   val index = ATen._unsafe_view(tmp, Array(1L, 1L))
                   tmp.release
                   val logProb = selected.toMat.raw(0)

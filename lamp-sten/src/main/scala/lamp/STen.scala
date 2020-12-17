@@ -2,10 +2,12 @@ package lamp
 
 import aten.Tensor
 import aten.ATen
-import aten.TensorOptions
 import org.saddle._
 
 object STen {
+  val dOptions = STenOptions(aten.TensorOptions.d)
+  val fOptions = STenOptions(aten.TensorOptions.f)
+  val lOptions = STenOptions(aten.TensorOptions.l)
 
   implicit class OwnedSyntax(t: Tensor) {
     def owned[S: Sc] = STen.owned(t)
@@ -80,92 +82,110 @@ object STen {
   def stack[S: Sc](tensors: Seq[STen], dim: Long) =
     owned(ATen.stack(tensors.map(_.value).toArray, dim))
 
-  def scalarLong(value: Long, options: TensorOptions)(implicit scope: Scope) =
-    Tensor.scalarLong(value, options.toLong()).owned
-  def scalarDouble[S: Sc](value: Double, options: TensorOptions) =
-    Tensor.scalarDouble(value, options.toDouble()).owned
+  def scalarLong(value: Long, options: STenOptions)(implicit scope: Scope) =
+    Tensor.scalarLong(value, options.toLong.value).owned
+  def scalarDouble[S: Sc](value: Double, options: STenOptions) =
+    Tensor.scalarDouble(value, options.toDouble.value).owned
 
   def ones[S: Sc](
       size: Seq[Long],
-      tensorOptions: TensorOptions = TensorOptions.d
+      tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.ones(size.toArray.map(_.toLong), tensorOptions))
+    owned(ATen.ones(size.toArray.map(_.toLong), tensorOptions.value))
+
+  def onesLike[S: Sc](
+      tensor: Tensor
+  ) =
+    owned(Tensor.ones_like(tensor))
+  def onesLike[S: Sc](
+      tensor: STen
+  ) =
+    owned(Tensor.ones_like(tensor.value))
+
   def zeros[S: Sc](
       size: Seq[Long],
-      tensorOptions: TensorOptions = TensorOptions.d
+      tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.zeros(size.toArray.map(_.toLong), tensorOptions))
+    owned(ATen.zeros(size.toArray.map(_.toLong), tensorOptions.value))
+  def zerosLike[S: Sc](
+      tensor: Tensor
+  ) =
+    owned(Tensor.zeros_like(tensor))
+  def zerosLike[S: Sc](
+      tensor: STen
+  ) =
+    owned(Tensor.zeros_like(tensor.value))
   def rand[S: Sc](
       size: Seq[Long],
-      tensorOptions: TensorOptions = TensorOptions.d
+      tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.rand(size.toArray.map(_.toLong), tensorOptions))
+    owned(ATen.rand(size.toArray.map(_.toLong), tensorOptions.value))
   def randn[S: Sc](
       size: Seq[Long],
-      tensorOptions: TensorOptions = TensorOptions.d
+      tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.randn(size.toArray.map(_.toLong), tensorOptions))
+    owned(ATen.randn(size.toArray.map(_.toLong), tensorOptions.value))
 
   def normal[S: Sc](
       mean: Double,
       std: Double,
       size: Seq[Long],
-      options: TensorOptions
+      options: STenOptions
   ) =
-    ATen.normal_3(mean, std, size.toArray, options).owned
+    ATen.normal_3(mean, std, size.toArray, options.value).owned
 
   def randint[S: Sc](
       high: Long,
       size: Seq[Long],
-      tensorOptions: TensorOptions = TensorOptions.d
+      tensorOptions: STenOptions = STen.dOptions
   ) =
     owned(
-      ATen.randint_0(high, size.toArray, tensorOptions)
+      ATen.randint_0(high, size.toArray, tensorOptions.value)
     )
   def randint[S: Sc](
       low: Long,
       high: Long,
       size: Seq[Long],
-      tensorOptions: TensorOptions
+      tensorOptions: STenOptions
   ) =
     owned(
-      ATen.randint_2(low, high, size.toArray, tensorOptions)
+      ATen.randint_2(low, high, size.toArray, tensorOptions.value)
     )
-  def eye[S: Sc](n: Int, tensorOptions: TensorOptions = TensorOptions.d) =
-    owned(ATen.eye_0(n, tensorOptions))
+  def eye[S: Sc](n: Int, tensorOptions: STenOptions = STen.dOptions) =
+    owned(ATen.eye_0(n, tensorOptions.value))
   def eye[S: Sc](
       n: Int,
       m: Int,
-      tensorOptions: TensorOptions
+      tensorOptions: STenOptions
   ) =
-    owned(ATen.eye_1(n, m, tensorOptions))
+    owned(ATen.eye_1(n, m, tensorOptions.value))
 
   def arange[S: Sc](
       start: Double,
       end: Double,
       step: Double,
-      tensorOptions: TensorOptions = TensorOptions.d
+      tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.arange(start, end, step, tensorOptions))
+    owned(ATen.arange(start, end, step, tensorOptions.value))
   def linspace[S: Sc](
       start: Double,
       end: Double,
       steps: Long,
-      tensorOptions: TensorOptions = TensorOptions.d
+      tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.linspace(start, end, steps, tensorOptions))
+    owned(ATen.linspace(start, end, steps, tensorOptions.value))
   def sparse_coo[S: Sc](
       indices: STen,
       values: STen,
       dim: Seq[Long],
-      tensorOptions: TensorOptions = TensorOptions.d
+      tensorOptions: STenOptions = STen.dOptions
   ) =
     owned(
       ATen.sparse_coo_tensor(
         indices.value,
         values.value,
         dim.toArray,
-        tensorOptions
+        tensorOptions.value
       )
     )
 
@@ -303,6 +323,40 @@ object STen {
 
 }
 
+case class STenOptions(value: aten.TensorOptions) {
+  import STenOptions._
+  def toLong[S: Sc] = value.toLong.owned
+  def toDouble[S: Sc] = value.toDouble.owned
+  def toFloat[S: Sc] = value.toFloat.owned
+  def cpu[S: Sc] = value.cpu.owned
+  def cudaIndex[S: Sc](index: Short) = value.cuda_index(index).owned
+  def cuda[S: Sc] = cudaIndex(0)
+  def isDouble = value.isDouble
+  def isFloat = value.isFloat
+  def isLong = value.isLong
+  def isCPU = value.isCPU
+  def isCuda = value.isCuda
+  def isSparse = value.isSparse
+  def deviceIndex = value.deviceIndex
+  def scalarTypeByte = value.scalarTypeByte
+}
+object STenOptions {
+  def d = STen.dOptions
+  def f = STen.fOptions
+  def l = STen.lOptions
+  def fromScalarType[S: Sc](b: Byte) =
+    owned(aten.TensorOptions.fromScalarType(b))
+  implicit class OwnedSyntaxOp(t: aten.TensorOptions) {
+    def owned[S: Sc] = STenOptions.owned(t)
+  }
+  def owned(
+      value: aten.TensorOptions
+  )(implicit scope: Scope): STenOptions = {
+    scope(value)
+    STenOptions(value)
+  }
+}
+
 case class STen private (
     value: Tensor
 ) {
@@ -318,17 +372,26 @@ case class STen private (
   def toLongVec = TensorHelpers.toLongVec(value)
   def shape = value.sizes.toList
   def sizes = shape
-  def options = value.options()
+  def options[S: Sc] = STenOptions.owned(value.options())
   def coalesce[S: Sc] = value.coalesce.owned
   def indices[S: Sc] = value.indices.owned
   def values[S: Sc] = value.indices.owned
+
+  def isDouble = Scope.leak { implicit scope => options.isDouble }
+  def isFloat = Scope.leak { implicit scope => options.isFloat }
+  def isLong = Scope.leak { implicit scope => options.isLong }
+  def isCPU = Scope.leak { implicit scope => options.isCPU }
+  def isCuda = Scope.leak { implicit scope => options.isCuda }
+  def isSparse = Scope.leak { implicit scope => options.isSparse }
+  def deviceIndex = Scope.leak { implicit scope => options.deviceIndex }
+  def scalarTypeByte = Scope.leak { implicit scope => options.scalarTypeByte }
 
   def copyToDevice(device: Device)(implicit scope: Scope) = {
     STen.owned(device.to(value))
   }
 
   def cloneTensor[S: Sc] = ATen.clone(value).owned
-  def copyTo[S: Sc](options: TensorOptions) = value.to(options, true).owned
+  def copyTo[S: Sc](options: STenOptions) = value.to(options.value, true).owned
   def copyFrom(source: Tensor) =
     value.copyFrom(source)
   def copyFrom(source: STen) =
@@ -600,7 +663,7 @@ case class STen private (
         value,
         dim.toArray.map(_.toLong),
         keepDim,
-        TensorOptions.d.scalarTypeByte()
+        STen.dOptions.scalarTypeByte
       )
     )
 

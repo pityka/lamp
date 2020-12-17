@@ -44,6 +44,7 @@ package lamp
 import aten.Tensor
 import cats.effect.Resource
 import cats.effect.IO
+import aten.TensorOptions
 
 trait Movable[-R] {
   def list(movable: R): List[Tensor]
@@ -130,10 +131,16 @@ object Movable {
 
 final class Scope private {
 
+  type ResourceType = Either[Tensor, TensorOptions]
+
   private var closed = false
-  private var resources: List[Tensor] = Nil
+  private var resources: List[ResourceType] = Nil
 
   def apply(resource: Tensor): Tensor = {
+    register(resource)
+    resource
+  }
+  def apply(resource: TensorOptions): TensorOptions = {
     register(resource)
     resource
   }
@@ -142,27 +149,38 @@ final class Scope private {
     if (resource == null) throw new NullPointerException("null resource")
     if (closed)
       throw new IllegalStateException("already been closed")
-    resources = resource :: resources
+    resources = Left(resource) :: resources
+  }
+  def register(resource: TensorOptions): Unit = {
+    if (resource == null) throw new NullPointerException("null resource")
+    if (closed)
+      throw new IllegalStateException("already been closed")
+    resources = Right(resource) :: resources
   }
 
   def release(): Unit = manage[Unit](_ => ())
 
   private def manageMovable[A](
       op: Scope => A
-  )(implicit movable: Movable[A]): (A, List[Tensor]) = {
+  )(implicit movable: Movable[A]): (A, List[ResourceType]) = {
     var toThrow: Throwable = null
     try {
       val last = op(this)
       val lastResources = movable.list(last)
       val (movableResources, releasableResources) =
-        resources.partition(r => lastResources.exists(_ eq r))
+        resources.partition(r =>
+          r match {
+            case Left(r)  => lastResources.exists(v => v eq r)
+            case Right(_) => false
+          }
+        )
       resources = releasableResources
       (last, movableResources)
     } catch {
       case t: Throwable =>
         toThrow = t
         null.asInstanceOf[
-          (A, List[Tensor])
+          (A, List[ResourceType])
         ] // compiler doesn't know `finally` will throw
     } finally {
       closed = true
@@ -171,7 +189,7 @@ final class Scope private {
       while (rs.nonEmpty) {
         val resource = rs.head
         rs = rs.tail
-        try resource.release()
+        try resource.fold(_.release(), _.release())
         catch {
           case t: Throwable =>
             if (toThrow == null) toThrow = t
@@ -183,14 +201,19 @@ final class Scope private {
   }
   private def manageMovableIO[A](
       op: Scope => IO[A]
-  )(implicit movable: Movable[A]): IO[(A, List[Tensor])] = {
+  )(implicit movable: Movable[A]): IO[(A, List[ResourceType])] = {
     import cats.syntax.all._
 
     op(this)
       .map { last =>
         val lastResources = movable.list(last)
         val (movables, releasable) =
-          resources.partition(r => lastResources.exists(_ eq r))
+          resources.partition(r =>
+            r match {
+              case Left(r)  => lastResources.exists(v => v eq r)
+              case Right(_) => false
+            }
+          )
         (Option(last), movables, releasable, Option.empty[Throwable])
       }
       .recover {
@@ -205,7 +228,7 @@ final class Scope private {
           while (rs.nonEmpty) {
             val resource = rs.head
             rs = rs.tail
-            try resource.release()
+            try resource.fold(_.release(), _.release())
             catch {
               case t: Throwable =>
                 toThrow = t
@@ -234,7 +257,7 @@ final class Scope private {
       while (rs.nonEmpty) {
         val resource = rs.head
         rs = rs.tail
-        try resource.release()
+        try resource.fold(_.release(), _.release())
         catch {
           case t: Throwable =>
             if (toThrow == null) toThrow = t
@@ -261,7 +284,7 @@ object Scope {
     Scope.free.manageMovableIO(use).flatMap {
       case (last, movables) =>
         IO {
-          movables.foreach(a => parent.register(a))
+          movables.foreach(a => a.fold(parent.register, parent.register))
           last
         }
     }
@@ -278,7 +301,7 @@ object Scope {
   )(implicit parent: Scope): A = {
     val (last, movables) = (new Scope).manageMovable(op)
     if (parent != null) {
-      movables.foreach(a => parent.register(a))
+      movables.foreach(a => a.fold(parent.register, parent.register))
     }
     last
   }

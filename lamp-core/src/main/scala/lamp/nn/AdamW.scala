@@ -36,10 +36,10 @@ case class AdamW(
     clip: Option[Double] = None
 ) extends Optimizer {
   val mt: List[Tensor] = parameters.toList.map {
-    case (param, _) => ATen.zeros_like(param.value, param.options)
+    case (param, _) => Tensor.zeros_like(param.value)
   }
   val vt: List[Tensor] = parameters.toList.map {
-    case (param, _) => ATen.zeros_like(param.value, param.options)
+    case (param, _) => Tensor.zeros_like(param.value)
   }
 
   var stepCount = 0L

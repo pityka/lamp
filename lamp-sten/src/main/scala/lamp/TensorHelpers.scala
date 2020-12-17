@@ -3,7 +3,6 @@ package lamp
 import aten.Tensor
 import org.saddle._
 import aten.ATen
-import aten.TensorOptions
 
 object TensorHelpers {
   def unbroadcast(p: Tensor, desiredShape: List[Long]): Option[Tensor] =
@@ -43,11 +42,11 @@ object TensorHelpers {
     }
 
   def toMat(t: Tensor) = {
-    if (t.options.scalarTypeByte() == 6) toFloatMat(t).map(_.toDouble)
+    if (t.scalarTypeByte() == 6) toFloatMat(t).map(_.toDouble)
     else {
       assert(
-        t.options.scalarTypeByte == 7,
-        s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+        t.scalarTypeByte == 7,
+        s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
       )
       val shape = t.sizes()
       if (shape.size == 2) {
@@ -66,7 +65,7 @@ object TensorHelpers {
     }
   }
   def toVec(t: Tensor) = {
-    if (t.options().scalarTypeByte() == 6) {
+    if (t.scalarTypeByte() == 6) {
       assert(
         t.numel <= Int.MaxValue,
         "Tensor too long to fit into a java array"
@@ -76,8 +75,8 @@ object TensorHelpers {
       arr.toVec.map(_.toDouble)
     } else {
       assert(
-        t.options.scalarTypeByte == 7,
-        s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+        t.scalarTypeByte == 7,
+        s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
       )
       assert(
         t.numel <= Int.MaxValue,
@@ -90,8 +89,8 @@ object TensorHelpers {
   }
   def toLongVec(t: Tensor) = {
     assert(
-      t.options.scalarTypeByte == 4,
-      s"Expected Long Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+      t.scalarTypeByte == 4,
+      s"Expected Long Tensor. Got scalartype: ${t.scalarTypeByte}"
     )
     assert(t.numel <= Int.MaxValue, "Tensor too long to fit into a java array")
     val arr = Array.ofDim[Long](t.numel.toInt)
@@ -100,8 +99,8 @@ object TensorHelpers {
   }
   def toFloatVec(t: Tensor) = {
     assert(
-      t.options.scalarTypeByte == 6,
-      s"Expected Float Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+      t.scalarTypeByte == 6,
+      s"Expected Float Tensor. Got scalartype: ${t.scalarTypeByte}"
     )
     assert(t.numel <= Int.MaxValue, "Tensor too long to fit into a java array")
     val arr = Array.ofDim[Float](t.numel.toInt)
@@ -110,8 +109,8 @@ object TensorHelpers {
   }
   def toFloatMat(t: Tensor) = {
     assert(
-      t.options.scalarTypeByte == 6,
-      s"Expected Double Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+      t.scalarTypeByte == 6,
+      s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
     )
     val shape = t.sizes()
     if (shape.size == 2) {
@@ -130,8 +129,8 @@ object TensorHelpers {
   }
   def toLongMat(t: Tensor) = {
     assert(
-      t.options.scalarTypeByte == 4,
-      s"Expected Long Tensor. Got scalartype: ${t.options.scalarTypeByte}"
+      t.scalarTypeByte == 4,
+      s"Expected Long Tensor. Got scalartype: ${t.scalarTypeByte}"
     )
     val shape = t.sizes()
     if (shape.size == 2) {
@@ -169,11 +168,13 @@ object TensorHelpers {
     val d2 = m.headOption.map(_.numCols).getOrElse(0)
     val t = ATen.zeros(
       Array(m.length, d1, d2),
-      TensorOptions.dtypeDouble
+      STenOptions.d.value
     )
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
-      val t2 = t.to(device.options(precision), true)
+      val t2 = Scope.leak { implicit scope =>
+        t.to(device.options(precision).value, true)
+      }
       t.release
       t2
     } else t
@@ -194,11 +195,13 @@ object TensorHelpers {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.numRows.toLong, m.numCols.toLong),
-      TensorOptions.dtypeFloat()
+      STenOptions.f.value
     )
     assert(t.copyFromFloatArray(arr))
     if (device != CPU) {
-      val t2 = t.to(device.options(SinglePrecision), true)
+      val t2 = Scope.leak { implicit scope =>
+        t.to(device.options(SinglePrecision).value, true)
+      }
       t.release
       t2
     } else t
@@ -211,11 +214,13 @@ object TensorHelpers {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.numRows.toLong, m.numCols.toLong),
-      TensorOptions.dtypeDouble
+      STenOptions.d.value
     )
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
-      val t2 = t.to(device.options(precision), true)
+      val t2 = Scope.leak { implicit scope =>
+        t.to(device.options(precision).value, true)
+      }
       t.release
       t2
     } else t
@@ -226,7 +231,7 @@ object TensorHelpers {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.numRows.toLong, m.numCols.toLong),
-      TensorOptions.dtypeLong
+      STenOptions.l.value
     )
     assert(t.copyFromLongArray(arr))
     if (device != CPU) {
@@ -241,7 +246,7 @@ object TensorHelpers {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.length.toLong),
-      TensorOptions.dtypeLong
+      STenOptions.l.value
     )
     assert(t.copyFromLongArray(arr))
     if (device != CPU) {
@@ -267,11 +272,13 @@ object TensorHelpers {
     val arr = m.toArray
     val t = ATen.zeros(
       Array(m.length.toLong),
-      TensorOptions.dtypeDouble
+      STenOptions.d.value
     )
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
-      val t2 = t.to(device.options(precision), true)
+      val t2 = Scope.leak { implicit scope =>
+        t.to(device.options(precision).value, true)
+      }
       t.release
       t2
     } else t
@@ -288,11 +295,13 @@ object TensorHelpers {
     )
     val t = ATen.zeros(
       dim.toArray,
-      TensorOptions.dtypeDouble
+      STenOptions.d.value
     )
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
-      val t2 = t.to(device.options(precision), true)
+      val t2 = Scope.leak { implicit scope =>
+        t.to(device.options(precision).value, true)
+      }
       t.release
       t2
     } else t
@@ -308,7 +317,7 @@ object TensorHelpers {
     )
     val t = ATen.zeros(
       dim.toArray,
-      TensorOptions.dtypeFloat
+      STenOptions.f.value
     )
     assert(t.copyFromFloatArray(arr))
     if (device != CPU) {
@@ -328,7 +337,7 @@ object TensorHelpers {
     )
     val t = ATen.zeros(
       dim.toArray,
-      TensorOptions.dtypeLong
+      STenOptions.l.value
     )
     assert(t.copyFromLongArray(arr))
     if (device != CPU) {

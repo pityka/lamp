@@ -5,12 +5,12 @@ import org.saddle._
 import lamp.autograd.{const}
 import lamp.nn._
 import lamp.{CPU, CudaDevice, DoublePrecision}
-import aten.TensorOptions
 import lamp.Scope
 import lamp.STen
+import lamp.STenOptions
 
 class MLPSuite extends AnyFunSuite {
-  def mlp(dim: Int, k: Int, tOpt: TensorOptions)(
+  def mlp(dim: Int, k: Int, tOpt: STenOptions)(
       implicit pool: Scope
   ) =
     sequence(

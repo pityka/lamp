@@ -1,7 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.{Variable, Constant, param}
-import aten.TensorOptions
+import lamp.STenOptions
 import lamp.Sc
 import lamp.scope
 import lamp.STen
@@ -38,7 +38,7 @@ object Embedding {
   def apply[S: Sc](
       classes: Int,
       dimensions: Int,
-      tOpt: TensorOptions
+      tOpt: STenOptions
   ): Embedding =
     Embedding(
       weights = param(

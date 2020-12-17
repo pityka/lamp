@@ -2,9 +2,9 @@ package lamp.nn
 
 import lamp.Sc
 import lamp.autograd.{Variable, Constant, param}
-import aten.{TensorOptions}
 import lamp.scope
 import lamp.STen
+import lamp.STenOptions
 
 case class WeightNormLinear(
     weightsV: Constant,
@@ -39,7 +39,7 @@ object WeightNormLinear {
   def apply[S: Sc](
       in: Int,
       out: Int,
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       bias: Boolean = true
   ): WeightNormLinear =
     WeightNormLinear(

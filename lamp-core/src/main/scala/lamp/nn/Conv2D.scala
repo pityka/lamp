@@ -1,7 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.{Variable, Constant, param, Conv2D => Conv2dOp, const}
-import aten.TensorOptions
+import lamp.STenOptions
 import lamp.Sc
 import lamp.scope
 import lamp.STen
@@ -38,7 +38,7 @@ object Conv2D {
       inChannels: Long,
       outChannels: Long,
       kernelSize: Long,
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       bias: Boolean = false,
       stride: Long = 1,
       padding: Long = 0,

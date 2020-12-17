@@ -4,8 +4,8 @@ import org.saddle._
 import scala.reflect.ClassTag
 import org.saddle._
 import aten.ATen
-import aten.TensorOptions
 import aten.Tensor
+import lamp.STenOptions
 
 /** INTERNAL API
   *
@@ -78,7 +78,7 @@ object NDArray {
     val arr = m.toArray
     val t = ATen.zeros(
       m.shape.toArray.map(_.toLong),
-      TensorOptions.dtypeDouble
+      STenOptions.d.value
     )
     val success = t.copyFromDoubleArray(arr)
     if (!success) {
@@ -94,7 +94,7 @@ object NDArray {
     val arr = m.toArray
     val t = ATen.zeros(
       m.shape.toArray.map(_.toLong),
-      TensorOptions.dtypeLong
+      STenOptions.l.value
     )
     val success = t.copyFromLongArray(arr)
     if (!success) {

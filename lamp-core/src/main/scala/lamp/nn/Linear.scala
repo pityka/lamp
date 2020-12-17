@@ -1,9 +1,9 @@
 package lamp.nn
 
 import lamp.autograd.{Variable, Constant, param}
-import aten.{TensorOptions}
 import lamp.Sc
 import lamp.STen
+import lamp.STenOptions
 case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
 
   override val state = List(
@@ -28,7 +28,7 @@ object Linear {
   def apply[S: Sc](
       in: Int,
       out: Int,
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       bias: Boolean = true
   ): Linear =
     Linear(

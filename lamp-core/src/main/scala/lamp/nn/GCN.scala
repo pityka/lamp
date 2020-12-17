@@ -2,9 +2,9 @@ package lamp.nn
 
 import lamp.autograd._
 import aten.ATen
-import aten.TensorOptions
 import lamp.Sc
 import lamp.STen
+import lamp.STenOptions
 
 case class Passthrough[M <: Module](
     m: M with Module
@@ -129,7 +129,7 @@ object NGCN {
       in: Int,
       middle: Int,
       out: Int,
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       dropout: Double = 0d,
       nonLinearity: Boolean = true,
       K: Int,
@@ -172,31 +172,30 @@ object NGCN {
 object GCN {
 
   def precomputeSparseAdjacency[S: Sc](
-      valueOpt: TensorOptions,
+      valueOpt: STenOptions,
       edgeList: Variable,
       numNodes: Long
   ) = {
-
     val edgeFrom = edgeList.select(1, 0)
     val edgeTo = edgeList.select(1, 1)
 
     val tOptDoubleDevice =
-      if (valueOpt.isCPU())
-        TensorOptions
-          .fromScalarType(valueOpt.scalarTypeByte())
-          .cpu()
+      if (valueOpt.isCPU)
+        STenOptions
+          .fromScalarType(valueOpt.scalarTypeByte)
+          .cpu
       else
-        TensorOptions
-          .fromScalarType(valueOpt.scalarTypeByte())
-          .cuda_index(valueOpt.deviceIndex().toShort)
+        STenOptions
+          .fromScalarType(valueOpt.scalarTypeByte)
+          .cudaIndex(valueOpt.deviceIndex.toShort)
 
     val tOptLongDevice =
-      if (valueOpt.isCPU) TensorOptions.l.cpu
-      else TensorOptions.l.cuda_index(valueOpt.deviceIndex().toShort)
+      if (valueOpt.isCPU) STenOptions.l.cpu
+      else STenOptions.l.cudaIndex(valueOpt.deviceIndex.toShort)
 
     val degrees = {
-      val ones = ATen.ones(Array(edgeFrom.shape(0)), tOptDoubleDevice)
-      val zeros = ATen.zeros(Array(numNodes), ones.options)
+      val ones = ATen.ones(Array(edgeFrom.shape(0)), tOptDoubleDevice.value)
+      val zeros = ATen.zeros(Array(numNodes), tOptDoubleDevice.value)
       val result1 = ATen.index_add(zeros, 0, edgeFrom.value.value, ones)
       val result2 = ATen.index_add(result1, 0, edgeTo.value.value, ones)
       val result3 = ATen.add_1(result2, 1.0, 1.0)
@@ -210,13 +209,13 @@ object GCN {
     }
 
     val a = {
-      val ones = ATen.ones(Array(edgeList.shape(0)), tOptDoubleDevice)
+      val ones = ATen.ones(Array(edgeList.shape(0)), tOptDoubleDevice.value)
       val edgeListT = ATen.t(edgeList.value.value)
       val sp1 = ATen.sparse_coo_tensor(
         edgeListT,
         ones,
         Array(numNodes, numNodes),
-        tOptDoubleDevice
+        tOptDoubleDevice.value
       )
 
       val sp1T = ATen.t(sp1)
@@ -226,7 +225,7 @@ object GCN {
       ones.release
       val ident = {
         val selfLoops = {
-          val ar = ATen.arange(0d, numNodes.toDouble, 1.0, tOptLongDevice)
+          val ar = ATen.arange(0d, numNodes.toDouble, 1.0, tOptLongDevice.value)
           val ar2 = ATen._unsafe_view(ar, Array(-1, 1))
           val r = ar2.repeat(Array(1, 2))
           ar.release
@@ -235,12 +234,13 @@ object GCN {
           r.release
           rt
         }
-        val ones = ATen.ones(Array(selfLoops.sizes.apply(1)), tOptDoubleDevice)
+        val ones =
+          ATen.ones(Array(selfLoops.sizes.apply(1)), tOptDoubleDevice.value)
         val i = ATen.sparse_coo_tensor(
           selfLoops,
           ones,
           Array(numNodes, numNodes),
-          tOptDoubleDevice
+          tOptDoubleDevice.value
         )
         ones.release
         selfLoops.release
@@ -301,7 +301,7 @@ object GCN {
   def gcn[S: Sc](
       in: Int,
       out: Int,
-      tOpt: TensorOptions,
+      tOpt: STenOptions,
       dropout: Double = 0d,
       nonLinearity: Boolean = true
   ) =

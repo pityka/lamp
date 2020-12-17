@@ -6,8 +6,8 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.nn.CudaTest
 import lamp.Scope
 import lamp.util.NDArray
-import aten.TensorOptions
 import lamp.STen
+import lamp.STenOptions
 
 class GradientSuite extends AnyFunSuite {
   val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
@@ -479,7 +479,7 @@ class GradientSuite extends AnyFunSuite {
           val idx =
             STen.fromLongMat(Mat(Vec(1L, 0L), Vec(0L, 1L)), cuda)
           val values = STen.fromVec(Vec(2d, 3d), cuda)
-          val topt = if (cuda) TensorOptions.d.cuda() else TensorOptions.d
+          val topt = if (cuda) STenOptions.d.cudaIndex(0) else STenOptions.d
           val sp = STen.sparse_coo(idx, values, Array(3, 2), topt)
           const(sp)
         }
