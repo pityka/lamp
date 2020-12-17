@@ -316,9 +316,9 @@ case class STen private (
   def toVec = TensorHelpers.toVec(value)
   def toFloatVec = TensorHelpers.toFloatVec(value)
   def toLongVec = TensorHelpers.toLongVec(value)
-  val shape = value.sizes.toList
+  def shape = value.sizes.toList
   def sizes = shape
-  val options = value.options()
+  def options = value.options()
   def coalesce[S: Sc] = value.coalesce.owned
   def indices[S: Sc] = value.indices.owned
   def values[S: Sc] = value.indices.owned
