@@ -147,8 +147,8 @@
                         <a href="CappedShiftedNegativeExponential.html" title="">CappedShiftedNegativeExponential</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="" title=""></a>
-                        <a href="" title="">CastToPrecision</a>
+                        <a class="class" href="CastToPrecision.html" title=""></a>
+                        <a href="CastToPrecision.html" title="">CastToPrecision</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Concatenate.html" title=""></a>
@@ -255,8 +255,8 @@
                         <a href="MaskFill.html" title="">MaskFill</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="MaskSelect.html" title=""></a>
-                        <a href="MaskSelect.html" title="">MaskSelect</a>
+                        <a class="class" href="" title=""></a>
+                        <a href="" title="">MaskSelect</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="MatMul.html" title=""></a>
@@ -390,8 +390,8 @@
       <div id="definition">
         <div class="big-circle class">c</div>
         <p id="owner"><a href="../index.html" class="extype" name="lamp">lamp</a>.<a href="index.html" class="extype" name="lamp.autograd">autograd</a></p>
-        <h1>CastToPrecision<span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html" title="Permalink">
+        <h1>MaskSelect<span class="permalink">
+      <a href="../../lamp/autograd/MaskSelect.html" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span></h1>
@@ -404,7 +404,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">CastToPrecision</span><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="precision">precision: <a href="../FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">MaskSelect</span><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="mask">mask: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -439,7 +439,7 @@
                   <span class="filtertype">Inherited<br />
                   </span>
                   <ol id="linearization">
-                    <li class="in" name="lamp.autograd.CastToPrecision"><span>CastToPrecision</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.autograd.Op"><span>Op</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                    <li class="in" name="lamp.autograd.MaskSelect"><span>MaskSelect</span></li><li class="in" name="scala.Serializable"><span>Serializable</span></li><li class="in" name="java.io.Serializable"><span>Serializable</span></li><li class="in" name="scala.Product"><span>Product</span></li><li class="in" name="scala.Equals"><span>Equals</span></li><li class="in" name="lamp.autograd.Op"><span>Op</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
                   </ol>
                 </div><div class="ancestors">
               <span class="filtertype"></span>
@@ -459,10 +459,10 @@
         <div id="allMembers">
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
-              <ol><li name="lamp.autograd.CastToPrecision#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(scope:lamp.Scope,a:lamp.autograd.Variable,precision:lamp.FloatingPointPrecision):lamp.autograd.CastToPrecision"></a><a id="&lt;init&gt;:CastToPrecision"></a>
+              <ol><li name="lamp.autograd.MaskSelect#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="&lt;init&gt;(scope:lamp.Scope,input:lamp.autograd.Variable,mask:lamp.autograd.Variable):lamp.autograd.MaskSelect"></a><a id="&lt;init&gt;:MaskSelect"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#&lt;init&gt;(scope:lamp.Scope,a:lamp.autograd.Variable,precision:lamp.FloatingPointPrecision):lamp.autograd.CastToPrecision" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#&lt;init&gt;(scope:lamp.Scope,input:lamp.autograd.Variable,mask:lamp.autograd.Variable):lamp.autograd.MaskSelect" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -471,7 +471,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">CastToPrecision</span><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="precision">precision: <a href="../FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a></span>)</span>
+        <span class="name">MaskSelect</span><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="mask">mask: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span>
       </span>
       
       
@@ -488,7 +488,7 @@
                 <li name="scala.AnyRef#!=" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="!=(x$1:Any):Boolean"></a><a id="!=(Any):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#!=(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#!=(x$1:Any):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -504,7 +504,7 @@
     </li><li name="scala.AnyRef###" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="##():Int"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html###():Int" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html###():Int" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -520,7 +520,7 @@
     </li><li name="scala.AnyRef#==" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="==(x$1:Any):Boolean"></a><a id="==(Any):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#==(x$1:Any):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#==(x$1:Any):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -533,26 +533,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
-    </li><li name="lamp.autograd.CastToPrecision#a" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="a:lamp.autograd.Variable"></a><a id="a:Variable"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#a:lamp.autograd.Variable" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">a</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
-      </span>
-      
-      
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#asInstanceOf[T0]:T0" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#asInstanceOf[T0]:T0" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -568,7 +552,7 @@
     </li><li name="scala.AnyRef#clone" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a><a id="clone():AnyRef"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#clone():Object" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#clone():Object" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -592,7 +576,7 @@
     </li><li name="scala.AnyRef#eq" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a><a id="eq(AnyRef):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#eq(x$1:AnyRef):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#eq(x$1:AnyRef):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -608,7 +592,7 @@
     </li><li name="scala.AnyRef#finalize" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="finalize():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#finalize():Unit" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#finalize():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -630,7 +614,7 @@
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#getClass():Class[_]" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#getClass():Class[_]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -646,10 +630,26 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.autograd.MaskSelect#input" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="input:lamp.autograd.Variable"></a><a id="input:Variable"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#input:lamp.autograd.Variable" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">input</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#isInstanceOf[T0]:Boolean" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#isInstanceOf[T0]:Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -662,10 +662,26 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="lamp.autograd.MaskSelect#mask" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="mask:lamp.autograd.Variable"></a><a id="mask:Variable"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#mask:lamp.autograd.Variable" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">mask</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#ne(x$1:AnyRef):Boolean" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#ne(x$1:AnyRef):Boolean" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -681,7 +697,7 @@
     </li><li name="scala.AnyRef#notify" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notify():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#notify():Unit" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#notify():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -700,7 +716,7 @@
     </li><li name="scala.AnyRef#notifyAll" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="notifyAll():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#notifyAll():Unit" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#notifyAll():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -716,10 +732,10 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
-    </li><li name="lamp.autograd.CastToPrecision#params" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="lamp.autograd.MaskSelect#params" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="params:List[(lamp.autograd.Variable,(lamp.STen,lamp.STen)=&gt;Unit)]"></a><a id="params:List[(Variable,(STen,STen)⇒Unit)]"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#params:List[(lamp.autograd.Variable,(lamp.STen,lamp.STen)=&gt;Unit)]" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#params:List[(lamp.autograd.Variable,(lamp.STen,lamp.STen)=&gt;Unit)]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -731,27 +747,11 @@
         <span class="name">params</span><span class="result">: <span class="extype" name="scala.collection.immutable.List">List</span>[(<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, (<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.CastToPrecision">CastToPrecision</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
-    </li><li name="lamp.autograd.CastToPrecision#precision" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="precision:lamp.FloatingPointPrecision"></a><a id="precision:FloatingPointPrecision"></a>
-      <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#precision:lamp.FloatingPointPrecision" title="Permalink">
-        <i class="material-icons"></i>
-      </a>
-    </span>
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">precision</span><span class="result">: <a href="../FloatingPointPrecision.html" class="extype" name="lamp.FloatingPointPrecision">FloatingPointPrecision</a></span>
-      </span>
-      
-      
-    </li><li name="lamp.autograd.CastToPrecision#scope" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.MaskSelect">MaskSelect</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
+    </li><li name="lamp.autograd.MaskSelect#scope" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="scope:lamp.Scope"></a><a id="scope:Scope"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#scope:lamp.Scope" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#scope:lamp.Scope" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -767,7 +767,7 @@
     </li><li name="scala.AnyRef#synchronized" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a><a id="synchronized[T0](⇒T0):T0"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#synchronized[T0](x$1:=&gt;T0):T0" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#synchronized[T0](x$1:=&gt;T0):T0" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -780,10 +780,10 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
-    </li><li name="lamp.autograd.CastToPrecision#value" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="lamp.autograd.MaskSelect#value" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="value:lamp.autograd.Variable"></a><a id="value:Variable"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#value:lamp.autograd.Variable" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#value:lamp.autograd.Variable" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -795,11 +795,11 @@
         <span class="name">value</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.CastToPrecision">CastToPrecision</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.MaskSelect">MaskSelect</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#wait():Unit" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#wait():Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -821,7 +821,7 @@
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long,x$2:Int):Unit"></a><a id="wait(Long,Int):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#wait(x$1:Long,x$2:Int):Unit" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#wait(x$1:Long,x$2:Int):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -843,7 +843,7 @@
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait(x$1:Long):Unit"></a><a id="wait(Long):Unit"></a>
       <span class="permalink">
-      <a href="../../lamp/autograd/CastToPrecision.html#wait(x$1:Long):Unit" title="Permalink">
+      <a href="../../lamp/autograd/MaskSelect.html#wait(x$1:Long):Unit" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>

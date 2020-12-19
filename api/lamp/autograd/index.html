@@ -139,6 +139,10 @@
                         <a href="BatchedMatMul.html" title="">BatchedMatMul</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="class" href="BinaryCrossEntropyWithLogitsLoss.html" title="input: (N,T) where T&gt;=1 are multiple independent tasks target: same shape as input, float with in [0,1] posWeight: is (T)"></a>
+                        <a href="BinaryCrossEntropyWithLogitsLoss.html" title="input: (N,T) where T&gt;=1 are multiple independent tasks target: same shape as input, float with in [0,1] posWeight: is (T)">BinaryCrossEntropyWithLogitsLoss</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="class" href="CappedShiftedNegativeExponential.html" title=""></a>
                         <a href="CappedShiftedNegativeExponential.html" title="">CappedShiftedNegativeExponential</a>
                       </li><li class="current-entities indented2">
@@ -249,6 +253,10 @@
                         <span class="separator"></span>
                         <a class="class" href="MaskFill.html" title=""></a>
                         <a href="MaskFill.html" title="">MaskFill</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="MaskSelect.html" title=""></a>
+                        <a href="MaskSelect.html" title="">MaskSelect</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="MatMul.html" title=""></a>
@@ -714,6 +722,25 @@
       </span>
       
       
+    </li><li name="lamp.autograd.BinaryCrossEntropyWithLogitsLoss" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="BinaryCrossEntropyWithLogitsLossextendsOpwithProductwithSerializable"></a><a id="BinaryCrossEntropyWithLogitsLoss:BinaryCrossEntropyWithLogitsLoss"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/BinaryCrossEntropyWithLogitsLoss.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="input: (N,T) where T&gt;=1 are multiple independent tasks target: same shape as input, float with in [0,1] posWeight: is (T)" href="BinaryCrossEntropyWithLogitsLoss.html"><span class="name">BinaryCrossEntropyWithLogitsLoss</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="posWeights">posWeights: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">input: (N,T) where T&gt;=1 are multiple independent tasks
+target: same shape as input, float with in [0,1]
+posWeight: is (T)
+</p>
     </li><li name="lamp.autograd.CappedShiftedNegativeExponential" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="CappedShiftedNegativeExponentialextendsOpwithProductwithSerializable"></a><a id="CappedShiftedNegativeExponential:CappedShiftedNegativeExponential"></a>
       <span class="permalink">
@@ -1163,6 +1190,22 @@
       </span>
       <span class="symbol">
         <a title="" href="MaskFill.html"><span class="name">MaskFill</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="mask">mask: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="fill">fill: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.autograd.MaskSelect" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="MaskSelectextendsOpwithProductwithSerializable"></a><a id="MaskSelect:MaskSelect"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/MaskSelect.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="MaskSelect.html"><span class="name">MaskSelect</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="mask">mask: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
