@@ -10,7 +10,7 @@ sealed trait FloatingPointPrecision {
 case object DoublePrecision extends FloatingPointPrecision {
   def convertTensor(t: Tensor): Tensor = {
     val opt = t.options().toDouble()
-    t.to(opt, true)
+    t.to(opt, true, true)
   }
   def convertOption[S: Sc](t: STenOptions): STenOptions = {
     t.toDouble
@@ -19,7 +19,7 @@ case object DoublePrecision extends FloatingPointPrecision {
 case object SinglePrecision extends FloatingPointPrecision {
   def convertTensor(t: Tensor): Tensor = {
     val opt = t.options().toFloat()
-    t.to(opt, true)
+    t.to(opt, true, true)
   }
   def convertOption[S: Sc](t: STenOptions): STenOptions = {
     t.toFloat
@@ -45,7 +45,7 @@ case class CudaDevice(i: Int) extends Device {
   )
   def to(t: Tensor): Tensor = {
     val topt = t.options().cuda_index(i.toShort)
-    t.to(topt, true)
+    t.to(topt, true, true)
   }
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
     precision.convertOption(STenOptions.d.cudaIndex(i.toShort))

@@ -173,7 +173,7 @@ object TensorHelpers {
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.leak { implicit scope =>
-        t.to(device.options(precision).value, true)
+        t.to(device.options(precision).value, true, true)
       }
       t.release
       t2
@@ -200,7 +200,7 @@ object TensorHelpers {
     assert(t.copyFromFloatArray(arr))
     if (device != CPU) {
       val t2 = Scope.leak { implicit scope =>
-        t.to(device.options(SinglePrecision).value, true)
+        t.to(device.options(SinglePrecision).value, true, true)
       }
       t.release
       t2
@@ -219,7 +219,7 @@ object TensorHelpers {
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.leak { implicit scope =>
-        t.to(device.options(precision).value, true)
+        t.to(device.options(precision).value, true, true)
       }
       t.release
       t2
@@ -277,7 +277,7 @@ object TensorHelpers {
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.leak { implicit scope =>
-        t.to(device.options(precision).value, true)
+        t.to(device.options(precision).value, true, true)
       }
       t.release
       t2
@@ -300,7 +300,7 @@ object TensorHelpers {
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.leak { implicit scope =>
-        t.to(device.options(precision).value, true)
+        t.to(device.options(precision).value, true, true)
       }
       t.release
       t2

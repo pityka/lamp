@@ -391,7 +391,8 @@ case class STen private (
   }
 
   def cloneTensor[S: Sc] = ATen.clone(value).owned
-  def copyTo[S: Sc](options: STenOptions) = value.to(options.value, true).owned
+  def copyTo[S: Sc](options: STenOptions) =
+    value.to(options.value, true, true).owned
   def copyFrom(source: Tensor) =
     value.copyFrom(source)
   def copyFrom(source: STen) =
@@ -432,9 +433,9 @@ case class STen private (
   def cat[S: Sc](other: STen, dim: Long) =
     owned(ATen.cat(Array(value, other.value), dim))
 
-  def castToFloat[S: Sc] = owned(ATen._cast_Float(value, false))
-  def castToDouble[S: Sc] = owned(ATen._cast_Double(value, false))
-  def castToLong[S: Sc] = owned(ATen._cast_Long(value, false))
+  def castToFloat[S: Sc] = owned(ATen._cast_Float(value, true))
+  def castToDouble[S: Sc] = owned(ATen._cast_Double(value, true))
+  def castToLong[S: Sc] = owned(ATen._cast_Long(value, true))
 
   def +[S: Sc](other: STen) =
     owned(ATen.add_0(value, other.value, 1d))

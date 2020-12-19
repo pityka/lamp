@@ -137,7 +137,7 @@ object Reader {
             case ScalarTagFloat  => t.copyFromFloatArray(data)
             case ScalarTagLong   => t.copyFromLongArray(data)
           }
-          val tdevice = t.to(topt.value, true)
+          val tdevice = t.to(topt.value, true, true)
           t.release
           Right(tdevice)
         }
