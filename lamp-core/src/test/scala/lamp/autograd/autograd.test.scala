@@ -13,6 +13,7 @@ class GradientSuite extends AnyFunSuite {
   val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
     4d, 5d, 6d)
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
+  val mat2x2 = Mat(Vec(4d, 1d), Vec(6d, 2d)).T
   val ndx1 = NDArray(Array(1d), List(1))
   val ndx2 = NDArray(Array(1d, 1d), List(2))
   val ndx3 = NDArray(Array(1d, 2d, 3d), List(3))
@@ -874,6 +875,29 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  testGradientAndValue("l2 logistic regression loss - bce loss")(
+    mat2x2,
+    54.5067
+  ) { (m, doBackprop, _) =>
+    Scope.leak { implicit scope =>
+      val w = param(STen.fromMat(m))
+      val data = const(STen.fromMat(mat3x2))
+      val y =
+        const(STen.fromMat(Mat(Vec(0d, 1d, 0.5d), Vec(0d, 0.5, 1d))))
+      val classWeights = STen.ones(Array(1, 2), w.value.options)
+      val L =
+        ((data
+          .mm(w))
+          .binaryCrossEntropyWithLogitsLoss(y.value, classWeights, Sum))
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        w.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
   testGradientAndValue("l2 logistic regression loss - nll_loss")(
     mat2x3_2,
     151.0000008318073
@@ -953,7 +977,7 @@ class GradientSuite extends AnyFunSuite {
         )
       }
   }
-  testGradientAndValueND("mask")(nd1x2x2, 5d) { (m, doBackprop, cuda) =>
+  testGradientAndValueND("mask-fill")(nd1x2x2, 5d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val input =
         param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
@@ -969,6 +993,34 @@ class GradientSuite extends AnyFunSuite {
       }
 
       val output = new MaskFill(scope, input, mask, 2d).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+      )
+    }
+  }
+  testGradientAndValueND("mask-select")(nd1x2x2, 2d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val input =
+        param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+      val mask = {
+        val q = STen.owned(
+          NDArray.tensorFromNDArray(
+            NDArray(Array(1d, 0d, 0d, 1d), List(1, 2, 2)),
+            cuda
+          )
+        )
+        val sc = STen.scalarDouble(1d, q.options)
+        param(q.equ(sc))
+      }
+
+      val output = new MaskSelect(scope, input.flatten, mask.flatten).value
+      assert(output.shape == List(2))
 
       val L = output.sum
       if (doBackprop) {

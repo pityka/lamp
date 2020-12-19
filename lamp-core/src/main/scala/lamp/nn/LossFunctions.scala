@@ -49,6 +49,21 @@ object LossFunctions {
     }
   }
 
+  case class BCEWithLogits(
+      posWeights: STen,
+      reduction: Reduction = Mean,
+      ignore: Long = -100L
+  ) extends LossFunction {
+    def apply[S: Sc](out: Variable, target: STen) = {
+      val v = out.binaryCrossEntropyWithLogitsLoss(
+        target,
+        posWeights,
+        reduction
+      )
+      (v, out.shape(0))
+    }
+  }
+
   /**
     * Return a loss function which takes outputs of time step x batch x classes
     * and targets of time step x batch

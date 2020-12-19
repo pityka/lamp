@@ -167,6 +167,8 @@ trait Variable {
     new Assign(extractScope, abandon = this, keep = other).value
   def maskFill[S: Sc](mask: Variable, fill: Double) =
     new MaskFill(extractScope, this, mask, fill).value
+  def maskSelect[S: Sc](mask: Variable) =
+    new MaskSelect(extractScope, this, mask).value
   def makeBooleanMask[S: Sc](q: Long) = new EqWhere(extractScope, this, q).value
   def cast[S: Sc](precision: FloatingPointPrecision) =
     new CastToPrecision(extractScope, this, precision).value
@@ -229,6 +231,19 @@ trait Variable {
       reduction,
       ignore
     ).value
+  def binaryCrossEntropyWithLogitsLoss[S: Sc](
+      target: STen,
+      posWeights: STen,
+      reduction: Reduction = Mean
+  ) =
+    new BinaryCrossEntropyWithLogitsLoss(
+      extractScope,
+      this,
+      target,
+      posWeights,
+      reduction
+    ).value
+
   def mseLoss[S: Sc](
       target: STen,
       reduction: Reduction = Mean

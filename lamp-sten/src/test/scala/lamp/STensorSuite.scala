@@ -76,6 +76,16 @@ class STenSuite extends AnyFunSuite {
       )
     }
   }
+  test("maskScatter") {
+    Scope.root { implicit scope =>
+      val t1 = STen.eye(3, STenOptions.d)
+      val t2 = STen.zeros(List(3, 3), STenOptions.d)
+      val mask = t1.equ(1d)
+      assert(
+        t2.maskedScatter(mask, t1 * 4).toMat.row(0) == Vec(4d, 0d, 0d)
+      )
+    }
+  }
   test("cat") {
     Scope.root { implicit scope =>
       val t1 = STen.eye(3, STenOptions.d)

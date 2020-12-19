@@ -95,6 +95,21 @@ case class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
     }
   })(scope)
 }
+case class MaskSelect(scope: Scope, input: Variable, mask: Variable)
+    extends Op {
+
+  val params = List(
+    input.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp = STen.zerosLike(out)
+        out += tmp.maskedScatter(mask.value, p)
+      }
+
+    }
+  )
+  val value =
+    Variable(this, input.value.maskedSelect(mask.value)(scope))(scope)
+}
 case class MaskFill(scope: Scope, input: Variable, mask: Variable, fill: Double)
     extends Op {
 
@@ -937,6 +952,62 @@ case class NllLoss(
       ignore
     )
   scope.register(total_weight)
+
+  val value =
+    Variable(
+      this,
+      STen.owned(value1)(scope)
+    )(scope)
+
+}
+
+/**
+  * input: (N,T) where T>=1 are multiple independent tasks
+  * target: same shape as input, float with in [0,1]
+  * posWeight: is (T)
+  */
+case class BinaryCrossEntropyWithLogitsLoss(
+    scope: Scope,
+    input: Variable,
+    target: STen,
+    posWeights: STen,
+    reduction: Reduction
+) extends Op {
+
+  assert(
+    input.sizes == target.sizes,
+    s"BinaryCrossEntropyWithLogitsLoss input and target have the same shape. Input ${input.sizes}, target ${target.sizes} ."
+  )
+
+  val instanceWeights = STen.onesLike(target)(scope)
+  val params = List(
+    input.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp =
+          STen.owned(
+            ATen.binary_cross_entropy_with_logits_backward(
+              p.value,
+              input.value.value,
+              target.value,
+              instanceWeights.value,
+              posWeights.value,
+              reduction.asLong
+            )
+          )
+        out += tmp
+
+      }
+    }
+  )
+
+  val (value1) =
+    ATen.binary_cross_entropy_with_logits(
+      input.value.value,
+      target.value,
+      instanceWeights.value,
+      posWeights.value,
+      reduction.asLong
+    )
 
   val value =
     Variable(

@@ -588,6 +588,9 @@ case class STen private (
   def maskedFill[S: Sc](mask: Tensor, fill: Double) =
     ATen.masked_fill_0(value, mask, fill).owned
 
+  def maskedScatter[S: Sc](mask: STen, src: STen) =
+    ATen.masked_scatter(value, mask.value, src.value).owned
+
   def zero_(): Unit =
     ATen.zero_(value)
 
