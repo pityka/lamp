@@ -12,22 +12,6 @@ class AdamWSuite extends AnyFunSuite {
     test(id + "/CUDA", CudaTest) { fun(true) }
   }
 
-  test1("AdamW noop") { cuda =>
-    Scope.root { implicit scope =>
-      val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(mat.zeros(1, 2), cuda)
-      AdamW(
-        parameters = List((params, NoTag)),
-        learningRate = simple(1d),
-        weightDecay = simple(0.00),
-        beta1 = simple(1d),
-        beta2 = simple(1d)
-      ).step(List(Some(gradients)), 1d)
-      val updatedParams = params.toMat
-      assert(updatedParams == initParams)
-    }
-  }
   test1("AdamW without weight decay") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
@@ -42,11 +26,39 @@ class AdamWSuite extends AnyFunSuite {
       )
       opt.step(List(Some(gradients)), 1d)
       val updatedParams1 = params.toMat
-      assert(updatedParams1 == Mat(Vec(0.9999990000002, 0.9999990000001333)).T)
+      assert(
+        updatedParams1 == Mat(Vec(0.9000000063245549, 0.90000000421637)).T
+      )
       opt.step(List(Some(gradients)), 1d)
       val updatedParams2 = params.toMat
+
       assert(
-        updatedParams2 == Mat(Vec(0.9999969728373086, 0.999996902616711)).T
+        updatedParams2 == Mat(Vec(0.8000000109128679, 0.8000000072752449)).T
+      )
+    }
+  }
+  test1("RAdam without weight decay") { cuda =>
+    Scope.root { implicit scope =>
+      val initParams = mat.ones(1, 2)
+      val params = STen.fromMat(initParams, cuda)
+      val gradients = STen.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
+      val opt = RAdam(
+        parameters = List((params, NoTag)),
+        learningRate = simple(0.1d),
+        weightDecay = simple(0.00),
+        beta1 = simple(0.999d),
+        beta2 = simple(0.9d)
+      )
+      opt.step(List(Some(gradients)), 1d)
+      val updatedParams1 = params.toMat
+      assert(
+        updatedParams1 == Mat(Vec(0.95, 0.925)).T
+      )
+      opt.step(List(Some(gradients)), 1d)
+      val updatedParams2 = params.toMat
+
+      assert(
+        updatedParams2 == Mat(Vec(0.8999999999999992, 0.849999999999999)).T
       )
     }
   }
@@ -66,15 +78,43 @@ class AdamWSuite extends AnyFunSuite {
       val updatedParams1 = params.toMat
       assert(
         updatedParams1.roundTo(10) == Mat(
-          Vec(0.9999890000002, 0.9999890000001334)
+          Vec(0.899990006324555, 0.8999900042163701)
         ).T.roundTo(10)
       )
       opt.step(List(Some(gradients)), 1d)
       val updatedParams2 = params.toMat
       assert(
         updatedParams2.roundTo(10) == Mat(
-          Vec(0.9999769729473086, 0.9999769027267111)
+          Vec(0.7999810110128047, 0.7999810073752027)
         ).T.roundTo(10)
+      )
+    }
+  }
+  test1("Yogi") { cuda =>
+    Scope.root { implicit scope =>
+      val initParams = mat.ones(1, 2)
+      val params = STen.fromMat(initParams, cuda)
+      val gradients = STen.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
+      val opt = Yogi(
+        parameters = List((params, NoTag)),
+        learningRate = simple(1d),
+        weightDecay = simple(0.00001),
+        beta1 = simple(0.999d),
+        beta2 = simple(0.9d)
+      )
+      opt.step(List(Some(gradients)), 1d)
+      val updatedParams1 = params.toMat
+      assert(
+        updatedParams1.roundTo(4) == Mat(
+          Vec(0.0019860079840320344, 0.0013215579227696672)
+        ).T.roundTo(4)
+      )
+      opt.step(List(Some(gradients)), 1d)
+      val updatedParams2 = params.toMat
+      assert(
+        updatedParams2.roundTo(4) == Mat(
+          Vec(-0.3050151568303592, -0.1358345992884816)
+        ).T.roundTo(4)
       )
     }
   }
