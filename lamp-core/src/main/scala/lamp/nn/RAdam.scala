@@ -4,7 +4,7 @@ import aten.Tensor
 import aten.ATen
 import lamp.STen
 
-object AdamW {
+object RAdam {
   def factory(
       weightDecay: OptimizerHyperparameter,
       learningRate: OptimizerHyperparameter = simple(0.001),
@@ -14,7 +14,7 @@ object AdamW {
       clip: Option[Double] = None
   ) =
     (parameters: Seq[(STen, PTag)]) =>
-      AdamW(
+      RAdam(
         parameters,
         weightDecay,
         learningRate,
@@ -25,8 +25,7 @@ object AdamW {
       )
 }
 
-// https://arxiv.org/pdf/1711.05101.pdf Algorithm 2
-case class AdamW(
+case class RAdam(
     parameters: Seq[(STen, PTag)],
     weightDecay: OptimizerHyperparameter,
     learningRate: OptimizerHyperparameter = simple(0.001),
@@ -62,31 +61,52 @@ case class AdamW(
           val b2 = beta2(tag)
           val lr = learningRate(tag)
 
-          // L7
           mt.mul_(b1)
           ATen.add_out(mt, mt, gradients.value, (1d - b1))
 
-          // L8
           vt.mul_(b2)
           ATen.addcmul_out(vt, vt, gradients.value, gradients.value, 1 - b2)
 
-          // L9-L12..
-          val denom = ATen.sqrt(vt)
-          denom.add_(eps, 1d)
+          val beta2PowT = math.pow(b2, stepCount)
 
-          val stepParam = scheduleFactor * lr * math.sqrt(
-            (1 - math.pow(b2, stepCount))
-          ) / (1 - math.pow(b1, stepCount))
+          val rhoInf = (2d / (1d - b2)) - 1
+          val rho = rhoInf - (2d * stepCount * beta2PowT / (1d - beta2PowT))
+          // println("--")
+          // println("b" + beta2PowT)
+          // println("r-i" + rhoInf)
+          // println("r" + rho)
 
           val stepWd = scheduleFactor * wd
-
           if (wd != 0d) {
             ATen.add_out(param.value, param.value, param.value, -1 * stepWd)
           }
 
-          ATen.addcdiv_out(param.value, param.value, mt, denom, -1 * stepParam)
+          if (rho > 4) {
+            val stepParam = scheduleFactor * lr * math.sqrt(
+              (1 - beta2PowT) * ((rho - 4) / (rhoInf - 4)) * ((rho - 2) / rho) * (rhoInf / (rhoInf - 2))
+            ) / (1 - math.pow(b1, stepCount))
 
-          denom.release
+            // println("A")
+            // println(stepParam)
+
+            val denom = ATen.sqrt(vt)
+            denom.add_(eps, 1d)
+
+            ATen.addcdiv_out(
+              param.value,
+              param.value,
+              mt,
+              denom,
+              -1 * stepParam
+            )
+            denom.release
+
+          } else {
+            // println("B")
+            val stepParam = scheduleFactor * lr / (1 - math.pow(b1, stepCount))
+            ATen.add_out(param.value, param.value, mt, -1 * stepParam)
+          }
+
       }
   }
 }

@@ -3,18 +3,19 @@ package lamp.nn
 import aten.Tensor
 import aten.ATen
 import lamp.STen
+import lamp.Scope
 
-object AdamW {
+object Yogi {
   def factory(
       weightDecay: OptimizerHyperparameter,
-      learningRate: OptimizerHyperparameter = simple(0.001),
+      learningRate: OptimizerHyperparameter = simple(0.01),
       beta1: OptimizerHyperparameter = simple(0.9),
       beta2: OptimizerHyperparameter = simple(0.999),
-      eps: Double = 1e-8,
+      eps: Double = 1e-3,
       clip: Option[Double] = None
   ) =
     (parameters: Seq[(STen, PTag)]) =>
-      AdamW(
+      Yogi(
         parameters,
         weightDecay,
         learningRate,
@@ -25,14 +26,15 @@ object AdamW {
       )
 }
 
-// https://arxiv.org/pdf/1711.05101.pdf Algorithm 2
-case class AdamW(
+// https://papers.nips.cc/paper/2018/file/90365351ccc7437a1309dc64e4db32a3-Paper.pdf Algorithm 2
+// I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf
+case class Yogi(
     parameters: Seq[(STen, PTag)],
     weightDecay: OptimizerHyperparameter,
-    learningRate: OptimizerHyperparameter = simple(0.001),
+    learningRate: OptimizerHyperparameter = simple(0.01),
     beta1: OptimizerHyperparameter = simple(0.9),
     beta2: OptimizerHyperparameter = simple(0.999),
-    eps: Double = 1e-8,
+    eps: Double = 1e-3,
     clip: Option[Double] = None
 ) extends Optimizer {
   val mt: List[Tensor] = parameters.toList.map {
@@ -62,31 +64,30 @@ case class AdamW(
           val b2 = beta2(tag)
           val lr = learningRate(tag)
 
-          // L7
-          mt.mul_(b1)
-          ATen.add_out(mt, mt, gradients.value, (1d - b1))
+          Scope.root { implicit scope =>
+            mt.mul_(b1)
+            ATen.add_out(mt, mt, gradients.value, (1d - b1))
+            gradients.pow_(2d)
+            val tmp = STen.owned(ATen.sub_0(vt, gradients.value, 1d))
+            tmp.sign_()
+            gradients *= tmp
+            ATen.sub_out(vt, vt, gradients.value, 1d - b2)
 
-          // L8
-          vt.mul_(b2)
-          ATen.addcmul_out(vt, vt, gradients.value, gradients.value, 1 - b2)
+            val mtcap =
+              STen.owned(ATen.div_1(mt, (1 - math.pow(b1, stepCount))))
+            val vtcap =
+              STen.owned(ATen.div_1(vt, (1 - math.pow(b2, stepCount))))
 
-          // L9-L12..
-          val denom = ATen.sqrt(vt)
-          denom.add_(eps, 1d)
-
-          val stepParam = scheduleFactor * lr * math.sqrt(
-            (1 - math.pow(b2, stepCount))
-          ) / (1 - math.pow(b1, stepCount))
-
-          val stepWd = scheduleFactor * wd
-
-          if (wd != 0d) {
-            ATen.add_out(param.value, param.value, param.value, -1 * stepWd)
+            vtcap.sqrt_
+            vtcap += eps
+            mtcap /= vtcap
+            mtcap *= lr
+            if (wd != 0d) {
+              STen.addOut(mtcap, mtcap, param, wd)
+            }
+            STen.addOut(param, param, mtcap, -1 * scheduleFactor)
           }
 
-          ATen.addcdiv_out(param.value, param.value, mt, denom, -1 * stepParam)
-
-          denom.release
       }
   }
 }

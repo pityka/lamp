@@ -441,6 +441,8 @@ case class STen private (
     owned(ATen.add_0(value, other.value, 1d))
   def +=(other: STen): Unit =
     ATen.add_out(value, value, other.value, 1d)
+  def +=(other: Double): Unit =
+    value.add_(other, 1d)
   def +[S: Sc](other: Double) =
     owned(ATen.add_1(value, other, 1d))
   def add[S: Sc](other: STen, alpha: Double) =
@@ -470,6 +472,8 @@ case class STen private (
 
   def *=[S: Sc](other: STen): Unit =
     ATen.mul_out(value, value, other.value)
+  def *=[S: Sc](other: Double): Unit =
+    value.mul_(other)
 
   def /[S: Sc](other: STen) =
     owned(ATen.div_0(value, other.value))
@@ -513,6 +517,8 @@ case class STen private (
   def gelu[S: Sc] = owned(ATen.gelu(value))
   def sigmoid[S: Sc] = owned(ATen.sigmoid(value))
   def sigmoid_() = ATen.sigmoid_(value)
+  def sign[S: Sc] = owned(ATen.sign(value))
+  def sign_() = ATen.sign_out(value, value)
   def exp[S: Sc] = owned(ATen.exp(value))
   def exp_() = ATen.exp_(value)
   def log[S: Sc] = owned(ATen.log(value))
@@ -534,6 +540,7 @@ case class STen private (
   def asin[S: Sc] = owned(ATen.asin(value))
   def asin_() = ATen.asin_(value)
   def sqrt[S: Sc] = owned(ATen.sqrt(value))
+  def sqrt_[S: Sc] = ATen.sqrt_(value)
   def square[S: Sc] = owned(ATen.square(value))
   def square_() = ATen.square_(value)
   def abs[S: Sc] = owned(ATen.abs(value))
