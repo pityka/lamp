@@ -318,6 +318,10 @@
                         <a class="class" href="Passthrough.html" title=""></a>
                         <a href="Passthrough.html" title="">Passthrough</a>
                       </li><li class="current-entities indented2">
+                        <a class="object" href="RAdam$.html" title=""></a>
+                        <a class="class" href="RAdam.html" title=""></a>
+                        <a href="RAdam.html" title="">RAdam</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="RNN$.html" title=""></a>
                         <a class="class" href="RNN.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)"></a>
                         <a href="RNN.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)">RNN</a>
@@ -421,6 +425,10 @@
                         <a class="object" href="WithInit$.html" title=""></a>
                         <a class="class" href="WithInit.html" title=""></a>
                         <a href="WithInit.html" title="">WithInit</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="Yogi$.html" title=""></a>
+                        <a class="class" href="Yogi.html" title=""></a>
+                        <a href="Yogi.html" title="">Yogi</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="object" href="sequence$.html" title=""></a>
@@ -1167,6 +1175,22 @@ Outputs of size (sequence length * batch * output dim)
       </span>
       
       
+    </li><li name="lamp.nn.RAdam" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="RAdamextendsOptimizerwithProductwithSerializable"></a><a id="RAdam:RAdam"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/RAdam.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="RAdam.html"><span class="name">RAdam</span></a><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.001)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-8</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.RNN" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="RNNextendsStatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,Option[lamp.autograd.Variable]]withProductwithSerializable"></a><a id="RNN:RNN"></a>
       <span class="permalink">
@@ -1617,6 +1641,22 @@ Applies a linear function to each time step
       </span>
       <span class="symbol">
         <a title="" href="WithInit.html"><span class="name">WithInit</span></a><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>, <span name="C">C</span>, <span name="M">M &lt;: <span class="extype" name="lamp.nn.StatefulModule">nn.StatefulModule</span>[<span class="extype" name="lamp.nn.WithInit.A">A</span>, <span class="extype" name="lamp.nn.WithInit.B">B</span>, <span class="extype" name="lamp.nn.WithInit.C">C</span>]</span>]</span><span class="params">(<span name="module">module: <span class="extype" name="lamp.nn.WithInit.M">M</span> with <a href="#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="lamp.nn.WithInit.A">A</span>, <span class="extype" name="lamp.nn.WithInit.B">B</span>, <span class="extype" name="lamp.nn.WithInit.C">C</span>]</span>, <span name="init">init: <span class="extype" name="lamp.nn.WithInit.C">C</span></span>)</span><span class="result"> extends <a href="#StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]" class="extmbr" name="lamp.nn.StatefulModule">StatefulModule</a>[<span class="extype" name="lamp.nn.WithInit.A">A</span>, <span class="extype" name="lamp.nn.WithInit.B">B</span>, <span class="extype" name="lamp.nn.WithInit.C">C</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.Yogi" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="YogiextendsOptimizerwithProductwithSerializable"></a><a id="Yogi:Yogi"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/Yogi.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Yogi.html"><span class="name">Yogi</span></a><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.01)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-3</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -2126,6 +2166,22 @@ Applies a linear function to each time step
       </span>
       
       
+    </li><li name="lamp.nn.RAdam" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="RAdam"></a><a id="RAdam:RAdam"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/RAdam$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="RAdam$.html"><span class="name">RAdam</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.RNN" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="RNN"></a><a id="RNN:RNN"></a>
       <span class="permalink">
@@ -2443,6 +2499,22 @@ Applies a linear function to each time step
       </span>
       <span class="symbol">
         <a title="" href="WithInit$.html"><span class="name">WithInit</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.Yogi" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Yogi"></a><a id="Yogi:Yogi"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/Yogi$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Yogi$.html"><span class="name">Yogi</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
