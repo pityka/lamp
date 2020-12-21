@@ -349,7 +349,8 @@ class GCNSuite extends AnyFunSuite {
           optimizerFactory = AdamW
             .factory(
               learningRate = simple(0.01),
-              weightDecay = simple(5e-3d)
+              weightDecay = simple(5e-3d),
+              debias = false
             ),
           trainBatchesOverEpoch = makeTrainingBatch,
           validationBatchesOverEpoch = None,

@@ -12,7 +12,8 @@ object Yogi {
       beta1: OptimizerHyperparameter = simple(0.9),
       beta2: OptimizerHyperparameter = simple(0.999),
       eps: Double = 1e-3,
-      clip: Option[Double] = None
+      clip: Option[Double] = None,
+      debias: Boolean = true
   ) =
     (parameters: Seq[(STen, PTag)]) =>
       Yogi(
@@ -22,7 +23,8 @@ object Yogi {
         beta1,
         beta2,
         eps,
-        clip
+        clip,
+        debias
       )
 }
 
@@ -35,7 +37,8 @@ case class Yogi(
     beta1: OptimizerHyperparameter = simple(0.9),
     beta2: OptimizerHyperparameter = simple(0.999),
     eps: Double = 1e-3,
-    clip: Option[Double] = None
+    clip: Option[Double] = None,
+    debias: Boolean = true
 ) extends Optimizer {
   val mt: List[Tensor] = parameters.toList.map {
     case (param, _) => Tensor.zeros_like(param.value)
@@ -73,19 +76,35 @@ case class Yogi(
             gradients *= tmp
             ATen.sub_out(vt, vt, gradients.value, 1d - b2)
 
-            val mtcap =
-              STen.owned(ATen.div_1(mt, (1 - math.pow(b1, stepCount))))
-            val vtcap =
-              STen.owned(ATen.div_1(vt, (1 - math.pow(b2, stepCount))))
+            val debiasTerm =
+              if (debias)
+                1d / (1 - math.pow(b1, stepCount))
+              else 1d
 
-            vtcap.sqrt_
-            vtcap += eps
-            mtcap /= vtcap
-            mtcap *= lr
-            if (wd != 0d) {
-              STen.addOut(mtcap, mtcap, param, wd)
+            val stepParam =
+              scheduleFactor * lr * debiasTerm
+
+            val stepWd = scheduleFactor * wd
+
+            val denom = STen.owned(ATen.sqrt(vt))
+            if (debias) {
+              denom *= 1d / math.sqrt(
+                (1 - math.pow(b2, stepCount))
+              )
             }
-            STen.addOut(param, param, mtcap, -1 * scheduleFactor)
+            denom += eps
+
+            if (wd != 0d) {
+              STen.addOut(param, param, param, -1 * stepWd)
+            }
+
+            ATen.addcdiv_out(
+              param.value,
+              param.value,
+              mt,
+              denom.value,
+              -1 * stepParam
+            )
           }
 
       }

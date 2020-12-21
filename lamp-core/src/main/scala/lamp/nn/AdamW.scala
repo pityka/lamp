@@ -11,7 +11,8 @@ object AdamW {
       beta1: OptimizerHyperparameter = simple(0.9),
       beta2: OptimizerHyperparameter = simple(0.999),
       eps: Double = 1e-8,
-      clip: Option[Double] = None
+      clip: Option[Double] = None,
+      debias: Boolean = true
   ) =
     (parameters: Seq[(STen, PTag)]) =>
       AdamW(
@@ -21,7 +22,8 @@ object AdamW {
         beta1,
         beta2,
         eps,
-        clip
+        clip,
+        debias
       )
 }
 
@@ -33,7 +35,8 @@ case class AdamW(
     beta1: OptimizerHyperparameter = simple(0.9),
     beta2: OptimizerHyperparameter = simple(0.999),
     eps: Double = 1e-8,
-    clip: Option[Double] = None
+    clip: Option[Double] = None,
+    debias: Boolean = true
 ) extends Optimizer {
   val mt: List[Tensor] = parameters.toList.map {
     case (param, _) => Tensor.zeros_like(param.value)
@@ -74,9 +77,12 @@ case class AdamW(
           val denom = ATen.sqrt(vt)
           denom.add_(eps, 1d)
 
-          val stepParam = scheduleFactor * lr * math.sqrt(
-            (1 - math.pow(b2, stepCount))
-          ) / (1 - math.pow(b1, stepCount))
+          val stepParam =
+            if (debias)
+              scheduleFactor * lr * math.sqrt(
+                (1 - math.pow(b2, stepCount))
+              ) / (1 - math.pow(b1, stepCount))
+            else scheduleFactor * lr
 
           val stepWd = scheduleFactor * wd
 
