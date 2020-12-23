@@ -402,7 +402,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Yogi</span><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.01)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-3</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Yogi</span><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.01)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-3</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="debias">debias: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -458,9 +458,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.Yogi#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(parameters:Seq[(lamp.STen,lamp.nn.PTag)],weightDecay:lamp.nn.OptimizerHyperparameter,learningRate:lamp.nn.OptimizerHyperparameter,beta1:lamp.nn.OptimizerHyperparameter,beta2:lamp.nn.OptimizerHyperparameter,eps:Double,clip:Option[Double]):lamp.nn.Yogi"></a><a id="&lt;init&gt;:Yogi"></a>
+      <a id="&lt;init&gt;(parameters:Seq[(lamp.STen,lamp.nn.PTag)],weightDecay:lamp.nn.OptimizerHyperparameter,learningRate:lamp.nn.OptimizerHyperparameter,beta1:lamp.nn.OptimizerHyperparameter,beta2:lamp.nn.OptimizerHyperparameter,eps:Double,clip:Option[Double],debias:Boolean):lamp.nn.Yogi"></a><a id="&lt;init&gt;:Yogi"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/Yogi.html#&lt;init&gt;(parameters:Seq[(lamp.STen,lamp.nn.PTag)],weightDecay:lamp.nn.OptimizerHyperparameter,learningRate:lamp.nn.OptimizerHyperparameter,beta1:lamp.nn.OptimizerHyperparameter,beta2:lamp.nn.OptimizerHyperparameter,eps:Double,clip:Option[Double]):lamp.nn.Yogi" title="Permalink">
+      <a href="../../lamp/nn/Yogi.html#&lt;init&gt;(parameters:Seq[(lamp.STen,lamp.nn.PTag)],weightDecay:lamp.nn.OptimizerHyperparameter,learningRate:lamp.nn.OptimizerHyperparameter,beta1:lamp.nn.OptimizerHyperparameter,beta2:lamp.nn.OptimizerHyperparameter,eps:Double,clip:Option[Double],debias:Boolean):lamp.nn.Yogi" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -469,7 +469,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Yogi</span><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.01)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-3</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span>
+        <span class="name">Yogi</span><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.01)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-3</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="debias">debias: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span>
       </span>
       
       
@@ -619,6 +619,22 @@
                 <span class="name">@native</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="lamp.nn.Yogi#debias" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="debias:Boolean"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/Yogi.html#debias:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">debias</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.Yogi#eps" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="eps:Double"></a>
       <span class="permalink">
