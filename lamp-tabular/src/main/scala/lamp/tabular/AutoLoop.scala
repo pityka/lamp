@@ -824,7 +824,7 @@ object AutoLoop {
               modelWithOptimizer,
               batchStream,
               logger,
-              learningRateSchedule.factor(epoch.toLong, None),
+              learningRateSchedule.learningRateFactor(epoch.toLong, None),
               None
             )
             next <- loop(

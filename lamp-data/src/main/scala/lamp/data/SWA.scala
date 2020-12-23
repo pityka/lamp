@@ -193,7 +193,13 @@ object SWA {
         }
       }
 
-      loop(0, None, None, 0, None, Nil)
+      for {
+        trained <- loop(0, None, None, 0, None, Nil)
+        (model, learningCurve) = trained
+        // update batchnorm's state in a side effect
+        _ <- IOLoops
+          .forwardBatchStream(trainBatchesOverEpoch(), model.module)
+      } yield trained
 
     }
   }

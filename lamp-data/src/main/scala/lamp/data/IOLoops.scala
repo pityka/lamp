@@ -12,6 +12,46 @@ import scala.concurrent.ExecutionContext
 import java.util.concurrent.Executors
 object IOLoops {
 
+  def forwardBatchStream[I, M <: GenericModule[I, Variable]](
+      batchStream: BatchStream[I],
+      model: M with GenericModule[I, Variable]
+  ): IO[Unit] = {
+
+    def loop(
+        batch: Resource[IO, Option[(I, STen)]]
+    ): IO[Unit] = {
+      batch.use {
+        case None => IO.unit
+        case Some((x, _)) =>
+          IO { Scope.root { implicit scope => model.forward(x) } } *> loop(
+            batchStream.nextBatch
+          )
+      }
+    }
+
+    loop(batchStream.nextBatch)
+  }
+  def runBatchStream[I, M <: GenericModule[I, Variable]](
+      batchStream: BatchStream[I],
+      model: M with GenericModule[I, Variable]
+  )(implicit scope: Scope) = {
+
+    def loop(
+        batch: Resource[IO, Option[(I, STen)]],
+        acc: List[STen]
+    ): IO[List[STen]] = {
+      batch.use {
+        case None => IO.pure(acc.reverse)
+        case Some((x, _)) =>
+          loop(batchStream.nextBatch, Scope { implicit scope =>
+            model.forward(x).value
+          } :: acc)
+      }
+    }
+
+    loop(batchStream.nextBatch, Nil)
+  }
+
   def withSWA[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
