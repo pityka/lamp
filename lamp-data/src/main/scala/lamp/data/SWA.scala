@@ -17,19 +17,22 @@ import aten.ATen
 object SWA {
 
   trait SWALearningRateSchedule {
-    def apply(epoch: Int, lastValidationLoss: Option[Double]): (Double, Boolean)
+    def swaLearningRateSchedule(
+        epoch: Int,
+        lastValidationLoss: Option[Double]
+    ): (Double, Boolean)
   }
 
   object SWALearningRateSchedule {
     def constant(f: Double) = new SWALearningRateSchedule {
-      def apply(
+      def swaLearningRateSchedule(
           epoch: Int,
           lastValidationLoss: Option[Double]
       ): (Double, Boolean) = (f, true)
     }
     def cyclic(minFactor: Double, maxFactor: Double, cycleLength: Int) =
       new SWALearningRateSchedule {
-        def apply(
+        def swaLearningRateSchedule(
             epoch: Int,
             lastValidationLoss: Option[Double]
         ): (Double, Boolean) = {
@@ -87,10 +90,11 @@ object SWA {
             List[(Int, Double, Option[Double])]
         )
       ] = {
-        val (learningRateFactor, accumulate) = learningRateSchedule.apply(
-          epoch = epoch,
-          lastValidationLoss = lastValidationLoss
-        )
+        val (learningRateFactor, accumulate) =
+          learningRateSchedule.swaLearningRateSchedule(
+            epoch = epoch,
+            lastValidationLoss = lastValidationLoss
+          )
         if (epoch >= epochs || learningRateFactor <= 0d)
           IO.pure {
             modelWithOptimizer.optimizer.release()

@@ -123,7 +123,7 @@ object IOLoops {
       ): IO[
         (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])
       ] = {
-        val learningRateFactor = learningRateSchedule.factor(
+        val learningRateFactor = learningRateSchedule.learningRateFactor(
           epoch = epoch,
           lastValidationLoss = lastValidationLoss
         )
