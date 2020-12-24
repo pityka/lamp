@@ -24,6 +24,7 @@ class MLPSuite extends AnyFunSuite {
   }
 
   test1("mnist tabular mini batch") { cuda =>
+    val stop = TensorLogger.start()(println _, (_, _) => true, 5000, 10000, 0)
     Scope.root { implicit scope =>
       val device = if (cuda) CudaDevice(0) else CPU
       val testData = org.saddle.csv.CsvParser
@@ -70,7 +71,8 @@ class MLPSuite extends AnyFunSuite {
 
       val model = SupervisedModel(
         mlp(784, 10, device.options(DoublePrecision)),
-        LossFunctions.NLL(10, classWeights)
+        LossFunctions.NLL(10, classWeights),
+        AdversarialTraining(2d)
       )
 
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
@@ -98,13 +100,14 @@ class MLPSuite extends AnyFunSuite {
           model = model,
           optimizerFactory = SGDW
             .factory(
-              learningRate = simple(0.0001),
+              learningRate = simple(0.01),
               weightDecay = simple(0.001d)
             ),
           trainBatchesOverEpoch = makeTrainingBatch,
           validationBatchesOverEpoch = Some(makeValidationBatch),
           warmupEpochs = 10,
-          swaEpochs = 10
+          swaEpochs = 10,
+          logger = Some(scribe.Logger("sdf"))
         )
         .unsafeRunSync()
       val acc = STen.scalarDouble(0d, testDataTensor.options)
@@ -115,7 +118,7 @@ class MLPSuite extends AnyFunSuite {
           acc
         )
       val loss = acc.toMat.raw(0) / numExamples
-      assert(loss < 3)
+      assert(loss < 0.8)
 
       {
         val input = const(testDataTensor)
@@ -135,5 +138,9 @@ class MLPSuite extends AnyFunSuite {
 
       }
     }
+    stop.stop()
+    assert(TensorLogger.queryActiveTensorOptions.size == 3)
+    assert(TensorLogger.queryActiveTensors.size == 0)
+    ()
   }
 }

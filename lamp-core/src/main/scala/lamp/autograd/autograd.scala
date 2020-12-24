@@ -122,6 +122,7 @@ trait Variable {
   val id = ju.UUID.randomUUID()
 
   def detached = const(value)
+  def withGrad[S: Sc] = param(value)
   def zeroGrad() = {
     partialDerivative.foreach { t => t.zero_() }
   }
