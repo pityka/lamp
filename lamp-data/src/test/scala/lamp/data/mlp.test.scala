@@ -139,7 +139,7 @@ class MLPSuite extends AnyFunSuite {
       }
     }
     stop.stop()
-    assert(TensorLogger.queryActiveTensorOptions.size == 3)
+    assert(TensorLogger.queryActiveTensorOptions.size <= 3)
     assert(TensorLogger.queryActiveTensors.size == 0)
     ()
   }
