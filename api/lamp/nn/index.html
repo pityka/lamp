@@ -171,6 +171,10 @@
                         <a href="AdamW.html" title="">AdamW</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="class" href="AdversarialTraining.html" title=""></a>
+                        <a href="AdversarialTraining.html" title="">AdversarialTraining</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="object" href="Attention$.html" title=""></a>
                         <a href="Attention$.html" title="">Attention</a>
                       </li><li class="current-entities indented2">
@@ -275,6 +279,10 @@
                         <a href="package$$LoadSyntax.html" title="">LoadSyntax</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="trait" href="LossCalculation.html" title=""></a>
+                        <a href="LossCalculation.html" title="">LossCalculation</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="trait" href="LossFunction.html" title=""></a>
                         <a href="LossFunction.html" title="">LossFunction</a>
                       </li><li class="current-entities indented2">
@@ -369,6 +377,10 @@
                         <a class="object" href="Sequential$.html" title=""></a>
                         <a class="class" href="Sequential.html" title=""></a>
                         <a href="Sequential.html" title="">Sequential</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="SimpleLossCalculation.html" title=""></a>
+                        <a href="SimpleLossCalculation.html" title="">SimpleLossCalculation</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="StatefulSeq2$.html" title=""></a>
                         <a class="class" href="StatefulSeq2.html" title=""></a>
@@ -598,6 +610,22 @@
       </span>
       <span class="symbol">
         <a title="" href="AdamW.html"><span class="name">AdamW</span></a><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.001)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-8</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="debias">debias: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.AdversarialTraining" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="AdversarialTrainingextendsLossCalculation[lamp.autograd.Variable]withProductwithSerializable"></a><a id="AdversarialTraining:AdversarialTraining"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/AdversarialTraining.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="AdversarialTraining.html"><span class="name">AdversarialTraining</span></a><span class="params">(<span name="eps">eps: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="LossCalculation.html" class="extype" name="lamp.nn.LossCalculation">LossCalculation</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -1031,6 +1059,22 @@ Outputs of size (sequence length * batch * output dim)
       </span>
       
       
+    </li><li name="lamp.nn.LossCalculation" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="LossCalculation[I]extendsAnyRef"></a><a id="LossCalculation[I]:LossCalculation[I]"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/LossCalculation.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="LossCalculation.html"><span class="name">LossCalculation</span></a><span class="tparams">[<span name="I">I</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.LossFunction" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
       <a id="LossFunctionextendsAnyRef"></a><a id="LossFunction:LossFunction"></a>
       <span class="permalink">
@@ -1388,6 +1432,22 @@ Applies a linear function to each time step
       </span>
       
       
+    </li><li name="lamp.nn.SimpleLossCalculation" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="SimpleLossCalculation[I]extendsLossCalculation[I]"></a><a id="SimpleLossCalculation[I]:SimpleLossCalculation[I]"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/SimpleLossCalculation.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="SimpleLossCalculation.html"><span class="name">SimpleLossCalculation</span></a><span class="tparams">[<span name="I">I</span>]</span><span class="result"> extends <a href="LossCalculation.html" class="extype" name="lamp.nn.LossCalculation">LossCalculation</a>[<span class="extype" name="lamp.nn.SimpleLossCalculation.I">I</span>]</span>
+      </span>
+      
+      
     </li><li name="lamp.nn.StatefulModule" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="StatefulModule[A,B,C]=lamp.nn.GenericModule[(A,C),(B,C)]"></a><a id="StatefulModule[A,B,C]:StatefulModule[A,B,C]"></a>
       <span class="permalink">
@@ -1496,7 +1556,7 @@ Applies a linear function to each time step
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="SupervisedModel.html"><span class="name">SupervisedModel</span></a><span class="tparams">[<span name="I">I</span>, <span name="M">M &lt;: <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>]</span><span class="params">(<span name="module">module: <span class="extype" name="lamp.nn.SupervisedModel.M">M</span> with <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="lossFunction">lossFunction: <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="tm">tm: <a href="TrainingMode.html" class="extype" name="lamp.nn.TrainingMode">TrainingMode</a>[<span class="extype" name="lamp.nn.SupervisedModel.M">M</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="SupervisedModel.html"><span class="name">SupervisedModel</span></a><span class="tparams">[<span name="I">I</span>, <span name="M">M &lt;: <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>]</span><span class="params">(<span name="module">module: <span class="extype" name="lamp.nn.SupervisedModel.M">M</span> with <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="lossFunction">lossFunction: <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a></span>, <span name="lossCalculation">lossCalculation: <a href="LossCalculation.html" class="extype" name="lamp.nn.LossCalculation">LossCalculation</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>] = <span class="symbol">new SimpleLossCalculation[I]</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="tm">tm: <a href="TrainingMode.html" class="extype" name="lamp.nn.TrainingMode">TrainingMode</a>[<span class="extype" name="lamp.nn.SupervisedModel.M">M</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       

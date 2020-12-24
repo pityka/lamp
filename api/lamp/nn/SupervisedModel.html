@@ -107,6 +107,10 @@
                         <a href="AdamW.html" title="">AdamW</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="class" href="AdversarialTraining.html" title=""></a>
+                        <a href="AdversarialTraining.html" title="">AdversarialTraining</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="object" href="Attention$.html" title=""></a>
                         <a href="Attention$.html" title="">Attention</a>
                       </li><li class="current-entities indented2">
@@ -211,6 +215,10 @@
                         <a href="package$$LoadSyntax.html" title="">LoadSyntax</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="trait" href="LossCalculation.html" title=""></a>
+                        <a href="LossCalculation.html" title="">LossCalculation</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="trait" href="LossFunction.html" title=""></a>
                         <a href="LossFunction.html" title="">LossFunction</a>
                       </li><li class="current-entities indented2">
@@ -306,6 +314,10 @@
                         <a class="class" href="Sequential.html" title=""></a>
                         <a href="Sequential.html" title="">Sequential</a>
                       </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="SimpleLossCalculation.html" title=""></a>
+                        <a href="SimpleLossCalculation.html" title="">SimpleLossCalculation</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="StatefulSeq2$.html" title=""></a>
                         <a class="class" href="StatefulSeq2.html" title=""></a>
                         <a href="StatefulSeq2.html" title="">StatefulSeq2</a>
@@ -400,7 +412,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">SupervisedModel</span><span class="tparams">[<span name="I">I</span>, <span name="M">M &lt;: <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>]</span><span class="params">(<span name="module">module: <span class="extype" name="lamp.nn.SupervisedModel.M">M</span> with <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="lossFunction">lossFunction: <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="tm">tm: <a href="TrainingMode.html" class="extype" name="lamp.nn.TrainingMode">TrainingMode</a>[<span class="extype" name="lamp.nn.SupervisedModel.M">M</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">SupervisedModel</span><span class="tparams">[<span name="I">I</span>, <span name="M">M &lt;: <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>]</span><span class="params">(<span name="module">module: <span class="extype" name="lamp.nn.SupervisedModel.M">M</span> with <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="lossFunction">lossFunction: <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a></span>, <span name="lossCalculation">lossCalculation: <a href="LossCalculation.html" class="extype" name="lamp.nn.LossCalculation">LossCalculation</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>] = <span class="symbol">new SimpleLossCalculation[I]</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="tm">tm: <a href="TrainingMode.html" class="extype" name="lamp.nn.TrainingMode">TrainingMode</a>[<span class="extype" name="lamp.nn.SupervisedModel.M">M</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -456,9 +468,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.SupervisedModel#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(module:Mwithlamp.nn.GenericModule[I,lamp.autograd.Variable],lossFunction:lamp.nn.LossFunction)(implicittm:lamp.nn.TrainingMode[M]):lamp.nn.SupervisedModel[I,M]"></a><a id="&lt;init&gt;:SupervisedModel[I,M]"></a>
+      <a id="&lt;init&gt;(module:Mwithlamp.nn.GenericModule[I,lamp.autograd.Variable],lossFunction:lamp.nn.LossFunction,lossCalculation:lamp.nn.LossCalculation[I])(implicittm:lamp.nn.TrainingMode[M]):lamp.nn.SupervisedModel[I,M]"></a><a id="&lt;init&gt;:SupervisedModel[I,M]"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/SupervisedModel.html#&lt;init&gt;(module:Mwithlamp.nn.GenericModule[I,lamp.autograd.Variable],lossFunction:lamp.nn.LossFunction)(implicittm:lamp.nn.TrainingMode[M]):lamp.nn.SupervisedModel[I,M]" title="Permalink">
+      <a href="../../lamp/nn/SupervisedModel.html#&lt;init&gt;(module:Mwithlamp.nn.GenericModule[I,lamp.autograd.Variable],lossFunction:lamp.nn.LossFunction,lossCalculation:lamp.nn.LossCalculation[I])(implicittm:lamp.nn.TrainingMode[M]):lamp.nn.SupervisedModel[I,M]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -467,7 +479,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">SupervisedModel</span><span class="params">(<span name="module">module: <span class="extype" name="lamp.nn.SupervisedModel.M">M</span> with <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="lossFunction">lossFunction: <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="tm">tm: <a href="TrainingMode.html" class="extype" name="lamp.nn.TrainingMode">TrainingMode</a>[<span class="extype" name="lamp.nn.SupervisedModel.M">M</span>]</span>)</span>
+        <span class="name">SupervisedModel</span><span class="params">(<span name="module">module: <span class="extype" name="lamp.nn.SupervisedModel.M">M</span> with <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>, <span name="lossFunction">lossFunction: <a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">LossFunction</a></span>, <span name="lossCalculation">lossCalculation: <a href="LossCalculation.html" class="extype" name="lamp.nn.LossCalculation">LossCalculation</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>] = <span class="symbol">new SimpleLossCalculation[I]</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="tm">tm: <a href="TrainingMode.html" class="extype" name="lamp.nn.TrainingMode">TrainingMode</a>[<span class="extype" name="lamp.nn.SupervisedModel.M">M</span>]</span>)</span>
       </span>
       
       
@@ -706,6 +718,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="lamp.nn.SupervisedModel#lossCalculation" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="lossCalculation:lamp.nn.LossCalculation[I]"></a><a id="lossCalculation:LossCalculation[I]"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/SupervisedModel.html#lossCalculation:lamp.nn.LossCalculation[I]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">lossCalculation</span><span class="result">: <a href="LossCalculation.html" class="extype" name="lamp.nn.LossCalculation">LossCalculation</a>[<span class="extype" name="lamp.nn.SupervisedModel.I">I</span>]</span>
+      </span>
+      
+      
     </li><li name="lamp.nn.SupervisedModel#lossFunction" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="lossFunction:lamp.nn.LossFunction"></a><a id="lossFunction:LossFunction"></a>
       <span class="permalink">

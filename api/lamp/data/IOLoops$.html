@@ -392,6 +392,22 @@
     </span>)</span>
               
         </dd></dl></div>
+    </li><li name="lamp.data.IOLoops#forwardBatchStream" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="forwardBatchStream[I,M&lt;:lamp.nn.GenericModule[I,lamp.autograd.Variable]](batchStream:lamp.data.BatchStream[I],model:Mwithlamp.nn.GenericModule[I,lamp.autograd.Variable]):cats.effect.IO[Unit]"></a><a id="forwardBatchStream[I,M&lt;:GenericModule[I,Variable]](BatchStream[I],MwithGenericModule[I,Variable]):IO[Unit]"></a>
+      <span class="permalink">
+      <a href="../../lamp/data/IOLoops$.html#forwardBatchStream[I,M&lt;:lamp.nn.GenericModule[I,lamp.autograd.Variable]](batchStream:lamp.data.BatchStream[I],model:Mwithlamp.nn.GenericModule[I,lamp.autograd.Variable]):cats.effect.IO[Unit]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">forwardBatchStream</span><span class="tparams">[<span name="I">I</span>, <span name="M">M &lt;: <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.data.IOLoops.forwardBatchStream.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>]</span><span class="params">(<span name="batchStream">batchStream: <a href="BatchStream.html" class="extype" name="lamp.data.BatchStream">BatchStream</a>[<span class="extype" name="lamp.data.IOLoops.forwardBatchStream.I">I</span>]</span>, <span name="model">model: <span class="extype" name="lamp.data.IOLoops.forwardBatchStream.M">M</span> with <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.data.IOLoops.forwardBatchStream.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<span class="extype" name="scala.Unit">Unit</span>]</span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
@@ -513,6 +529,22 @@
       </span>
       <span class="symbol">
         <span class="name">oneEpoch</span><span class="tparams">[<span name="I">I</span>, <span name="M">M &lt;: <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.data.IOLoops.oneEpoch.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>]</span><span class="params">(<span name="epochCount">epochCount: <span class="extype" name="scala.Long">Long</span></span>, <span name="trainingCallback">trainingCallback: <a href="TrainingCallback.html" class="extype" name="lamp.data.TrainingCallback">TrainingCallback</a></span>, <span name="model">model: <a href="../nn/ModelWithOptimizer.html" class="extype" name="lamp.nn.ModelWithOptimizer">ModelWithOptimizer</a>[<span class="extype" name="lamp.data.IOLoops.oneEpoch.I">I</span>, <span class="extype" name="lamp.data.IOLoops.oneEpoch.M">M</span>]</span>, <span name="trainBatches">trainBatches: <a href="BatchStream.html" class="extype" name="lamp.data.BatchStream">BatchStream</a>[<span class="extype" name="lamp.data.IOLoops.oneEpoch.I">I</span>]</span>, <span name="logger">logger: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scribe.Logger">Logger</span>]</span>, <span name="learningRateScheduleFactor">learningRateScheduleFactor: <span class="extype" name="scala.Double">Double</span></span>, <span name="prefetchEC">prefetchEC: <span class="extype" name="scala.Option">Option</span>[(<span class="extype" name="scala.concurrent.ExecutionContext">ExecutionContext</span>, <span class="extype" name="scala.concurrent.ExecutionContext">ExecutionContext</span>)]</span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<span class="extype" name="scala.Double">Double</span>]</span>
+      </span>
+      
+      
+    </li><li name="lamp.data.IOLoops#runBatchStream" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="runBatchStream[I,M&lt;:lamp.nn.GenericModule[I,lamp.autograd.Variable]](batchStream:lamp.data.BatchStream[I],model:Mwithlamp.nn.GenericModule[I,lamp.autograd.Variable])(implicitscope:lamp.Scope):cats.effect.IO[List[lamp.STen]]"></a><a id="runBatchStream[I,M&lt;:GenericModule[I,Variable]](BatchStream[I],MwithGenericModule[I,Variable])(Scope):IO[List[STen]]"></a>
+      <span class="permalink">
+      <a href="../../lamp/data/IOLoops$.html#runBatchStream[I,M&lt;:lamp.nn.GenericModule[I,lamp.autograd.Variable]](batchStream:lamp.data.BatchStream[I],model:Mwithlamp.nn.GenericModule[I,lamp.autograd.Variable])(implicitscope:lamp.Scope):cats.effect.IO[List[lamp.STen]]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">runBatchStream</span><span class="tparams">[<span name="I">I</span>, <span name="M">M &lt;: <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.data.IOLoops.runBatchStream.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>]</span><span class="params">(<span name="batchStream">batchStream: <a href="BatchStream.html" class="extype" name="lamp.data.BatchStream">BatchStream</a>[<span class="extype" name="lamp.data.IOLoops.runBatchStream.I">I</span>]</span>, <span name="model">model: <span class="extype" name="lamp.data.IOLoops.runBatchStream.M">M</span> with <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.data.IOLoops.runBatchStream.I">I</span>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>)</span><span class="result">: <span class="extype" name="cats.effect.IO">IO</span>[<a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<a href="../STen.html" class="extype" name="lamp.STen">STen</a>]]</span>
       </span>
       
       
