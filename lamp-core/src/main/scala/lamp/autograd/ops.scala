@@ -1628,7 +1628,7 @@ case class BatchNorm(
         saveInvstd,
         training,
         eps,
-        Array(true, true, true)
+        Array(true, false, false)
       )
       val gradInput_reshaped = ATen._unsafe_view(gradInput, out.shape.toArray)
       ATen.add_out(out.value, out.value, gradInput_reshaped, 1d)
@@ -1651,7 +1651,7 @@ case class BatchNorm(
         saveInvstd,
         training,
         eps,
-        Array(true, true, true)
+        Array(false, true, false)
       )
       val grad_reshaped = ATen._unsafe_view(gradWeight, out.shape.toArray)
       ATen.add_out(out.value, out.value, grad_reshaped, 1d)
@@ -1736,7 +1736,7 @@ case class BatchNorm2D(
         saveInvstd,
         training,
         eps,
-        Array(true, true, true)
+        Array(true, false, false)
       )
       val gradInput_reshaped =
         ATen._unsafe_view(gradInput, out.shape.toArray)
@@ -1757,7 +1757,7 @@ case class BatchNorm2D(
         saveInvstd,
         training,
         eps,
-        Array(true, true, true)
+        Array(false, true, false)
       )
       val grad_reshaped = ATen._unsafe_view(gradWeight, out.shape.toArray)
       ATen.add_out(out.value, out.value, grad_reshaped, 1d)
