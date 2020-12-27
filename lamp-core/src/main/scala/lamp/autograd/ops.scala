@@ -1373,6 +1373,164 @@ case class Conv2D(
     })(scope)
 }
 
+case class Conv2DTransposed(
+    scope: Scope,
+    input: Variable,
+    weight: Variable,
+    bias: Variable,
+    stride: Long,
+    padding: Long,
+    dilation: Long
+    // groups: Long
+) extends Op {
+
+  assert(input.shape.size == 4, "Input dimensions must be 4")
+  assert(weight.shape.size == 4, "Weight dimensions must be 4")
+  val batchSize = input.shape(0)
+  val inputChannels = input.shape(1)
+  val imageHeight = input.shape(2)
+  val imageWidth = input.shape(3)
+  val kernelSize = weight.shape(2)
+  val outChannels = weight.shape(1)
+  assert(
+    weight.shape(0) == inputChannels,
+    s"Weight 2nd dimension must have size equal to input channels (2nd dim of input). Got weight: ${weight.shape}, input: ${input.shape} "
+  )
+  assert(
+    bias.shape(0) == outChannels,
+    "Number of biases must be the number of output channels"
+  )
+
+  override val params: List[(Variable, (STen, STen) => Unit)] = List(
+    input.zipBackward { (p, out) =>
+      if (p.options(scope).value.isCuda()) {
+        val tmp = ATen.cudnn_convolution_transpose_backward_input(
+          p.value,
+          weight.value.value,
+          Array(padding, padding),
+          Array(stride, stride),
+          Array(dilation, dilation),
+          1,
+          false,
+          false
+        )
+        ATen.add_out(out.value, out.value, tmp, 1d)
+        tmp.release
+      } else {
+
+        val columns = STen.zerosLike(p)(scope)
+        val ones = STen.onesLike(p)(scope)
+        assert(input.shape(1) == weight.shape(0))
+        assert(p.shape(1) == weight.shape(1))
+        assert(p.shape(1) == bias.shape(0))
+
+        assert(
+          p.shape(2) == ((imageWidth - 1) * stride - 2 * padding +
+            (dilation * (kernelSize - 1) + 1))
+        )
+        assert(
+          p.shape(3) == ((imageHeight - 1) * stride - 2 * padding +
+            (dilation * (kernelSize - 1) + 1))
+        )
+        val (a, b, c) = ATen.slow_conv_transpose2d_backward(
+          p.value,
+          input.value.value,
+          weight.value.value,
+          Array(kernelSize, kernelSize),
+          Array(stride, stride),
+          Array(padding, padding),
+          Array(0, 0),
+          Array(dilation, dilation),
+          columns.value,
+          ones.value,
+          Array(true, false, false)
+        )
+
+        b.release
+        c.release
+        ATen.add_out(out.value, out.value, a, 1d)
+
+      }
+    },
+    weight.zipBackward { (p, out) =>
+      if (p.options(scope).value.isCuda()) {
+        val tmp = ATen.cudnn_convolution_transpose_backward_weight(
+          weight.shape.toArray,
+          p.value,
+          value.value.value,
+          Array(padding, padding),
+          Array(stride, stride),
+          Array(dilation, dilation),
+          1,
+          false,
+          false
+        )
+        ATen.add_out(out.value, out.value, tmp, 1d)
+        tmp.release
+      } else {
+        val columns = STen.zerosLike(p)(scope)
+        val ones = STen.onesLike(p)(scope)
+        val (a, b, c) = ATen.slow_conv_transpose2d_backward(
+          p.value,
+          input.value.value,
+          weight.value.value,
+          Array(kernelSize, kernelSize),
+          Array(stride, stride),
+          Array(padding, padding),
+          Array(0, 0),
+          Array(dilation, dilation),
+          columns.value,
+          ones.value,
+          Array(false, true, false)
+        )
+
+        a.release
+        c.release
+        ATen.add_out(out.value, out.value, b, 1d)
+      }
+    },
+    bias.zipBackward { (p, out) =>
+      val columns = STen.zerosLike(p)(scope)
+      val ones = STen.onesLike(p)(scope)
+      val (a, b, c) = ATen.slow_conv_transpose2d_backward(
+        p.value,
+        input.value.value,
+        weight.value.value,
+        Array(kernelSize, kernelSize),
+        Array(stride, stride),
+        Array(padding, padding),
+        Array(0, 0),
+        Array(dilation, dilation),
+        columns.value,
+        ones.value,
+        Array(false, false, true)
+      )
+
+      b.release
+      a.release
+      ATen.add_out(out.value, out.value, c, 1d)
+    }
+  )
+
+  val value =
+    Variable(
+      this, {
+        STen.owned(
+          ATen.conv_transpose2d(
+            input.value.value,
+            weight.value.value,
+            bias.value.value,
+            Array(stride, stride),
+            Array(padding, padding),
+            Array(0, 0),
+            1,
+            Array(dilation)
+          )
+        )(scope)
+      }
+    )(scope)
+}
+
 /** 1D max pooling
   *
   * @param input batch x in_channels x L

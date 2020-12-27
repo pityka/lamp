@@ -2193,4 +2193,115 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+
+  testGradientAndValueND("tranposed conv2d - wrt input")(nd1x2x3x3, 628d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+        val weight =
+          param(
+            STen
+              .owned(NDArray.tensorFromNDArray(nd1x2x2x2, cuda))
+              .transpose(0, 1)
+          )
+
+        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val output =
+          new Conv2DTransposed(scope, input, weight, bias, 1, 0, 1).value
+
+        assert(output.shape == List(1, 1, 4, 4))
+        val L = output.sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+        )
+      }
+  }
+  testGradientAndValueND("tranposed conv2d - wrt input - padded")(
+    nd1x2x3x3,
+    276d
+  ) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val input =
+        param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+      val weight =
+        param(
+          STen
+            .owned(NDArray.tensorFromNDArray(nd1x2x2x2, cuda))
+            .transpose(0, 1)
+        )
+
+      val bias = param(STen.fromVec(vec.ones(1), cuda))
+      val output =
+        new Conv2DTransposed(scope, input, weight, bias, 1, 1, 1).value
+
+      assert(output.shape == List(1, 1, 2, 2))
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+      )
+    }
+  }
+  testGradientAndValueND("tranposed conv2d - wrt weight")(nd1x2x2x2, 628d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
+        val weight =
+          param(
+            STen
+              .owned(NDArray.tensorFromNDArray(m, cuda))
+              .transpose(0, 1)
+          )
+
+        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val output =
+          new Conv2DTransposed(scope, input, weight, bias, 1, 0, 1).value
+
+        assert(output.shape == List(1, 1, 4, 4))
+        val L = output.sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+        )
+      }
+  }
+  testGradientAndValueND("tranposed conv2d - wrt bias")(ndx1, 628d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
+        val weight =
+          param(
+            STen
+              .owned(NDArray.tensorFromNDArray(nd1x2x2x2, cuda))
+              .transpose(0, 1)
+          )
+
+        val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+        val output =
+          new Conv2DTransposed(scope, input, weight, bias, 1, 0, 1).value
+
+        assert(output.shape == List(1, 1, 4, 4))
+        val L = output.sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+        )
+      }
+  }
 }

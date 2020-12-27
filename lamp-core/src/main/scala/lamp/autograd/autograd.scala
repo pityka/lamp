@@ -111,7 +111,7 @@ trait Variable {
   def needsGrad: Boolean = partialDerivative.isDefined
 
   override def toString =
-    s"Var(shape=$shape,value=$value,needsGrad=$needsGrad)"
+    s"Var(value=$value,needsGrad=$needsGrad)"
 
   def options[S: Sc] = value.options
 
