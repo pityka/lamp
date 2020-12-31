@@ -111,9 +111,9 @@ object TensorLogger {
       .take(detailNum)
       .map {
         case (data, duration) =>
-          s"${duration * 1e-6}s|${formatLine(data)}"
+          s"${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
       }
-      .mkString(",")}"
+      .mkString("\n", ";\n", "")}"
 
     string
   }
@@ -127,7 +127,7 @@ object TensorLogger {
     }
     val strings = lifetimes.map {
       case (data, duration) =>
-        s"\t${duration * 1e3}s|${formatLine(data)}\n${formatStackTrace(data)}"
+        s"\t${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
     }
     logger("\n" + strings.mkString("\n"))
   }
@@ -140,7 +140,7 @@ object TensorLogger {
     }
     val strings = lifetimes.map {
       case (data, duration) =>
-        s"\t${duration * 1e3}s|${formatLine(data)}\n${formatStackTrace(data)}"
+        s"\t${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
     }
     logger("\n" + strings.mkString("\n"))
   }

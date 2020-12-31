@@ -349,15 +349,21 @@ object TensorHelpers {
 
   def device(t: Tensor) = {
     val op = t.options
-    if (op.isCPU) CPU
-    else CudaDevice(op.deviceIndex.toShort)
+    val r =
+      if (op.isCPU) CPU
+      else CudaDevice(op.deviceIndex.toShort)
+    op.release
+    r
   }
 
   def precision(t: Tensor) = {
     val op = t.options
-    if (op.isFloat()) Some(SinglePrecision)
-    else if (op.isDouble) Some(DoublePrecision)
-    else None
+    val r =
+      if (op.isFloat()) Some(SinglePrecision)
+      else if (op.isDouble) Some(DoublePrecision)
+      else None
+    op.release
+    r
   }
 
 }

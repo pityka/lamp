@@ -514,6 +514,9 @@ case class STen private (
 
   def relu[S: Sc] = owned(ATen.relu(value))
   def relu_() = ATen.relu_(value)
+  def leakyRelu[S: Sc](negativeSlope: Double) =
+    owned(ATen.leaky_relu(value, negativeSlope))
+  def leakyRelu_(negativeSlope: Double) = ATen.leaky_relu_(value, negativeSlope)
   def gelu[S: Sc] = owned(ATen.gelu(value))
   def sigmoid[S: Sc] = owned(ATen.sigmoid(value))
   def sigmoid_() = ATen.sigmoid_(value)

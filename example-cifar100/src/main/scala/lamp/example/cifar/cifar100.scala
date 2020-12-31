@@ -13,7 +13,6 @@ import lamp.CPU
 import lamp.data.BatchStream
 import lamp.data.IOLoops
 import lamp.nn.SupervisedModel
-import aten.Tensor
 import lamp.nn.AdamW
 import lamp.nn.simple
 import lamp.nn.LossFunctions
@@ -251,7 +250,7 @@ object Train extends App {
 object AWTWindow {
   import java.awt.Graphics2D
   import java.awt.geom.AffineTransform
-  def showImage(t: Tensor): javax.swing.JFrame = {
+  def showImage(t: STen): javax.swing.JFrame = {
     import javax.swing._
     import java.awt.{Graphics}
     val image = BufferedImageHelper.fromDoubleTensor(t)

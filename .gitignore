@@ -16,3 +16,4 @@ lamp-tabular/predicted.csv
 project/project/metals.sbt
 project/project/project/metals.sbt
 example-arxiv/arxiv*
+.bsp/sbt.json

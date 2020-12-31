@@ -185,6 +185,8 @@ trait Variable {
   def bmm[S: Sc](other: Variable) =
     new BatchedMatMul(extractScope, this, other).value
   def relu[S: Sc] = new Relu(extractScope, this).value
+  def leakyRelu[S: Sc](negativeSlope: Double) =
+    new LeakyRelu(extractScope, this, negativeSlope).value
   def swish1[S: Sc] = this * this.sigmoid
   def gelu[S: Sc] = new Gelu(extractScope, this).value
   def sigmoid[S: Sc] = new Sigmoid(extractScope, this).value

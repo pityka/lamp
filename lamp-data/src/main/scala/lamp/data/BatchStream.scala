@@ -22,6 +22,26 @@ trait BatchStream[I] { self =>
           }
         )
     }
+
+  def foldLeft[B](zero: B)(f: (B, (I, STen)) => IO[B]): IO[B] = {
+    def loop(b: B): IO[B] = {
+      nextBatch.allocated.flatMap {
+        case (None, release) => release *> IO.pure(b)
+        case (Some(batch), release) =>
+          f(b, batch).attempt.flatMap { v =>
+            release.flatMap { _ =>
+              v match {
+                case Left(e)  => IO.raiseError(e)
+                case Right(b) => loop(b)
+              }
+            }
+          }
+      }
+    }
+
+    loop(zero)
+
+  }
 }
 
 object BatchStream {

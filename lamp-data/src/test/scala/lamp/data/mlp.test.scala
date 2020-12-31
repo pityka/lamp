@@ -139,6 +139,7 @@ class MLPSuite extends AnyFunSuite {
       }
     }
     stop.stop()
+    TensorLogger.detailAllTensorOptions(println)
     assert(TensorLogger.queryActiveTensorOptions.size <= 3)
     assert(TensorLogger.queryActiveTensors.size == 0)
     ()

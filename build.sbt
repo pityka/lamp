@@ -267,6 +267,18 @@ lazy val example_cifar100 = project
     )
   )
   .dependsOn(core, data, onnx)
+lazy val example_gan = project
+  .in(file("example-gan"))
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    skip in publish := true,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.outr" %% "scribe" % "2.7.3"
+    )
+  )
+  .dependsOn(core, data, onnx)
 lazy val example_timemachine = project
   .in(file("example-timemachine"))
   .settings(commonSettings: _*)
@@ -344,5 +356,6 @@ lazy val root = project
     example_timemachine,
     example_translation,
     example_arxiv,
+    example_gan,
     e2etest
   )

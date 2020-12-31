@@ -28,8 +28,11 @@ class GradientSuite extends AnyFunSuite {
   val nd3x3x2 = NDArray(ar18, List(3, 3, 2))
   val nd1x2x3x3 =
     NDArray((0 until 18).toArray.map(_.toDouble), List(1, 2, 3, 3))
+  val nd1x4x3x3 =
+    NDArray((0 until 36).toArray.map(_.toDouble), List(1, 4, 3, 3))
   val nd1x2x2 = NDArray(mat.ones(2, 2).toArray, List(1, 2, 2))
   val nd1x2x2x2 = NDArray(mat.ones(2, 4).toArray, List(1, 2, 2, 2))
+  val nd2x2x2x2 = NDArray(mat.ones(4, 4).toArray, List(2, 2, 2, 2))
   val mat1x1 = Mat(Vec(1d))
   val mat3x2 = mat2x3.T
   val mat3x1 = Mat(Vec(1d, 2d, 3d))
@@ -100,40 +103,47 @@ class GradientSuite extends AnyFunSuite {
     }
   }
   def testGradientAndValueND(
-      id: String
+      id: String,
+      cuda: Boolean = true,
+      cpu: Boolean = true
   )(m: NDArray[Double], expectedValue: Double)(
       fun: (NDArray[Double], Boolean, Boolean) => (
           Double,
           Option[NDArray[Double]]
       )
   ) = {
-    test(id + ": gradient is correct") {
+    if (cpu) {
+      test(id + ": gradient is correct") {
 
-      def diffNum(m: NDArray[Double]) = diffND(m)(m => fun(m, false, false)._1)
-      def diffAuto(m: NDArray[Double]) = {
-        fun(m, true, false)._2.get
-      }
-      assert(
-        Vec(fun(m, false, false)._1).roundTo(4) == Vec(expectedValue).roundTo(
-          4
+        def diffNum(m: NDArray[Double]) =
+          diffND(m)(m => fun(m, false, false)._1)
+        def diffAuto(m: NDArray[Double]) = {
+          fun(m, true, false)._2.get
+        }
+        assert(
+          Vec(fun(m, false, false)._1).roundTo(4) == Vec(expectedValue).roundTo(
+            4
+          )
         )
-      )
 
-      assert(diffAuto(m).toVec.roundTo(4) == diffNum(m).toVec.roundTo(4))
+        assert(diffAuto(m).toVec.roundTo(4) == diffNum(m).toVec.roundTo(4))
+      }
     }
-    test(id + "/CUDA: gradient is correct", CudaTest) {
+    if (cuda) {
+      test(id + "/CUDA: gradient is correct", CudaTest) {
 
-      def diffNum(m: NDArray[Double]) = diffND(m)(m => fun(m, false, true)._1)
-      def diffAuto(m: NDArray[Double]) = {
-        fun(m, true, true)._2.get
-      }
-      assert(
-        Vec(fun(m, false, true)._1).roundTo(10) == Vec(expectedValue).roundTo(
-          10
+        def diffNum(m: NDArray[Double]) = diffND(m)(m => fun(m, false, true)._1)
+        def diffAuto(m: NDArray[Double]) = {
+          fun(m, true, true)._2.get
+        }
+        assert(
+          Vec(fun(m, false, true)._1).roundTo(10) == Vec(expectedValue).roundTo(
+            10
+          )
         )
-      )
 
-      assert(diffAuto(m).toVec.roundTo(4) == diffNum(m).toVec.roundTo(4))
+        assert(diffAuto(m).toVec.roundTo(4) == diffNum(m).toVec.roundTo(4))
+      }
     }
   }
 
@@ -540,6 +550,19 @@ class GradientSuite extends AnyFunSuite {
       }
   }
 
+  testGradientAndValue("leakyrelu")(mat2x3_2, 13.5) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(STen.fromMat(m, cuda))
+      val L = x1.leakyRelu(0.5).sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
   testGradientAndValue("relu")(mat2x3_2, 16d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val x1 = param(STen.fromMat(m, cuda))
@@ -1382,6 +1405,29 @@ class GradientSuite extends AnyFunSuite {
           weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
+  }
+  testGradientAndValueND("conv2d - wrt weights - groups", cpu = false)(
+    nd2x2x2x2,
+    1128d
+  ) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val input =
+        param(STen.owned(NDArray.tensorFromNDArray(nd1x4x3x3, cuda)))
+      val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+
+      val bias = param(STen.fromVec(vec.ones(2), cuda))
+      val output =
+        new Conv2D(scope, input, weight, bias, 1, 0, 1, 2L).value
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+      )
+    }
   }
   testGradientAndValueND("conv2d - wrt input")(nd1x2x3x3, 276d) {
     (m, doBackprop, cuda) =>

@@ -659,6 +659,24 @@ case class Relu(scope: Scope, a: Variable) extends Op {
   val aOpt = a.options(scope)
   val value = Variable(this, a.value.relu(scope))(scope)
 }
+case class LeakyRelu(scope: Scope, a: Variable, slope: Double) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val pred = a.value.lt(0d)
+        val ones =
+          STen.ones(List(1), aOpt)
+        val s =
+          STen.zeros(List(1), aOpt) + slope
+        val tmp = STen.where(pred, s, ones)
+        out.addcmulSelf(p, tmp, 1d)
+      }
+    }
+  )
+  val aOpt = a.options(scope)
+  val value = Variable(this, a.value.leakyRelu(slope)(scope))(scope)
+}
 
 case class LogSoftMax(scope: Scope, a: Variable, dim: Int) extends Op {
 
@@ -1200,14 +1218,6 @@ case class Conv2D(
   val imageWidth = input.shape(3)
   val kernelSize = weight.shape(2)
   val outChannels = weight.shape(0)
-  assert(
-    weight.shape(1) == inputChannels,
-    s"Weight 2nd dimension must have size equal to input channels (2nd dim of input). Got weight: ${weight.shape}, input: ${input.shape} "
-  )
-  assert(
-    bias.shape(0) == outChannels,
-    "Number of biases must be the number of output channels"
-  )
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
@@ -1263,86 +1273,113 @@ case class Conv2D(
         ATen.add_out(out.value, out.value, tmp, 1d)
         tmp.release
       } else {
+        if (groups == 1) {
 
-        val p_repeated =
-          ATen.repeat_interleave_2(p.value, inputChannels / groups, 1)
-        val p_repeated_size = p_repeated.sizes
-        val p_repeated_viewed =
-          ATen._unsafe_view(
-            p_repeated,
+          val (a, b, c) = ATen.slow_conv_dilated2d_backward(
+            p.value,
+            input.value.value,
+            weight.value.value,
+            Array(kernelSize, kernelSize),
+            Array(stride, stride),
+            Array(padding, padding),
+            Array(dilation, dilation),
+            Array(false, true, false)
+          )
+
+          a.release
+          c.release
+          ATen.add_out(out.value, out.value, b, 1d)
+          b.release
+
+        } else {
+          throw new NotImplementedError(
+            "Conv2d backward with groups>1 on cpu is not implemented"
+          )
+          val p_repeated =
+            ATen.repeat_interleave_2(p.value, inputChannels / groups, 1)
+          val p_repeated_size = p_repeated.sizes
+          val p_repeated_viewed =
+            ATen._unsafe_view(
+              p_repeated,
+              Array(
+                p_repeated_size(0) * p_repeated_size(1),
+                1,
+                p_repeated_size(2),
+                p_repeated_size(3)
+              )
+            )
+          val input_viewed = ATen._unsafe_view(
+            input.value.value,
+            Array(1, batchSize * inputChannels, imageHeight, imageWidth)
+          )
+          val zero =
+            ATen.zeros(
+              Array(p_repeated_viewed.sizes.apply(0)),
+              p.options(scope).value
+            )
+          val conv_0 = ATen.conv2d(
+            input_viewed,
+            p_repeated_viewed,
+            zero,
+            Array(dilation),
+            Array(padding),
+            Array(stride),
+            inputChannels * batchSize
+          )
+          val conv_0_sizes = conv_0.sizes
+          val conv_1 = ATen._unsafe_view(
+            conv_0,
             Array(
-              p_repeated_size(0) * p_repeated_size(1),
-              1,
-              p_repeated_size(2),
-              p_repeated_size(3)
+              batchSize,
+              conv_0_sizes.apply(1) / batchSize,
+              conv_0_sizes.apply(2),
+              conv_0_sizes.apply(3)
             )
           )
-        val input_viewed = ATen._unsafe_view(
-          input.value.value,
-          Array(1, batchSize * inputChannels, imageHeight, imageWidth)
-        )
-        val zero =
-          ATen.zeros(
-            Array(p_repeated_viewed.sizes.apply(0)),
-            p.options(scope).value
-          )
-        val conv_0 = ATen.conv2d(
-          input_viewed,
-          p_repeated_viewed,
-          zero,
-          Array(dilation),
-          Array(padding),
-          Array(stride),
-          inputChannels * batchSize
-        )
-        val conv_0_sizes = conv_0.sizes
-        val conv_1 = ATen._unsafe_view(
-          conv_0,
-          Array(
-            batchSize,
-            conv_0_sizes.apply(1) / batchSize,
-            conv_0_sizes.apply(2),
-            conv_0_sizes.apply(3)
-          )
-        )
-        val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
-        val conv_1_sum_viewed =
-          ATen._unsafe_view(
-            conv_1_sum,
-            Array(
-              inputChannels / groups,
-              outChannels,
-              conv_1.sizes.apply(2),
-              conv_1.sizes.apply(3)
+          val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
+          val conv_1_sum_viewed =
+            ATen._unsafe_view(
+              conv_1_sum,
+              Array(
+                inputChannels / groups,
+                outChannels,
+                conv_1.sizes.apply(2),
+                conv_1.sizes.apply(3)
+              )
             )
+          val conv_1_sum_viewed_transposed =
+            ATen.transpose(conv_1_sum_viewed, 0, 1)
+
+          val conv_1_sum_viewed_transposed_narrowed1 =
+            ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
+          val conv_1_sum_viewed_transposed_narrowed2 =
+            ATen
+              .narrow_0(
+                conv_1_sum_viewed_transposed_narrowed1,
+                3,
+                0,
+                kernelSize
+              )
+
+          ATen.add_out(
+            out.value,
+            out.value,
+            conv_1_sum_viewed_transposed_narrowed2,
+            1d
           )
-        val conv_1_sum_viewed_transposed =
-          ATen.transpose(conv_1_sum_viewed, 0, 1)
 
-        val conv_1_sum_viewed_transposed_narrowed1 =
-          ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
-        val conv_1_sum_viewed_transposed_narrowed2 =
-          ATen
-            .narrow_0(conv_1_sum_viewed_transposed_narrowed1, 3, 0, kernelSize)
-
-        ATen.add_out(
-          out.value,
-          out.value,
-          conv_1_sum_viewed_transposed_narrowed2,
-          1d
-        )
-
-        conv_1_sum_viewed_transposed_narrowed1.release()
-        conv_1_sum_viewed_transposed_narrowed2.release()
-        conv_1_sum_viewed_transposed.release
-        conv_1_sum_viewed.release
-        conv_1_sum.release
-        conv_1.release
-        conv_0.release
-        input_viewed.release()
-        p_repeated_viewed.release
-        p_repeated.release
-        zero.release
+          conv_1_sum_viewed_transposed_narrowed1.release()
+          conv_1_sum_viewed_transposed_narrowed2.release()
+          conv_1_sum_viewed_transposed.release
+          conv_1_sum_viewed.release
+          conv_1_sum.release
+          conv_1.release
+          conv_0.release
+          input_viewed.release()
+          p_repeated_viewed.release
+          p_repeated.release
+          zero.release
+        }
       }
     },
     bias.zipBackward { (p, out) =>
@@ -1384,26 +1421,24 @@ case class Conv2DTransposed(
     // groups: Long
 ) extends Op {
 
-  assert(input.shape.size == 4, "Input dimensions must be 4")
-  assert(weight.shape.size == 4, "Weight dimensions must be 4")
+  assert(
+    input.shape.size == 4,
+    s"Input dimensions must be 4, got ${input.shape}"
+  )
+  assert(
+    weight.shape.size == 4,
+    s"Weight dimensions must be 4, got ${weight.shape}"
+  )
   val batchSize = input.shape(0)
   val inputChannels = input.shape(1)
   val imageHeight = input.shape(2)
   val imageWidth = input.shape(3)
   val kernelSize = weight.shape(2)
   val outChannels = weight.shape(1)
-  assert(
-    weight.shape(0) == inputChannels,
-    s"Weight 2nd dimension must have size equal to input channels (2nd dim of input). Got weight: ${weight.shape}, input: ${input.shape} "
-  )
-  assert(
-    bias.shape(0) == outChannels,
-    "Number of biases must be the number of output channels"
-  )
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      if (p.options(scope).value.isCuda()) {
+      if (p.scalarTypeByte == 6 && p.options(scope).value.isCuda()) {
         val tmp = ATen.cudnn_convolution_transpose_backward_input(
           p.value,
           weight.value.value,
@@ -1449,15 +1484,16 @@ case class Conv2DTransposed(
         b.release
         c.release
         ATen.add_out(out.value, out.value, a, 1d)
+        a.release
 
       }
     },
     weight.zipBackward { (p, out) =>
-      if (p.options(scope).value.isCuda()) {
+      if (p.scalarTypeByte == 6 && p.options(scope).value.isCuda()) {
         val tmp = ATen.cudnn_convolution_transpose_backward_weight(
           weight.shape.toArray,
           p.value,
-          value.value.value,
+          input.value.value,
           Array(padding, padding),
           Array(stride, stride),
           Array(dilation, dilation),
@@ -1487,6 +1523,7 @@ case class Conv2DTransposed(
         a.release
         c.release
         ATen.add_out(out.value, out.value, b, 1d)
+        b.release
       }
     },
     bias.zipBackward { (p, out) =>
@@ -1509,6 +1546,7 @@ case class Conv2DTransposed(
       b.release
       a.release
       ATen.add_out(out.value, out.value, c, 1d)
+      c.release
     }
   )
 
