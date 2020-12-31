@@ -183,6 +183,10 @@
                         <a href="Conv2D.html" title="2D convolution">Conv2D</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
+                        <a class="class" href="Conv2DTransposed.html" title=""></a>
+                        <a href="Conv2DTransposed.html" title="">Conv2DTransposed</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
                         <a class="class" href="Cos.html" title=""></a>
                         <a href="Cos.html" title="">Cos</a>
                       </li><li class="current-entities indented2">
@@ -237,6 +241,10 @@
                         <span class="separator"></span>
                         <a class="class" href="L1Loss.html" title=""></a>
                         <a href="L1Loss.html" title="">L1Loss</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="class" href="LeakyRelu.html" title=""></a>
+                        <a href="LeakyRelu.html" title="">LeakyRelu</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Log.html" title=""></a>
@@ -905,6 +913,22 @@ posWeight: is (T)
       <p class="shortcomment cmt">2D convolution
 </p><div class="fullcomment"><div class="comment cmt"><p>2D convolution
 </p></div><dl class="paramcmts block"><dt class="param">input</dt><dd class="cmt"><p>batch x in_channels x height x width</p></dd><dt class="param">weight</dt><dd class="cmt"><p>out_channels x in_channels x kernel_size x kernel_size</p></dd><dt class="param">bias</dt><dd class="cmt"><p>out_channels</p></dd><dt>returns</dt><dd class="cmt"><p>Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)</p></dd></dl></div>
+    </li><li name="lamp.autograd.Conv2DTransposed" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Conv2DTransposedextendsOpwithProductwithSerializable"></a><a id="Conv2DTransposed:Conv2DTransposed"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/Conv2DTransposed.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="Conv2DTransposed.html"><span class="name">Conv2DTransposed</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="weight">weight: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="bias">bias: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="stride">stride: <span class="extype" name="scala.Long">Long</span></span>, <span name="padding">padding: <span class="extype" name="scala.Long">Long</span></span>, <span name="dilation">dilation: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.autograd.Cos" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="CosextendsOpwithProductwithSerializable"></a><a id="Cos:Cos"></a>
       <span class="permalink">
@@ -1126,6 +1150,22 @@ posWeight: is (T)
       </span>
       <span class="symbol">
         <a title="" href="L1Loss.html"><span class="name">L1Loss</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="input">input: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="target">target: <a href="../STen.html" class="extype" name="lamp.STen">STen</a></span>, <span name="reduction">reduction: <a href="Reduction.html" class="extype" name="lamp.autograd.Reduction">Reduction</a></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.autograd.LeakyRelu" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="LeakyReluextendsOpwithProductwithSerializable"></a><a id="LeakyRelu:LeakyRelu"></a>
+      <span class="permalink">
+      <a href="../../lamp/autograd/LeakyRelu.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="LeakyRelu.html"><span class="name">LeakyRelu</span></a><span class="params">(<span name="scope">scope: <a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a></span>, <span name="a">a: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="slope">slope: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result"> extends <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
