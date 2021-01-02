@@ -1231,7 +1231,8 @@ case class Conv2D(
           Array(dilation, dilation),
           groups,
           false,
-          false
+          false,
+          true
         )
         ATen.add_out(out.value, out.value, tmp, 1d)
         tmp.release
@@ -1268,7 +1269,8 @@ case class Conv2D(
           Array(dilation, dilation),
           groups,
           false,
-          false
+          false,
+          true
         )
         ATen.add_out(out.value, out.value, tmp, 1d)
         tmp.release
@@ -1447,7 +1449,8 @@ case class Conv2DTransposed(
           Array(dilation, dilation),
           1,
           false,
-          false
+          false,
+          true
         )
         ATen.add_out(out.value, out.value, tmp, 1d)
         tmp.release
@@ -1499,7 +1502,8 @@ case class Conv2DTransposed(
           Array(dilation, dilation),
           1,
           false,
-          false
+          false,
+          true
         )
         ATen.add_out(out.value, out.value, tmp, 1d)
         tmp.release
