@@ -41,10 +41,7 @@ Github Packages needs a github user token available either in a $GITHUB_TOKEN en
 - `lamp-core` depends on [saddle-core](https://github.com/pityka/saddle), [cats-effect](https://github.com/typelevel/cats-effect) and [aten-scala](https://github.com/pityka/aten-scala)
 - `lamp-data` in addition depends on [scribe](https://github.com/outr/scribe) and [ujson](https://github.com/lihaoyi/upickle)
 
-Lamp depends on aten-scala is a JNI binding to libtorch. It has has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.5.0 shared libraries in its linker path.
-
-On mac it suffices to install torch with `brew install libtorch`.
-On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile).
+Lamp depends on aten-scala is a JNI binding to libtorch. It has has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.7.1 shared libraries in its linker path.
 
 ### Verify installation
 This will allocate an identity matrix of 32-bit floats in the main memory:
