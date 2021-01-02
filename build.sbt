@@ -75,7 +75,7 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "2.0.0-M29"
+val saddleVersion = "2.0.0"
 val upickleVersion = "1.2.0"
 
 lazy val sten = project
