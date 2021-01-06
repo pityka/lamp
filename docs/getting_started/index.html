@@ -153,16 +153,13 @@ resolvers <span style="color:#f92672">+=</span> <span style="color:#a6e22e">Reso
 <li><code>lamp-data</code> in addition depends on <a href="https://github.com/outr/scribe">scribe</a> and <a href="https://github.com/lihaoyi/upickle">ujson</a></li>
 </ul>
 
-<p>Lamp depends on aten-scala is a JNI binding to libtorch. It has has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.5.0 shared libraries in its linker path.</p>
-
-<p>On mac it suffices to install torch with <code>brew install libtorch</code>.
-On linux, see the following <a href="https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile">Dockerfile</a>.</p>
+<p>Lamp depends on aten-scala is a JNI binding to libtorch. It has has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.7.1 shared libraries in its linker path.</p>
 
 <h3 id="verify-installation">Verify installation</h3>
 
 <p>This will allocate an identity matrix of 32-bit floats in the main memory:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">aten<span style="color:#f92672">.</span><span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>eye_0<span style="color:#f92672">(</span><span style="color:#ae81ff">2L</span><span style="color:#f92672">,</span>aten<span style="color:#f92672">.</span><span style="color:#a6e22e">TensorOptions</span><span style="color:#f92672">.</span>dtypeFloat<span style="color:#f92672">)</span>
-<span style="color:#f92672">//</span> res0<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">139651683211104</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPUFloatType</span></code></pre></div>
+<span style="color:#f92672">//</span> res0<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">139871057093472</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPUFloatType</span></code></pre></div>
 <p>The following will allocate an identity matrix of 32-bit floats in the GPU memory. It will throw an exception if GPU support is not available</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">aten<span style="color:#f92672">.</span><span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>eye_0<span style="color:#f92672">(</span><span style="color:#ae81ff">2L</span><span style="color:#f92672">,</span>aten<span style="color:#f92672">.</span><span style="color:#a6e22e">TensorOptions</span><span style="color:#f92672">.</span>dtypeFloat<span style="color:#f92672">.</span>cuda<span style="color:#f92672">)</span></code></pre></div>
 </div>
