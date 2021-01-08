@@ -1,6 +1,8 @@
 package lamp.umap
 
 import org.saddle._
+import org.saddle.linalg._
+import org.saddle.macros.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.DoublePrecision
 import lamp.CPU
@@ -23,7 +25,17 @@ class UmapSuite extends AnyFunSuite {
       100
     )
 
-    val b = Umap.edgeWeights(data, knn)
+    val knnDistances = knn.mapRows {
+      case (row, rowIdx) =>
+        val row1 = data.row(rowIdx)
+        row.map { idx2 =>
+          val row2 = data.row(idx2)
+          val d = row1 - row2
+          math.sqrt(d vv d)
+        }
+    }
+
+    val b = Umap.edgeWeights(knnDistances, knn)
     val exp = Mat(
       Vec(0.0, 1.0, 1.0),
       Vec(0.0, 2.0, 0.0),

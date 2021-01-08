@@ -50,26 +50,18 @@ object Umap {
   }
 
   private[lamp] def edgeWeights(
-      data: Mat[Double],
+      knnDistances: Mat[Double],
       knn: Mat[Int]
   ): Mat[Double] = {
-    val knnDistances = knn.mapRows {
-      case (row, rowIdx) =>
-        val row1 = data.row(rowIdx)
-        row.map { idx2 =>
-          val row2 = data.row(idx2)
-          val d = row1 - row2
-          math.sqrt(d vv d)
-        }
-    }
+
     val rho = array
-      .range(0, data.numRows)
+      .range(0, knnDistances.numRows)
       .map { rowIdx => knnDistances.row(rowIdx).filter(_ > 0d).min2 }
       .toVec
 
     val log2k = math.log(knn.numCols) / math.log(2d)
     val sigma = array
-      .range(0, data.numRows)
+      .range(0, knnDistances.numRows)
       .map { rowIdx =>
         val r = rho.raw(rowIdx)
         def fun(s: Double) =
@@ -90,7 +82,7 @@ object Umap {
 
     val b = Mat(
       array
-        .range(0, data.numRows)
+        .range(0, knnDistances.numRows)
         .flatMap { i =>
           val r = rho.raw(i)
           val s = sigma.raw(i)
@@ -340,16 +332,56 @@ object Umap {
       knnMinibatchSize
     )
 
+    val knnDistances = knn.mapRows {
+      case (row, rowIdx) =>
+        val row1 = data.row(rowIdx)
+        row.map { idx2 =>
+          val row2 = data.row(idx2)
+          val d = row1 - row2
+          math.sqrt(d vv d)
+        }
+    }
+
+    umapCustomKnn(
+      knn,
+      knnDistances,
+      device,
+      numDim,
+      lr,
+      iterations,
+      minDist,
+      negativeSampleSize,
+      randomSeed,
+      balanceAttractionsAndRepulsions,
+      repulsionStrength,
+      logger
+    )
+  }
+  def umapCustomKnn(
+      knn: Mat[Int],
+      knnDistances: Mat[Double],
+      device: Device = CPU,
+      numDim: Int = 2,
+      lr: Double = 0.1,
+      iterations: Int = 500,
+      minDist: Double = 0.0d,
+      negativeSampleSize: Int = 5,
+      randomSeed: Long = 42L,
+      balanceAttractionsAndRepulsions: Boolean = true,
+      repulsionStrength: Double = 1d,
+      logger: Option[Logger] = None
+  ) = {
+
     logger.foreach(_.info("KNN done"))
 
-    val b = edgeWeights(data, knn)
+    val b = edgeWeights(knnDistances, knn)
 
     logger.foreach(_.info(s"${b.numRows} edge weights computed"))
 
     val (layout, loss) =
       optimize(
         b,
-        data.numRows,
+        knn.numRows,
         lr = lr,
         iterations = iterations,
         minDist = minDist,
