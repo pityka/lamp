@@ -61,6 +61,9 @@ case class Yogi(
       .zip(vt)
       .filter(_._1._1._2.isDefined)
       .foreach {
+        case ((((_, _), None), _), _) =>
+          // won't happent, see filter above
+          ???
         case ((((param, tag), Some(gradients)), mt), vt) =>
           val wd = weightDecay(tag)
           val b1 = beta1(tag)
