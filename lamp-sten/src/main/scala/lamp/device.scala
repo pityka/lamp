@@ -34,15 +34,18 @@ sealed trait Device { self =>
   def to(t: Tensor): Tensor
   def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions
+  def setSeed(seed: Long)
 }
 case object CPU extends Device {
   def to(t: Tensor) = {
     t.cpu
   }
+  def setSeed(seed: Long) = Tensor.manual_seed_cpu(seed)
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
     precision.convertOption(STenOptions.d)
 }
 case class CudaDevice(i: Int) extends Device {
+  def setSeed(seed: Long) = Tensor.manual_seed_cuda(seed, i)
   assert(
     i >= 0 && i < Tensor.getNumGPUs,
     s"Device number is wrong. Got $i. Available gpus: ${Tensor.getNumGPUs}."
