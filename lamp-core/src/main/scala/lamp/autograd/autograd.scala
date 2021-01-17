@@ -270,6 +270,8 @@ trait Variable {
   }
   def view[S: Sc](shape: List[Long]) =
     new View(extractScope, this, shape.toArray).value
+  def reshape[S: Sc](shape: List[Long]) =
+    new Reshape(extractScope, this, shape.toArray).value
   def flatten[S: Sc] =
     new Flatten(extractScope, this, startDim = 0, endDim = -1).value
   def flatten[S: Sc](startDim: Int) =

@@ -103,9 +103,9 @@ object Fun {
   implicit val load = Load.identity[Fun]
 }
 
-case class GenericFun[A, B](fun: A => B) extends GenericModule[A, B] {
+case class GenericFun[A, B](fun: Scope => A => B) extends GenericModule[A, B] {
   def state = Nil
-  def forward[S: Sc](x: A): B = fun(x)
+  def forward[S: Sc](x: A): B = fun(scope)(x)
 }
 object GenericFun {
   implicit def trainingMode[A, B] = TrainingMode.identity[GenericFun[A, B]]

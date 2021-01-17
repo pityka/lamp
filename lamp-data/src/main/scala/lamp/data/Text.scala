@@ -397,4 +397,15 @@ object Text {
     }
 
   }
+
+  def sentencesToPaddedMatrix(
+      sentences: Seq[String],
+      maxLength: Int,
+      pad: Int,
+      vocabulary: Map[Char, Int]
+  ): Mat[Int] = {
+    Mat(sentences.map { s =>
+      s.map(vocabulary).toArray.take(maxLength).padTo(maxLength, pad).toVec
+    }: _*).T
+  }
 }

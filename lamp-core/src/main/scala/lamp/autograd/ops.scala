@@ -35,6 +35,16 @@ case class View(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
   )
   val value = Variable(this, a.value.view(shape: _*)(scope))(scope)
 }
+case class Reshape(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope => out += p.reshape(out.shape: _*) }
+
+    }
+  )
+  val value = Variable(this, a.value.reshape(shape: _*)(scope))(scope)
+}
 
 case class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
   val ashapes = a.map(_.shape(dim.toInt))
@@ -89,8 +99,7 @@ case class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
   val value = Variable(this, {
     implicit val sc = scope
     Scope { implicit sc =>
-      val scalar = STen.scalarLong(b, a.options)
-      val r = a.value.equ(scalar)
+      val r = a.value.equ(b)
       r
     }
   })(scope)

@@ -2218,6 +2218,25 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  testGradientAndValueND("reshape 1 ")(nd1x2x3, 21d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val input =
+        param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+
+      val output = input.reshape(List(1, 1, 2, 3))
+
+      assert(output.shape == List(1, 1, 2, 3))
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+      )
+    }
+  }
   testGradientAndValue("embedding ")(mat2x3, 240d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val weight =

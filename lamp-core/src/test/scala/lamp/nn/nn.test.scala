@@ -185,6 +185,87 @@ class NNSuite extends AnyFunSuite {
         ()
       }
     }
+  def testGradientAndValueNDGeneric[A, B, M <: GenericModule[A, B]: Load](
+      id: String,
+      cuda: Boolean = false
+  )(
+      m: NDArray[Double],
+      inputToA: Constant => A,
+      bToVar: B => Variable,
+      moduleF: Scope => M with GenericModule[A, B],
+      expectedValue: Double
+  ) =
+    test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+      Scope.root { implicit scope =>
+        val d = const(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+        val module = moduleF(scope)
+
+        {
+          val module1 = moduleF(scope)
+          val state = module1.state
+          val modifiedState = state.map {
+            case (v, _) =>
+              v.value * (-1)
+          }
+          module1.load(modifiedState)
+          (module1.state zip modifiedState).foreach {
+            case ((st1, _), (st2)) =>
+              assert(
+                NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
+                  .tensorToNDArray(st2.value)
+                  .toVec
+              )
+          }
+        }
+
+        val output = bToVar(module.forward(inputToA(d)))
+        val sum = output.sum
+        val value = NDArray.tensorToNDArray(sum.value.value).data(0)
+        val gradAuto =
+          module.gradients(sum).map(_.get.value).map(NDArray.tensorToNDArray)
+        val gradNum = module.parameters.map {
+          case (paramT, _) =>
+            val oldparam = paramT.value.cloneTensor
+            val param = NDArray.tensorToNDArray(paramT.value.value)
+            def f(p: NDArray[Double]) = {
+              val p2 = NDArray.tensorFromNDArray(p, cuda)
+              paramT.value.zero_()
+              ATen.add_out(
+                paramT.value.value,
+                paramT.value.value,
+                p2,
+                1d
+              )
+              bToVar(module.forward(inputToA(d))).sum.value.toMat.raw(0)
+            }
+            val eps = 1e-8
+            val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
+              case (_, idx) =>
+                val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
+                epsM.set(idx, eps)
+                val a = f(param + epsM)
+                val b = f(param - epsM)
+                val r = (a - b) / (2 * eps)
+                r
+            }
+            paramT.value.zero_()
+            ATen.add_out(
+              paramT.value.value,
+              paramT.value.value,
+              oldparam.value,
+              1d
+            )
+            r
+        }
+        assert(gradAuto.size == gradNum.size)
+        gradAuto.zip(gradNum).foreach {
+          case (a, b) =>
+            assert(a.toVec.roundTo(10) == b.toVec.roundTo(10))
+        }
+        assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
+        ()
+      }
+    }
   def testGradientAndValueNDLong[T, M <: StatefulModule[Variable, Variable, T]: Load](
       id: String,
       st: T,
@@ -580,6 +661,77 @@ class NNSuite extends AnyFunSuite {
         4.0, 5.0)
     )
   }
+
+  // m: NDArray[Double],
+  //     inputToA: Constant => A,
+  //     bToVar: B => Variable,
+  //     moduleF: Scope => M with GenericModule[A, B],
+  //     expectedValue: Double
+  testGradientAndValueNDGeneric[(Variable, STen), Variable, TransformerEncoder](
+    "transformer encoder ",
+    false
+  )(
+    nd2x3x2,
+    v =>
+      (v, STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free)),
+    v => v,
+    implicit pool => {
+      aten.Tensor.manual_seed(123)
+
+      val in = 2
+      val attentionHiddenPerHeadDim = 3
+      val attentionNumHeads = 5
+      val mlpHiddenDim = 7
+      val dropout = 0d
+      val padToken = -999L
+      val tOpt = STenOptions.d
+      TransformerEncoder.apply(
+        List(
+          TransformerEncoderBlock(
+            attention = MultiheadAttention(
+              wQ = param(
+                STen.ones(
+                  List(in, attentionHiddenPerHeadDim * attentionNumHeads),
+                  tOpt
+                ) * 2
+              ),
+              wK = param(
+                STen.ones(
+                  List(in, attentionHiddenPerHeadDim * attentionNumHeads),
+                  tOpt
+                ) * 2
+              ),
+              wV = param(
+                STen.ones(
+                  List(in, attentionHiddenPerHeadDim * attentionNumHeads),
+                  tOpt
+                ) * 2
+              ),
+              wO = param(
+                STen.ones(
+                  List(attentionHiddenPerHeadDim * attentionNumHeads, in),
+                  tOpt
+                ) * 2
+              ),
+              dropout = dropout,
+              train = true,
+              numHeads = attentionNumHeads,
+              padToken = padToken
+            ),
+            layerNorm1 = LayerNorm(List(2), tOpt),
+            layerNorm2 = LayerNorm(List(2), tOpt),
+            w1 = param(STen.ones(List(in, mlpHiddenDim), tOpt) * 2),
+            b1 = param(STen.ones(List(1, mlpHiddenDim), tOpt) * 2),
+            w2 = param(STen.ones(List(mlpHiddenDim, in), tOpt) * 2),
+            b2 = param(STen.ones(List(1, in), tOpt)),
+            dropout = dropout,
+            train = true
+          )
+        )
+      )
+    },
+    0d
+  )
 
 }
 

@@ -17,7 +17,7 @@ case class NDArray[@specialized(Long, Double, Float) T](
 ) {
 
   assert(
-    data.length == shape.reduce(_ * _),
+    data.length == shape.foldLeft(1)(_ * _),
     "Dimension does not match up with elements."
   )
   def reshape(ns: List[Int]) = {
@@ -73,7 +73,7 @@ case class NDArray[@specialized(Long, Double, Float) T](
 
 object NDArray {
   def zeros(shape: List[Int]) =
-    NDArray(Array.ofDim[Double](shape.reduce(_ * _)), shape)
+    NDArray(Array.ofDim[Double](shape.foldLeft(1)(_ * _)), shape)
   def tensorFromNDArray(m: NDArray[Double], cuda: Boolean = false) = {
     val arr = m.toArray
     val t = ATen.zeros(

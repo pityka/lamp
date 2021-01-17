@@ -2,6 +2,7 @@ package lamp
 import lamp.autograd.Variable
 import aten.ATen
 import lamp.util.syntax
+import lamp.autograd.{Constant, param}
 
 package object nn {
   type Module = GenericModule[Variable, Variable]
@@ -66,4 +67,13 @@ package object nn {
       }
     }
   }
+
+  def initLinear[S: Sc](in: Int, out: Int, tOpt: STenOptions): Constant = param(
+    STen.normal(
+      0d,
+      math.sqrt(2d / (out + in)),
+      List(in, out),
+      tOpt
+    )
+  )
 }
