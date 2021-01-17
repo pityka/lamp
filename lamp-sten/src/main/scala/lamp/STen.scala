@@ -430,6 +430,8 @@ case class STen private (
     owned(ATen.eq_1(value, other.value))
   def equ[S: Sc](other: Double) =
     owned(ATen.eq_0(value, other))
+  def equ[S: Sc](other: Long) =
+    owned(ATen.eq_0_l(value, other))
   def cat[S: Sc](other: STen, dim: Long) =
     owned(ATen.cat(Array(value, other.value), dim))
 
@@ -670,6 +672,8 @@ case class STen private (
     owned(value.expand_as(other.value))
   def view[S: Sc](dims: Long*) =
     owned(ATen._unsafe_view(value, dims.toArray))
+  def reshape[S: Sc](dims: Long*) =
+    owned(ATen.reshape(value, dims.toArray))
 
   def norm2[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(
@@ -813,6 +817,8 @@ case class STen private (
   def repeatInterleave[S: Sc] =
     ATen.repeat_interleave_0(value).owned
 
+  def repeat[S: Sc](dims: List[Long]) = value.repeat(dims.toArray).owned
+
   def sort[S: Sc](dim: Int, descending: Boolean) = {
     val (a, b) = ATen.sort(value, dim, descending)
     (owned(a), owned(b))
@@ -851,6 +857,11 @@ case class STen private (
     ATen.dropout_(value, p, training)
 
   def frobeniusNorm[S: Sc] = ATen.frobenius_norm_0(value).owned
+
+  def svd[S: Sc] = {
+    val (ut, s, v) = ATen.svd(value, true, true)
+    (ut.owned, s.owned, v.owned)
+  }
 
   // todo:
   // ATen.eig

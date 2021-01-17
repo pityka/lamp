@@ -186,7 +186,7 @@ class GCNSuite extends AnyFunSuite {
               tOpt = device.options(precision),
               dropout = 0.95
             ),
-            GenericFun[(Variable, Variable), Variable](_._1),
+            GenericFun[(Variable, Variable), Variable](_ => _._1),
             Linear(
               in = 128,
               out = 7,
@@ -330,7 +330,7 @@ class GCNSuite extends AnyFunSuite {
             r = 1,
             includeZeroOrder = false
           ),
-          GenericFun[(Variable, Variable), Variable](_._1),
+          GenericFun[(Variable, Variable), Variable](_ => _._1),
           Fun(implicit scope => _.logSoftMax(1))
         ),
         LossFunctions.NLL(7, classWeights, ignore = -100)

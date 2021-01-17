@@ -112,7 +112,7 @@ object Train extends App {
                 dropout = 0.5,
                 nonLinearity = false
               ),
-              GenericFun[(Variable, Variable), Variable](_._1),
+              GenericFun[(Variable, Variable), Variable](_ => _._1),
               Fun(scope => variable => variable.logSoftMax(1)(scope))
             ),
             LossFunctions.NLL(numClasses, classWeights, ignore = -100)

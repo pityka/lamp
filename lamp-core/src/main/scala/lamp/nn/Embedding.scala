@@ -18,6 +18,8 @@ import lamp.STen
   * n is the size of the batch.
   *
   * Input is a long tensor with values in [0,C-1].
+  * Input shape is arbitrary, (*).
+  * Output shape is (* x D) where D is the embedding dimension.
   */
 case class Embedding(weights: Constant) extends Module {
   val state = List(
