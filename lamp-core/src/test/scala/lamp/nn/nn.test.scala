@@ -662,11 +662,6 @@ class NNSuite extends AnyFunSuite {
     )
   }
 
-  // m: NDArray[Double],
-  //     inputToA: Constant => A,
-  //     bToVar: B => Variable,
-  //     moduleF: Scope => M with GenericModule[A, B],
-  //     expectedValue: Double
   testGradientAndValueNDGeneric[(Variable, STen), Variable, TransformerEncoder](
     "transformer encoder ",
     false
@@ -679,7 +674,7 @@ class NNSuite extends AnyFunSuite {
       aten.Tensor.manual_seed(123)
 
       val in = 2
-      val attentionHiddenPerHeadDim = 3
+      val attentionHiddenPerHeadDim = 4
       val attentionNumHeads = 5
       val mlpHiddenDim = 7
       val dropout = 0d
@@ -716,7 +711,74 @@ class NNSuite extends AnyFunSuite {
               dropout = dropout,
               train = true,
               numHeads = attentionNumHeads,
-              padToken = padToken
+              padToken = padToken,
+              linearized = false
+            ),
+            layerNorm1 = LayerNorm(List(2), tOpt),
+            layerNorm2 = LayerNorm(List(2), tOpt),
+            w1 = param(STen.ones(List(in, mlpHiddenDim), tOpt) * 2),
+            b1 = param(STen.ones(List(1, mlpHiddenDim), tOpt) * 2),
+            w2 = param(STen.ones(List(mlpHiddenDim, in), tOpt) * 2),
+            b2 = param(STen.ones(List(1, in), tOpt)),
+            dropout = dropout,
+            train = true
+          )
+        )
+      )
+    },
+    0d
+  )
+  testGradientAndValueNDGeneric[(Variable, STen), Variable, TransformerEncoder](
+    "linearized transformer encoder ",
+    false
+  )(
+    nd2x3x2,
+    v =>
+      (v, STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free)),
+    v => v,
+    implicit pool => {
+      aten.Tensor.manual_seed(123)
+
+      val in = 2
+      val attentionHiddenPerHeadDim = 4
+      val attentionNumHeads = 5
+      val mlpHiddenDim = 7
+      val dropout = 0d
+      val padToken = -999L
+      val tOpt = STenOptions.d
+      TransformerEncoder.apply(
+        List(
+          TransformerEncoderBlock(
+            attention = MultiheadAttention(
+              wQ = param(
+                STen.ones(
+                  List(in, attentionHiddenPerHeadDim * attentionNumHeads),
+                  tOpt
+                ) * 2
+              ),
+              wK = param(
+                STen.ones(
+                  List(in, attentionHiddenPerHeadDim * attentionNumHeads),
+                  tOpt
+                ) * 2
+              ),
+              wV = param(
+                STen.ones(
+                  List(in, attentionHiddenPerHeadDim * attentionNumHeads),
+                  tOpt
+                ) * 2
+              ),
+              wO = param(
+                STen.ones(
+                  List(attentionHiddenPerHeadDim * attentionNumHeads, in),
+                  tOpt
+                ) * 2
+              ),
+              dropout = dropout,
+              train = true,
+              numHeads = attentionNumHeads,
+              padToken = padToken,
+              linearized = true
             ),
             layerNorm1 = LayerNorm(List(2), tOpt),
             layerNorm2 = LayerNorm(List(2), tOpt),

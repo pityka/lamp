@@ -76,7 +76,8 @@ object TransformerEncoder {
       mlpHiddenDim: Int,
       dropout: Double,
       padToken: Long,
-      tOpt: STenOptions
+      tOpt: STenOptions,
+      linearized: Boolean
   ): TransformerEncoder =
     TransformerEncoder(
       0 until numBlocks map (_ =>
@@ -88,7 +89,8 @@ object TransformerEncoder {
           out = in,
           dropout = dropout,
           padToken = padToken,
-          tOpt = tOpt
+          tOpt = tOpt,
+          linearized = linearized
         )
       )
     )
@@ -144,7 +146,8 @@ object TransformerEncoderBlock {
       out: Int,
       dropout: Double,
       padToken: Long,
-      tOpt: STenOptions
+      tOpt: STenOptions,
+      linearized: Boolean
   ): TransformerEncoderBlock =
     TransformerEncoderBlock(
       attention = MultiheadAttention(
@@ -156,7 +159,8 @@ object TransformerEncoderBlock {
         numHeads = attentionNumHeads,
         dropout = dropout,
         padToken = padToken,
-        tOpt = tOpt
+        tOpt = tOpt,
+        linearized = linearized
       ),
       layerNorm1 = LayerNorm(List(2), tOpt),
       layerNorm2 = LayerNorm(List(2), tOpt),
@@ -218,7 +222,8 @@ case class MultiheadAttention(
     dropout: Double,
     train: Boolean,
     numHeads: Int,
-    padToken: Long
+    padToken: Long,
+    linearized: Boolean
 ) extends GenericModule[(Variable, Variable, Variable, STen), Variable] {
 
   override val state = List(
@@ -245,7 +250,8 @@ case class MultiheadAttention(
       wKeys = wK,
       wValues = wV,
       wOutput = wO,
-      numHeads = numHeads
+      numHeads = numHeads,
+      linearized = linearized
     )
   }
 
@@ -261,7 +267,8 @@ object MultiheadAttention {
       dropout: Double,
       numHeads: Int,
       padToken: Long,
-      tOpt: STenOptions
+      tOpt: STenOptions,
+      linearized: Boolean
   ): MultiheadAttention = MultiheadAttention(
     wQ = initLinear(dQ, hiddenPerHead * numHeads, tOpt),
     wK = initLinear(dK, hiddenPerHead * numHeads, tOpt),
@@ -270,7 +277,8 @@ object MultiheadAttention {
     dropout = dropout,
     train = true,
     numHeads = numHeads,
-    padToken = padToken
+    padToken = padToken,
+    linearized = linearized
   )
   case object WeightsQ extends LeafTag
   case object WeightsK extends LeafTag
@@ -366,6 +374,54 @@ object MultiheadAttention {
 
   }
 
+  /** Linearized dot product attention
+    *  https://arxiv.org/pdf/2006.16236.pdf
+    *
+    * replaces exp(a dot b) with f(a) dot f(b)
+    * where f is any elementwise function,
+    *  in the paper f(x) = elu(x)+1
+    *  here f(x) = swish1(x)+1
+    * due to this decomposition a more efficient configuration of the chained matrix multiplication
+    * may be used: (Q Kt) V = Q (Kt V)
+    *
+    * (batch,query) locations where tokens(batch,query) == pad are ignored
+    *
+    * @param query  batch x num queries x key dim
+    * @param key batch x num k-v pairs x key dim
+    * @param value batch x num k-v pairs x value dim
+    * @param tokens batch x num queries , type long
+    * @param pad scalar long
+    * @return  batch x num queries x value dim
+    */
+  def linearizedAttention[S: Sc](
+      query: Variable,
+      keys: Variable,
+      values: Variable,
+      tokens: STen,
+      padToken: Long,
+      dropout: Double,
+      trainDropout: Boolean
+  ) = {
+
+    val qF = (query.swish1 + 1)
+
+    // zero out some keys either due to padding or dropout
+    val kF = sequenceMask(
+      tokens,
+      (keys.swish1 + 1).dropout(dropout, trainDropout),
+      padToken,
+      0d
+    )
+
+    val tmp1 = kF.transpose(1, 2).bmm(values)
+    val tmp2 = kF.sum(dim = List(1), keepDim = true).transpose(1, 2)
+    val enumerator = qF.bmm(tmp1)
+    val denom = qF.bmm(tmp2)
+
+    enumerator / (denom + 1e-5)
+
+  }
+
   /** Multi-head scaled dot product attention
     *
     * (batch,query) locations where tokens(batch,query) == pad are ignored
@@ -394,7 +450,8 @@ object MultiheadAttention {
       wKeys: Variable,
       wValues: Variable,
       wOutput: Variable,
-      numHeads: Int
+      numHeads: Int,
+      linearized: Boolean
   ) = {
 
     def mm1(a: Variable, b: Variable) = {
@@ -444,15 +501,27 @@ object MultiheadAttention {
     val tokensRepeated = tokens.repeat(List(numHeads, 1))
 
     // (batch * h) x num queries x hidden/h
-    val output = scaledDotProductAttention(
-      q1t,
-      k1t,
-      v1t,
-      tokensRepeated,
-      padToken,
-      dropout,
-      trainDropout
-    )
+    val output =
+      if (linearized)
+        linearizedAttention(
+          q1t,
+          k1t,
+          v1t,
+          tokensRepeated,
+          padToken,
+          dropout,
+          trainDropout
+        )
+      else
+        scaledDotProductAttention(
+          q1t,
+          k1t,
+          v1t,
+          tokensRepeated,
+          padToken,
+          dropout,
+          trainDropout
+        )
 
     // batch x num queries x hidden
     val outputConcat: Variable = transposeOut(output, numHeads)
