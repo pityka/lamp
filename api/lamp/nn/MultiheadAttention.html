@@ -442,7 +442,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">MultiheadAttention</span><span class="params">(<span name="wQ">wQ: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wK">wK: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wV">wV: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wO">wO: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="numHeads">numHeads: <span class="extype" name="scala.Int">Int</span></span>, <span name="padToken">padToken: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">MultiheadAttention</span><span class="params">(<span name="wQ">wQ: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wK">wK: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wV">wV: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wO">wO: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="numHeads">numHeads: <span class="extype" name="scala.Int">Int</span></span>, <span name="padToken">padToken: <span class="extype" name="scala.Long">Long</span></span>, <span name="linearized">linearized: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -502,9 +502,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.MultiheadAttention#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(wQ:lamp.autograd.Constant,wK:lamp.autograd.Constant,wV:lamp.autograd.Constant,wO:lamp.autograd.Constant,dropout:Double,train:Boolean,numHeads:Int,padToken:Long):lamp.nn.MultiheadAttention"></a><a id="&lt;init&gt;:MultiheadAttention"></a>
+      <a id="&lt;init&gt;(wQ:lamp.autograd.Constant,wK:lamp.autograd.Constant,wV:lamp.autograd.Constant,wO:lamp.autograd.Constant,dropout:Double,train:Boolean,numHeads:Int,padToken:Long,linearized:Boolean):lamp.nn.MultiheadAttention"></a><a id="&lt;init&gt;:MultiheadAttention"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/MultiheadAttention.html#&lt;init&gt;(wQ:lamp.autograd.Constant,wK:lamp.autograd.Constant,wV:lamp.autograd.Constant,wO:lamp.autograd.Constant,dropout:Double,train:Boolean,numHeads:Int,padToken:Long):lamp.nn.MultiheadAttention" title="Permalink">
+      <a href="../../lamp/nn/MultiheadAttention.html#&lt;init&gt;(wQ:lamp.autograd.Constant,wK:lamp.autograd.Constant,wV:lamp.autograd.Constant,wO:lamp.autograd.Constant,dropout:Double,train:Boolean,numHeads:Int,padToken:Long,linearized:Boolean):lamp.nn.MultiheadAttention" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -513,7 +513,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">MultiheadAttention</span><span class="params">(<span name="wQ">wQ: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wK">wK: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wV">wV: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wO">wO: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="numHeads">numHeads: <span class="extype" name="scala.Int">Int</span></span>, <span name="padToken">padToken: <span class="extype" name="scala.Long">Long</span></span>)</span>
+        <span class="name">MultiheadAttention</span><span class="params">(<span name="wQ">wQ: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wK">wK: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wV">wV: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wO">wO: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="numHeads">numHeads: <span class="extype" name="scala.Int">Int</span></span>, <span name="padToken">padToken: <span class="extype" name="scala.Long">Long</span></span>, <span name="linearized">linearized: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span>
       </span>
       
       
@@ -768,6 +768,22 @@
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
+    </li><li name="lamp.nn.MultiheadAttention#linearized" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="linearized:Boolean"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/MultiheadAttention.html#linearized:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">linearized</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      
+      
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
