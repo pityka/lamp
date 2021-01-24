@@ -258,6 +258,10 @@
                         <a class="class" href="LSTM.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)"></a>
                         <a href="LSTM.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)">LSTM</a>
                       </li><li class="current-entities indented2">
+                        <a class="object" href="LayerNorm$.html" title=""></a>
+                        <a class="class" href="LayerNorm.html" title=""></a>
+                        <a href="LayerNorm.html" title="">LayerNorm</a>
+                      </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="trait" href="LeafTag.html" title=""></a>
                         <a href="LeafTag.html" title="">LeafTag</a>
@@ -306,6 +310,10 @@
                         <a class="class" href="ModelWithOptimizer.html" title=""></a>
                         <a href="ModelWithOptimizer.html" title="">ModelWithOptimizer</a>
                       </li><li class="current-entities indented2">
+                        <a class="object" href="MultiheadAttention$.html" title=""></a>
+                        <a class="class" href="MultiheadAttention.html" title="Multi-head scaled dot product attention module"></a>
+                        <a href="MultiheadAttention.html" title="Multi-head scaled dot product attention module">MultiheadAttention</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="NGCN$.html" title=""></a>
                         <a class="class" href="NGCN.html" title=""></a>
                         <a href="NGCN.html" title="">NGCN</a>
@@ -329,6 +337,10 @@
                         <a class="object" href="Passthrough$.html" title=""></a>
                         <a class="class" href="Passthrough.html" title=""></a>
                         <a href="Passthrough.html" title="">Passthrough</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="object" href="PositionalEmbedding$.html" title=""></a>
+                        <a href="PositionalEmbedding$.html" title="">PositionalEmbedding</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="RAdam$.html" title=""></a>
                         <a class="class" href="RAdam.html" title=""></a>
@@ -429,6 +441,18 @@
                         <span class="separator"></span>
                         <a class="class" href="package$$TrainingModeSyntax.html" title=""></a>
                         <a href="package$$TrainingModeSyntax.html" title="">TrainingModeSyntax</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="TransformerEmbedding$.html" title=""></a>
+                        <a class="class" href="TransformerEmbedding.html" title="Gradients are not computed for positionalEmbedding"></a>
+                        <a href="TransformerEmbedding.html" title="Gradients are not computed for positionalEmbedding">TransformerEmbedding</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="TransformerEncoder$.html" title=""></a>
+                        <a class="class" href="TransformerEncoder.html" title="TransformerEncoder module"></a>
+                        <a href="TransformerEncoder.html" title="TransformerEncoder module">TransformerEncoder</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="TransformerEncoderBlock$.html" title=""></a>
+                        <a class="class" href="TransformerEncoderBlock.html" title="A single block of the transformer encoder as defined in Fig 10.7.1 in d2l v0.16"></a>
+                        <a href="TransformerEncoderBlock.html" title="A single block of the transformer encoder as defined in Fig 10.7.1 in d2l v0.16">TransformerEncoderBlock</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="UnliftedModule$.html" title=""></a>
                         <a class="class" href="UnliftedModule.html" title=""></a>
@@ -801,6 +825,8 @@ W is learnable.
 L is never computed directly.
 C is the number of classes.
 n is the size of the batch.</p><p>Input is a long tensor with values in [0,C-1].
+Input shape is arbitrary, (*).
+Output shape is (* x D) where D is the embedding dimension.
 </p></div></div>
     </li><li name="lamp.nn.FreeRunningRNN" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="FreeRunningRNN[T,M&lt;:lamp.nn.StatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T]]extendsStatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,T]withProductwithSerializable"></a><a id="FreeRunningRNN[T,M&lt;:nn.StatefulModule[Variable,Variable,T]]:FreeRunningRNN[T,M]"></a>
@@ -881,7 +907,7 @@ Outputs of size (sequence length * batch * hidden dim)
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="GenericFun.html"><span class="name">GenericFun</span></a><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>]</span><span class="params">(<span name="fun">fun: (<span class="extype" name="lamp.nn.GenericFun.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericFun.B">B</span></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.GenericFun.A">A</span>, <span class="extype" name="lamp.nn.GenericFun.B">B</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="GenericFun.html"><span class="name">GenericFun</span></a><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>]</span><span class="params">(<span name="fun">fun: (<a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a>) ⇒ (<span class="extype" name="lamp.nn.GenericFun.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericFun.B">B</span></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.GenericFun.A">A</span>, <span class="extype" name="lamp.nn.GenericFun.B">B</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -918,7 +944,7 @@ Outputs of size (sequence length * batch * hidden dim)
       
       
     </li><li name="lamp.nn.GraphReadout" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="GraphReadout[M&lt;:lamp.nn.GraphModule]extendsGenericModule[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable),lamp.autograd.Variable]withProductwithSerializable"></a><a id="GraphReadout[M&lt;:nn.GraphModule]:GraphReadout[M]"></a>
+      <a id="GraphReadout[M&lt;:lamp.nn.GraphModule]extendsGenericModule[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable),lamp.autograd.Variable]withProductwithSerializable"></a><a id="GraphReadout[M&lt;:GraphModule]:GraphReadout[M]"></a>
       <span class="permalink">
       <a href="../../lamp/nn/GraphReadout.html" title="Permalink">
         <i class="material-icons"></i>
@@ -929,7 +955,7 @@ Outputs of size (sequence length * batch * hidden dim)
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="GraphReadout.html"><span class="name">GraphReadout</span></a><span class="tparams">[<span name="M">M &lt;: <span class="extype" name="lamp.nn.GraphModule">nn.GraphModule</span></span>]</span><span class="params">(<span name="m">m: <span class="extype" name="lamp.nn.GraphReadout.M">M</span> with <a href="#GraphModule=lamp.nn.GenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]" class="extmbr" name="lamp.nn.GraphModule">GraphModule</a></span>, <span name="pooling">pooling: <a href="GraphReadout$$PoolType.html" class="extype" name="lamp.nn.GraphReadout.PoolType">PoolType</a></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="GraphReadout.html"><span class="name">GraphReadout</span></a><span class="tparams">[<span name="M">M &lt;: <a href="#GraphModule=lamp.nn.GenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]" class="extmbr" name="lamp.nn.GraphModule">GraphModule</a></span>]</span><span class="params">(<span name="m">m: <span class="extype" name="lamp.nn.GraphReadout.M">M</span> with <a href="#GraphModule=lamp.nn.GenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]" class="extmbr" name="lamp.nn.GraphModule">GraphModule</a></span>, <span name="pooling">pooling: <a href="GraphReadout$$PoolType.html" class="extype" name="lamp.nn.GraphReadout.PoolType">PoolType</a></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -983,6 +1009,22 @@ Outputs of size (sequence length * batch * hidden dim)
       <p class="shortcomment cmt">Inputs of size (sequence length * batch * vocab)
 Outputs of size (sequence length * batch * output dim)
 </p>
+    </li><li name="lamp.nn.LayerNorm" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="LayerNormextendsModulewithProductwithSerializable"></a><a id="LayerNorm:LayerNorm"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/LayerNorm.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="LayerNorm.html"><span class="name">LayerNorm</span></a><span class="params">(<span name="scale">scale: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="bias">bias: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span></span>, <span name="normalizedDim">normalizedDim: <a href="../../scala/index.html#List[+A]=List[A]" class="extmbr" name="scala.List">List</a>[<span class="extype" name="scala.Int">Int</span>]</span>)</span><span class="result"> extends <a href="#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">Module</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.LeafTag" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
       <a id="LeafTagextendsPTag"></a><a id="LeafTag:LeafTag"></a>
       <span class="permalink">
@@ -1159,6 +1201,26 @@ Outputs of size (sequence length * batch * output dim)
       </span>
       
       
+    </li><li name="lamp.nn.MultiheadAttention" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="MultiheadAttentionextendsGenericModule[(lamp.autograd.Variable,lamp.autograd.Variable,lamp.autograd.Variable,lamp.STen),lamp.autograd.Variable]withProductwithSerializable"></a><a id="MultiheadAttention:MultiheadAttention"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/MultiheadAttention.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="Multi-head scaled dot product attention module" href="MultiheadAttention.html"><span class="name">MultiheadAttention</span></a><span class="params">(<span name="wQ">wQ: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wK">wK: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wV">wV: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="wO">wO: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="numHeads">numHeads: <span class="extype" name="scala.Int">Int</span></span>, <span name="padToken">padToken: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Multi-head scaled dot product attention module</p><div class="fullcomment"><div class="comment cmt"><p>Multi-head scaled dot product attention module</p><p>Input: (query,key,value,tokens) where
+ query: batch x num queries x query dim
+ key: batch x num k-v x key dim
+ value: batch x num k-v x key value
+ tokens: batch x num queries, long type</p><p>Tokens is used to carry over padding information and ignore the padding</p></div></div>
     </li><li name="lamp.nn.NGCN" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="NGCN[M&lt;:lamp.nn.Module]extendsGenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]withProductwithSerializable"></a><a id="NGCN[M&lt;:nn.Module]:NGCN[M]"></a>
       <span class="permalink">
@@ -1676,6 +1738,59 @@ Applies a linear function to each time step
       </span>
       
       
+    </li><li name="lamp.nn.TransformerEmbedding" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="TransformerEmbeddingextendsGenericModule[lamp.autograd.Variable,(lamp.autograd.Variable,lamp.STen)]withProductwithSerializable"></a><a id="TransformerEmbedding:TransformerEmbedding"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/TransformerEmbedding.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="Gradients are not computed for positionalEmbedding" href="TransformerEmbedding.html"><span class="name">TransformerEmbedding</span></a><span class="params">(<span name="embedding">embedding: <a href="Embedding.html" class="extype" name="lamp.nn.Embedding">Embedding</a></span>, <span name="addPositionalEmbedding">addPositionalEmbedding: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="positionalEmbedding">positionalEmbedding: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, (<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>)] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Gradients are not computed for <code>positionalEmbedding</code>
+</p>
+    </li><li name="lamp.nn.TransformerEncoder" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="TransformerEncoderextendsGenericModule[(lamp.autograd.Variable,lamp.STen),lamp.autograd.Variable]withProductwithSerializable"></a><a id="TransformerEncoder:TransformerEncoder"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/TransformerEncoder.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="TransformerEncoder module" href="TransformerEncoder.html"><span class="name">TransformerEncoder</span></a><span class="params">(<span name="blocks">blocks: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="TransformerEncoderBlock.html" class="extype" name="lamp.nn.TransformerEncoderBlock">TransformerEncoderBlock</a>]</span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">TransformerEncoder module</p><div class="fullcomment"><div class="comment cmt"><p>TransformerEncoder module</p><p>Input is <code>(data, tokens)</code> where
+<code>data</code> is (batch, num tokens, in dimension), double tensor
+<code>tokens</code> is (batch,num tokens) long tensor.</p><p>Output is (bach, num tokens, out dimension)</p><p>The sole purpose of <code>tokens</code> is to carry over the padding
+</p></div></div>
+    </li><li name="lamp.nn.TransformerEncoderBlock" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="TransformerEncoderBlockextendsGenericModule[(lamp.autograd.Variable,lamp.STen),lamp.autograd.Variable]withProductwithSerializable"></a><a id="TransformerEncoderBlock:TransformerEncoderBlock"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/TransformerEncoderBlock.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="A single block of the transformer encoder as defined in Fig 10.7.1 in d2l v0.16" href="TransformerEncoderBlock.html"><span class="name">TransformerEncoderBlock</span></a><span class="params">(<span name="attention">attention: <a href="MultiheadAttention.html" class="extype" name="lamp.nn.MultiheadAttention">MultiheadAttention</a></span>, <span name="layerNorm1">layerNorm1: <a href="LayerNorm.html" class="extype" name="lamp.nn.LayerNorm">LayerNorm</a></span>, <span name="layerNorm2">layerNorm2: <a href="LayerNorm.html" class="extype" name="lamp.nn.LayerNorm">LayerNorm</a></span>, <span name="w1">w1: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="b1">b1: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="w2">w2: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="b2">b2: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>, <span name="dropout">dropout: <span class="extype" name="scala.Double">Double</span></span>, <span name="train">train: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[(<a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>), <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">A single block of the transformer encoder as defined in Fig 10.7.1 in d2l v0.16
+</p>
     </li><li name="lamp.nn.UnliftedModule" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="UnliftedModule[A,B,C,D,M&lt;:lamp.nn.StatefulModule2[A,B,C,D]]extendsGenericModule[A,B]withProductwithSerializable"></a><a id="UnliftedModule[A,B,C,D,M&lt;:nn.StatefulModule2[A,B,C,D]]:UnliftedModule[A,B,C,D,M]"></a>
       <span class="permalink">
@@ -1777,6 +1892,22 @@ Applies a linear function to each time step
       </span>
       <span class="symbol">
         <span class="name">gradientClippingInPlace</span><span class="params">(<span name="gradients">gradients: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Option">Option</span>[<a href="../STen.html" class="extype" name="lamp.STen">STen</a>]]</span>, <span name="theta">theta: <span class="extype" name="scala.Double">Double</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn#initLinear" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="initLinear[S](in:Int,out:Int,tOpt:lamp.STenOptions)(implicitevidence$3:lamp.Sc[S]):lamp.autograd.Constant"></a><a id="initLinear[S](Int,Int,STenOptions)(Sc[S]):Constant"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/index.html#initLinear[S](in:Int,out:Int,tOpt:lamp.STenOptions)(implicitevidence$3:lamp.Sc[S]):lamp.autograd.Constant" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">initLinear</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="in">in: <span class="extype" name="scala.Int">Int</span></span>, <span name="out">out: <span class="extype" name="scala.Int">Int</span></span>, <span name="tOpt">tOpt: <a href="../STenOptions.html" class="extype" name="lamp.STenOptions">STenOptions</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.nn.initLinear.S">S</span>]</span>)</span><span class="result">: <a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a></span>
       </span>
       
       
@@ -2084,6 +2215,22 @@ Applies a linear function to each time step
       </span>
       
       
+    </li><li name="lamp.nn.LayerNorm" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="LayerNorm"></a><a id="LayerNorm:LayerNorm"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/LayerNorm$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="LayerNorm$.html"><span class="name">LayerNorm</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.LearningRateSchedule" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="LearningRateSchedule"></a><a id="LearningRateSchedule:LearningRateSchedule"></a>
       <span class="permalink">
@@ -2198,6 +2345,22 @@ Applies a linear function to each time step
       </span>
       
       
+    </li><li name="lamp.nn.MultiheadAttention" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="MultiheadAttention"></a><a id="MultiheadAttention:MultiheadAttention"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/MultiheadAttention$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="MultiheadAttention$.html"><span class="name">MultiheadAttention</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
     </li><li name="lamp.nn.NGCN" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="NGCN"></a><a id="NGCN:NGCN"></a>
       <span class="permalink">
@@ -2259,6 +2422,22 @@ Applies a linear function to each time step
       </span>
       <span class="symbol">
         <a title="" href="Passthrough$.html"><span class="name">Passthrough</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.PositionalEmbedding" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="PositionalEmbedding"></a><a id="PositionalEmbedding:PositionalEmbedding"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/PositionalEmbedding$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="PositionalEmbedding$.html"><span class="name">PositionalEmbedding</span></a>
       </span>
       
       
@@ -2547,6 +2726,54 @@ Applies a linear function to each time step
       </span>
       <span class="symbol">
         <a title="" href="TrainingMode$.html"><span class="name">TrainingMode</span></a>
+      </span>
+      
+      
+    </li><li name="lamp.nn.TransformerEmbedding" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="TransformerEmbedding"></a><a id="TransformerEmbedding:TransformerEmbedding"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/TransformerEmbedding$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="TransformerEmbedding$.html"><span class="name">TransformerEmbedding</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.TransformerEncoder" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="TransformerEncoder"></a><a id="TransformerEncoder:TransformerEncoder"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/TransformerEncoder$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="TransformerEncoder$.html"><span class="name">TransformerEncoder</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.nn.TransformerEncoderBlock" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="TransformerEncoderBlock"></a><a id="TransformerEncoderBlock:TransformerEncoderBlock"></a>
+      <span class="permalink">
+      <a href="../../lamp/nn/TransformerEncoderBlock$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="TransformerEncoderBlock$.html"><span class="name">TransformerEncoderBlock</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       

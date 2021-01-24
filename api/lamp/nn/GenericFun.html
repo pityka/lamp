@@ -194,6 +194,10 @@
                         <a class="class" href="LSTM.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)"></a>
                         <a href="LSTM.html" title="Inputs of size (sequence length * batch * vocab) Outputs of size (sequence length * batch * output dim)">LSTM</a>
                       </li><li class="current-entities indented2">
+                        <a class="object" href="LayerNorm$.html" title=""></a>
+                        <a class="class" href="LayerNorm.html" title=""></a>
+                        <a href="LayerNorm.html" title="">LayerNorm</a>
+                      </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="trait" href="LeafTag.html" title=""></a>
                         <a href="LeafTag.html" title="">LeafTag</a>
@@ -242,6 +246,10 @@
                         <a class="class" href="ModelWithOptimizer.html" title=""></a>
                         <a href="ModelWithOptimizer.html" title="">ModelWithOptimizer</a>
                       </li><li class="current-entities indented2">
+                        <a class="object" href="MultiheadAttention$.html" title=""></a>
+                        <a class="class" href="MultiheadAttention.html" title="Multi-head scaled dot product attention module"></a>
+                        <a href="MultiheadAttention.html" title="Multi-head scaled dot product attention module">MultiheadAttention</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="NGCN$.html" title=""></a>
                         <a class="class" href="NGCN.html" title=""></a>
                         <a href="NGCN.html" title="">NGCN</a>
@@ -265,6 +273,10 @@
                         <a class="object" href="Passthrough$.html" title=""></a>
                         <a class="class" href="Passthrough.html" title=""></a>
                         <a href="Passthrough.html" title="">Passthrough</a>
+                      </li><li class="current-entities indented2">
+                        <span class="separator"></span>
+                        <a class="object" href="PositionalEmbedding$.html" title=""></a>
+                        <a href="PositionalEmbedding$.html" title="">PositionalEmbedding</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="RAdam$.html" title=""></a>
                         <a class="class" href="RAdam.html" title=""></a>
@@ -366,6 +378,18 @@
                         <a class="class" href="package$$TrainingModeSyntax.html" title=""></a>
                         <a href="package$$TrainingModeSyntax.html" title="">TrainingModeSyntax</a>
                       </li><li class="current-entities indented2">
+                        <a class="object" href="TransformerEmbedding$.html" title=""></a>
+                        <a class="class" href="TransformerEmbedding.html" title="Gradients are not computed for positionalEmbedding"></a>
+                        <a href="TransformerEmbedding.html" title="Gradients are not computed for positionalEmbedding">TransformerEmbedding</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="TransformerEncoder$.html" title=""></a>
+                        <a class="class" href="TransformerEncoder.html" title="TransformerEncoder module"></a>
+                        <a href="TransformerEncoder.html" title="TransformerEncoder module">TransformerEncoder</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="TransformerEncoderBlock$.html" title=""></a>
+                        <a class="class" href="TransformerEncoderBlock.html" title="A single block of the transformer encoder as defined in Fig 10.7.1 in d2l v0.16"></a>
+                        <a href="TransformerEncoderBlock.html" title="A single block of the transformer encoder as defined in Fig 10.7.1 in d2l v0.16">TransformerEncoderBlock</a>
+                      </li><li class="current-entities indented2">
                         <a class="object" href="UnliftedModule$.html" title=""></a>
                         <a class="class" href="UnliftedModule.html" title=""></a>
                         <a href="UnliftedModule.html" title="">UnliftedModule</a>
@@ -418,7 +442,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">GenericFun</span><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>]</span><span class="params">(<span name="fun">fun: (<span class="extype" name="lamp.nn.GenericFun.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericFun.B">B</span></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.GenericFun.A">A</span>, <span class="extype" name="lamp.nn.GenericFun.B">B</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">GenericFun</span><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>]</span><span class="params">(<span name="fun">fun: (<a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a>) ⇒ (<span class="extype" name="lamp.nn.GenericFun.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericFun.B">B</span></span>)</span><span class="result"> extends <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a>[<span class="extype" name="lamp.nn.GenericFun.A">A</span>, <span class="extype" name="lamp.nn.GenericFun.B">B</span>] with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -474,9 +498,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.nn.GenericFun#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(fun:A=&gt;B):lamp.nn.GenericFun[A,B]"></a><a id="&lt;init&gt;:GenericFun[A,B]"></a>
+      <a id="&lt;init&gt;(fun:lamp.Scope=&gt;(A=&gt;B)):lamp.nn.GenericFun[A,B]"></a><a id="&lt;init&gt;:GenericFun[A,B]"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/GenericFun.html#&lt;init&gt;(fun:A=&gt;B):lamp.nn.GenericFun[A,B]" title="Permalink">
+      <a href="../../lamp/nn/GenericFun.html#&lt;init&gt;(fun:lamp.Scope=&gt;(A=&gt;B)):lamp.nn.GenericFun[A,B]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -485,7 +509,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">GenericFun</span><span class="params">(<span name="fun">fun: (<span class="extype" name="lamp.nn.GenericFun.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericFun.B">B</span></span>)</span>
+        <span class="name">GenericFun</span><span class="params">(<span name="fun">fun: (<a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a>) ⇒ (<span class="extype" name="lamp.nn.GenericFun.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericFun.B">B</span></span>)</span>
       </span>
       
       
@@ -658,9 +682,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.nn.GenericFun">GenericFun</a> → <a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="lamp.nn.GenericFun#fun" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fun:A=&gt;B"></a><a id="fun:(A)⇒B"></a>
+      <a id="fun:lamp.Scope=&gt;(A=&gt;B)"></a><a id="fun:(Scope)⇒(A)⇒B"></a>
       <span class="permalink">
-      <a href="../../lamp/nn/GenericFun.html#fun:A=&gt;B" title="Permalink">
+      <a href="../../lamp/nn/GenericFun.html#fun:lamp.Scope=&gt;(A=&gt;B)" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -669,7 +693,7 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">fun</span><span class="result">: (<span class="extype" name="lamp.nn.GenericFun.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericFun.B">B</span></span>
+        <span class="name">fun</span><span class="result">: (<a href="../Scope.html" class="extype" name="lamp.Scope">Scope</a>) ⇒ (<span class="extype" name="lamp.nn.GenericFun.A">A</span>) ⇒ <span class="extype" name="lamp.nn.GenericFun.B">B</span></span>
       </span>
       
       
