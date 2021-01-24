@@ -19,7 +19,7 @@ The library also provides off-heap (living in main or GPU memory) n-dimensional 
 
 It provides components to build neural networks:
 
-- fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM, GCN layers
+- fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM, GCN, self-attention (transformer) layers
 - various nonlinearities
 - batch normalization and weight normalization
 - seq2seq
