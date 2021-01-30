@@ -126,7 +126,8 @@ object Umap {
       repulsionStrength: Double,
       logger: Option[Logger],
       device: Device,
-      numDim: Int
+      numDim: Int,
+      positiveSamples: Option[Int]
   ) = {
     val precision = DoublePrecision
 
@@ -201,9 +202,14 @@ object Umap {
         clip = Some(1d)
       )(List(locations.value -> NoTag))
 
-      def sampleRepulsivePairsT(n: Int)(implicit scope: Scope) = {
+      def sampleRepulsivePairsT(n: Int, positiveSample: Option[STen])(
+          implicit scope: Scope
+      ) = {
         Scope { implicit scope =>
-          val ii = indexIT.repeatInterleave(n, 0)
+          val ii = positiveSample
+            .map(p => indexIT.indexSelect(0, p))
+            .getOrElse(indexIT)
+            .repeatInterleave(n, 0)
 
           val m = ii.sizes.apply(0)
           val jj = STen.randint(0, total - 1, Array(m), ii.options)
@@ -218,8 +224,18 @@ object Umap {
       var lastLoss = 0d
       while (i < iterations) {
         Scope.root { implicit scope =>
+          val positiveSample =
+            positiveSamples.map(m =>
+              STen.randint(
+                index1.shape(0),
+                List(math.min(m, index1.shape(0))),
+                index1.options
+              )
+            )
+
           val (index3T, index4T) = {
-            var (index3, index4) = sampleRepulsivePairsT(negativeSampleSize)
+            var (index3, index4) =
+              sampleRepulsivePairsT(negativeSampleSize, positiveSample)
             val i3 = const(
               index3
             )
@@ -229,13 +245,18 @@ object Umap {
             (i3, i4)
           }
 
+          def select(a: Variable) = positiveSample match {
+            case None    => a
+            case Some(i) => a.indexSelect(0, const(i))
+          }
+
           val lossV = loss(
             locations = locations,
-            index1 = index1,
-            index2 = index2,
+            index1 = select(index1),
+            index2 = select(index2),
             index3 = index3T,
             index4 = index4T,
-            b = b
+            b = select(b)
           )
           val lossAsDouble = lossV.value.toMat.raw(0)
           lastLoss = lossAsDouble
@@ -320,7 +341,8 @@ object Umap {
       randomSeed: Long = 42L,
       balanceAttractionsAndRepulsions: Boolean = true,
       repulsionStrength: Double = 1d,
-      logger: Option[Logger] = None
+      logger: Option[Logger] = None,
+      positiveSamples: Option[Int] = None
   ) = {
     val knn = lamp.knn.knnSearch(
       data,
@@ -354,7 +376,8 @@ object Umap {
       randomSeed,
       balanceAttractionsAndRepulsions,
       repulsionStrength,
-      logger
+      logger,
+      positiveSamples
     )
   }
   def umapCustomKnn(
@@ -369,7 +392,8 @@ object Umap {
       randomSeed: Long = 42L,
       balanceAttractionsAndRepulsions: Boolean = true,
       repulsionStrength: Double = 1d,
-      logger: Option[Logger] = None
+      logger: Option[Logger] = None,
+      positiveSamples: Option[Int] = None
   ) = {
 
     logger.foreach(_.info("KNN done"))
@@ -391,7 +415,8 @@ object Umap {
         repulsionStrength = repulsionStrength,
         logger = logger,
         device = device,
-        numDim = numDim
+        numDim = numDim,
+        positiveSamples = positiveSamples
       )
 
     logger.foreach(_.info(s"optimization done"))

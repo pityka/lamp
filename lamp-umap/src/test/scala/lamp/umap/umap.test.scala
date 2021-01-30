@@ -7,10 +7,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.DoublePrecision
 import lamp.CPU
 
-// import org.nspl._
-// import org.nspl.awtrenderer._
-// import org.nspl.saddle._
-
 class UmapSuite extends AnyFunSuite {
 
   test("edge weights") {
@@ -64,11 +60,16 @@ class UmapSuite extends AnyFunSuite {
 
     val (locs, _, loss) = Umap.umap(
       data = data.toMat,
-      numDim = 2
+      numDim = 2,
+      positiveSamples = Some(5000),
+      negativeSampleSize = 5,
+      // logger = Some(scribe.Logger("sfa")),
+      iterations = 1000
     )
 
-    assert(loss < 0.7)
-    val _ = locs
+    // import org.nspl._
+    // import org.nspl.awtrenderer._
+    // import org.nspl.saddle._
     // println(
     //   pdfToFile(
     //     xyplot(
@@ -84,6 +85,9 @@ class UmapSuite extends AnyFunSuite {
     //     )().build
     //   )
     // )
+
+    assert(loss < 0.7)
+    val _ = locs
 
   }
 }
