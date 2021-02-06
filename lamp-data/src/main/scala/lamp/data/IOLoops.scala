@@ -21,11 +21,12 @@ object IOLoops {
         batch: Resource[IO, Option[(I, STen)]]
     ): IO[Unit] = {
       batch.use {
-        case None => IO.unit
+        case None => IO.pure(false)
         case Some((x, _)) =>
-          IO { Scope.root { implicit scope => model.forward(x) } } *> loop(
-            batchStream.nextBatch
-          )
+          IO { Scope.root { implicit scope => model.forward(x) }; true }
+      } flatMap {
+        case true  => loop(batchStream.nextBatch)
+        case false => IO.unit
       }
     }
 
@@ -41,12 +42,19 @@ object IOLoops {
         acc: List[STen]
     ): IO[List[STen]] = {
       batch.use {
-        case None => IO.pure(acc.reverse)
+        case None => IO.pure(Left(acc.reverse))
         case Some((x, _)) =>
-          loop(batchStream.nextBatch, Scope { implicit scope =>
-            model.forward(x).value
-          } :: acc)
+          IO {
+            Right(Scope { implicit scope =>
+              model.forward(x).value
+            } :: acc)
+          }
+
+      } flatMap {
+        case Left(acc)  => IO.pure(acc)
+        case Right(acc) => loop(batchStream.nextBatch, acc)
       }
+
     }
 
     loop(batchStream.nextBatch, Nil)

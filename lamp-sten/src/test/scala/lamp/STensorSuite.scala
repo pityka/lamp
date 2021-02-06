@@ -261,5 +261,52 @@ class STenSuite extends AnyFunSuite {
       )
     }
   }
+  test("npy") {
+    Scope.root { implicit scope =>
+      val read =
+        lamp.io.npy.readDoubleFromChannel(
+          java.nio.channels.Channels
+            .newChannel(getClass.getResourceAsStream("/file.npy")),
+          CPU
+        )
+      assert(read.shape == List(3, 3))
+      assert(
+        read.toMat == (Mat(Vec(1d, 0d, 0d), Vec(0d, 1d, 0d), Vec(0d, 0d, 1d)))
+      )
+    }
+
+  }
+
+  test("csv") {
+    Scope.root { implicit scope =>
+      val tmp = java.io.File.createTempFile("dfsd", ".csv")
+      val is = new java.io.FileInputStream(tmp)
+      val writer = new java.io.BufferedWriter(new java.io.FileWriter(tmp))
+      writer.write("a,b\r\n")
+      val line = "1.0,2.0\r\n"
+      val numRows = 1000L
+      var i = 0L
+      while (i < numRows) {
+        writer.write(line)
+        i += 1
+      }
+      writer.close
+      val channel = is.getChannel
+      val (h, ten) =
+        lamp.io.csv.readFromChannel(6, channel, CPU, header = true).right.get
+      assert(h == Some(List("a", "b")))
+      assert(ten.shape == List(numRows, 2))
+    }
+  }
+
+  test("csv - buffer") {
+    val buffer =
+      new lamp.io.csv.Buffer[Double](Array.ofDim[Double](0), 0, Nil, 5)
+    0 until 100 foreach (i => buffer.+=(i.toDouble))
+    assert(
+      buffer.toArrays.reduce(_ ++ _).toList == (0 until 100).toList
+        .map(_.toDouble)
+    )
+  }
 
 }
