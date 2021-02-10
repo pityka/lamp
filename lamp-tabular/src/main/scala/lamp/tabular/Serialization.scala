@@ -11,8 +11,8 @@ import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 import java.io.FileInputStream
 import org.saddle.scalar.ScalarTagLong
-import lamp.ClassificationTree
-import lamp.RegressionTree
+import lamp.extratrees.ClassificationTree
+import lamp.extratrees.RegressionTree
 import lamp.STen
 import lamp.Scope
 import lamp.STenOptions

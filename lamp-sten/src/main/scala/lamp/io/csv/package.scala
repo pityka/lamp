@@ -12,6 +12,11 @@ import org.saddle.scalar.ScalarTagLong
 import org.saddle.scalar.ScalarTagFloat
 import java.io.File
 
+/** This package provides methods to read CSV formatted data into STen tensors
+  *
+  * The data is first read into to a regular JVM array, then transferred to off-heap memory.
+  * The total tensor size may be larger than what a single JVM array can hold.
+  */
 package object csv {
   val asciiSilentCharsetDecoder = org.saddle.io.csv.asciiSilentCharsetDecoder
 

@@ -129,6 +129,36 @@ object Movable {
 
 }
 
+/** Faciliates memory management of off-heap data structures.
+  *
+  * Tracks allocations of aten.Tensor and aten.TensorOption instances.
+  *
+  * aten.Tensor and aten.TensorOption instances are not freed up by the garbage collector.
+  * Lamp implements zoned memory management around these object.
+  * The managed counterpart of aten.Tensor is [[lamp.STen]], while for aten.TensorOption it is [[lamp.STenOptions]].
+  *
+  * One can only create a [[lamp.STen]] instance with a [[lamp.Scope]] in implicit scope.
+  *
+  * Create new scopes with [[lamp.Scope.root]], [[lamp.Scope.apply]] or [[lamp.Scope.leak]].
+  *
+  * =Examples=
+  * {{{
+  * // Scope.root returns Unit
+  * Scope.root { implicit scope =>
+  *    val sum = Scope { implicit scope =>
+  *    // Intermediate values allocated in this block (`ident` and `ones`) are freed when
+  *    // this block returns
+  *    // The return value (`ident + ones`) of this block is moved to the outer scope
+  *     val ident = STen.eye(3, STenOptions.d)
+  *     val ones = STen.ones(List(3, 3), STenOptions.d)
+  *     ident + ones
+  *    }
+  *    assert(sum.toMat == mat.ones(3, 3) + mat.ident(3))
+  *    // `sum` is freed once this block exits
+  * }
+  * }}}
+  *
+  */
 final class Scope private {
 
   type ResourceType = Either[Tensor, TensorOptions]
@@ -136,21 +166,39 @@ final class Scope private {
   private var closed = false
   private var resources: List[ResourceType] = Nil
 
+  /** Adds a resource to the managed resources, then returns it unchanged.
+    *
+    * The resources will be released when this Scope goes out of scope or otherwise releases.
+    */
   def apply(resource: Tensor): Tensor = {
     register(resource)
     resource
   }
+
+  /** Adds a resource to the managed resources, then returns it unchanged.
+    *
+    * The resources will be released when this Scope goes out of scope or otherwise releases.
+    */
   def apply(resource: TensorOptions): TensorOptions = {
     register(resource)
     resource
   }
 
+  /** Adds a resource to the managed resources.
+    *
+    * The resources will be released when this Scope goes out of scope or otherwise releases.
+    */
   def register(resource: Tensor): Unit = {
     if (resource == null) throw new NullPointerException("null resource")
     if (closed)
       throw new IllegalStateException("already been closed")
     resources = Left(resource) :: resources
   }
+
+  /** Adds a resource to the managed resources.
+    *
+    * The resources will be released when this Scope goes out of scope or otherwise releases.
+    */
   def register(resource: TensorOptions): Unit = {
     if (resource == null) throw new NullPointerException("null resource")
     if (closed)
@@ -158,6 +206,7 @@ final class Scope private {
     resources = Right(resource) :: resources
   }
 
+  /** Immediately release the resources managed by this Scope */
   def release(): Unit = manage[Unit](_ => ())
 
   private def manageMovable[A](
@@ -271,13 +320,23 @@ final class Scope private {
 
 object Scope {
 
+  /** Create new free standing Scope, not bound to any lexical scope. */
   def free = new Scope
 
+  /** Create new Scope bound to a cats-effect Resource.
+    *
+    * Will release when the cats-effect Resource cleans up.
+    */
   def inResource =
     Resource.make(IO {
       Scope.free
     })(scope => IO { scope.release })
 
+  /** Create new Scope bound to a cats-effect IO.
+    *
+    * Will release when the IO finishes.
+    * Return values of the IO are moved to the parent scope.
+    */
   def bracket[A: Movable](
       use: Scope => IO[A]
   )(implicit parent: Scope): IO[A] =
@@ -289,6 +348,11 @@ object Scope {
         }
     }
 
+  /** Create new Scope bound to a cats-effect IO.
+    *
+    * Will release when the IO finishes.
+    * Return values of the IO are moved to the parent scope.
+    */
   def bracket[A: Movable](parent: Scope)(
       use: Scope => IO[A]
   ): IO[A] = {
@@ -296,6 +360,12 @@ object Scope {
     bracket(use)
   }
 
+  /** Create new Scope bound to an anonymous function.
+    *
+    * Will release when the function returns.
+    * Return values of the function are moved to the parent scope.
+    * Return values must conform to the [[lamp.Movable]] type class.
+    */
   def apply[A: Movable](
       op: Scope => A
   )(implicit parent: Scope): A = {
@@ -305,11 +375,24 @@ object Scope {
     }
     last
   }
+
+  /** Create new Scope bound to an anonymous function. Returns nothing.
+    *
+    * Will release when the function returns.
+    */
   def root[A](
       op: Scope => Unit
   ): Unit = {
     (new Scope).manage(op)
   }
+
+  /** Create new Scope bound to an anonymous function. May leak resources.
+    *
+    * Will release when the function returns.
+    * Return values are *not* moved to any parent scope.
+    *
+    * This method exists to return GC-managed values from a Scope block.
+    */
   def leak[A](
       op: Scope => A
   ): A = {
