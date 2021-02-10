@@ -5,57 +5,81 @@ import aten.ATen
 import org.saddle._
 
 object STen {
+
+  /** A tensor option specifying CPU and double */
   val dOptions = STenOptions(aten.TensorOptions.d)
+
+  /** A tensor option specifying CPU and float */
   val fOptions = STenOptions(aten.TensorOptions.f)
+
+  /** A tensor option specifying CPU and long */
   val lOptions = STenOptions(aten.TensorOptions.l)
 
   implicit class OwnedSyntax(t: Tensor) {
     def owned[S: Sc] = STen.owned(t)
   }
 
+  /** Returns a tensor with the given content and shape on the given device */
   def fromMat[S: Sc](
       m: Mat[Double],
       cuda: Boolean = false
   ) = owned(TensorHelpers.fromMat(m, cuda))
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromMat[S: Sc](
       m: Mat[Double],
       device: Device,
       precision: FloatingPointPrecision
   ) = owned(TensorHelpers.fromMat(m, device, precision))
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromFloatMat[S: Sc](
       m: Mat[Float],
       device: Device
   ) = owned(TensorHelpers.fromFloatMat(m, device))
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromVec[S: Sc](
       m: Vec[Double],
       cuda: Boolean = false
   ) = owned(TensorHelpers.fromVec(m, cuda))
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromVec[S: Sc](
       m: Vec[Double],
       device: Device,
       precision: FloatingPointPrecision
   ) = owned(TensorHelpers.fromVec(m, device, precision))
 
+  /** Returns a tensor with the given content and shape on the given device */
   def fromLongMat[S: Sc](
       m: Mat[Long],
       device: Device
   ) = owned(TensorHelpers.fromLongMat(m, device))
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromLongMat[S: Sc](
       m: Mat[Long],
       cuda: Boolean = false
   ) = owned(TensorHelpers.fromLongMat(m, cuda))
 
+  /** Returns a tensor with the given content and shape on the given device */
   def fromLongVec[S: Sc](
       m: Vec[Long],
       device: Device
   ) = owned(TensorHelpers.fromLongVec(m, device))
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromLongVec[S: Sc](
       m: Vec[Long],
       cuda: Boolean = false
   ) = owned(TensorHelpers.fromLongVec(m, cuda))
 
+  /** Returns a tensor with the given content and shape on the given device */
   def fromLongArray[S: Sc](ar: Array[Long], dim: Seq[Long], device: Device) =
     TensorHelpers.fromLongArray(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromDoubleArray[S: Sc](
       ar: Array[Double],
       dim: Seq[Long],
@@ -63,13 +87,21 @@ object STen {
       precision: FloatingPointPrecision
   ) =
     TensorHelpers.fromDoubleArray(ar, dim, device, precision).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromFloatArray[S: Sc](ar: Array[Float], dim: Seq[Long], device: Device) =
     TensorHelpers.fromFloatArray(ar, dim, device).owned
 
+  /** Wraps a tensor without registering it to any scope.
+    *
+    * Memory may leak.
+    */
   def free(value: Tensor) = STen(value)
 
+  /** Returns a 1D tensor containing the given values */
   def apply[S: Sc](vs: Double*) = fromVec(Vec(vs: _*))
 
+  /** Wraps an aten.Tensor and registering it to the given scope */
   def owned(
       value: Tensor
   )(implicit scope: Scope): STen = {
@@ -325,12 +357,25 @@ object STen {
 
 case class STenOptions(value: aten.TensorOptions) {
   import STenOptions._
+
+  /** Returns a copy with dtype set to long */
   def toLong[S: Sc] = value.toLong.owned
+
+  /** Returns a copy with dtype set to double */
   def toDouble[S: Sc] = value.toDouble.owned
+
+  /** Returns a copy with dtype set to float */
   def toFloat[S: Sc] = value.toFloat.owned
+
+  /** Returns a copy with device set to CPU */
   def cpu[S: Sc] = value.cpu.owned
+
+  /** Returns a copy with device set to cuda with index */
   def cudaIndex[S: Sc](index: Short) = value.cuda_index(index).owned
+
+  /** Returns a copy with device set to cuda:0 */
   def cuda[S: Sc] = cudaIndex(0)
+
   def isDouble = value.isDouble
   def isFloat = value.isFloat
   def isLong = value.isLong
@@ -338,12 +383,28 @@ case class STenOptions(value: aten.TensorOptions) {
   def isCuda = value.isCuda
   def isSparse = value.isSparse
   def deviceIndex = value.deviceIndex
+
+  /** Returns the byte representation of dtype
+    *
+    * 4 - long, 6 - float, 7 - oble
+    */
   def scalarTypeByte = value.scalarTypeByte
 }
 object STenOptions {
+
+  /** Returns an tensor option specifying CPU and double */
   def d = STen.dOptions
+
+  /** Returns an tensor option specifying CPU and float */
   def f = STen.fOptions
+
+  /** Returns an tensor option specifying CPU and long */
   def l = STen.lOptions
+
+  /** Returns an tensor option specifying CPU and dtype corresponding to the given byte
+    *
+    * 4 - long, 6 - float, 7 - double
+    */
   def fromScalarType[S: Sc](b: Byte) =
     owned(aten.TensorOptions.fromScalarType(b))
   implicit class OwnedSyntaxOp(t: aten.TensorOptions) {
@@ -357,44 +418,184 @@ object STenOptions {
   }
 }
 
+/** Memory managed, off-heap N-dimensional array.
+  *
+  * This class is a wrapper around aten.Tensor providing a more convenient API.
+  * All allocating operations require an implicit [[lamp.Scope]].
+  *
+  * STen instances are associated with a device which determines where the memory is allocated,
+  * and where the operations are performed.
+  * Operations on multiple tensors expect that all the arguments reside on the same device.
+  *
+  * [[lamp.STen.options]] returns a [[lamp.STenOptions]] which describes the device, shape, data type and
+  * storage layout of a tensor.
+  * Most factory methods in the companion object in turn require a [[lamp.STenOptions]] to specify
+  * the device, data types and storage layout.
+  *
+  * Naming convention of most operations follows libtorch.
+  * Operations return their result in a copy, i.e. not in place. These operations need a [[lamp.Scope]].
+  * Operations whose name ends with an underscore are in place.
+  * Operations whose name contains `out` will write their results into the specified output tensor, these are in the companion object.
+  * Some operations are exempt from this naming rule, e.g. `+=`, `-=`, `*=` etc.
+  *
+  * Semantics of operations follow those of libtorch with the same name.
+  * Many of the operations broadcasts. See [[https://numpy.org/doc/stable/user/basics.broadcasting.html#general-broadcasting-rules]] for broadcasting rules.
+  * In short:
+  *
+  *   1. shapes are aligned from the right, extending with ones to the left as needed.
+  *   2. If two aligned dimensions are not matching but one of them is 1, then it is expanded to the
+  *     value of the other dimension, pretending a copy of all its values.
+  *     If two aligned dimension are not matching and neither of them is 1, then the operation fails.
+  * =Examples=
+  * {{{
+  * Scope.root { implicit scope =>
+  *    val sum = Scope { implicit scope =>
+  *     val ident = STen.eye(3, STenOptions.d)
+  *     val ones = STen.ones(List(3, 3), STenOptions.d)
+  *     ident + ones
+  *    }
+  *    assert(sum.toMat == mat.ones(3, 3) + mat.ident(3))
+  * }
+  * }}}
+  * ===Broadcasting examples===
+  * {{{
+  * // successful
+  * 3 x 4 x 6 A
+  *     4 x 6 B
+  * 3 x 4 x 6 Result // B is repeated 3 times first dimensions
+  *
+  * // successful
+  * 3 x 4 x 6 A
+  * 3 x 1 x 6 B
+  * 3 x 4 x 6 Result // B's second dimension is repeated 4 times
+  *
+  * // fail
+  * 3 x 4 x 6 A
+  * 3 x 2 x 6 B
+  * 3 x 4 x 6 Result // 2 != 4
+  * }}}
+  *
+  *
+  */
 case class STen private (
     value: Tensor
 ) {
   import STen._
 
+  /** Returns the number of elements in the tensor */
   def numel = value.numel
 
+  /** Converts to a Mat[Double].
+    *
+    * Copies to CPU if needed.
+    * Fails if dtype is not float or double.
+    * Fails if shape does not conform a matrix.
+    */
   def toMat = TensorHelpers.toMat(value)
+
+  /** Converts to a Mat[Float].
+    *
+    * Copies to CPU if needed.
+    * Fails if dtype is not float.
+    * Fails if shape does not conform a matrix.
+    */
   def toFloatMat = TensorHelpers.toFloatMat(value)
+
+  /** Converts to a Mat[Long].
+    *
+    * Copies to CPU if needed.
+    * Fails if dtype is not long.
+    * Fails if shape does not conform a matrix.
+    */
   def toLongMat = TensorHelpers.toLongMat(value)
+
+  /** Converts to a Vec[Double].
+    *
+    * Copies to CPU if needed.
+    * Fails if dtype is not float or double.
+    * Flattens the shape.
+    */
   def toVec = TensorHelpers.toVec(value)
+
+  /** Converts to a Vec[Float].
+    *
+    * Copies to CPU if needed.
+    * Fails if dtype is not float.
+    * Flattens the shape.
+    */
   def toFloatVec = TensorHelpers.toFloatVec(value)
+
+  /** Converts to a Vec[Long].
+    *
+    * Copies to CPU if needed.
+    * Fails if dtype is not long.
+    * Flattens the shape.
+    */
   def toLongVec = TensorHelpers.toLongVec(value)
+
+  /** Returns the shape of the tensor */
   def shape = value.sizes.toList
+
+  /** Returns the shape of the tensor */
   def sizes = shape
+
+  /** Returns the associated STenOptions */
   def options[S: Sc] = STenOptions.owned(value.options())
   def coalesce[S: Sc] = value.coalesce.owned
+
+  /** Returns indices. Only for sparse tensors */
   def indices[S: Sc] = value.indices.owned
+
+  /** Returns values. Only for sparse tensors */
   def values[S: Sc] = value.indices.owned
 
+  /** Returns true if data type is double */
   def isDouble = Scope.leak { implicit scope => options.isDouble }
+
+  /** Returns true if data type is float */
   def isFloat = Scope.leak { implicit scope => options.isFloat }
+
+  /** Returns true if data type is long */
   def isLong = Scope.leak { implicit scope => options.isLong }
+
+  /** Returns true if device is CPU */
   def isCPU = Scope.leak { implicit scope => options.isCPU }
+
+  /** Returns true if device is Cuda */
   def isCuda = Scope.leak { implicit scope => options.isCuda }
+
+  /** Returns true if this is sparse tensor */
   def isSparse = Scope.leak { implicit scope => options.isSparse }
+
+  /** Returns the device index. Only for Cuda tensors. */
   def deviceIndex = Scope.leak { implicit scope => options.deviceIndex }
+
+  /** Returns the byte representation of the data type
+    *
+    * The mapping is:
+    *  - 4 for Long
+    *  - 6 for Float
+    *  - 7 for Double
+    */
   def scalarTypeByte = Scope.leak { implicit scope => options.scalarTypeByte }
 
+  /** Returns a copy of this tensor on the given device */
   def copyToDevice(device: Device)(implicit scope: Scope) = {
     STen.owned(device.to(value))
   }
 
+  /** Returns a copy of this tensor */
   def cloneTensor[S: Sc] = ATen.clone(value).owned
+
+  /** Returns a copy of this tensor adapted to the given options */
   def copyTo[S: Sc](options: STenOptions) =
     value.to(options.value, true, true).owned
+
+  /** Overwrites the contents of this tensor with the contents of an other. Must conform. */
   def copyFrom(source: Tensor) =
     value.copyFrom(source)
+
+  /** Overwrites the contents of this tensor with the contents of an other. Must conform. */
   def copyFrom(source: STen) =
     value.copyFrom(source.value)
 
@@ -407,106 +608,185 @@ case class STen private (
       case Some(t) => t.owned
     }
 
+  /** Transposes the first two dimensions. */
   def t[S: Sc] = owned(ATen.t(value))
+
+  /** Transposes the  given dimensions. */
   def transpose[S: Sc](dim1: Int, dim2: Int) =
     owned(ATen.transpose(value, dim1, dim2))
 
+  /** Selects a scalar element or a tensor in the given dimension and index. */
   def select[S: Sc](dim: Long, index: Long) =
     owned(ATen.select(value, dim, index))
+
+  /** Flattens between the given dimensions. Inclusive. */
   def flatten[S: Sc](startDim: Long, endDim: Long) =
     owned(ATen.flatten(value, startDim, endDim))
 
+  /** Selects along the given dimension with indices in the supplied long tensor. */
   def indexSelect[S: Sc](dim: Long, index: STen) =
     owned(ATen.index_select(value, dim, index.value))
+
+  /** Selects along the given dimension with indices in the supplied long tensor. */
   def indexSelect[S: Sc](dim: Long, index: Tensor) =
     owned(ATen.index_select(value, dim, index))
+
+  /** Reduces the given dimension with the index of its maximum element.
+    *
+    * @param keepDim if true then the reduced dimension is kept with size 1
+    */
   def argmax[S: Sc](dim: Long, keepDim: Boolean) =
     owned(ATen.argmax(value, dim, keepDim))
+
+  /** Reduces the given dimension with the index of its minimum element.
+    *
+    * @param keepDim if true then the reduced dimension is kept with size 1
+    */
   def argmin[S: Sc](dim: Long, keepDim: Boolean) =
     owned(ATen.argmin(value, dim, keepDim))
+
+  /** Fills the tensor with the given `fill` value in the locations indicated by the `mask` boolean mask. */
   def maskFill[S: Sc](mask: STen, fill: Double) =
     owned(ATen.masked_fill_0(value, mask.value, fill))
+
+  /** Returns a boolean tensors of the same shape, indicating equality with the other tensor. */
   def equ[S: Sc](other: STen) =
     owned(ATen.eq_1(value, other.value))
+
+  /** Returns a boolean tensors of the same shape, indicating equality with the other value. */
   def equ[S: Sc](other: Double) =
     owned(ATen.eq_0(value, other))
+
+  /** Returns a boolean tensors of the same shape, indicating equality with the other value. */
   def equ[S: Sc](other: Long) =
     owned(ATen.eq_0_l(value, other))
+
+  /** Concatenates two tensors along the given dimension. Other dimensions must conform. */
   def cat[S: Sc](other: STen, dim: Long) =
     owned(ATen.cat(Array(value, other.value), dim))
 
+  /** Casts to float */
   def castToFloat[S: Sc] = owned(ATen._cast_Float(value, true))
+
+  /** Casts to double */
   def castToDouble[S: Sc] = owned(ATen._cast_Double(value, true))
+
+  /** Casts to long */
   def castToLong[S: Sc] = owned(ATen._cast_Long(value, true))
 
+  /** Adds to tensors. */
   def +[S: Sc](other: STen) =
     owned(ATen.add_0(value, other.value, 1d))
+
+  /** In place add. */
   def +=(other: STen): Unit =
     ATen.add_out(value, value, other.value, 1d)
+
+  /** In place add. */
   def +=(other: Double): Unit =
     value.add_(other, 1d)
+
+  /** Adds a scalar to all elements. */
   def +[S: Sc](other: Double) =
     owned(ATen.add_1(value, other, 1d))
+
+  /** Adds an other tensor multipled by a scalar `(a + alpha * b)`. */
   def add[S: Sc](other: STen, alpha: Double) =
     owned(ATen.add_0(value, other.value, alpha))
+
+  /** Adds a value multipled by a scalar `(a + alpha * b)`. */
   def add[S: Sc](other: Double, alpha: Double) =
     owned(ATen.add_1(value, other, alpha))
 
+  /** `beta * this + alpha * (mat1 matmul mat2)` */
   def addmm[S: Sc](mat1: STen, mat2: STen, beta: Double, alpha: Double) =
     ATen.addmm(value, mat1.value, mat2.value, beta, alpha).owned
 
+  /** Subtracts other. */
   def -[S: Sc](other: STen) =
     owned(ATen.sub_0(value, other.value, 1d))
+
+  /** Subtracts other in place. */
   def -=[S: Sc](other: STen): Unit =
     ATen.sub_out(value, value, other.value, 1d)
+
+  /** Subtracts other after multiplying with a number. */
   def sub[S: Sc](other: STen, alpha: Double) =
     owned(ATen.sub_0(value, other.value, alpha))
+
+  /** Subtracts other after multiplying with a number. */
   def sub[S: Sc](other: Double, alpha: Double) =
     owned(ATen.sub_1(value, other, alpha))
 
+  /** Multiplication */
   def *[S: Sc](other: STen) =
     owned(ATen.mul_0(value, other.value))
+
+  /** Multiplication */
   def *[S: Sc](other: Tensor) =
     owned(ATen.mul_0(value, other))
 
+  /** Multiplication */
   def *[S: Sc](other: Double) =
     owned(ATen.mul_1(value, other))
 
+  /** In place multiplication. */
   def *=[S: Sc](other: STen): Unit =
     ATen.mul_out(value, value, other.value)
+
+  /** In place multiplication. */
   def *=[S: Sc](other: Double): Unit =
     value.mul_(other)
 
+  /** Division. */
   def /[S: Sc](other: STen) =
     owned(ATen.div_0(value, other.value))
+
+  /** Division. */
   def /[S: Sc](other: Tensor) =
     owned(ATen.div_0(value, other))
+
+  /** Division. */
   def /[S: Sc](other: Double) =
     owned(ATen.div_1(value, other))
+
+  /** In place division. */
   def /=[S: Sc](other: STen): Unit =
     ATen.div_out(value, value, other.value)
 
+  /** Matrix multiplication. Maps to Aten.mm. */
   def mm[S: Sc](other: STen) =
     owned(ATen.mm(value, other.value))
 
+  /** Batched matrix multiplication. Maps to Aten.bmm.
+    *
+    * Performs the same matrix multiplication along multiple batches.
+    * Batch dimensions do not broadcast.
+    */
   def bmm[S: Sc](other: STen) =
     owned(ATen.bmm(value, other.value))
 
+  /** Batched add mm. */
   def baddbmm[S: Sc](batch1: STen, batch2: STen, beta: Double, alpha: Double) =
     ATen.baddbmm(value, batch1.value, batch2.value, beta, alpha).owned
 
+  /** Elementwise `this + alpha * tensor1 * tensor2` */
   def addcmul[S: Sc](
       tensor1: STen,
       tensor2: STen,
       alpha: Double
   ) =
     ATen.addcmul(value, tensor1.value, tensor2.value, alpha).owned
+
+  /** Elementwise in place `this + alpha * tensor1 * tensor2` */
   def addcmulSelf(
       tensor1: STen,
       tensor2: STen,
       alpha: Double
   ): Unit =
     ATen.addcmul_out(value, value, tensor1.value, tensor2.value, alpha)
+
+  /** Elementwise in place `this + alpha * tensor1 * tensor2` */
   def addcmulSelf(
       tensor1: STen,
       tensor2: Tensor,
@@ -514,15 +794,29 @@ case class STen private (
   ): Unit =
     ATen.addcmul_out(value, value, tensor1.value, tensor2, alpha)
 
+  /** Rectified linear unit */
   def relu[S: Sc] = owned(ATen.relu(value))
+
+  /** In place rectified linear unit */
   def relu_() = ATen.relu_(value)
+
+  /** Leaky rectified linear unit */
   def leakyRelu[S: Sc](negativeSlope: Double) =
     owned(ATen.leaky_relu(value, negativeSlope))
+
+  /** In place leaky rectified linear unit */
   def leakyRelu_(negativeSlope: Double) = ATen.leaky_relu_(value, negativeSlope)
+
+  /** Gaussian Error Linear Unit */
   def gelu[S: Sc] = owned(ATen.gelu(value))
+
+  /** Sigmoid funtion */
   def sigmoid[S: Sc] = owned(ATen.sigmoid(value))
+
+  /** In place sigmoid funtion */
   def sigmoid_() = ATen.sigmoid_(value)
   def sign[S: Sc] = owned(ATen.sign(value))
+
   def sign_() = ATen.sign_out(value, value)
   def exp[S: Sc] = owned(ATen.exp(value))
   def exp_() = ATen.exp_(value)
@@ -572,41 +866,71 @@ case class STen private (
     ATen.pow_out_0(value, value, exponent)
 
   def sum[S: Sc] = owned(ATen.sum_0(value))
+
+  /** Reduces the given dimensions with the sum of their elements.
+    *
+    * @param keepDim if true then the reduced dimensions are kept with size 1
+    */
   def sum[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(ATen.sum_1(value, dim.toArray.map(_.toLong), keepDim))
   def sum[S: Sc](dim: Int, keepDim: Boolean) =
     owned(ATen.sum_1(value, Array(dim.toLong), keepDim))
+
+  /** Sum over the second dimension */
   def rowSum[S: Sc] = sum(1, true)
+
+  /** Sum over the first dimension */
   def colSum[S: Sc] = sum(0, true)
 
+  /** Selects the top k elements along the given dimension
+    *
+    * @param k How many elements to select
+    * @param dim which dimension to select in
+    * @param largest if true, then the highest k element is selected
+    * @param sorted if true, the selected elements are further sorted
+    * @return a pair of (value,index) tensors where value holds the selected elements and
+    * index holds the indices of the selected elements
+    */
   def topk[S: Sc](k: Int, dim: Int, largest: Boolean, sorted: Boolean) = {
     val (a, b) = ATen.topk(value, k, dim, largest, sorted)
     (owned(a), owned(b))
   }
 
+  /** Returns a slice over the selected dimension */
   def slice[S: Sc](dim: Int, start: Long, end: Long, step: Long) =
     owned(ATen.slice(value, dim, start, end, step))
+
+  /** Returns a slice over the selected dimension */
   def slice[S: Sc](dim: Long, start: Long, end: Long, step: Long) =
     owned(ATen.slice(value, dim, start, end, step))
 
+  /** In place fills the tensors with the given value */
   def fill_(v: Double) = ATen.fill__0(value, v)
 
+  /** Selects the elements according to the boolean mask. Returns a 1D tensor. */
   def maskedSelect[S: Sc](mask: STen) =
     ATen.masked_select(value, mask.value).owned
+
+  /** Selects the elements according to the boolean mask. Returns a 1D tensor. */
   def maskedSelect[S: Sc](mask: Tensor) =
     ATen.masked_select(value, mask).owned
 
+  /** Fills with the given value according to the boolean mask. */
   def maskedFill[S: Sc](mask: STen, fill: Double) =
     ATen.masked_fill_0(value, mask.value, fill).owned
+
+  /** Fills with the given value according to the boolean mask. */
   def maskedFill[S: Sc](mask: Tensor, fill: Double) =
     ATen.masked_fill_0(value, mask, fill).owned
 
   def maskedScatter[S: Sc](mask: STen, src: STen) =
     ATen.masked_scatter(value, mask.value, src.value).owned
 
+  /** In place fills with zeros. */
   def zero_(): Unit =
     ATen.zero_(value)
 
+  /** In place fills with the given tensor. */
   def fill_(v: STen) = ATen.fill__1(value, v.value)
 
   def scatter[S: Sc](
@@ -627,6 +951,7 @@ case class STen private (
       source: STen
   ) =
     owned(ATen.scatter_add(value, dim, index.value, source.value))
+
   def indexAdd[S: Sc](
       dim: Long,
       index: STen,
@@ -670,11 +995,20 @@ case class STen private (
 
   def expandAs[S: Sc](other: STen) =
     owned(value.expand_as(other.value))
+
+  /** Returns a tensor with a new shape.
+    *
+    * No data is copied.
+    * The new shape must be compatible with the number of elements and the stride of the tensor.
+    */
   def view[S: Sc](dims: Long*) =
     owned(ATen._unsafe_view(value, dims.toArray))
+
+  /** Returns a tensor with a new shape. May copy. */
   def reshape[S: Sc](dims: Long*) =
     owned(ATen.reshape(value, dims.toArray))
 
+  /** Reduces the given dimensions with their L2 norm. */
   def norm2[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(
       ATen.norm_2(
@@ -685,6 +1019,7 @@ case class STen private (
       )
     )
 
+  /** Reduces the given dimension with the log-softmax of its elements. */
   def logSoftMax[S: Sc](dim: Int) =
     owned(
       ATen.log_softmax(
@@ -695,6 +1030,8 @@ case class STen private (
 
   def mean[S: Sc] =
     owned(ATen.mean_0(value))
+
+  /** Reduces the given dimensions with their mean. */
   def mean[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(ATen.mean_1(value, dim.toArray.map(_.toLong), keepDim))
   def mean[S: Sc](dim: Int, keepDim: Boolean) =
@@ -702,6 +1039,8 @@ case class STen private (
 
   def variance[S: Sc](unbiased: Boolean) =
     owned(ATen.var_0(value, unbiased))
+
+  /** Reduces the given dimensions with their variance. */
   def variance[S: Sc](dim: Seq[Int], unbiased: Boolean, keepDim: Boolean) =
     owned(ATen.var_1(value, dim.toArray.map(_.toLong), unbiased, keepDim))
   def variance[S: Sc](dim: Int, unbiased: Boolean, keepDim: Boolean) =
@@ -709,34 +1048,52 @@ case class STen private (
 
   def std[S: Sc](unbiased: Boolean) =
     owned(ATen.std_0(value, unbiased))
+
+  /** Reduces the given dimensions with their standard deviation. */
   def std[S: Sc](dim: Seq[Int], unbiased: Boolean, keepDim: Boolean) =
     owned(ATen.std_1(value, dim.toArray.map(_.toLong), unbiased, keepDim))
   def std[S: Sc](dim: Int, unbiased: Boolean, keepDim: Boolean) =
     owned(ATen.std_1(value, Array(dim), unbiased, keepDim))
 
   def median[S: Sc] = owned(ATen.median_1(value))
+
+  /** Reduces the given dimension with its median. */
   def median[S: Sc](dim: Int, keepDim: Boolean) = {
     val (a, b) = ATen.median_0(value, dim, keepDim)
     owned(a) -> owned(b)
   }
+
+  /** Reduces the given dimension with its mode. */
   def mode[S: Sc](dim: Int, keepDim: Boolean) = {
     val (a, b) = ATen.mode(value, dim, keepDim)
     owned(a) -> owned(b)
   }
 
   def max[S: Sc] = owned(ATen.max_2(value))
+
+  /** Return a boolean tensor indicating elementwise max. */
   def max[S: Sc](other: STen) = owned(ATen.max_1(value, other.value))
+
+  /** Reduces the given dimension with its max. */
   def max[S: Sc](dim: Int, keepDim: Boolean) = {
     val (a, b) = ATen.max_0(value, dim, keepDim)
     owned(a) -> owned(b)
   }
   def min[S: Sc] = owned(ATen.min_2(value))
+
+  /** Return a boolean tensor indicating elementwise min. */
   def min[S: Sc](other: STen) = owned(ATen.min_1(value, other.value))
+
+  /** Reduces the given dimension with its max. */
   def min[S: Sc](dim: Int, keepDim: Boolean) = {
     val (a, b) = ATen.min_0(value, dim, keepDim)
     owned(a) -> owned(b)
   }
 
+  /** Returns a long tensors with the argsort of the given dimension.
+    *
+    * Indexing the given dimension by the returned tensor would result in a sorted order.
+    */
   def argsort[S: Sc](dim: Int, descending: Boolean) =
     owned(ATen.argsort(value, dim, descending))
 
@@ -746,40 +1103,68 @@ case class STen private (
     owned(ATen.cholesky_inverse(value, upper))
   def choleskyInverse[S: Sc](input2: STen, upper: Boolean) =
     owned(ATen.cholesky_solve(value, input2.value, upper))
+
+  /** Return a boolean tensor indicating element-wise equality. Maps to Aten.equal */
   def equalDeep(input2: STen) =
     ATen.equal(value, input2.value)
 
+  /** Return a boolean tensor indicating element-wise greater-than. */
   def gt[S: Sc](other: STen) =
     ATen.gt_1(value, other.value).owned
+
+  /** Return a boolean tensor indicating element-wise greater-than. */
   def gt[S: Sc](other: Double) =
     ATen.gt_0(value, other).owned
+
+  /** Return a boolean tensor indicating element-wise less-than. */
   def lt[S: Sc](other: STen) =
     ATen.lt_1(value, other.value).owned
+
+  /** Return a boolean tensor indicating element-wise greater-than. */
   def lt[S: Sc](other: Double) =
     ATen.lt_0(value, other).owned
 
+  /** Return a boolean tensor indicating element-wise greater-or-equal. */
   def ge[S: Sc](other: STen) =
     ATen.ge_1(value, other.value).owned
+
+  /** Return a boolean tensor indicating element-wise greater-or-equal. */
   def ge[S: Sc](other: Double) =
     ATen.ge_0(value, other).owned
+
+  /** Return a boolean tensor indicating element-wise less-or-equal. */
   def le[S: Sc](other: STen) =
     ATen.le_1(value, other.value).owned
+
+  /** Return a boolean tensor indicating element-wise less-or-equal. */
   def le[S: Sc](other: Double) =
     ATen.le_0(value, other).owned
+
+  /** Return a boolean tensor indicating element-wise not-equal. */
   def ne[S: Sc](other: STen) =
     ATen.ne_1(value, other.value).owned
+
+  /** Return a boolean tensor indicating element-wise less-or-equal. */
   def ne[S: Sc](other: Double) =
     ATen.ne_0(value, other).owned
+
+  /** Returns the negation. */
   def neg[S: Sc] =
     ATen.neg(value).owned
+
+  /** Return a boolean tensor indicating element-wise is-nan. */
   def isnan[S: Sc] =
     ATen.isnan(value).owned
+
+  /** Return a boolean tensor indicating element-wise is-finite. */
   def isfinite[S: Sc] =
     ATen.isfinite(value).owned
   def log10[S: Sc] =
     ATen.log10(value).owned
   def expm1[S: Sc] =
     ATen.expm1(value).owned
+
+  /** Indexes with the given tensors along multiple dimensions. */
   def index[S: Sc](indices: STen*) =
     ATen.index(value, indices.map(_.value).toArray).owned
   def indexPut[S: Sc](indices: List[STen], values: STen, accumulate: Boolean) =
@@ -799,6 +1184,12 @@ case class STen private (
   def matrixRank[S: Sc](tol: Double, symmetric: Boolean) =
     ATen.matrix_rank(value, tol, symmetric).owned
 
+  /** Returns a tensor with a subset of its elements.
+    *
+    * The returned tensor includes elements from `start` to `start+length` along the given dimension.
+    *
+    * No copy is made, storage is shared.
+    */
   def narrow[S: Sc](dim: Int, start: Long, length: Long) =
     ATen.narrow_0(value, dim, start, length).owned
   def narrow[S: Sc](dim: Int, start: STen, length: Long) =
@@ -823,10 +1214,16 @@ case class STen private (
     val (a, b) = ATen.sort(value, dim, descending)
     (owned(a), owned(b))
   }
+
+  /** Removes dimensions of size=1 from the shape */
   def squeeze[S: Sc](dim: Int) =
     ATen.squeeze_1(value, dim).owned
+
+  /** Removes dimensions of size=1 from the shape */
   def squeeze[S: Sc] =
     ATen.squeeze_0(value).owned
+
+  /** Inserts a dimension of size=1 in the given position */
   def unsqueeze[S: Sc](dim: Int) =
     ATen.unsqueeze(value, dim).owned
   def varAndMean[S: Sc](unbiased: Boolean) = {
@@ -848,6 +1245,7 @@ case class STen private (
     (a.owned, b.owned)
   }
 
+  /** Returns the indices of non-zero values */
   def where[S: Sc] =
     ATen.where_1(value).toList.map(_.owned)
 

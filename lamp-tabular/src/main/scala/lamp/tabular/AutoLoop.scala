@@ -20,8 +20,8 @@ import lamp.SinglePrecision
 import org.saddle.index.IndexIntRange
 import lamp.DoublePrecision
 import lamp.CudaDevice
-import lamp.RegressionTree
-import _root_.lamp.ClassificationTree
+import lamp.extratrees.RegressionTree
+import _root_.lamp.extratrees.ClassificationTree
 import lamp.Scope
 import lamp.STen
 import lamp.Movable

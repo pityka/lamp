@@ -10,7 +10,6 @@ import lamp.CudaDevice
 import lamp.Device
 import lamp.DoublePrecision
 import scribe.Logger
-import lamp.StringMetadata
 import lamp.STen
 import lamp.Scope
 

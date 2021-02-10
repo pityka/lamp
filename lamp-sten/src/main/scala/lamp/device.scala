@@ -30,6 +30,7 @@ case object SinglePrecision extends FloatingPointPrecision {
   }
 }
 
+/** Represents a device where tensors are stored and tensor operations are executed */
 sealed trait Device { self =>
   def to(t: Tensor): Tensor
   def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))

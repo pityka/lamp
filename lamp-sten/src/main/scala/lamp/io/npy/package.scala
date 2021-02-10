@@ -10,6 +10,11 @@ import lamp.STen
 import aten.Tensor
 import java.io.File
 
+/** This package provides methods to read NPY formatted data into STen tensors
+  *
+  * The data is first read into to a regular JVM array, then transferred to off-heap memory.
+  * The total tensor size may be larger than what a single JVM array can hold.
+  */
 package object npy {
 
   def readDoubleFromChannel(

@@ -1,10 +1,9 @@
-package lamp
+package lamp.tabular
 
 import org.saddle._
 import org.saddle.order._
 import org.saddle.scalar.ScalarTagDouble
-import lamp.tabular.Metadata
-import lamp.tabular.Numerical
+import lamp._
 
 sealed trait StringMetadata
 object StringMetadata {
