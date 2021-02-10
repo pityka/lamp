@@ -12,6 +12,10 @@ Lamp is inspired by [pytorch](https://pytorch.org/).
 The foundation of lamp is a [JNI binding to ATen](https://github.com/pityka/aten-scala), the C++ tensor backend of torch ([see here](https://pytorch.org/cppdocs/#aten])).
 As a consequence lamp uses fast CPU and GPU code and stores its data in off-heap memory.
 
+[Documentation](https://pityka.github.io/lamp)
+
+[API](https://pityka.github.io/lamp/api/lamp/index.html)
+
 # Features
 
 Lamp implements generic automatic reverse mode differentiation (also known as autograd, see e.g. [this paper](https://arxiv.org/pdf/1811.05031.pdf)). 
@@ -24,9 +28,9 @@ It provides components to build neural networks:
 - batch normalization and weight normalization
 - seq2seq
 - dropout
-- SgdW and AdamW optimizers (see [here](https://arxiv.org/abs/1711.05101))
+- optimizers: SgdW, AdamW (see [here](https://arxiv.org/abs/1711.05101)), RAdam, Yogi
 - training loop and data loaders on top of cats-effect
-- checkpointing, ONNX export
+- checkpointing, ONNX export, NPY and CSV import
 
 With the above components Lamp is feature complete to build machine learning models on tabular, image, text and graph domains.
 
@@ -41,6 +45,12 @@ Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-
 
 On mac it suffices to copy the shared libraries from `https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.7.1.zip` to e.g. `/usr/local/lib/`.
 On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile).
+
+# Dependencies
+
+In addition to the libtorch shared libraries:
+- `lamp-core` depends on [saddle-core](https://github.com/pityka/saddle), [cats-effect](https://github.com/typelevel/cats-effect) and [aten-scala](https://github.com/pityka/aten-scala)
+- `lamp-data` further depends on [scribe](https://github.com/outr/scribe) and [ujson](https://github.com/lihaoyi/upickle)
 
 # Completeness
 
@@ -86,6 +96,7 @@ Github Packages needs a github user token available either in a $GITHUB_TOKEN en
 [github]
   token = TOKEN_DATA
 ```
+
 
 ## Running tests
 
