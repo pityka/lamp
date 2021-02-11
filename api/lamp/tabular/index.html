@@ -81,10 +81,11 @@
         <span class="kind">package</span>
       </span>
       <span class="symbol">
-        <a title="" href="../index.html"><span class="name">lamp</span></a>
+        <a title="Lamp provides utilities to build state of the art machine learning applications" href="../index.html"><span class="name">lamp</span></a>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
+      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> implements reverse mode automatic differentiation.</li><li><a href="../nn/index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="../nn/Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.
+</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
     </li><li name="lamp.autograd" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="autograd"></a><a id="autograd:autograd"></a>
       <span class="permalink">
@@ -130,6 +131,22 @@
       </span>
       <span class="symbol">
         <a title="" href="../example/index.html"><span class="name">example</span></a>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+    </li><li name="lamp.extratrees" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="extratrees"></a><a id="extratrees:extratrees"></a>
+      <span class="permalink">
+      <a href="../../lamp/extratrees/index.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="../extratrees/index.html"><span class="name">extratrees</span></a>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
@@ -253,6 +270,10 @@
                         <span class="separator"></span>
                         <a class="object" href="Serialization$.html" title=""></a>
                         <a href="Serialization$.html" title="">Serialization</a>
+                      </li><li class="current-entities indented2">
+                        <a class="object" href="StringMetadata$.html" title=""></a>
+                        <a class="trait" href="StringMetadata.html" title=""></a>
+                        <a href="StringMetadata.html" title="">StringMetadata</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="TabularEmbedding$.html" title=""></a>
                         <a class="class" href="TabularEmbedding.html" title=""></a>
@@ -452,7 +473,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="ExtratreesBase.html"><span class="name">ExtratreesBase</span></a><span class="params">(<span name="trees">trees: <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">Either</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../ClassificationTree.html" class="extype" name="lamp.ClassificationTree">ClassificationTree</a>], <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../RegressionTree.html" class="extype" name="lamp.RegressionTree">RegressionTree</a>]]</span>)</span><span class="result"> extends <a href="BaseModel.html" class="extype" name="lamp.tabular.BaseModel">BaseModel</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="" href="ExtratreesBase.html"><span class="name">ExtratreesBase</span></a><span class="params">(<span name="trees">trees: <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">Either</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../extratrees/ClassificationTree.html" class="extype" name="lamp.extratrees.ClassificationTree">ClassificationTree</a>], <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../extratrees/RegressionTree.html" class="extype" name="lamp.extratrees.RegressionTree">RegressionTree</a>]]</span>)</span><span class="result"> extends <a href="BaseModel.html" class="extype" name="lamp.tabular.BaseModel">BaseModel</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
       
@@ -501,6 +522,22 @@
       </span>
       <span class="symbol">
         <a title="" href="NNBase.html"><span class="name">NNBase</span></a><span class="params">(<span name="hiddenSize">hiddenSize: <span class="extype" name="scala.Int">Int</span></span>, <span name="state">state: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../STen.html" class="extype" name="lamp.STen">STen</a>]</span>)</span><span class="result"> extends <a href="BaseModel.html" class="extype" name="lamp.tabular.BaseModel">BaseModel</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      
+    </li><li name="lamp.tabular.StringMetadata" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+      <a id="StringMetadataextendsAnyRef"></a><a id="StringMetadata:StringMetadata"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/StringMetadata.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">sealed </span>
+        <span class="kind">trait</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="StringMetadata.html"><span class="name">StringMetadata</span></a><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
       
@@ -765,6 +802,22 @@
       </span>
       <span class="symbol">
         <a title="" href="Serialization$.html"><span class="name">Serialization</span></a>
+      </span>
+      
+      
+    </li><li name="lamp.tabular.StringMetadata" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="StringMetadata"></a><a id="StringMetadata:StringMetadata"></a>
+      <span class="permalink">
+      <a href="../../lamp/tabular/StringMetadata$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="StringMetadata$.html"><span class="name">StringMetadata</span></a>
       </span>
       
       

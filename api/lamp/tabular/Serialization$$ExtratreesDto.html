@@ -81,10 +81,11 @@
         <span class="kind">package</span>
       </span>
       <span class="symbol">
-        <a title="" href="../index.html"><span class="name">lamp</span></a>
+        <a title="Lamp provides utilities to build state of the art machine learning applications" href="../index.html"><span class="name">lamp</span></a>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
+      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> implements reverse mode automatic differentiation.</li><li><a href="../nn/index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="../nn/Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.
+</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
     </li><li name="lamp.tabular" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="tabular"></a><a id="tabular:tabular"></a>
       <span class="permalink">
@@ -162,7 +163,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">ExtratreesDto</span><span class="params">(<span name="trees">trees: <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">Either</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../ClassificationTree.html" class="extype" name="lamp.ClassificationTree">ClassificationTree</a>], <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../RegressionTree.html" class="extype" name="lamp.RegressionTree">RegressionTree</a>]]</span>)</span><span class="result"> extends <a href="Serialization$$BaseModelDTO.html" class="extype" name="lamp.tabular.Serialization.BaseModelDTO">BaseModelDTO</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">ExtratreesDto</span><span class="params">(<span name="trees">trees: <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">Either</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../extratrees/ClassificationTree.html" class="extype" name="lamp.extratrees.ClassificationTree">ClassificationTree</a>], <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../extratrees/RegressionTree.html" class="extype" name="lamp.extratrees.RegressionTree">RegressionTree</a>]]</span>)</span><span class="result"> extends <a href="Serialization$$BaseModelDTO.html" class="extype" name="lamp.tabular.Serialization.BaseModelDTO">BaseModelDTO</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
 
@@ -218,9 +219,9 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="lamp.tabular.Serialization.ExtratreesDto#&lt;init&gt;" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(trees:Either[Seq[lamp.ClassificationTree],Seq[lamp.RegressionTree]]):lamp.tabular.Serialization.ExtratreesDto"></a><a id="&lt;init&gt;:ExtratreesDto"></a>
+      <a id="&lt;init&gt;(trees:Either[Seq[lamp.extratrees.ClassificationTree],Seq[lamp.extratrees.RegressionTree]]):lamp.tabular.Serialization.ExtratreesDto"></a><a id="&lt;init&gt;:ExtratreesDto"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Serialization$$ExtratreesDto.html#&lt;init&gt;(trees:Either[Seq[lamp.ClassificationTree],Seq[lamp.RegressionTree]]):lamp.tabular.Serialization.ExtratreesDto" title="Permalink">
+      <a href="../../lamp/tabular/Serialization$$ExtratreesDto.html#&lt;init&gt;(trees:Either[Seq[lamp.extratrees.ClassificationTree],Seq[lamp.extratrees.RegressionTree]]):lamp.tabular.Serialization.ExtratreesDto" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -229,7 +230,7 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">ExtratreesDto</span><span class="params">(<span name="trees">trees: <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">Either</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../ClassificationTree.html" class="extype" name="lamp.ClassificationTree">ClassificationTree</a>], <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../RegressionTree.html" class="extype" name="lamp.RegressionTree">RegressionTree</a>]]</span>)</span>
+        <span class="name">ExtratreesDto</span><span class="params">(<span name="trees">trees: <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">Either</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../extratrees/ClassificationTree.html" class="extype" name="lamp.extratrees.ClassificationTree">ClassificationTree</a>], <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../extratrees/RegressionTree.html" class="extype" name="lamp.extratrees.RegressionTree">RegressionTree</a>]]</span>)</span>
       </span>
       
       
@@ -475,9 +476,9 @@
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
     </li><li name="lamp.tabular.Serialization.ExtratreesDto#trees" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="trees:Either[Seq[lamp.ClassificationTree],Seq[lamp.RegressionTree]]"></a><a id="trees:Either[Seq[ClassificationTree],Seq[RegressionTree]]"></a>
+      <a id="trees:Either[Seq[lamp.extratrees.ClassificationTree],Seq[lamp.extratrees.RegressionTree]]"></a><a id="trees:Either[Seq[ClassificationTree],Seq[RegressionTree]]"></a>
       <span class="permalink">
-      <a href="../../lamp/tabular/Serialization$$ExtratreesDto.html#trees:Either[Seq[lamp.ClassificationTree],Seq[lamp.RegressionTree]]" title="Permalink">
+      <a href="../../lamp/tabular/Serialization$$ExtratreesDto.html#trees:Either[Seq[lamp.extratrees.ClassificationTree],Seq[lamp.extratrees.RegressionTree]]" title="Permalink">
         <i class="material-icons"></i>
       </a>
     </span>
@@ -486,7 +487,7 @@
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">trees</span><span class="result">: <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">Either</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../ClassificationTree.html" class="extype" name="lamp.ClassificationTree">ClassificationTree</a>], <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../RegressionTree.html" class="extype" name="lamp.RegressionTree">RegressionTree</a>]]</span>
+        <span class="name">trees</span><span class="result">: <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">Either</a>[<a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../extratrees/ClassificationTree.html" class="extype" name="lamp.extratrees.ClassificationTree">ClassificationTree</a>], <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<a href="../extratrees/RegressionTree.html" class="extype" name="lamp.extratrees.RegressionTree">RegressionTree</a>]]</span>
       </span>
       
       
