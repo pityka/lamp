@@ -1,4 +1,57 @@
 package lamp
+
+/** Implements reverse mode automatic differentiaton
+  *
+  * The main types in this package are [[lamp.autograd.Variable]] and [[lamp.autograd.Op]].
+  * The computational graph built by this package consists of vertices representing values (as [[lamp.autograd.Variable]]) and vertices representing operations (as [[lamp.autograd.Op]]).
+  *
+  * Variables contain the value of a `R^n^ => R^m^` function.
+  * Variables may also contain the partial derivative of their argument with respect to a single scalar.
+  * A Variable whose value is a scalar (m=1) can trigger the computation of partial derivatives of all
+  * the intermediate upstream Variables.
+  * Computing partial derivatives with respect to non-scalar variables is not supported.
+  *
+  * A constant Variable  may be created with the `const`
+  * or `param` factory method in this package. `const` may be used for constants which
+  * do not need their partial derivatives to be computed. `param` on the other hand
+  * create Variables which will fill in their partial derivatives. Further variables may be created by the
+  * methods in this class, eventually expressing more complex `R^n^ => R^m^` functions.
+  * ===Example===
+  * {{{
+  * lamp.Scope.root{ implicit scope =>
+  *   // x is constant (depends on no other variables) and won't compute a partial derivative
+  *   val x = lamp.autograd.const(STen.eye(3, STenOptions.d))
+  *   // y is constant but will compute a partial derivative
+  *   val y = lamp.autograd.param(STen.ones(List(3,3), STenOptions.d))
+  *
+  *   // z is a Variable with x and y dependencies
+  *   val z = x+y
+  *
+  *   // w is a Variable with z as a direct and x, y as transient dependencies
+  *   val w = z.sum
+  *   // w is a scalar (number of elements is 1), thus we can call backprop() on it.
+  *   // calling backprop will fill out the partial derivatives of the upstream variables
+  *   w.backprop()
+  *
+  *   // partialDerivative is empty since we created `x` with `const`
+  *   assert(x.partialDerivative.isEmpty)
+  *
+  *   // `y`'s partial derivatie is defined and is computed
+  *   // it holds `y`'s partial derivative with respect to `w`, the scalar which we called backprop() on
+  *   assert(y.partialDerivative.isDefined)
+
+  *
+  * }
+  * }}}
+  *
+  * This package may be used to compute the derivative of any function, provided the function can
+  * be composed out of the provided methods. A particular use case is gradient based optimization.
+  *
+  *
+  * @see [[https://arxiv.org/pdf/1811.05031.pdf]] for a review of the algorithm
+  * @see [[lamp.autograd.Op]] for how to implement a new operation
+  *
+  */
 package object autograd {
 
   def const(m: STen): Constant =
@@ -21,7 +74,7 @@ package object autograd {
       ConstantWithGrad(scalar, STen.zerosLike(scalar)(scope))
     }
 
-  def measure[T](tag: String)(body: => T): T = {
+  private[lamp] def measure[T](tag: String)(body: => T): T = {
     val t1 = System.nanoTime()
     val r = body
     val t2 = System.nanoTime()

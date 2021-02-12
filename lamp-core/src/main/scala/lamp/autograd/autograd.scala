@@ -6,35 +6,79 @@ import lamp.Sc
 import lamp.STen
 import lamp.Movable
 
-/**
-  * Params: the input and the function which calculates the partial derivative
-  * of the function value wrt to this input
+/** Represents an operation in the computational graph
   *
-  * y = f1 o f2 o .. o fn
+  * ===Short outline of reverse autograd from scalar values===
+  * `y = f1 o f2 o .. o fn`
   *
-  * One of these subexpression (f_i) has value w2 and arguments w1.
-  * We can write this: dy/dw1 = dy/dw2 * dw2/dw1.
-  * dw2/dw1 is the Jacobian of f_i at the current value of w1.
-  * dy/dw2 is the Jacobian of y wrt to w2 at the current value of w2.
+  * One of these subexpression (f_i) has value w2 and arguments `w1`.
+  * We can write `dy/dw1 = dy/dw2 * dw2/dw1`.
+  * `dw2/dw1` is the Jacobian of `f_i` at the current value of `w1`.
+  * `dy/dw2` is the Jacobian of `y` wrt to `w2` at the current value of `w2`.
   *
-  * The current value of w1 and w2 are computed in a forward pass.
-  * The value dy/dy is 1 and from this dy/dw2 is recursed in the backward pass.
-  * The Jacobian function of dw2/dw1 is either computed symbolically.
+  * The current value of `w1` and `w2` are computed in a forward pass.
+  * The value `dy/dy` is 1 and from this `dy/dw2` is recursed in the backward pass.
+  * The Jacobian function of `dw2/dw1` is computed symbolically and hard coded.
   *
-  * https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation
-  * http://www.cs.cmu.edu/~wcohen/10-605/notes/autodiff.pdf
   *
-  * The function given in this argument is dy/dw2 => dy/dw2 * dw2/dw1.
-  * The argument is coming down from the backward pass.
-  * The Op fills in the symbolic part and the multiplication.
+  * The anonymous function which `Op`s must implement is `dy/dw2 => dy/dw2 * dw2/dw1`.
+  * The argument of that function (`dy/dw2`) is coming down from the backward pass.
+  * The `Op` must implement `dy/dw2 * dw2/dw1`.
   *
-  * The shape of the argument given to that function is the shape of the value of Op (dy/dw2)
-  * The shape of the return is the shape of the argument (parameter) with respect the
-  * derivative is taken (dy/dw1)
+  * The shape of `dy/dw2` is the shape of the value of the operation (`dy/dw2`).
+  * The shape of `dy/dw2 * dw2/dw1` is the shape of the parameter variable with respect which
+  * the derivative is taken, i.e. `w1` since we are computing `dy/dw1`.
+  *
+  * ===How to implement an operation===
+  * {{{
+  * // Each concrete realization of the operation corresponds to an instance of an Op
+  * // The Op instance holds handles to the input variables (here a, b), to be used in the backward pass
+  * // The forward pass is effectively done in the constructor of the Op
+  * // The backward pass is triggerd and orchestrated by [[lamp.autograd.Variable.backward]]
+  * case class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
+  *
+  * // List all parameters which support partial derivatives, here both a and b
+  * val params = List(
+  *  // partial derivative of the first argument
+  *  a.zipBackward { (p, out) =>
+  *   // p is the incoming partial derivative, out is where the result is accumated into
+  *   // Intermediate tensors are released due to the enclosing Scope.root
+  *   Scope.root { implicit scope => out += (p * b.value).unbroadcast(a.sizes) }
+  *   },
+  *  // partial derivative of the second argument ..
+  *  b.zipBackward { (p, out) =>
+  *   Scope.root { implicit scope => out += (p * a.value).unbroadcast(b.sizes) }
+  *
+  *   }
+  *)
+  * //The value of this operation, i.e. the forward pass
+  * val value = Variable(this, a.value.*(b.value)(scope))(scope)
+  *
+  *}
+  *}}}
+  * @see [[https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation]]
+  * @see [[http://www.cs.cmu.edu/~wcohen/10-605/notes/autodiff.pdf]]
   *
   */
 trait Op {
+
+  /** The value of this operation */
   val value: Variable
+
+  /** Implementation of the backward pass
+    *
+    * A list of input variables paired up with an anonymous function computing the respective partial
+    * derivative. With the notation in the documentation of the trait [[lamp.autograd.Op]]:
+    * `dy/dw2 => dy/dw2 * dw2/dw1`. The first argument of the anonymous function is the incoming
+    * partial derivative (`dy/dw2`), the second argument is the output tensor into which the
+    * result (`dy/dw2 * dw2/dw1`) is accumulated (added).
+    *
+    * If the operation does not support computing the partial derivative for some of its arguments, then
+    * do not include that argument in this list.
+    *
+    * @see The documentation on the trait [[lamp.autograd.Op]] for more details and example.
+    *
+    */
   val params: List[(Variable, (STen, STen) => Unit)]
 }
 
@@ -48,22 +92,27 @@ object Variable {
       STen.zerosLike(value)(scope)
     )
 
+  /** Same as [[lamp.autograd.Variable.stack]] */
   def concatenateAddNewDim(inputs: Seq[Variable])(implicit scope: Scope) =
     new Stack(scope, inputs, 0).value
 
+  /** Concatenates the given tensor along a newly inserted dimension */
   def stack(inputs: Seq[Variable], dim: Int)(implicit scope: Scope) =
     new Stack(scope, inputs, dim).value
 
+  /** Concatenates the given tensor along the given dimension */
   def cat(inputs: Seq[Variable], dim: Long)(implicit scope: Scope) =
     new Concatenate(scope, inputs, dim).value
 }
 
+/** A variable whose parent and partial derivatives are empty */
 case class ConstantWithoutGrad(
     value: STen
 ) extends Constant {
   val partialDerivative = None
 }
 
+/** A variable whose parent is empty but whose partial derivative is defined */
 case class ConstantWithGrad(
     value: STen,
     pd: STen
@@ -71,6 +120,7 @@ case class ConstantWithGrad(
   val partialDerivative = Some(pd)
 }
 
+/** A variable whose parent is empty */
 sealed trait Constant extends Variable {
   final def op = None
 }
@@ -84,6 +134,7 @@ object Constant {
 
 }
 
+/** A variable whose parent is not empty, neither its partial derivative */
 case class VariableNonConstant(
     op1: Op,
     value: STen,
@@ -104,31 +155,62 @@ object VariableNonConstant {
     )
 }
 
-trait Variable {
+/** A value of a tensor valued function, a vertex in the computational graph.
+  *
+  * A Variable may be constant, i.e. depends on no other Variables.
+  * Constant variables may or may not need their partial derivatives computed.
+  */
+sealed trait Variable {
+
+  /** The parent operation of this value in the computational graph. Empty for constants. */
   def op: Option[Op]
+
+  /** The actual tensor value of this Variable. */
   def value: STen
+
+  /** The partial derivative, or a placeholder tensor for the partial derivative.
+    *
+    * Returns empty iff this Variable needs no gradient computation. Otherwise a placeholder tensor
+    * is allocated upfront when the Variable is allocated.
+    */
   def partialDerivative: Option[STen]
+
+  /** Returns true if [[lamp.autograd.Variable.partialDerivative]] is defined. */
   def needsGrad: Boolean = partialDerivative.isDefined
 
   override def toString =
     s"Var(value=$value,needsGrad=$needsGrad)"
 
+  /** Returns the tensor options of its value. */
   def options[S: Sc] = value.options
 
+  /** Returns the shape of its value. */
   val sizes = value.sizes.toList
 
+  /** Returns the shape of its value. */
   def shape = sizes
 
+  /** Returns unique, stable and random UUID. */
   val id = ju.UUID.randomUUID()
 
+  /** Returns an other Variable wrapping the same value tensor, without any parent and with `needsGrad=false`. */
   def detached = const(value)
+
+  /** Returns an other Variable wrapping the same value tensor, without any parent and with `needsGrad=true`. */
   def withGrad[S: Sc] = param(value)
+
+  /** In place zeros out the partial derivative */
   def zeroGrad() = {
     partialDerivative.foreach { t => t.zero_() }
   }
 
+  /** Returns the Wengert list */
   lazy val wengert = Autograd.topologicalSort(this)
 
+  /** Runs the backpropagation algorithm starting from this value
+    *
+    * Only meaningful if this is scalar i.e. the number of elements in the value tensor is 1.
+    */
   def backprop(): Unit = {
     if (partialDerivative.isDefined) {
       partialDerivative.get.fill_(1d)
@@ -143,9 +225,10 @@ trait Variable {
 
   }
 
+  /** Returns a pair of this instance and the supplied function */
   def zipBackward(fn: (STen, STen) => Unit) = (this, fn)
 
-  def accumulateGrad(
+  private def accumulateGrad(
       incoming: STen,
       computeGrad: (STen, STen) => Unit
   ) = if (needsGrad) {
@@ -153,9 +236,14 @@ trait Variable {
   }
 
   import lamp.{scope => extractScope}
+
+  /** Returns a new variable with the respective dimensions transposed. */
   def transpose[S: Sc](dim1: Int, dim2: Int) =
     new Transpose(extractScope, this, dim1, dim2).value
+
+  /** Returns a new variable with the first two dimensions transposed. */
   def t[S: Sc] = new Transpose(extractScope, this).value
+
   def select[S: Sc](dim: Long, index: Long) =
     new Select(extractScope, this, dim = dim, index = index).value
   def indexSelect[S: Sc](dim: Long, index: Variable) =
