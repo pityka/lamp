@@ -84,8 +84,7 @@
         <a title="Lamp provides utilities to build state of the art machine learning applications" href="../index.html"><span class="name">lamp</span></a>
       </span>
       
-      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> implements reverse mode automatic differentiation.</li><li><a href="" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.
-</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
+      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types and packages:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="../autograd/index.html" class="extype" name="lamp.autograd">lamp.autograd</a> implements reverse mode automatic differentiation.</li><li><a href="" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.</li><li><a href="../knn/index.html" class="extype" name="lamp.knn">lamp.knn</a> implements k-nearest neighbor search on the CPU and GPU</li><li><a href="../umap/Umap$.html" class="extype" name="lamp.umap.Umap">lamp.umap.Umap</a> implements the UMAP dimension reduction algorithm</li><li><a href="../onnx/index.html" class="extype" name="lamp.onnx">lamp.onnx</a> implements serialization of computation graphs into ONNX format</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
     </li><li name="lamp.autograd" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="autograd"></a><a id="autograd:autograd"></a>
       <span class="permalink">
@@ -98,10 +97,43 @@
         <span class="kind">package</span>
       </span>
       <span class="symbol">
-        <a title="" href="../autograd/index.html"><span class="name">autograd</span></a>
+        <a title="Implements reverse mode automatic differentiaton" href="../autograd/index.html"><span class="name">autograd</span></a>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+      <p class="shortcomment cmt">Implements reverse mode automatic differentiaton</p><div class="fullcomment"><div class="comment cmt"><p>Implements reverse mode automatic differentiaton</p><p>The main types in this package are <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> and <a href="../autograd/Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a>.
+The computational graph built by this package consists of vertices representing values (as <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a>) and vertices representing operations (as <a href="../autograd/Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a>).</p><p>Variables contain the value of a <code>R<sup>n</sup> =&gt; R<sup>m</sup></code> function.
+Variables may also contain the partial derivative of their argument with respect to a single scalar.
+A Variable whose value is a scalar (m=1) can trigger the computation of partial derivatives of all
+the intermediate upstream Variables.
+Computing partial derivatives with respect to non-scalar variables is not supported.</p><p>A constant Variable  may be created with the <code>const</code>
+or <code>param</code> factory method in this package. <code>const</code> may be used for constants which
+do not need their partial derivatives to be computed. <code>param</code> on the other hand
+create Variables which will fill in their partial derivatives. Further variables may be created by the
+methods in this class, eventually expressing more complex <code>R<sup>n</sup> =&gt; R<sup>m</sup></code> functions.</p><h5>Example</h5><pre>lamp.Scope.root{ <span class="kw">implicit</span> scope <span class="kw">=&gt;</span>
+  <span class="cmt">// x is constant (depends on no other variables) and won't compute a partial derivative</span>
+  <span class="kw">val</span> x = lamp.autograd.const(STen.eye(<span class="num">3</span>, STenOptions.d))
+  <span class="cmt">// y is constant but will compute a partial derivative</span>
+  <span class="kw">val</span> y = lamp.autograd.param(STen.ones(<span class="std">List</span>(<span class="num">3</span>,<span class="num">3</span>), STenOptions.d))
+
+  <span class="cmt">// z is a Variable with x and y dependencies</span>
+  <span class="kw">val</span> z = x+y
+
+  <span class="cmt">// w is a Variable with z as a direct and x, y as transient dependencies</span>
+  <span class="kw">val</span> w = z.sum
+  <span class="cmt">// w is a scalar (number of elements is 1), thus we can call backprop() on it.</span>
+  <span class="cmt">// calling backprop will fill out the partial derivatives of the upstream variables</span>
+  w.backprop()
+
+  <span class="cmt">// partialDerivative is empty since we created `x` with `const`</span>
+  assert(x.partialDerivative.isEmpty)
+
+  <span class="cmt">// `y`'s partial derivatie is defined and is computed</span>
+  <span class="cmt">// it holds `y`'s partial derivative with respect to `w`, the scalar which we called backprop() on</span>
+  assert(y.partialDerivative.isDefined)
+
+
+}</pre><p>This package may be used to compute the derivative of any function, provided the function can
+be composed out of the provided methods. A particular use case is gradient based optimization.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd><dt>See also</dt><dd><span class="cmt"><p><a href="https://arxiv.org/pdf/1811.05031.pdf" target="_blank">https://arxiv.org/pdf/1811.05031.pdf</a> for a review of the algorithm</p></span><span class="cmt"><p><a href="../autograd/Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a> for how to implement a new operation</p></span></dd></dl></div>
     </li><li name="lamp.data" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="data"></a><a id="data:data"></a>
       <span class="permalink">
@@ -181,7 +213,7 @@
         <span class="name">nn</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+      <p class="shortcomment cmt">Provides building blocks for neural networks</p><div class="fullcomment"><div class="comment cmt"><p>Provides building blocks for neural networks</p><p>Notable types:</p><ul><li><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">nn.GenericModule</a> is an abstraction on parametric functions</li><li><a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">nn.Optimizer</a> is an abstraction of gradient based optimizers</li><li><a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">nn.LossFunction</a> is an abstraction of loss functions, see the companion object for the implemented losses</li><li><a href="SupervisedModel.html" class="extype" name="lamp.nn.SupervisedModel">nn.SupervisedModel</a> combines a module with a loss</li></ul><p>Optimizers:</p><ul><li><a href="AdamW.html" class="extype" name="lamp.nn.AdamW">nn.AdamW</a></li><li><a href="SGDW.html" class="extype" name="lamp.nn.SGDW">nn.SGDW</a></li><li><a href="RAdam.html" class="extype" name="lamp.nn.RAdam">nn.RAdam</a></li><li><a href="Yogi.html" class="extype" name="lamp.nn.Yogi">nn.Yogi</a></li></ul><p>Modules facilitating composing other modules:</p><ul><li><a href="Sequential.html" class="extype" name="lamp.nn.Sequential">nn.Sequential</a> composes a homogenous list of modules (analogous to List)</li><li><a href="sequence$.html" class="extype" name="lamp.nn.sequence">nn.sequence</a> composes a heterogeneous list of modules (analogous to tuples)</li><li><a href="EitherModule.html" class="extype" name="lamp.nn.EitherModule">nn.EitherModule</a> composes two modules in a <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">scala.Either</a></li></ul><p>Examples of neural network building blocks, layers etc:</p><ul><li><a href="Linear.html" class="extype" name="lamp.nn.Linear">nn.Linear</a> implements <code>W X + b</code> with parameters <code>W</code> and <code>b</code> and input <code>X</code></li><li><a href="BatchNorm.html" class="extype" name="lamp.nn.BatchNorm">nn.BatchNorm</a>, <a href="LayerNorm.html" class="extype" name="lamp.nn.LayerNorm">nn.LayerNorm</a> implement batch and layer normalization</li><li><a href="MLP$.html" class="extype" name="lamp.nn.MLP">nn.MLP</a> is a factory of a multilayer perceptron architecture</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
     </li><li class="current-entities indented2">
                         <a class="object" href="AdamW$.html" title=""></a>
                         <a class="class" href="AdamW.html" title=""></a>
@@ -256,16 +288,16 @@
                         <a href="GenericFun.html" title="">GenericFun</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="GenericModule$.html" title=""></a>
-                        <a class="trait" href="GenericModule.html" title=""></a>
-                        <a href="GenericModule.html" title="">GenericModule</a>
+                        <a class="trait" href="GenericModule.html" title="Base type of modules"></a>
+                        <a href="GenericModule.html" title="Base type of modules">GenericModule</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="GraphReadout$.html" title=""></a>
                         <a class="class" href="GraphReadout.html" title=""></a>
                         <a href="GraphReadout.html" title="">GraphReadout</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="InitState$.html" title=""></a>
-                        <a class="trait" href="InitState.html" title=""></a>
-                        <a href="InitState.html" title="">InitState</a>
+                        <a class="trait" href="InitState.html" title="Type class about how to initialize recurrent neural networks"></a>
+                        <a href="InitState.html" title="Type class about how to initialize recurrent neural networks">InitState</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="package$$InitStateSyntax.html" title=""></a>
@@ -296,8 +328,8 @@
                         <a href="Linear.html" title="">Linear</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Load$.html" title=""></a>
-                        <a class="trait" href="Load.html" title=""></a>
-                        <a href="Load.html" title="">Load</a>
+                        <a class="trait" href="Load.html" title="Type class about how to load the contents of the state of modules from external tensors"></a>
+                        <a href="Load.html" title="Type class about how to load the contents of the state of modules from external tensors">Load</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="package$$LoadSyntax.html" title=""></a>
@@ -348,8 +380,8 @@
                         <a href="OptimizerHyperparameter.html" title="">OptimizerHyperparameter</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="PTag$.html" title=""></a>
-                        <a class="trait" href="PTag.html" title=""></a>
-                        <a href="PTag.html" title="">PTag</a>
+                        <a class="trait" href="PTag.html" title="A small trait to mark paramters for unique identification"></a>
+                        <a href="PTag.html" title="A small trait to mark paramters for unique identification">PTag</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Passthrough$.html" title=""></a>
                         <a class="class" href="Passthrough.html" title=""></a>
@@ -360,8 +392,8 @@
                         <a href="PositionalEmbedding$.html" title="">PositionalEmbedding</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="RAdam$.html" title=""></a>
-                        <a class="class" href="RAdam.html" title=""></a>
-                        <a href="RAdam.html" title="">RAdam</a>
+                        <a class="class" href="RAdam.html" title="Rectified Adam optimizer algorithm"></a>
+                        <a href="RAdam.html" title="Rectified Adam optimizer algorithm">RAdam</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="RNN$.html" title=""></a>
                         <a class="class" href="RNN.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)"></a>
@@ -452,8 +484,8 @@
                         <a href="package$$ToWithInit.html" title="">ToWithInit</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="TrainingMode$.html" title=""></a>
-                        <a class="trait" href="TrainingMode.html" title=""></a>
-                        <a href="TrainingMode.html" title="">TrainingMode</a>
+                        <a class="trait" href="TrainingMode.html" title="Type class about how to switch a module into training or evaluation mode"></a>
+                        <a href="TrainingMode.html" title="Type class about how to switch a module into training or evaluation mode">TrainingMode</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="package$$TrainingModeSyntax.html" title=""></a>
@@ -484,8 +516,8 @@
                         <a href="WithInit.html" title="">WithInit</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Yogi$.html" title=""></a>
-                        <a class="class" href="Yogi.html" title=""></a>
-                        <a href="Yogi.html" title="">Yogi</a>
+                        <a class="class" href="Yogi.html" title="The Yogi optimizer algorithm I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf"></a>
+                        <a href="Yogi.html" title="The Yogi optimizer algorithm I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf">Yogi</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="object" href="sequence$.html" title=""></a>
@@ -590,7 +622,7 @@
       </h4>
 
       
-          <div id="comment" class="fullcommenttop"><div class="toggleContainer block">
+          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>Provides building blocks for neural networks</p><p>Notable types:</p><ul><li><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">nn.GenericModule</a> is an abstraction on parametric functions</li><li><a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">nn.Optimizer</a> is an abstraction of gradient based optimizers</li><li><a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">nn.LossFunction</a> is an abstraction of loss functions, see the companion object for the implemented losses</li><li><a href="SupervisedModel.html" class="extype" name="lamp.nn.SupervisedModel">nn.SupervisedModel</a> combines a module with a loss</li></ul><p>Optimizers:</p><ul><li><a href="AdamW.html" class="extype" name="lamp.nn.AdamW">nn.AdamW</a></li><li><a href="SGDW.html" class="extype" name="lamp.nn.SGDW">nn.SGDW</a></li><li><a href="RAdam.html" class="extype" name="lamp.nn.RAdam">nn.RAdam</a></li><li><a href="Yogi.html" class="extype" name="lamp.nn.Yogi">nn.Yogi</a></li></ul><p>Modules facilitating composing other modules:</p><ul><li><a href="Sequential.html" class="extype" name="lamp.nn.Sequential">nn.Sequential</a> composes a homogenous list of modules (analogous to List)</li><li><a href="sequence$.html" class="extype" name="lamp.nn.sequence">nn.sequence</a> composes a heterogeneous list of modules (analogous to tuples)</li><li><a href="EitherModule.html" class="extype" name="lamp.nn.EitherModule">nn.EitherModule</a> composes two modules in a <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">scala.Either</a></li></ul><p>Examples of neural network building blocks, layers etc:</p><ul><li><a href="Linear.html" class="extype" name="lamp.nn.Linear">nn.Linear</a> implements <code>W X + b</code> with parameters <code>W</code> and <code>b</code> and input <code>X</code></li><li><a href="BatchNorm.html" class="extype" name="lamp.nn.BatchNorm">nn.BatchNorm</a>, <a href="LayerNorm.html" class="extype" name="lamp.nn.LayerNorm">nn.LayerNorm</a> implement batch and layer normalization</li><li><a href="MLP$.html" class="extype" name="lamp.nn.MLP">nn.MLP</a> is a factory of a multilayer perceptron architecture</li></ul></div><div class="toggleContainer block">
           <span class="toggle">
             Linear Supertypes
           </span>
@@ -642,7 +674,7 @@
 
         <div id="types" class="types members">
               <h3>Type Members</h3>
-              <ol><li name="lamp.nn.AdamW" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+              <ol><li name="lamp.nn.AdamW" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="AdamWextendsOptimizerwithProductwithSerializable"></a><a id="AdamW:AdamW"></a>
       <span class="permalink">
       <a href="../../lamp/nn/AdamW.html" title="Permalink">
@@ -657,7 +689,7 @@
         <a title="" href="AdamW.html"><span class="name">AdamW</span></a><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.001)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-8</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="debias">debias: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
-      
+      <p class="shortcomment cmt"></p><div class="fullcomment"><div class="comment cmt"></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p>https://arxiv.org/pdf/1711.05101.pdf Algorithm 2</p></span></dd></dl></div>
     </li><li name="lamp.nn.AdversarialTraining" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="AdversarialTrainingextendsLossCalculation[lamp.autograd.Variable]withProductwithSerializable"></a><a id="AdversarialTraining:AdversarialTraining"></a>
       <span class="permalink">
@@ -928,7 +960,7 @@ Outputs of size (sequence length * batch * hidden dim)
       </span>
       
       
-    </li><li name="lamp.nn.GenericModule" visbl="pub" class="indented0 " data-isabs="true" fullComment="no" group="Ungrouped">
+    </li><li name="lamp.nn.GenericModule" visbl="pub" class="indented0 " data-isabs="true" fullComment="yes" group="Ungrouped">
       <a id="GenericModule[A,B]extendsAnyRef"></a><a id="GenericModule[A,B]:GenericModule[A,B]"></a>
       <span class="permalink">
       <a href="../../lamp/nn/GenericModule.html" title="Permalink">
@@ -940,10 +972,28 @@ Outputs of size (sequence length * batch * hidden dim)
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="GenericModule.html"><span class="name">GenericModule</span></a><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+        <a title="Base type of modules" href="GenericModule.html"><span class="name">GenericModule</span></a><span class="tparams">[<span name="A">A</span>, <span name="B">B</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
-      
+      <p class="shortcomment cmt">Base type of modules</p><div class="fullcomment"><div class="comment cmt"><p>Base type of modules</p><p>Modules are functions of type <code>(Seq[lamp.autograd.Constant],A) =&gt; B</code>, where
+the <code>Seq[lamp.autograd.Constant]</code> arguments are optimizable parameters and <code>A</code> is a non-optimizable
+input.</p><p>Modules provide a way to build composite functions while also keep track of the parameter list of the
+composite function.</p><h5>Example</h5><pre><span class="kw">case</span> <span class="kw">object</span> Weights <span class="kw">extends</span> LeafTag
+<span class="kw">case</span> <span class="kw">object</span> Bias <span class="kw">extends</span> LeafTag
+<span class="kw">case</span> <span class="kw">class</span> Linear(weights: Constant, bias: <span class="std">Option</span>[Constant]) <span class="kw">extends</span> Module {
+
+ <span class="kw">override</span> <span class="kw">val</span> state = <span class="std">List</span>(
+   weights -&gt; Weights
+ ) ++ bias.toList.map(b <span class="kw">=&gt;</span> (b, Bias))
+
+ <span class="kw">def</span> forward[S: Sc](x: Variable): Variable = {
+   <span class="kw">val</span> v = x.mm(weights)
+   bias.map(_ + v).getOrElse(v)
+
+ }
+}</pre><p>Some other attributes of modules are attached by type classes e.g. with the <a href="TrainingMode.html" class="extype" name="lamp.nn.TrainingMode">nn.TrainingMode</a>, <a href="Load.html" class="extype" name="lamp.nn.Load">nn.Load</a>
+type classes.
+</p></div><dl class="paramcmts block"><dt class="tparam">A</dt><dd class="cmt"><p>the argument type of the module</p></dd><dt class="tparam">B</dt><dd class="cmt"><p>the value type of the module</p></dd></dl><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="#Module=lamp.nn.GenericModule[lamp.autograd.Variable,lamp.autograd.Variable]" class="extmbr" name="lamp.nn.Module">nn.Module</a> is an alias for simple <code>Variable =&gt; Variable</code> modules</p></span></dd></dl></div>
     </li><li name="lamp.nn.GraphModule" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="GraphModule=lamp.nn.GenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]"></a><a id="GraphModule:GraphModule"></a>
       <span class="permalink">
@@ -988,10 +1038,10 @@ Outputs of size (sequence length * batch * hidden dim)
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="InitState.html"><span class="name">InitState</span></a><span class="tparams">[<span name="M">M</span>, <span name="C">C</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+        <a title="Type class about how to initialize recurrent neural networks" href="InitState.html"><span class="name">InitState</span></a><span class="tparams">[<span name="M">M</span>, <span name="C">C</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
-      
+      <p class="shortcomment cmt">Type class about how to initialize recurrent neural networks</p>
     </li><li name="lamp.nn.InitStateSyntax" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="InitStateSyntax[M,C]extendsAnyRef"></a><a id="InitStateSyntax[M,C]:InitStateSyntax[M,C]"></a>
       <span class="permalink">
@@ -1118,10 +1168,10 @@ Outputs of size (sequence length * batch * output dim)
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="Load.html"><span class="name">Load</span></a><span class="tparams">[<span name="M">M</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+        <a title="Type class about how to load the contents of the state of modules from external tensors" href="Load.html"><span class="name">Load</span></a><span class="tparams">[<span name="M">M</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
-      
+      <p class="shortcomment cmt">Type class about how to load the contents of the state of modules from external tensors</p>
     </li><li name="lamp.nn.LoadSyntax" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="LoadSyntax[M]extendsAnyRef"></a><a id="LoadSyntax[M]:LoadSyntax[M]"></a>
       <span class="permalink">
@@ -1298,10 +1348,10 @@ Outputs of size (sequence length * batch * output dim)
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="PTag.html"><span class="name">PTag</span></a><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+        <a title="A small trait to mark paramters for unique identification" href="PTag.html"><span class="name">PTag</span></a><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
-      
+      <p class="shortcomment cmt">A small trait to mark paramters for unique identification</p>
     </li><li name="lamp.nn.Passthrough" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="Passthrough[M&lt;:lamp.nn.Module]extendsGenericModule[(lamp.autograd.Variable,lamp.autograd.Variable),(lamp.autograd.Variable,lamp.autograd.Variable)]withProductwithSerializable"></a><a id="Passthrough[M&lt;:nn.Module]:Passthrough[M]"></a>
       <span class="permalink">
@@ -1330,10 +1380,11 @@ Outputs of size (sequence length * batch * output dim)
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="RAdam.html"><span class="name">RAdam</span></a><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.001)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-8</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="Rectified Adam optimizer algorithm" href="RAdam.html"><span class="name">RAdam</span></a><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.001)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-8</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
-      
+      <p class="shortcomment cmt">Rectified Adam optimizer algorithm
+</p>
     </li><li name="lamp.nn.RNN" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="RNNextendsStatefulModule[lamp.autograd.Variable,lamp.autograd.Variable,Option[lamp.autograd.Variable]]withProductwithSerializable"></a><a id="RNN:RNN"></a>
       <span class="permalink">
@@ -1735,10 +1786,10 @@ Applies a linear function to each time step
         <span class="kind">trait</span>
       </span>
       <span class="symbol">
-        <a title="" href="TrainingMode.html"><span class="name">TrainingMode</span></a><span class="tparams">[<span name="M">M</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
+        <a title="Type class about how to switch a module into training or evaluation mode" href="TrainingMode.html"><span class="name">TrainingMode</span></a><span class="tparams">[<span name="M">M</span>]</span><span class="result"> extends <a href="../../scala/index.html#AnyRef=Object" class="extmbr" name="scala.AnyRef">AnyRef</a></span>
       </span>
       
-      
+      <p class="shortcomment cmt">Type class about how to switch a module into training or evaluation mode</p>
     </li><li name="lamp.nn.TrainingModeSyntax" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="TrainingModeSyntax[M]extendsAnyRef"></a><a id="TrainingModeSyntax[M]:TrainingModeSyntax[M]"></a>
       <span class="permalink">
@@ -1856,7 +1907,7 @@ Applies a linear function to each time step
       </span>
       
       
-    </li><li name="lamp.nn.Yogi" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+    </li><li name="lamp.nn.Yogi" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="YogiextendsOptimizerwithProductwithSerializable"></a><a id="Yogi:Yogi"></a>
       <span class="permalink">
       <a href="../../lamp/nn/Yogi.html" title="Permalink">
@@ -1868,10 +1919,12 @@ Applies a linear function to each time step
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a title="" href="Yogi.html"><span class="name">Yogi</span></a><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.01)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-3</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="debias">debias: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a title="The Yogi optimizer algorithm I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf" href="Yogi.html"><span class="name">Yogi</span></a><span class="params">(<span name="parameters">parameters: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>, <span name="weightDecay">weightDecay: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a></span>, <span name="learningRate">learningRate: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.01)</span></span>, <span name="beta1">beta1: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.9)</span></span>, <span name="beta2">beta2: <a href="OptimizerHyperparameter.html" class="extype" name="lamp.nn.OptimizerHyperparameter">OptimizerHyperparameter</a> = <span class="symbol">simple(0.999)</span></span>, <span name="eps">eps: <span class="extype" name="scala.Double">Double</span> = <span class="symbol">1e-3</span></span>, <span name="clip">clip: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Double">Double</span>] = <span class="symbol"><span class="name"><a href="../../scala/index.html">None</a></span></span></span>, <span name="debias">debias: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result"> extends <a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">Optimizer</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       
-      
+      <p class="shortcomment cmt">The Yogi optimizer algorithm
+I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf</p><div class="fullcomment"><div class="comment cmt"><p>The Yogi optimizer algorithm
+I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p>https://papers.nips.cc/paper/2018/file/90365351ccc7437a1309dc64e4db32a3-Paper.pdf Algorithm 2</p></span></dd></dl></div>
     </li><li name="lamp.nn.simple" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="simpleextendsOptimizerHyperparameterwithProductwithSerializable"></a><a id="simple:simple"></a>
       <span class="permalink">
@@ -2344,7 +2397,7 @@ Applies a linear function to each time step
       </span>
       
       <p class="shortcomment cmt">Factory for multilayer fully connected feed forward networks</p><div class="fullcomment"><div class="comment cmt"><p>Factory for multilayer fully connected feed forward networks</p><p>Returned network has the following repeated structure:
-[linear -&gt; batchnorm -&gt; gelu -&gt; dropout]*</p><p>The last block does not include the nonlinearity and the dropout.
+[linear -&gt; batchnorm -&gt; nonlinearity -&gt; dropout]*</p><p>The last block does not include the nonlinearity and the dropout.
 </p></div></div>
     </li><li name="lamp.nn.MappedState" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="MappedState"></a><a id="MappedState:MappedState"></a>

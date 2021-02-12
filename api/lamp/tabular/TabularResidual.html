@@ -84,8 +84,7 @@
         <a title="Lamp provides utilities to build state of the art machine learning applications" href="../index.html"><span class="name">lamp</span></a>
       </span>
       
-      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> implements reverse mode automatic differentiation.</li><li><a href="../nn/index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="../nn/Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.
-</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
+      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types and packages:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="../autograd/index.html" class="extype" name="lamp.autograd">lamp.autograd</a> implements reverse mode automatic differentiation.</li><li><a href="../nn/index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="../nn/Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.</li><li><a href="../knn/index.html" class="extype" name="lamp.knn">lamp.knn</a> implements k-nearest neighbor search on the CPU and GPU</li><li><a href="../umap/Umap$.html" class="extype" name="lamp.umap.Umap">lamp.umap.Umap</a> implements the UMAP dimension reduction algorithm</li><li><a href="../onnx/index.html" class="extype" name="lamp.onnx">lamp.onnx</a> implements serialization of computation graphs into ONNX format</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
     </li><li name="lamp.tabular" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="tabular"></a><a id="tabular:tabular"></a>
       <span class="permalink">
@@ -343,7 +342,7 @@
         <span class="name">apply</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="a">a: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.nn.GenericModule.apply.S">S</span>]</span>)</span><span class="result">: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
+      <p class="shortcomment cmt">Alias of forward</p><div class="fullcomment"><div class="comment cmt"><p>Alias of forward</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="scala.Any#asInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="asInstanceOf[T0]:T0"></a>
       <span class="permalink">
@@ -453,7 +452,7 @@
         <span class="name">forward</span><span class="tparams">[<span name="S">S</span>]</span><span class="params">(<span name="x">x: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="arg0">arg0: <a href="../index.html#Sc[_]=lamp.Scope" class="extmbr" name="lamp.Sc">Sc</a>[<span class="extype" name="lamp.tabular.TabularResidual.forward.S">S</span>]</span>)</span><span class="result">: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.tabular.TabularResidual">TabularResidual</a> → <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
+      <p class="shortcomment cmt">The implementation of the function.</p><div class="fullcomment"><div class="comment cmt"><p>The implementation of the function.</p><p>In addition of <code>x</code> it can also use all the <code>state to compute its value.</code></p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.tabular.TabularResidual">TabularResidual</a> → <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="scala.AnyRef#getClass" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getClass():Class[_]"></a>
       <span class="permalink">
@@ -488,7 +487,7 @@
         <span class="name">gradients</span><span class="params">(<span name="loss">loss: <a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>, <span name="zeroGrad">zeroGrad: <span class="extype" name="scala.Boolean">Boolean</span> = <span class="symbol">true</span></span>)</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[<span class="extype" name="scala.Option">Option</span>[<a href="../STen.html" class="extype" name="lamp.STen">STen</a>]]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
+      <p class="shortcomment cmt">Computes the gradient of loss with respect to the parameters.</p><div class="fullcomment"><div class="comment cmt"><p>Computes the gradient of loss with respect to the parameters.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="scala.Any#isInstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <span class="permalink">
@@ -520,7 +519,7 @@
         <span class="name">learnableParameters</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
+      <p class="shortcomment cmt">Returns the total number of optimizable parameters.</p><div class="fullcomment"><div class="comment cmt"><p>Returns the total number of optimizable parameters.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -590,7 +589,7 @@
         <span class="name">parameters</span><span class="result">: <span class="extype" name="scala.collection.Seq">Seq</span>[(<a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a>, <a href="../nn/PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
+      <p class="shortcomment cmt">Returns the state variables which need gradient computation.</p><div class="fullcomment"><div class="comment cmt"><p>Returns the state variables which need gradient computation.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="lamp.tabular.TabularResidual#state" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="state:Seq[(lamp.autograd.Constant,lamp.nn.PTag)]"></a><a id="state:Seq[(Constant,PTag)]"></a>
       <span class="permalink">
@@ -606,7 +605,8 @@
         <span class="name">state</span><span class="result">: <a href="../../scala/index.html#Seq[+A]=Seq[A]" class="extmbr" name="scala.Seq">Seq</a>[(<a href="../autograd/Constant.html" class="extype" name="lamp.autograd.Constant">Constant</a>, <a href="../nn/PTag.html" class="extype" name="lamp.nn.PTag">PTag</a>)]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.tabular.TabularResidual">TabularResidual</a> → <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
+      <p class="shortcomment cmt">List of optimizable, or non-optimizable, but stateful parameters</p><div class="fullcomment"><div class="comment cmt"><p>List of optimizable, or non-optimizable, but stateful parameters</p><p>Stateful means that the state is carried over the repeated forward calls.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.tabular.TabularResidual">TabularResidual</a> → <a href="../nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">GenericModule</a></dd></dl></div>
     </li><li name="lamp.tabular.TabularResidual#straight" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="straight:B2withlamp.nn.Module"></a><a id="straight:B2withModule"></a>
       <span class="permalink">

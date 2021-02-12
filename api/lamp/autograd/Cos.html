@@ -84,8 +84,7 @@
         <a title="Lamp provides utilities to build state of the art machine learning applications" href="../index.html"><span class="name">lamp</span></a>
       </span>
       
-      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> implements reverse mode automatic differentiation.</li><li><a href="../nn/index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="../nn/Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.
-</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
+      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types and packages:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="index.html" class="extype" name="lamp.autograd">lamp.autograd</a> implements reverse mode automatic differentiation.</li><li><a href="../nn/index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="../nn/Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.</li><li><a href="../knn/index.html" class="extype" name="lamp.knn">lamp.knn</a> implements k-nearest neighbor search on the CPU and GPU</li><li><a href="../umap/Umap$.html" class="extype" name="lamp.umap.Umap">lamp.umap.Umap</a> implements the UMAP dimension reduction algorithm</li><li><a href="../onnx/index.html" class="extype" name="lamp.onnx">lamp.onnx</a> implements serialization of computation graphs into ONNX format</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
     </li><li name="lamp.autograd" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="autograd"></a><a id="autograd:autograd"></a>
       <span class="permalink">
@@ -98,10 +97,43 @@
         <span class="kind">package</span>
       </span>
       <span class="symbol">
-        <a title="" href="index.html"><span class="name">autograd</span></a>
+        <a title="Implements reverse mode automatic differentiaton" href="index.html"><span class="name">autograd</span></a>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+      <p class="shortcomment cmt">Implements reverse mode automatic differentiaton</p><div class="fullcomment"><div class="comment cmt"><p>Implements reverse mode automatic differentiaton</p><p>The main types in this package are <a href="Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> and <a href="Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a>.
+The computational graph built by this package consists of vertices representing values (as <a href="Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a>) and vertices representing operations (as <a href="Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a>).</p><p>Variables contain the value of a <code>R<sup>n</sup> =&gt; R<sup>m</sup></code> function.
+Variables may also contain the partial derivative of their argument with respect to a single scalar.
+A Variable whose value is a scalar (m=1) can trigger the computation of partial derivatives of all
+the intermediate upstream Variables.
+Computing partial derivatives with respect to non-scalar variables is not supported.</p><p>A constant Variable  may be created with the <code>const</code>
+or <code>param</code> factory method in this package. <code>const</code> may be used for constants which
+do not need their partial derivatives to be computed. <code>param</code> on the other hand
+create Variables which will fill in their partial derivatives. Further variables may be created by the
+methods in this class, eventually expressing more complex <code>R<sup>n</sup> =&gt; R<sup>m</sup></code> functions.</p><h5>Example</h5><pre>lamp.Scope.root{ <span class="kw">implicit</span> scope <span class="kw">=&gt;</span>
+  <span class="cmt">// x is constant (depends on no other variables) and won't compute a partial derivative</span>
+  <span class="kw">val</span> x = lamp.autograd.const(STen.eye(<span class="num">3</span>, STenOptions.d))
+  <span class="cmt">// y is constant but will compute a partial derivative</span>
+  <span class="kw">val</span> y = lamp.autograd.param(STen.ones(<span class="std">List</span>(<span class="num">3</span>,<span class="num">3</span>), STenOptions.d))
+
+  <span class="cmt">// z is a Variable with x and y dependencies</span>
+  <span class="kw">val</span> z = x+y
+
+  <span class="cmt">// w is a Variable with z as a direct and x, y as transient dependencies</span>
+  <span class="kw">val</span> w = z.sum
+  <span class="cmt">// w is a scalar (number of elements is 1), thus we can call backprop() on it.</span>
+  <span class="cmt">// calling backprop will fill out the partial derivatives of the upstream variables</span>
+  w.backprop()
+
+  <span class="cmt">// partialDerivative is empty since we created `x` with `const`</span>
+  assert(x.partialDerivative.isEmpty)
+
+  <span class="cmt">// `y`'s partial derivatie is defined and is computed</span>
+  <span class="cmt">// it holds `y`'s partial derivative with respect to `w`, the scalar which we called backprop() on</span>
+  assert(y.partialDerivative.isDefined)
+
+
+}</pre><p>This package may be used to compute the derivative of any function, provided the function can
+be composed out of the provided methods. A particular use case is gradient based optimization.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd><dt>See also</dt><dd><span class="cmt"><p><a href="https://arxiv.org/pdf/1811.05031.pdf" target="_blank">https://arxiv.org/pdf/1811.05031.pdf</a> for a review of the algorithm</p></span><span class="cmt"><p><a href="Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a> for how to implement a new operation</p></span></dd></dl></div>
     </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Add.html" title=""></a>
@@ -164,16 +196,16 @@
                         <a href="ConstMult.html" title="">ConstMult</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Constant$.html" title=""></a>
-                        <a class="trait" href="Constant.html" title=""></a>
-                        <a href="Constant.html" title="">Constant</a>
+                        <a class="trait" href="Constant.html" title="A variable whose parent is empty"></a>
+                        <a href="Constant.html" title="A variable whose parent is empty">Constant</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="ConstantWithGrad.html" title=""></a>
-                        <a href="ConstantWithGrad.html" title="">ConstantWithGrad</a>
+                        <a class="class" href="ConstantWithGrad.html" title="A variable whose parent is empty but whose partial derivative is defined"></a>
+                        <a href="ConstantWithGrad.html" title="A variable whose parent is empty but whose partial derivative is defined">ConstantWithGrad</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="class" href="ConstantWithoutGrad.html" title=""></a>
-                        <a href="ConstantWithoutGrad.html" title="">ConstantWithoutGrad</a>
+                        <a class="class" href="ConstantWithoutGrad.html" title="A variable whose parent and partial derivatives are empty"></a>
+                        <a href="ConstantWithoutGrad.html" title="A variable whose parent and partial derivatives are empty">ConstantWithoutGrad</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Conv1D.html" title="1D convolution"></a>
@@ -308,8 +340,8 @@
                         <a href="OneHot.html" title="">OneHot</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
-                        <a class="trait" href="Op.html" title="Params: the input and the function which calculates the partial derivative of the function value wrt to this input"></a>
-                        <a href="Op.html" title="Params: the input and the function which calculates the partial derivative of the function value wrt to this input">Op</a>
+                        <a class="trait" href="Op.html" title="Represents an operation in the computational graph"></a>
+                        <a href="Op.html" title="Represents an operation in the computational graph">Op</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Pow.html" title=""></a>
@@ -376,12 +408,12 @@
                         <a href="Transpose.html" title="">Transpose</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Variable$.html" title=""></a>
-                        <a class="trait" href="Variable.html" title=""></a>
-                        <a href="Variable.html" title="">Variable</a>
+                        <a class="trait" href="Variable.html" title="A value of a tensor valued function, a vertex in the computational graph."></a>
+                        <a href="Variable.html" title="A value of a tensor valued function, a vertex in the computational graph.">Variable</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="VariableNonConstant$.html" title=""></a>
-                        <a class="class" href="VariableNonConstant.html" title=""></a>
-                        <a href="VariableNonConstant.html" title="">VariableNonConstant</a>
+                        <a class="class" href="VariableNonConstant.html" title="A variable whose parent is not empty, neither its partial derivative"></a>
+                        <a href="VariableNonConstant.html" title="A variable whose parent is not empty, neither its partial derivative">VariableNonConstant</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="Variance.html" title=""></a>
@@ -744,7 +776,13 @@
         <span class="name">params</span><span class="result">: <span class="extype" name="scala.collection.immutable.List">List</span>[(<a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a>, (<a href="../STen.html" class="extype" name="lamp.STen">STen</a>, <a href="../STen.html" class="extype" name="lamp.STen">STen</a>) ⇒ <span class="extype" name="scala.Unit">Unit</span>)]</span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.Cos">Cos</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
+      <p class="shortcomment cmt">Implementation of the backward pass</p><div class="fullcomment"><div class="comment cmt"><p>Implementation of the backward pass</p><p>A list of input variables paired up with an anonymous function computing the respective partial
+derivative. With the notation in the documentation of the trait <a href="Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a>:
+<code>dy/dw2 =&gt; dy/dw2 * dw2/dw1</code>. The first argument of the anonymous function is the incoming
+partial derivative (<code>dy/dw2</code>), the second argument is the output tensor into which the
+result (<code>dy/dw2 * dw2/dw1</code>) is accumulated (added).</p><p>If the operation does not support computing the partial derivative for some of its arguments, then
+do not include that argument in this list.
+</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.Cos">Cos</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd><dt>See also</dt><dd><span class="cmt"><p>The documentation on the trait <a href="Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a> for more details and example.</p></span></dd></dl></div>
     </li><li name="lamp.autograd.Cos#scope" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="scope:lamp.Scope"></a><a id="scope:Scope"></a>
       <span class="permalink">
@@ -792,7 +830,7 @@
         <span class="name">value</span><span class="result">: <a href="Variable.html" class="extype" name="lamp.autograd.Variable">Variable</a></span>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.Cos">Cos</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
+      <p class="shortcomment cmt">The value of this operation</p><div class="fullcomment"><div class="comment cmt"><p>The value of this operation</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="lamp.autograd.Cos">Cos</a> → <a href="Op.html" class="extype" name="lamp.autograd.Op">Op</a></dd></dl></div>
     </li><li name="scala.AnyRef#wait" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="wait():Unit"></a>
       <span class="permalink">

@@ -84,8 +84,7 @@
         <a title="Lamp provides utilities to build state of the art machine learning applications" href="index.html"><span class="name">lamp</span></a>
       </span>
       
-      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types:</p><ul><li><a href="STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> implements reverse mode automatic differentiation.</li><li><a href="nn/index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="nn/Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.
-</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="_root_">root</a></dd></dl></div>
+      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types and packages:</p><ul><li><a href="STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="autograd/index.html" class="extype" name="lamp.autograd">lamp.autograd</a> implements reverse mode automatic differentiation.</li><li><a href="nn/index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="nn/Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.</li><li><a href="knn/index.html" class="extype" name="lamp.knn">lamp.knn</a> implements k-nearest neighbor search on the CPU and GPU</li><li><a href="umap/Umap$.html" class="extype" name="lamp.umap.Umap">lamp.umap.Umap</a> implements the UMAP dimension reduction algorithm</li><li><a href="onnx/index.html" class="extype" name="lamp.onnx">lamp.onnx</a> implements serialization of computation graphs into ONNX format</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="_root_">root</a></dd></dl></div>
     </li><li name="lamp.autograd" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="autograd"></a><a id="autograd:autograd"></a>
       <span class="permalink">
@@ -98,10 +97,43 @@
         <span class="kind">package</span>
       </span>
       <span class="symbol">
-        <a title="" href="autograd/index.html"><span class="name">autograd</span></a>
+        <a title="Implements reverse mode automatic differentiaton" href="autograd/index.html"><span class="name">autograd</span></a>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+      <p class="shortcomment cmt">Implements reverse mode automatic differentiaton</p><div class="fullcomment"><div class="comment cmt"><p>Implements reverse mode automatic differentiaton</p><p>The main types in this package are <a href="autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> and <a href="autograd/Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a>.
+The computational graph built by this package consists of vertices representing values (as <a href="autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a>) and vertices representing operations (as <a href="autograd/Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a>).</p><p>Variables contain the value of a <code>R<sup>n</sup> =&gt; R<sup>m</sup></code> function.
+Variables may also contain the partial derivative of their argument with respect to a single scalar.
+A Variable whose value is a scalar (m=1) can trigger the computation of partial derivatives of all
+the intermediate upstream Variables.
+Computing partial derivatives with respect to non-scalar variables is not supported.</p><p>A constant Variable  may be created with the <code>const</code>
+or <code>param</code> factory method in this package. <code>const</code> may be used for constants which
+do not need their partial derivatives to be computed. <code>param</code> on the other hand
+create Variables which will fill in their partial derivatives. Further variables may be created by the
+methods in this class, eventually expressing more complex <code>R<sup>n</sup> =&gt; R<sup>m</sup></code> functions.</p><h5>Example</h5><pre>lamp.Scope.root{ <span class="kw">implicit</span> scope <span class="kw">=&gt;</span>
+  <span class="cmt">// x is constant (depends on no other variables) and won't compute a partial derivative</span>
+  <span class="kw">val</span> x = lamp.autograd.const(STen.eye(<span class="num">3</span>, STenOptions.d))
+  <span class="cmt">// y is constant but will compute a partial derivative</span>
+  <span class="kw">val</span> y = lamp.autograd.param(STen.ones(<span class="std">List</span>(<span class="num">3</span>,<span class="num">3</span>), STenOptions.d))
+
+  <span class="cmt">// z is a Variable with x and y dependencies</span>
+  <span class="kw">val</span> z = x+y
+
+  <span class="cmt">// w is a Variable with z as a direct and x, y as transient dependencies</span>
+  <span class="kw">val</span> w = z.sum
+  <span class="cmt">// w is a scalar (number of elements is 1), thus we can call backprop() on it.</span>
+  <span class="cmt">// calling backprop will fill out the partial derivatives of the upstream variables</span>
+  w.backprop()
+
+  <span class="cmt">// partialDerivative is empty since we created `x` with `const`</span>
+  assert(x.partialDerivative.isEmpty)
+
+  <span class="cmt">// `y`'s partial derivatie is defined and is computed</span>
+  <span class="cmt">// it holds `y`'s partial derivative with respect to `w`, the scalar which we called backprop() on</span>
+  assert(y.partialDerivative.isDefined)
+
+
+}</pre><p>This package may be used to compute the derivative of any function, provided the function can
+be composed out of the provided methods. A particular use case is gradient based optimization.</p></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="index.html" class="extype" name="lamp">lamp</a></dd><dt>See also</dt><dd><span class="cmt"><p><a href="https://arxiv.org/pdf/1811.05031.pdf" target="_blank">https://arxiv.org/pdf/1811.05031.pdf</a> for a review of the algorithm</p></span><span class="cmt"><p><a href="autograd/Op.html" class="extype" name="lamp.autograd.Op">lamp.autograd.Op</a> for how to implement a new operation</p></span></dd></dl></div>
     </li><li name="lamp.data" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="data"></a><a id="data:data"></a>
       <span class="permalink">
@@ -178,10 +210,10 @@
         <span class="kind">package</span>
       </span>
       <span class="symbol">
-        <a title="" href="nn/index.html"><span class="name">nn</span></a>
+        <a title="Provides building blocks for neural networks" href="nn/index.html"><span class="name">nn</span></a>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+      <p class="shortcomment cmt">Provides building blocks for neural networks</p><div class="fullcomment"><div class="comment cmt"><p>Provides building blocks for neural networks</p><p>Notable types:</p><ul><li><a href="nn/GenericModule.html" class="extype" name="lamp.nn.GenericModule">nn.GenericModule</a> is an abstraction on parametric functions</li><li><a href="nn/Optimizer.html" class="extype" name="lamp.nn.Optimizer">nn.Optimizer</a> is an abstraction of gradient based optimizers</li><li><a href="nn/LossFunction.html" class="extype" name="lamp.nn.LossFunction">nn.LossFunction</a> is an abstraction of loss functions, see the companion object for the implemented losses</li><li><a href="nn/SupervisedModel.html" class="extype" name="lamp.nn.SupervisedModel">nn.SupervisedModel</a> combines a module with a loss</li></ul><p>Optimizers:</p><ul><li><a href="nn/AdamW.html" class="extype" name="lamp.nn.AdamW">nn.AdamW</a></li><li><a href="nn/SGDW.html" class="extype" name="lamp.nn.SGDW">nn.SGDW</a></li><li><a href="nn/RAdam.html" class="extype" name="lamp.nn.RAdam">nn.RAdam</a></li><li><a href="nn/Yogi.html" class="extype" name="lamp.nn.Yogi">nn.Yogi</a></li></ul><p>Modules facilitating composing other modules:</p><ul><li><a href="nn/Sequential.html" class="extype" name="lamp.nn.Sequential">nn.Sequential</a> composes a homogenous list of modules (analogous to List)</li><li><a href="nn/sequence$.html" class="extype" name="lamp.nn.sequence">nn.sequence</a> composes a heterogeneous list of modules (analogous to tuples)</li><li><a href="nn/EitherModule.html" class="extype" name="lamp.nn.EitherModule">nn.EitherModule</a> composes two modules in a <a href="../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">scala.Either</a></li></ul><p>Examples of neural network building blocks, layers etc:</p><ul><li><a href="nn/Linear.html" class="extype" name="lamp.nn.Linear">nn.Linear</a> implements <code>W X + b</code> with parameters <code>W</code> and <code>b</code> and input <code>X</code></li><li><a href="nn/BatchNorm.html" class="extype" name="lamp.nn.BatchNorm">nn.BatchNorm</a>, <a href="nn/LayerNorm.html" class="extype" name="lamp.nn.LayerNorm">nn.LayerNorm</a> implement batch and layer normalization</li><li><a href="nn/MLP$.html" class="extype" name="lamp.nn.MLP">nn.MLP</a> is a factory of a multilayer perceptron architecture</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
     </li><li name="lamp.onnx" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="onnx"></a><a id="onnx:onnx"></a>
       <span class="permalink">

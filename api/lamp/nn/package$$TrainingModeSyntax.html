@@ -84,8 +84,7 @@
         <a title="Lamp provides utilities to build state of the art machine learning applications" href="../index.html"><span class="name">lamp</span></a>
       </span>
       
-      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="../autograd/Variable.html" class="extype" name="lamp.autograd.Variable">lamp.autograd.Variable</a> implements reverse mode automatic differentiation.</li><li><a href="index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.
-</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
+      <p class="shortcomment cmt">Lamp provides utilities to build state of the art machine learning applications</p><div class="fullcomment"><div class="comment cmt"><p>Lamp provides utilities to build state of the art machine learning applications</p><h4>Overview</h4><p>Notable types and packages:</p><ul><li><a href="../STen.html" class="extype" name="lamp.STen">lamp.STen</a> is a memory managed wrapper around aten.ATen, an off the heap, native n-dimensionl array backed by libtorch.</li><li><a href="../autograd/index.html" class="extype" name="lamp.autograd">lamp.autograd</a> implements reverse mode automatic differentiation.</li><li><a href="index.html" class="extype" name="lamp.nn">lamp.nn</a> contains neural network building blocks, see e.g. <a href="Linear.html" class="extype" name="lamp.nn.Linear">lamp.nn.Linear</a>.</li><li><a href="../data/IOLoops$.html" class="extype" name="lamp.data.IOLoops">lamp.data.IOLoops</a> implements a training loop and other data related abstractions.</li><li><a href="../knn/index.html" class="extype" name="lamp.knn">lamp.knn</a> implements k-nearest neighbor search on the CPU and GPU</li><li><a href="../umap/Umap$.html" class="extype" name="lamp.umap.Umap">lamp.umap.Umap</a> implements the UMAP dimension reduction algorithm</li><li><a href="../onnx/index.html" class="extype" name="lamp.onnx">lamp.onnx</a> implements serialization of computation graphs into ONNX format</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../../index.html" class="extype" name="_root_">root</a></dd></dl></div>
     </li><li name="lamp.nn" visbl="pub" class="indented2 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="nn"></a><a id="nn:nn"></a>
       <span class="permalink">
@@ -98,10 +97,10 @@
         <span class="kind">package</span>
       </span>
       <span class="symbol">
-        <a title="" href="index.html"><span class="name">nn</span></a>
+        <a title="Provides building blocks for neural networks" href="index.html"><span class="name">nn</span></a>
       </span>
       
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
+      <p class="shortcomment cmt">Provides building blocks for neural networks</p><div class="fullcomment"><div class="comment cmt"><p>Provides building blocks for neural networks</p><p>Notable types:</p><ul><li><a href="GenericModule.html" class="extype" name="lamp.nn.GenericModule">nn.GenericModule</a> is an abstraction on parametric functions</li><li><a href="Optimizer.html" class="extype" name="lamp.nn.Optimizer">nn.Optimizer</a> is an abstraction of gradient based optimizers</li><li><a href="LossFunction.html" class="extype" name="lamp.nn.LossFunction">nn.LossFunction</a> is an abstraction of loss functions, see the companion object for the implemented losses</li><li><a href="SupervisedModel.html" class="extype" name="lamp.nn.SupervisedModel">nn.SupervisedModel</a> combines a module with a loss</li></ul><p>Optimizers:</p><ul><li><a href="AdamW.html" class="extype" name="lamp.nn.AdamW">nn.AdamW</a></li><li><a href="SGDW.html" class="extype" name="lamp.nn.SGDW">nn.SGDW</a></li><li><a href="RAdam.html" class="extype" name="lamp.nn.RAdam">nn.RAdam</a></li><li><a href="Yogi.html" class="extype" name="lamp.nn.Yogi">nn.Yogi</a></li></ul><p>Modules facilitating composing other modules:</p><ul><li><a href="Sequential.html" class="extype" name="lamp.nn.Sequential">nn.Sequential</a> composes a homogenous list of modules (analogous to List)</li><li><a href="sequence$.html" class="extype" name="lamp.nn.sequence">nn.sequence</a> composes a heterogeneous list of modules (analogous to tuples)</li><li><a href="EitherModule.html" class="extype" name="lamp.nn.EitherModule">nn.EitherModule</a> composes two modules in a <a href="../../scala/index.html#Either[+A,+B]=scala.util.Either[A,B]" class="extmbr" name="scala.Either">scala.Either</a></li></ul><p>Examples of neural network building blocks, layers etc:</p><ul><li><a href="Linear.html" class="extype" name="lamp.nn.Linear">nn.Linear</a> implements <code>W X + b</code> with parameters <code>W</code> and <code>b</code> and input <code>X</code></li><li><a href="BatchNorm.html" class="extype" name="lamp.nn.BatchNorm">nn.BatchNorm</a>, <a href="LayerNorm.html" class="extype" name="lamp.nn.LayerNorm">nn.LayerNorm</a> implement batch and layer normalization</li><li><a href="MLP$.html" class="extype" name="lamp.nn.MLP">nn.MLP</a> is a factory of a multilayer perceptron architecture</li></ul></div><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="../index.html" class="extype" name="lamp">lamp</a></dd></dl></div>
     </li><li class="current-entities indented2">
                         <a class="object" href="AdamW$.html" title=""></a>
                         <a class="class" href="AdamW.html" title=""></a>
@@ -176,16 +175,16 @@
                         <a href="GenericFun.html" title="">GenericFun</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="GenericModule$.html" title=""></a>
-                        <a class="trait" href="GenericModule.html" title=""></a>
-                        <a href="GenericModule.html" title="">GenericModule</a>
+                        <a class="trait" href="GenericModule.html" title="Base type of modules"></a>
+                        <a href="GenericModule.html" title="Base type of modules">GenericModule</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="GraphReadout$.html" title=""></a>
                         <a class="class" href="GraphReadout.html" title=""></a>
                         <a href="GraphReadout.html" title="">GraphReadout</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="InitState$.html" title=""></a>
-                        <a class="trait" href="InitState.html" title=""></a>
-                        <a href="InitState.html" title="">InitState</a>
+                        <a class="trait" href="InitState.html" title="Type class about how to initialize recurrent neural networks"></a>
+                        <a href="InitState.html" title="Type class about how to initialize recurrent neural networks">InitState</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="package$$InitStateSyntax.html" title=""></a>
@@ -216,8 +215,8 @@
                         <a href="Linear.html" title="">Linear</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Load$.html" title=""></a>
-                        <a class="trait" href="Load.html" title=""></a>
-                        <a href="Load.html" title="">Load</a>
+                        <a class="trait" href="Load.html" title="Type class about how to load the contents of the state of modules from external tensors"></a>
+                        <a href="Load.html" title="Type class about how to load the contents of the state of modules from external tensors">Load</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="package$$LoadSyntax.html" title=""></a>
@@ -268,8 +267,8 @@
                         <a href="OptimizerHyperparameter.html" title="">OptimizerHyperparameter</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="PTag$.html" title=""></a>
-                        <a class="trait" href="PTag.html" title=""></a>
-                        <a href="PTag.html" title="">PTag</a>
+                        <a class="trait" href="PTag.html" title="A small trait to mark paramters for unique identification"></a>
+                        <a href="PTag.html" title="A small trait to mark paramters for unique identification">PTag</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Passthrough$.html" title=""></a>
                         <a class="class" href="Passthrough.html" title=""></a>
@@ -280,8 +279,8 @@
                         <a href="PositionalEmbedding$.html" title="">PositionalEmbedding</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="RAdam$.html" title=""></a>
-                        <a class="class" href="RAdam.html" title=""></a>
-                        <a href="RAdam.html" title="">RAdam</a>
+                        <a class="class" href="RAdam.html" title="Rectified Adam optimizer algorithm"></a>
+                        <a href="RAdam.html" title="Rectified Adam optimizer algorithm">RAdam</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="RNN$.html" title=""></a>
                         <a class="class" href="RNN.html" title="Inputs of size (sequence length * batch * in dim) Outputs of size (sequence length * batch * hidden dim)"></a>
@@ -372,8 +371,8 @@
                         <a href="package$$ToWithInit.html" title="">ToWithInit</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="TrainingMode$.html" title=""></a>
-                        <a class="trait" href="TrainingMode.html" title=""></a>
-                        <a href="TrainingMode.html" title="">TrainingMode</a>
+                        <a class="trait" href="TrainingMode.html" title="Type class about how to switch a module into training or evaluation mode"></a>
+                        <a href="TrainingMode.html" title="Type class about how to switch a module into training or evaluation mode">TrainingMode</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="class" href="" title=""></a>
@@ -404,8 +403,8 @@
                         <a href="WithInit.html" title="">WithInit</a>
                       </li><li class="current-entities indented2">
                         <a class="object" href="Yogi$.html" title=""></a>
-                        <a class="class" href="Yogi.html" title=""></a>
-                        <a href="Yogi.html" title="">Yogi</a>
+                        <a class="class" href="Yogi.html" title="The Yogi optimizer algorithm I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf"></a>
+                        <a href="Yogi.html" title="The Yogi optimizer algorithm I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf">Yogi</a>
                       </li><li class="current-entities indented2">
                         <span class="separator"></span>
                         <a class="object" href="sequence$.html" title=""></a>
