@@ -9,6 +9,9 @@ import aten.Tensor
   *  - [[lamp.autograd]] implements reverse mode automatic differentiation.
   *  - [[lamp.nn]] contains neural network building blocks, see e.g. [[lamp.nn.Linear]].
   *  - [[lamp.data.IOLoops]] implements a training loop and other data related abstractions.
+  *  - [[lamp.knn]] implements k-nearest neighbor search on the CPU and GPU
+  *  - [[lamp.umap.Umap]] implements the UMAP dimension reduction algorithm
+  *  - [[lamp.onnx]] implements serialization of computation graphs into ONNX format
   *
   */
 package object lamp {
