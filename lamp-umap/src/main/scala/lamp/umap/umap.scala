@@ -281,7 +281,7 @@ object Umap {
 
   /**
     * Dimension reduction similar to UMAP
-    * For reference see https://arxiv.org/abs/1802.03426
+    * For reference see [[https://arxiv.org/abs/1802.03426]]
     * This method does not follow the above paper exactly.
     *
     * Minimizes the objective function:
@@ -325,7 +325,7 @@ object Umap {
     * @param balanceAttractionsAndRepulsions if true the number of negative samples will not affect the relative strength of attractions and repulsions (see @param repulsionStrength)
     * @param repulsionStrength strength of repulsions compared to attractions
     * @param logger
-    * @return
+    * @return a triple of the layout, the umap graph (b) and the final optimization loss
     */
   def umap(
       data: Mat[Double],
