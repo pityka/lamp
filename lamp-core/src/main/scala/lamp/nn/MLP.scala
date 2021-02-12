@@ -6,7 +6,7 @@ import lamp.STenOptions
 /** Factory for multilayer fully connected feed forward networks
   *
   * Returned network has the following repeated structure:
-  * [linear -> batchnorm -> gelu -> dropout]*
+  * [linear -> batchnorm -> nonlinearity -> dropout]*
   *
   * The last block does not include the nonlinearity and the dropout.
   *

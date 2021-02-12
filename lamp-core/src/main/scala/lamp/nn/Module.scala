@@ -173,12 +173,64 @@ object GenericModule {
         .toList
     }
 }
+
+/** Base type of modules
+  *
+  * Modules are functions of type `(Seq[lamp.autograd.Constant],A) => B`, where
+  * the `Seq[lamp.autograd.Constant]` arguments are optimizable parameters and `A` is a non-optimizable
+  * input.
+  *
+  * Modules provide a way to build composite functions while also keep track of the parameter list of the
+  * composite function.
+  *
+  * ===Example===
+  * {{{
+  * case object Weights extends LeafTag
+  * case object Bias extends LeafTag
+  * case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
+  *
+  *  override val state = List(
+  *    weights -> Weights
+  *  ) ++ bias.toList.map(b => (b, Bias))
+  *
+  *  def forward[S: Sc](x: Variable): Variable = {
+  *    val v = x.mm(weights)
+  *    bias.map(_ + v).getOrElse(v)
+  *
+  *  }
+  *}
+  * }}}
+  *
+  * Some other attributes of modules are attached by type classes e.g. with the [[nn.TrainingMode]], [[nn.Load]]
+  * type classes.
+  *
+  * @tparam A the argument type of the module
+  * @tparam B the value type of the module
+  * @see [[nn.Module]] is an alias for simple `Variable => Variable` modules
+  */
 trait GenericModule[A, B] {
+
+  /** The implementation of the function.
+    *
+    * In addition of `x` it can also use all the `state to compute its value.
+    *
+    */
   def forward[S: Sc](x: A): B
+
+  /** Alias of forward */
   def apply[S: Sc](a: A): B = forward(a)
+
+  /** List of optimizable, or non-optimizable, but stateful parameters
+    *
+    * Stateful means that the state is carried over the repeated forward calls.
+    */
   def state: Seq[(Constant, PTag)]
+
+  /** Returns the state variables which need gradient computation. */
   final def parameters =
     state.filter(v => v._1.needsGrad)
+
+  /** Computes the gradient of loss with respect to the parameters.  */
   final def gradients(
       loss: Variable,
       zeroGrad: Boolean = true
@@ -195,10 +247,13 @@ trait GenericModule[A, B] {
     }
     g
   }
+
+  /** Returns the total number of optimizable parameters.  */
   final def learnableParameters =
     parameters.filter(_._1.needsGrad).map(_._1.value.numel).sum
 }
 
+/** A small trait to mark paramters for unique identification */
 trait PTag {
   def leaf: PTag
 }
@@ -210,6 +265,7 @@ trait LeafTag extends PTag {
 }
 case object NoTag extends LeafTag
 
+/** Type class about how to switch a module into training or evaluation mode */
 trait TrainingMode[M] {
   def asEval(m: M): M
   def asTraining(m: M): M
@@ -224,6 +280,8 @@ object TrainingMode {
   def identity[M] =
     TrainingMode.make(scala.Predef.identity[M], scala.Predef.identity[M])
 }
+
+/** Type class about how to load the contents of the state of modules from external tensors */
 trait Load[M] {
   def load(m: M, tensors: Seq[STen]): Unit
 }
@@ -233,6 +291,8 @@ object Load {
     def load(m: M, tensors: Seq[STen]): Unit = f(m)(tensors)
   }
 }
+
+/** Type class about how to initialize recurrent neural networks */
 trait InitState[M, C] {
   def initState(m: M): C
 }
