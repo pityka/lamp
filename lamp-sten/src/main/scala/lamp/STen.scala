@@ -439,13 +439,11 @@ object STenOptions {
   * Some operations are exempt from this naming rule, e.g. `+=`, `-=`, `*=` etc.
   *
   * Semantics of operations follow those of libtorch with the same name.
-  * Many of the operations broadcasts. See [[https://numpy.org/doc/stable/user/basics.broadcasting.html#general-broadcasting-rules]] for broadcasting rules.
-  * In short:
+  * Many of the operations broadcasts. See [[https://numpy.org/doc/stable/user/basics.broadcasting.html#general-broadcasting-rules]] for broadcasting rules. In short:
   *
-  *   1. shapes are aligned from the right, extending with ones to the left as needed.
-  *   2. If two aligned dimensions are not matching but one of them is 1, then it is expanded to the
-  *     value of the other dimension, pretending a copy of all its values.
-  *     If two aligned dimension are not matching and neither of them is 1, then the operation fails.
+  *  1. shapes are aligned from the right, extending with ones to the left as needed.
+  *  2. If two aligned dimensions are not matching but one of them is 1, then it is expanded to the
+  *     size of the other dimension, pretending a copy of all its values. If two aligned dimension are not matching and neither of them is 1, then the operation fails.
   * =Examples=
   * {{{
   * Scope.root { implicit scope =>
