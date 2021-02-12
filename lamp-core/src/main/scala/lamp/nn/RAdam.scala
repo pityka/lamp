@@ -25,6 +25,8 @@ object RAdam {
       )
 }
 
+/** Rectified Adam optimizer algorithm
+  */
 case class RAdam(
     parameters: Seq[(STen, PTag)],
     weightDecay: OptimizerHyperparameter,

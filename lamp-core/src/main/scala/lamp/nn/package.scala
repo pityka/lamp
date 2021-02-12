@@ -4,6 +4,31 @@ import aten.ATen
 import lamp.util.syntax
 import lamp.autograd.{Constant, param}
 
+/** Provides building blocks for neural networks
+  *
+  * Notable types:
+  *   - [[nn.GenericModule]] is an abstraction on parametric functions
+  *   - [[nn.Optimizer]] is an abstraction of gradient based optimizers
+  *   - [[nn.LossFunction]] is an abstraction of loss functions, see the companion object for the implemented losses
+  *   - [[nn.SupervisedModel]] combines a module with a loss
+  *
+  * Optimizers:
+  *   - [[nn.AdamW]]
+  *   - [[nn.SGDW]]
+  *   - [[nn.RAdam]]
+  *   - [[nn.Yogi]]
+  *
+  * Modules facilitating composing other modules:
+  *   - [[nn.Sequential]] composes a homogenous list of modules (analogous to List)
+  *   - [[nn.sequence]] composes a heterogeneous list of modules (analogous to tuples)
+  *   - [[nn.EitherModule]] composes two modules in a [[scala.Either]]
+  *
+  * Examples of neural network building blocks, layers etc:
+  *   - [[nn.Linear]] implements `W X + b` with parameters `W` and `b` and input `X`
+  *   - [[nn.BatchNorm]], [[nn.LayerNorm]] implement batch and layer normalization
+  *   - [[nn.MLP]] is a factory of a multilayer perceptron architecture
+  *
+  */
 package object nn {
   type Module = GenericModule[Variable, Variable]
   type StatefulModule[A, B, C] = GenericModule[(A, C), (B, C)]
