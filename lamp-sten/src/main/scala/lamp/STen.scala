@@ -4,6 +4,12 @@ import aten.Tensor
 import aten.ATen
 import org.saddle._
 
+/** Companion object of [[lamp.STen]]
+  *
+  * - [[STen.fromDoubleArray]], [[STen.fromLongArray]], [[STen.fromFloatArray]] factory methods
+  * copy data from JVM arrays into off heap memory and create an STen instance
+  *  - There are similar factories which take SADDLE data structures
+  */
 object STen {
 
   /** A tensor option specifying CPU and double */
@@ -472,6 +478,8 @@ object STenOptions {
   * 3 x 2 x 6 B
   * 3 x 4 x 6 Result // 2 != 4
   * }}}
+  *
+  * The companion object contains various factories which copy data from the JVM memory to STen tensors.
   *
   *
   */

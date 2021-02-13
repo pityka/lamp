@@ -10,6 +10,14 @@ import lamp.STen
 import lamp.Scope
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.Executors
+
+/** Contains a training loops and helpers around it
+  *
+  * The two training loops implemented here are:
+  *   - [[lamp.data.IOLoops.epochs]]
+  *   - [[lamp.data.IOLoops.withSWA]] implements Stochastic Weight Averaging
+  *
+  */
 object IOLoops {
 
   def forwardBatchStream[I, M <: GenericModule[I, Variable]](

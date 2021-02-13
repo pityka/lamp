@@ -19,7 +19,9 @@ before allocation and it provides a more fluent chainable API.
 
 Example:
 
-``` scala mdoc
+```scala mdoc
+  import lamp.{STen,Scope}
+  import cats.effect.IO
   def squaredEuclideanDistance(v1: STen, v2: STen)(
       implicit scope: Scope // parent scope
   ): STen = {
@@ -34,16 +36,20 @@ Example:
 ```
 
 With IO:
-``` scala mdoc
-  def squaredEuclideanDistance(v1: STen, v2: STen)(
-      implicit parent: Scope // parent scope
+```scala mdoc
+  import lamp.{STen,Scope}
+  import cats.effect.IO
+  def squaredEuclideanDistanceIO(v1: STen, v2: STen)(
+      implicit scope: Scope // parent scope
   ): IO[STen] = {
-    Scope.bracket(parent) { implicit scope => // this is a local scope cleared up when block ends
-      val outer = v1.mm(v2.t) // these allocations will get released at the end of the block
-      val n1 = (v1 * v1).rowSum
-      val n2 = (v2 * v2).rowSum
-      (n1 + n2.t - outer * 2) 
-    } // once the block exits all resources allocated within the block are released, with the exception of the 
+    Scope.bracket(scope) { implicit scope => // this is a local scope cleared up when block ends
+      IO{
+        val outer = v1.mm(v2.t) // these allocations will get released once the IO finished execution
+        val n1 = (v1 * v1).rowSum
+        val n2 = (v2 * v2).rowSum
+        (n1 + n2.t - outer * 2) 
+      }
+    }  
       // return value which is moved to the parent scope
   }
 ```
