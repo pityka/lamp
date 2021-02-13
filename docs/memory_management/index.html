@@ -142,29 +142,35 @@ Autograd variables own up to two tensors: their value and optionally their parti
 before allocation and it provides a more fluent chainable API.</p>
 
 <p>Example:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala mdoc" data-lang="scala mdoc">  def squaredEuclideanDistance(v1: STen, v2: STen)(
-      implicit scope: Scope // parent scope
-  ): STen = {
-    Scope { implicit scope =&gt; // this is a local scope cleared up when block ends
-      val outer = v1.mm(v2.t) // these allocations will get released at the end of the block
-      val n1 = (v1 * v1).rowSum
-      val n2 = (v2 * v2).rowSum
-      (n1 + n2.t - outer * 2) 
-    } // once the block exits all resources allocated within the block are released, with the exception of the 
-      // return value which is moved to the parent scope
-  }</code></pre></div>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.<span style="color:#f92672">{</span><span style="color:#a6e22e">STen</span><span style="color:#f92672">,</span><span style="color:#a6e22e">Scope</span><span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">import</span> cats.effect.IO
+  <span style="color:#66d9ef">def</span> squaredEuclideanDistance<span style="color:#f92672">(</span>v1<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STen</span><span style="color:#f92672">,</span> v2<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STen</span><span style="color:#f92672">)(</span>
+      <span style="color:#66d9ef">implicit</span> scope<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Scope</span> <span style="color:#75715e">// parent scope
+</span><span style="color:#75715e"></span>  <span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STen</span> <span style="color:#f92672">=</span> <span style="color:#f92672">{</span>
+    <span style="color:#a6e22e">Scope</span> <span style="color:#f92672">{</span> <span style="color:#66d9ef">implicit</span> scope <span style="color:#66d9ef">=&gt;</span> <span style="color:#75715e">// this is a local scope cleared up when block ends
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">val</span> outer <span style="color:#66d9ef">=</span> v1<span style="color:#f92672">.</span>mm<span style="color:#f92672">(</span>v2<span style="color:#f92672">.</span>t<span style="color:#f92672">)</span> <span style="color:#75715e">// these allocations will get released at the end of the block
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">val</span> n1 <span style="color:#66d9ef">=</span> <span style="color:#f92672">(</span>v1 <span style="color:#f92672">*</span> v1<span style="color:#f92672">).</span>rowSum
+      <span style="color:#66d9ef">val</span> n2 <span style="color:#66d9ef">=</span> <span style="color:#f92672">(</span>v2 <span style="color:#f92672">*</span> v2<span style="color:#f92672">).</span>rowSum
+      <span style="color:#f92672">(</span>n1 <span style="color:#f92672">+</span> n2<span style="color:#f92672">.</span>t <span style="color:#f92672">-</span> outer <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span><span style="color:#f92672">)</span> 
+    <span style="color:#f92672">}</span> <span style="color:#75715e">// once the block exits all resources allocated within the block are released, with the exception of the 
+</span><span style="color:#75715e"></span>      <span style="color:#75715e">// return value which is moved to the parent scope
+</span><span style="color:#75715e"></span>  <span style="color:#f92672">}</span></code></pre></div>
 <p>With IO:</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala mdoc" data-lang="scala mdoc">  def squaredEuclideanDistance(v1: STen, v2: STen)(
-      implicit parent: Scope // parent scope
-  ): IO[STen] = {
-    Scope.bracket(parent) { implicit scope =&gt; // this is a local scope cleared up when block ends
-      val outer = v1.mm(v2.t) // these allocations will get released at the end of the block
-      val n1 = (v1 * v1).rowSum
-      val n2 = (v2 * v2).rowSum
-      (n1 + n2.t - outer * 2) 
-    } // once the block exits all resources allocated within the block are released, with the exception of the 
-      // return value which is moved to the parent scope
-  }</code></pre></div>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.<span style="color:#f92672">{</span><span style="color:#a6e22e">STen</span><span style="color:#f92672">,</span><span style="color:#a6e22e">Scope</span><span style="color:#f92672">}</span>
+  <span style="color:#66d9ef">import</span> cats.effect.IO
+  <span style="color:#66d9ef">def</span> squaredEuclideanDistanceIO<span style="color:#f92672">(</span>v1<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STen</span><span style="color:#f92672">,</span> v2<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STen</span><span style="color:#f92672">)(</span>
+      <span style="color:#66d9ef">implicit</span> scope<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Scope</span> <span style="color:#75715e">// parent scope
+</span><span style="color:#75715e"></span>  <span style="color:#f92672">)</span><span style="color:#66d9ef">:</span> <span style="color:#66d9ef">IO</span><span style="color:#f92672">[</span><span style="color:#66d9ef">STen</span><span style="color:#f92672">]</span> <span style="color:#66d9ef">=</span> <span style="color:#f92672">{</span>
+    <span style="color:#a6e22e">Scope</span><span style="color:#f92672">.</span>bracket<span style="color:#f92672">(</span>scope<span style="color:#f92672">)</span> <span style="color:#f92672">{</span> <span style="color:#66d9ef">implicit</span> scope <span style="color:#66d9ef">=&gt;</span> <span style="color:#75715e">// this is a local scope cleared up when block ends
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">IO</span><span style="color:#f92672">{</span>
+        <span style="color:#66d9ef">val</span> outer <span style="color:#66d9ef">=</span> v1<span style="color:#f92672">.</span>mm<span style="color:#f92672">(</span>v2<span style="color:#f92672">.</span>t<span style="color:#f92672">)</span> <span style="color:#75715e">// these allocations will get released once the IO finished execution
+</span><span style="color:#75715e"></span>        <span style="color:#66d9ef">val</span> n1 <span style="color:#66d9ef">=</span> <span style="color:#f92672">(</span>v1 <span style="color:#f92672">*</span> v1<span style="color:#f92672">).</span>rowSum
+        <span style="color:#66d9ef">val</span> n2 <span style="color:#66d9ef">=</span> <span style="color:#f92672">(</span>v2 <span style="color:#f92672">*</span> v2<span style="color:#f92672">).</span>rowSum
+        <span style="color:#f92672">(</span>n1 <span style="color:#f92672">+</span> n2<span style="color:#f92672">.</span>t <span style="color:#f92672">-</span> outer <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span><span style="color:#f92672">)</span> 
+      <span style="color:#f92672">}</span>
+    <span style="color:#f92672">}</span>  
+      <span style="color:#75715e">// return value which is moved to the parent scope
+</span><span style="color:#75715e"></span>  <span style="color:#f92672">}</span></code></pre></div>
 <h1 id="lamp-scope"><code>lamp.Scope</code></h1>
 
 <p>Both <code>STen</code> and <code>Variable</code> own references to <code>aten.Tensor</code>s which need to be managed (released) manually.
