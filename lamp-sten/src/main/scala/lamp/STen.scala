@@ -172,6 +172,14 @@ object STen {
   ) =
     ATen.normal_3(mean, std, size.toArray, options.value).owned
 
+  def randperm[S: Sc](
+      n: Long,
+      tensorOptions: STenOptions = STen.dOptions
+  ) =
+    owned(
+      ATen.randperm_0(n, tensorOptions.value)
+    )
+
   def randint[S: Sc](
       high: Long,
       size: Seq[Long],
