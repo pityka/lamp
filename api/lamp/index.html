@@ -484,7 +484,7 @@ be composed out of the provided methods. A particular use case is gradient based
       <p class="shortcomment cmt">Memory managed, off-heap N-dimensional array.</p><div class="fullcomment"><div class="comment cmt"><p>Memory managed, off-heap N-dimensional array.</p><p>This class is a wrapper around aten.Tensor providing a more convenient API.
 All allocating operations require an implicit <a href="Scope.html" class="extype" name="lamp.Scope">lamp.Scope</a>.</p><p>STen instances are associated with a device which determines where the memory is allocated,
 and where the operations are performed.
-Operations on multiple tensors expect that all the arguments reside on the same device.</p><p><a href="STen.html#options[S](implicitevidence$48:lamp.Sc[S]):lamp.STenOptions" class="extmbr" name="lamp.STen#options">lamp.STen.options</a> returns a <a href="STenOptions.html" class="extype" name="lamp.STenOptions">lamp.STenOptions</a> which describes the device, shape, data type and
+Operations on multiple tensors expect that all the arguments reside on the same device.</p><p><a href="STen.html#options[S](implicitevidence$49:lamp.Sc[S]):lamp.STenOptions" class="extmbr" name="lamp.STen#options">lamp.STen.options</a> returns a <a href="STenOptions.html" class="extype" name="lamp.STenOptions">lamp.STenOptions</a> which describes the device, shape, data type and
 storage layout of a tensor.
 Most factory methods in the companion object in turn require a <a href="STenOptions.html" class="extype" name="lamp.STenOptions">lamp.STenOptions</a> to specify
 the device, data types and storage layout.</p><p>Naming convention of most operations follows libtorch.
