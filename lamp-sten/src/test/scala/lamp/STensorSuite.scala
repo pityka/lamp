@@ -15,7 +15,7 @@ class STenSuite extends AnyFunSuite {
       val t =
         STen.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
       val (un, _) = t.unique(sorted = false, returnInverse = false)
-      assert(un.toLongVec == Vec(1, 9, 8, 3))
+      assert(un.toLongVec.sorted == Vec(1, 3, 8, 9))
     }
   }
   test("unique 3") {
