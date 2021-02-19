@@ -7,15 +7,61 @@ weight: 2
 
 Lamp is organized into the following components:
 
-1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the `aten` package.
-2. A wrapper (`lamp.STen`) providing lexical scope based memory management to those off-heap tensors.
+1. A native tensor library storing multidimensional arrays of numbers in off-heap (main or GPU) memory. This is in the `aten` package and links to the native libtorch shared library via JNI. 
+2. A more fluent API and lexical scope based memory management in `lamp.STen`. 
 3. An algorithm to compute partial derivatives of composite functions. In particular Lamp implements generic reverse mode automatic differentiation. This lives in the package `lamp.autograd`.
 5. A set of building blocks to build neural networks in the package `lamp.nn`.
 6. Training loop and utilities to work with various kinds of data in `lamp.data`.
 
-# Building a classifier
+# N-dimensional arrays for numeric code
 
-This document shows how to build and train a simple model. The following code is taken from the test suite.
+Lamp has native CPU and GPU backed n-dimension arrays with similar operations to numpy or pytorch. 
+In fact, `lamp.STen` is a Scala binding to torch's `ATen` tensor class.
+
+```scala mdoc 
+import lamp._
+// get a scope for zoned memory management
+Scope.root{ implicit scope =>
+
+  // a 3D tensor, e.g. a color image
+  val img : STen = STen.rand(List(768, 1024, 3))
+
+  // get its shape
+  assert(img.shape == List(768, 1024, 3))
+
+  // select a channel
+  assert(img.select(dim=2,index=0).shape == List(768, 1024))
+
+  // manipulate with a broadcasting operation
+  val img2 = img / 2d
+
+  // take max, returns a tensor with 0 dimensions i.e. a scalar
+  assert(img2.max.shape == Nil)
+
+  // get a handle to metadata about data type, data layout and device
+  assert(img.options.isCPU)
+
+  val vec = STen.fromVec(org.saddle.Vec(2d,1d,3d))
+
+  // broadcasting matrix multiplication
+  val singleChannel = (img matmul vec)
+  assert(singleChannel.shape == List(768L,1024L))
+
+  // svd
+  val (u,s,v) = singleChannel.svd
+  assert(u.shape == List(768,768))
+  assert(s.shape == List(768))
+  assert(v.shape == List(1024,768))
+
+  val errorOfSVD = (singleChannel - ((u * s) matmul v.t)).norm2(dim=List(0,1), keepDim=false)
+  assert(errorOfSVD.toMat.raw(0) < 1E-6)
+} 
+
+
+
+```
+
+# Building a classifier
 
 We will use tabular data to build a multiclass classifier.
 
@@ -23,7 +69,7 @@ We will use tabular data to build a multiclass classifier.
 
 First get some tabular data into the JVM memory:
 
-```scala mdoc
+```scala mdoc:reset
     val testData = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
         scala.io.Source

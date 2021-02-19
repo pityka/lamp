@@ -18,14 +18,16 @@ As a consequence lamp uses fast CPU and GPU code and stores its data in off-heap
 
 # Features
 
-Lamp implements generic automatic reverse mode differentiation (also known as autograd, see e.g. [this paper](https://arxiv.org/pdf/1811.05031.pdf)). 
+Lamp provides CPU or GPU backed n-dimensional arrays and implements generic automatic reverse mode differentiation (also known as autograd, see e.g. [this paper](https://arxiv.org/pdf/1811.05031.pdf)). 
+Lamp may be used for scientific computing similarly to numpy, or to build neural networks.
 
-On top of that it provides a small set of components to build neural networks:
+It provides neural networks components:
 
-- fully connected, 1D and 2D convolutional, RNN and GRU layers
+- fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM, GCN, self-attention (transformer) layers
 - various nonlinearities
 - batch normalization and weight normalization
+- seq2seq
 - dropout
-- SgdW and AdamW optimizers (see [here](https://arxiv.org/abs/1711.05101))
+- optimizers: SgdW, AdamW (see [here](https://arxiv.org/abs/1711.05101)), RAdam, Yogi
 - training loop and data loaders on top of cats-effect
-- checkpointing, ONNX export
+- checkpointing, ONNX export, NPY and CSV import
