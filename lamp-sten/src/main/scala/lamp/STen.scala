@@ -679,6 +679,47 @@ case class STen private (
   def cat[S: Sc](other: STen, dim: Long) =
     owned(ATen.cat(Array(value, other.value), dim))
 
+  def unique[S: Sc](sorted: Boolean, returnInverse: Boolean) = {
+    val (a, b) =
+      ATen._unique(value, sorted, returnInverse)
+    (owned(a), owned(b))
+  }
+
+  def unique[S: Sc](
+      sorted: Boolean,
+      returnInverse: Boolean,
+      returnCounts: Boolean
+  ) = {
+    val (a, b, c) =
+      ATen._unique2(value, sorted, returnInverse, returnCounts)
+    (owned(a), owned(b), owned(c))
+  }
+  def unique[S: Sc](
+      dim: Int,
+      sorted: Boolean,
+      returnInverse: Boolean,
+      returnCounts: Boolean
+  ) = {
+    val (a, b, c) =
+      ATen.unique_dim(value, dim, sorted, returnInverse, returnCounts)
+    (owned(a), owned(b), owned(c))
+  }
+  def uniqueConsecutive[S: Sc](
+      dim: Int,
+      returnInverse: Boolean = false,
+      returnCounts: Boolean = false
+  ) = {
+    val (a, b, c) =
+      ATen.unique_consecutive(value, returnInverse, returnCounts, dim)
+    (owned(a), owned(b), owned(c))
+  }
+
+  /** Casts to char */
+  def castToChar[S: Sc] = owned(ATen._cast_Char(value, true))
+
+  /** Casts to byte */
+  def castToByte[S: Sc] = owned(ATen._cast_Byte(value, true))
+
   /** Casts to float */
   def castToFloat[S: Sc] = owned(ATen._cast_Float(value, true))
 
@@ -771,6 +812,12 @@ case class STen private (
   /** Matrix multiplication. Maps to Aten.mm. */
   def mm[S: Sc](other: STen) =
     owned(ATen.mm(value, other.value))
+
+  def matmul[S: Sc](other: STen) =
+    owned(ATen.matmul(value, other.value))
+
+  def dot[S: Sc](other: STen) =
+    owned(ATen.dot(value, other.value))
 
   /** Batched matrix multiplication. Maps to Aten.bmm.
     *

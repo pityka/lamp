@@ -10,6 +10,46 @@ import org.scalatest.compatible.Assertion
 class STenSuite extends AnyFunSuite {
   implicit def AssertionIsMovable = Movable.empty[Assertion]
 
+  test("unique 1") {
+    Scope.root { implicit scope =>
+      val t =
+        STen.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
+      val (un, _) = t.unique(sorted = false, returnInverse = false)
+      assert(un.toLongVec == Vec(1, 9, 8, 3))
+    }
+  }
+  test("unique 3") {
+    Scope.root { implicit scope =>
+      val t =
+        STen.fromLongVec(Vec(1, 1, 2, 3, 4, 4).map(_.toLong), false)
+      val (un, _) = t.unique(sorted = true, returnInverse = false)
+      assert(un.toLongVec == Vec(1, 2, 3, 4))
+    }
+  }
+  test("unique 4") {
+    Scope.root { implicit scope =>
+      val t =
+        STen.fromLongVec(Vec(1, 1, 2, 3, 4, 4).map(_.toLong), false)
+      val (un, _, _) = t.uniqueConsecutive(dim = 0, returnInverse = false)
+      assert(un.toLongVec == Vec(1, 2, 3, 4))
+    }
+  }
+  test("unique 2") {
+    Scope.root { implicit scope =>
+      val t =
+        STen.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
+      val (un, inv, count) = t.unique(
+        sorted = false,
+        returnInverse = true,
+        dim = 0,
+        returnCounts = true
+      )
+      assert(un.toLongMat == Mat(Vec(3, 9), Vec(8, 1)))
+      assert(inv.toLongVec == Vec(0, 0, 1))
+      assert(count.toLongVec == Vec(2, 1))
+    }
+  }
+
   test("zeros cpu") {
     Scope.root { implicit scope =>
       val sum = Scope { implicit scope =>
@@ -183,6 +223,44 @@ class STenSuite extends AnyFunSuite {
       val t2 = STen.rand(List(2, 2), STenOptions.d)
       assert(
         (t1 mm t2).toMat.roundTo(4) == (t1.toMat mm t2.toMat).roundTo(4)
+      )
+    }
+  }
+  test("matmul 2") {
+    Scope.root { implicit scope =>
+      val t1 = STen.rand(List(2, 2), STenOptions.d)
+      val t2 = STen.rand(List(2, 2), STenOptions.d)
+      assert(
+        (t1 matmul t2).toMat.roundTo(4) == (t1.toMat mm t2.toMat).roundTo(4)
+      )
+    }
+  }
+  test("matmul 3") {
+    Scope.root { implicit scope =>
+      val t1 = STen.rand(List(100, 10, 3), STenOptions.d)
+      val t2 = STen.rand(List(3), STenOptions.d)
+      assert(
+        (t1 matmul t2).shape == List(100, 10)
+      )
+    }
+  }
+  test("matmul") {
+    Scope.root { implicit scope =>
+      val t1 = STen.rand(List(2, 2), STenOptions.d)
+      val t2 = STen.rand(List(2), STenOptions.d)
+      assert(
+        (t1 matmul t2).toVec.roundTo(4) == (t1.toMat mv t2.toVec).roundTo(4)
+      )
+    }
+  }
+  test("dot") {
+    Scope.root { implicit scope =>
+      val t1 = STen.rand(List(4), STenOptions.d)
+      val t2 = STen.rand(List(4), STenOptions.d)
+      assert(
+        (t1 dot t2).toVec.roundTo(4) == Vec(
+          t1.toVec dot t2.toVec
+        ).roundTo(4)
       )
     }
   }
