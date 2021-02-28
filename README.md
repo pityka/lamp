@@ -61,13 +61,13 @@ There is substantial test coverage in terms of unit tests and a suite of end to 
 
 # Getting started
 
-Lamp is experimental, and no artifacts are pubished to maven central. Artifacts of lamp and aten-scala are delivered to Github Packages. Despite the artifacts being public, you need to authenticate to Github.
+Artifacts of lamp and aten-scala are delivered to Github Packages. 
 
 A minimal sbt project to use lamp:
 
 ```scala
 // in build.sbt
-scalaVersion := "2.12.12"
+scalaVersion := "2.12.13"
 
 resolvers in ThisBuild += Resolver.githubPackages("pityka")
 
@@ -86,7 +86,7 @@ resolvers += Resolver.bintrayRepo("djspiewak", "maven")
 
 ```scala
 // in project/build.properties
-sbt.version=1.3.13
+sbt.version=1.4.7
 ```
 
 Github Packages needs a github user token available either in a $GITHUB_TOKEN environmental variable, or in the git global configuration (`~/.gitconfig`): 
