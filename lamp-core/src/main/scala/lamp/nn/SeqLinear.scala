@@ -52,13 +52,13 @@ object SeqLinear {
         STen.normal(
           0d,
           math.sqrt(2d / (in + out)),
-          Array(in, out),
+          List(in, out),
           tOpt
         )
       ),
       bias = param(
         STen.zeros(
-          Array(1, out),
+          List(1, out),
           tOpt
         )
       )

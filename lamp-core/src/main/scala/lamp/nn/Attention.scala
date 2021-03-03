@@ -97,7 +97,7 @@ object Attention {
         outputs.append(output.select(0, 0))
         nextHidden
       }
-    val r = Variable.concatenateAddNewDim(outputs)
+    val r = Variable.concatenateAddNewDim(outputs.toSeq)
     (r, lastHidden)
 
   }

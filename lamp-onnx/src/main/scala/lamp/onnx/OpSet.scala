@@ -43,19 +43,19 @@ object Ops {
     )
 
   def tensorFromLongVec(vec: Seq[Long]): ox.TensorProto = {
-    val name = UUID.randomUUID().toString.replaceAllLiterally("-", "_")
+    val name = UUID.randomUUID().toString.replace("-", "_")
     ox.TensorProto(
       name = Some(name),
       docString = Some(
         "Literal constant converted to a tensor to match ONNX operator signatures."
       ),
-      dims = Array(vec.length),
+      dims = List(vec.length),
       dataType = Some(ox.TensorProto.DataType.INT64.index),
       int64Data = vec
     )
   }
   def tensorFromDoubleVec(vec: Seq[Double], `type`: Byte): ox.TensorProto = {
-    val name = UUID.randomUUID().toString.replaceAllLiterally("-", "_")
+    val name = UUID.randomUUID().toString.replace("-", "_")
     `type` match {
       case 4 =>
         ox.TensorProto(
@@ -63,7 +63,7 @@ object Ops {
           docString = Some(
             "Literal constant converted to a tensor to match ONNX operator signatures."
           ),
-          dims = Array(vec.length),
+          dims = List(vec.length),
           dataType = Some(ox.TensorProto.DataType.INT64.index),
           int64Data = vec.map(_.toLong)
         )
@@ -73,7 +73,7 @@ object Ops {
           docString = Some(
             "Literal constant converted to a tensor to match ONNX operator signatures."
           ),
-          dims = Array(vec.length),
+          dims = List(vec.length),
           dataType = Some(ox.TensorProto.DataType.FLOAT.index),
           floatData = vec.map(_.toFloat)
         )
@@ -83,14 +83,14 @@ object Ops {
           docString = Some(
             "Literal constant converted to a tensor to match ONNX operator signatures."
           ),
-          dims = Array(vec.length),
+          dims = List(vec.length),
           dataType = Some(ox.TensorProto.DataType.DOUBLE.index),
           doubleData = vec
         )
     }
   }
   def tensorFromDoubleScalar(d: Double, `type`: Byte): ox.TensorProto = {
-    val name = UUID.randomUUID().toString.replaceAllLiterally("-", "_")
+    val name = UUID.randomUUID().toString.replace("-", "_")
     `type` match {
       case 4 =>
         ox.TensorProto(
@@ -123,7 +123,7 @@ object Ops {
 
   }
   def tensorFromIntScalar(d: Int): ox.TensorProto = {
-    val name = UUID.randomUUID().toString.replaceAllLiterally("-", "_")
+    val name = UUID.randomUUID().toString.replace("-", "_")
     ox.TensorProto(
       name = Some(name),
       docString = Some(
@@ -134,7 +134,7 @@ object Ops {
     )
   }
   def tensorFromLongScalar(d: Long): ox.TensorProto = {
-    val name = UUID.randomUUID().toString.replaceAllLiterally("-", "_")
+    val name = UUID.randomUUID().toString.replace("-", "_")
     ox.TensorProto(
       name = Some(name),
       docString = Some(
@@ -145,7 +145,7 @@ object Ops {
     )
   }
   def tensorFromBooleanScalar(d: Boolean): ox.TensorProto = {
-    val name = UUID.randomUUID().toString.replaceAllLiterally("-", "_")
+    val name = UUID.randomUUID().toString.replace("-", "_")
     ox.TensorProto(
       name = Some(name),
       docString = Some(
@@ -156,7 +156,7 @@ object Ops {
     )
   }
   def tensorFromSTen(d: STen): ox.TensorProto = {
-    val name = UUID.randomUUID().toString.replaceAllLiterally("-", "_")
+    val name = UUID.randomUUID().toString.replace("-", "_")
     ox.TensorProto(
       name = Some(name),
       docString = Some(
@@ -225,7 +225,7 @@ trait DefaultOpSet1 extends OpSet {
       case _: Pow => Ops(out, "Pow")(nm) :: Nil
       case o: View =>
         Ops(out, "Reshape")(nm)
-          .appendInput(Ops.tensorFromLongVec(o.shape)) :: Nil
+          .appendInput(Ops.tensorFromLongVec(o.shape.toSeq)) :: Nil
       case op: Concatenate =>
         Ops(out, "Concat", List(Ops.attr("axis", op.dim)))(nm) :: Nil
 

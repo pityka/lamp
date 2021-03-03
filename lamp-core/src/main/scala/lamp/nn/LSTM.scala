@@ -78,7 +78,7 @@ case class LSTM(
           (ht, ct)
       }
     (
-      Variable.concatenateAddNewDim(outputs),
+      Variable.concatenateAddNewDim(outputs.toSeq),
       Some((lastHidden, lastMemory))
     )
 

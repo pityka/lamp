@@ -90,7 +90,7 @@ object GraphBatchStream {
           val s = Scope { implicit scope =>
             val i = STen.fromLongVec(edgesI.toVec, device)
             val j = STen.fromLongVec(edgesJ.toVec, device)
-            STen.stack(Array(i, j), 1)
+            STen.stack(List(i, j), 1)
           }
           const(s)
         }

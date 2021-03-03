@@ -31,7 +31,7 @@ class LogisticSuite extends AnyFunSuite {
               )
             )
         )
-        .right
+        .toOption
         .get
       val target =
         STen
@@ -69,7 +69,7 @@ class LogisticSuite extends AnyFunSuite {
         val correct = prediction.zipMap(data.firstCol("label").toVec)((a, b) =>
           if (a == b) 1d else 0d
         )
-        val classWeights = STen.ones(Array(10), x.options)
+        val classWeights = STen.ones(List(10), x.options)
         val loss: Variable = output.nllLoss(target, classWeights)
         lastAccuracy = correct.mean2
         lastLoss = loss.value.toMat.raw(0)

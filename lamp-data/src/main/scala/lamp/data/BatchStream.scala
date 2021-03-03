@@ -49,7 +49,7 @@ object BatchStream {
   def scopeInResource =
     Resource.make(IO {
       Scope.free
-    })(scope => IO { scope.release })
+    })(scope => IO { scope.release() })
 
   def minibatchesFromFull(
       minibatchSize: Int,
@@ -98,8 +98,7 @@ object BatchStream {
 
   }
 
-  def fromFullBatch(features: STen, targets: STen, device: Device)(
-      ) = {
+  def fromFullBatch(features: STen, targets: STen, device: Device) = {
     val resource = scopeInResource.map { implicit scope =>
       val xcl = device.to(features)
       val tcl = device.to(targets)

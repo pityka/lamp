@@ -33,7 +33,7 @@ case class View(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
 
     }
   )
-  val value = Variable(this, a.value.view(shape: _*)(scope))(scope)
+  val value = Variable(this, a.value.view(shape.toSeq: _*)(scope))(scope)
 }
 case class Reshape(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
 
@@ -43,7 +43,7 @@ case class Reshape(scope: Scope, a: Variable, shape: Array[Long]) extends Op {
 
     }
   )
-  val value = Variable(this, a.value.reshape(shape: _*)(scope))(scope)
+  val value = Variable(this, a.value.reshape(shape.toSeq: _*)(scope))(scope)
 }
 
 case class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
@@ -281,7 +281,7 @@ case class RepeatInterleave(
     self.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
         val plainIndices =
-          STen.arange(0, self.shape(0), 1d, self.options.toLong)
+          STen.arange(0, self.shape(0).toDouble, 1d, self.options.toLong)
         val repeatedIndices = plainIndices.repeatInterleave(repeats.value, 0)
         val zeros = STen.zerosLike(out)
         val added = zeros.indexAdd(0, repeatedIndices, p)
@@ -544,7 +544,7 @@ case class Log1p(scope: Scope, a: Variable) extends Op {
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
       val tmp = a.value + 1d
-      tmp.reciprocal_
+      tmp.reciprocal_()
       out.addcmulSelf(p, tmp, 1d)
     }
 

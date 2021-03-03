@@ -7,7 +7,7 @@ import _root_.lamp.autograd._
 import java.io.File
 import ai.onnxruntime._
 // import org.saddle._
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import java.nio._
 
 class OnnxSuite extends AnyFunSuite {

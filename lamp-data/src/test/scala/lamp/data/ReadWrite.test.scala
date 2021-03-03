@@ -17,12 +17,12 @@ class ReadWriteSuite extends AnyFunSuite {
     val t = ATen.ones(Array(3, 3, 3), STenOptions.f.value)
     val t2 = Reader
       .readTensorFromArray[Float](
-        Writer.writeTensorIntoArray[Float](t).right.get,
+        Writer.writeTensorIntoArray[Float](t).toOption.get,
         CPU
       )
     assert(
       NDArray.tensorToFloatNDArray(t).toVec == NDArray
-        .tensorToFloatNDArray(t2.right.get)
+        .tensorToFloatNDArray(t2.toOption.get)
         .toVec
     )
   }
@@ -46,7 +46,7 @@ class ReadWriteSuite extends AnyFunSuite {
         channelIn,
         CPU
       )
-      .right
+      .toOption
       .get
 
     assert(
@@ -70,7 +70,7 @@ class ReadWriteSuite extends AnyFunSuite {
       file.delete
       Writer.writeCheckpoint(file, net).unsafeRunSync()
       val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt))
-      Reader.loadFromFile(net2, file, CPU).unsafeRunSync().right.get
+      Reader.loadFromFile(net2, file, CPU).unsafeRunSync().toOption.get
       net2.state.zip(net.state).foreach {
         case ((loaded, _), (orig, _)) =>
           val ndL = NDArray.tensorToFloatNDArray(loaded.value.value)
@@ -87,7 +87,7 @@ class ReadWriteSuite extends AnyFunSuite {
       file.delete
       Writer.writeCheckpoint(file, net).unsafeRunSync()
       val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt.toDouble))
-      Reader.loadFromFile(net2, file, CPU).unsafeRunSync().right.get
+      Reader.loadFromFile(net2, file, CPU).unsafeRunSync().toOption.get
       net2.state.zip(net.state).foreach {
         case ((loaded, _), (orig, _)) =>
           loaded.value.scalarTypeByte match {

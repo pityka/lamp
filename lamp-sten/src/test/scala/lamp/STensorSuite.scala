@@ -371,7 +371,7 @@ class STenSuite extends AnyFunSuite {
       writer.close
       val channel = is.getChannel
       val (h, ten) =
-        lamp.io.csv.readFromChannel(6, channel, CPU, header = true).right.get
+        lamp.io.csv.readFromChannel(6, channel, CPU, header = true).toOption.get
       assert(h == Some(List("a", "b")))
       assert(ten.shape == List(numRows, 2))
     }

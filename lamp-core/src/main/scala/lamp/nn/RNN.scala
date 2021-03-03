@@ -42,7 +42,7 @@ case class RNN(
         outputs.append(newHidden)
         newHidden
       }
-    (Variable.concatenateAddNewDim(outputs), Some(lastHidden))
+    (Variable.concatenateAddNewDim(outputs.toSeq), Some(lastHidden))
 
   }
 

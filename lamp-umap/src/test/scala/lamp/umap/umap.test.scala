@@ -54,7 +54,7 @@ class UmapSuite extends AnyFunSuite {
           ),
         maxLines = 1000
       )
-      .right
+      .toOption
       .get
       .withRowIndex(0)
 

@@ -33,7 +33,7 @@ class GreenerManufacturingSuite extends AnyFunSuite {
       val numInstances = features.sizes.apply(0).toInt
 
       val minibatchSize = 512
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
       val cvFolds =
         AutoLoop.makeCVFolds(
           numInstances,
@@ -81,7 +81,7 @@ class GreenerManufacturingSuite extends AnyFunSuite {
             ),
           recordSeparator = "\n"
         )
-        .right
+        .toOption
         .get
       val rawTrainingData = rawTrainingData0 //.row(0 -> 3999)
       // val rawTestData = rawTrainingData0.row(4000 -> *)
@@ -93,7 +93,7 @@ class GreenerManufacturingSuite extends AnyFunSuite {
             ),
           recordSeparator = "\n"
         )
-        .right
+        .toOption
         .get
 
       println(rawTrainingData)

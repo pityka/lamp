@@ -50,9 +50,9 @@ case class Yogi(
   }
 
   var stepCount = 0L
-  def release = {
-    mt.foreach(_.release)
-    vt.foreach(_.release)
+  def release() = {
+    mt.foreach(_.release())
+    vt.foreach(_.release())
   }
   def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
@@ -83,7 +83,7 @@ case class Yogi(
 
             val debiasTerm =
               if (debias)
-                1d / (1 - math.pow(b1, stepCount))
+                1d / (1 - math.pow(b1, stepCount.toDouble))
               else 1d
 
             val stepParam =
@@ -94,7 +94,7 @@ case class Yogi(
             val denom = STen.owned(ATen.sqrt(vt))
             if (debias) {
               denom *= 1d / math.sqrt(
-                (1 - math.pow(b2, stepCount))
+                (1 - math.pow(b2, stepCount.toDouble))
               )
             }
             denom += eps

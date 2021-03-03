@@ -141,7 +141,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
           else if (features.options.isFloat) SinglePrecision
           else throw new RuntimeException("Expected float or double tensor")
         val numInstances = features.sizes.apply(0).toInt
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply
+        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
         val minibatchSize =
           if (numInstances < 1024) 8 else if (numInstances < 4096) 64 else 256
         val cvFolds =
@@ -189,7 +189,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
               )
             )
         )
-        .right
+        .toOption
         .get
 
       val target =
@@ -227,7 +227,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
               )
             )
         )
-        .right
+        .toOption
         .get
       val targetTest = dataTest.firstCol("label").toVec.map(_.toLong)
       val featuresTest =
@@ -240,7 +240,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
 
       val savePath = File.createTempFile("lampsave", "data").getAbsolutePath
       Serialization.saveModel(trained, savePath)
-      val trained2 = Serialization.loadModel(savePath).right.get
+      val trained2 = Serialization.loadModel(savePath).toOption.get
       trained2
         .predict(featuresTest)
         .map { modelOutput =>

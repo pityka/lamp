@@ -61,7 +61,7 @@ object TensorHelpers {
         val arr = Array.ofDim[Double](shape(0).toInt)
         assert(t.copyToDoubleArray(arr))
         Mat.apply(1, shape(0).toInt, arr)
-      } else throw new RuntimeException("shape: " + shape.deep)
+      } else throw new RuntimeException("shape: " + shape.toVector)
     }
   }
   def toVec(t: Tensor) = {
@@ -125,7 +125,7 @@ object TensorHelpers {
       val arr = Array.ofDim[Float](shape(0).toInt)
       assert(t.copyToFloatArray(arr))
       Mat.apply(1, shape(0).toInt, arr)
-    } else throw new RuntimeException("shape: " + shape.deep)
+    } else throw new RuntimeException("shape: " + shape.toVector)
   }
   def toLongMat(t: Tensor) = {
     assert(

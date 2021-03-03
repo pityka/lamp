@@ -35,7 +35,7 @@ sealed trait Device { self =>
   def to(t: Tensor): Tensor
   def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions
-  def setSeed(seed: Long)
+  def setSeed(seed: Long): Unit
 }
 case object CPU extends Device {
   def to(t: Tensor) = {

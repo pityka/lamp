@@ -107,7 +107,8 @@ object Umap {
                 List(Vec(i.toDouble, j.toDouble, b))
               }
           }
-        }: _*
+        }
+        .toIndexedSeq: _*
     ).T
 
     b
@@ -212,7 +213,7 @@ object Umap {
             .repeatInterleave(n, 0)
 
           val m = ii.sizes.apply(0)
-          val jj = STen.randint(0, total - 1, Array(m), ii.options)
+          val jj = STen.randint(0, total - 1, List(m), ii.options)
           val mask = ii.ne(jj)
           val ri = ii.maskedSelect(mask)
           val rj = jj.maskedSelect(mask)

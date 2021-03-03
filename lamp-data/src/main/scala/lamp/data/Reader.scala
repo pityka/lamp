@@ -67,7 +67,7 @@ object Reader {
 
   def sequence[A, B](s: Seq[Either[A, B]]): Either[A, Seq[B]] =
     if (s.forall(_.isRight))
-      Right(s.map(_.right.get))
+      Right(s.map(_.toOption.get))
     else s.find(_.isLeft).get.asInstanceOf[Left[A, Seq[B]]]
 
   def readFully(bb: ByteBuffer, channel: ReadableByteChannel) = {
@@ -80,7 +80,7 @@ object Reader {
   }
 
   def readHeaderFromChannel[T: ST](channel: ReadableByteChannel) =
-    dtype[T].right.flatMap { expectedDataType =>
+    dtype[T].flatMap { expectedDataType =>
       val magicAndVersion = Array.ofDim[Byte](8)
       readFully(ByteBuffer.wrap(magicAndVersion), channel)
       val magic = String.valueOf(magicAndVersion.map(_.toChar), 0, 6)
@@ -120,7 +120,7 @@ object Reader {
       .allocate(width * numel)
       .order(ByteOrder.LITTLE_ENDIAN)
     readFully(bb, channel)
-    parse[T](numel, bb).right.flatMap { data =>
+    parse[T](numel, bb).flatMap { data =>
       if (data.size != numel) {
         Left("Premature end of input")
       } else {
@@ -149,8 +149,8 @@ object Reader {
       channel: ReadableByteChannel,
       device: Device
   ): Either[String, Tensor] = {
-    readHeaderFromChannel[T](channel).right.flatMap { descriptor =>
-      width[T].right.flatMap { width =>
+    readHeaderFromChannel[T](channel).flatMap { descriptor =>
+      width[T].flatMap { width =>
         val shape =
           descriptor
             .get(KEY_shape)
@@ -231,7 +231,6 @@ object Reader {
               channel,
               device
             )
-            .right
             .map { tensors =>
               Scope.root { implicit scope =>
                 module.load(tensors.map(t => STen.owned(t)))

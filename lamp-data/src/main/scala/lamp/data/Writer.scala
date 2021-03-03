@@ -42,12 +42,14 @@ object Writer {
 
   def createTensorDescriptor[T: ST](
       tensor: Tensor
-  ) = dtype[T].right.map { dtype =>
+  ) = dtype[T].map { dtype =>
     ujson
       .write(
         ujson.Obj(
           KEY_datatype -> dtype,
-          KEY_shape -> ujson.Arr(tensor.sizes.map(l => ujson.Num(l)): _*),
+          KEY_shape -> ujson.Arr(
+            tensor.sizes.map(l => ujson.Num(l.toDouble)).toIndexedSeq: _*
+          ),
           KEY_v -> 1
         )
       )
@@ -56,7 +58,7 @@ object Writer {
   def createHeader(
       descriptor: Either[String, String]
   ): Either[String, Array[Byte]] = {
-    descriptor.right.map { descriptorJson =>
+    descriptor.map { descriptorJson =>
       val descriptor = {
         val json = descriptorJson
           .getBytes("UTF-8")
@@ -164,8 +166,8 @@ object Writer {
       channel: WritableByteChannel
   ): Either[String, Unit] = {
     val header = createHeader(createTensorDescriptor[T](tensor))
-    header.right.flatMap { header =>
-      width[T].right.map { width =>
+    header.flatMap { header =>
+      width[T].map { width =>
         writeFully(ByteBuffer.wrap(header), channel)
 
         val elem = tensor.numel().toInt
@@ -191,8 +193,8 @@ object Writer {
       tensor: Tensor
   ): Either[String, Array[Byte]] = {
     val header = createHeader(createTensorDescriptor(tensor))
-    header.right.flatMap { header =>
-      width[T].right.map { width =>
+    header.flatMap { header =>
+      width[T].map { width =>
         val elem = tensor.numel.toInt
         val result =
           Array.ofDim[Byte](header.length + width * elem)

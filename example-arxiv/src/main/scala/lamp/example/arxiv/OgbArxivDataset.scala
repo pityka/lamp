@@ -6,9 +6,9 @@ object OgbArxivDataset {
 
   def unzip(zipPath: os.Path, outputPath: os.Path): Unit = {
     import java.util.zip.ZipFile
-    import scala.collection.JavaConverters._
+    import scala.jdk.CollectionConverters._
     val zipFile = new ZipFile(zipPath.toIO)
-    for (entry <- zipFile.entries.asScala) {
+    for (entry <- zipFile.entries().asScala) {
       val path = outputPath.toNIO.resolve(entry.getName)
       if (entry.isDirectory) {
         java.nio.file.Files.createDirectories(path)
@@ -65,7 +65,7 @@ object OgbArxivDataset {
       val channel = os.read.channel(bin)
       val f = org.saddle.binary.Reader.readFrameFromChannel[T](channel)
       channel.close
-      f.right.get
+      f.toOption.get
     } else {
       val frame = read[T](file)
       scribe.info(s"Convert to binary $bin")
@@ -87,7 +87,7 @@ object OgbArxivDataset {
           recordSeparator = "\n"
         )
     is.close
-    f.right.get
+    f.toOption.get
 
   }
 

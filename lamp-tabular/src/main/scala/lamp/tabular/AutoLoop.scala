@@ -243,7 +243,7 @@ case class EnsembleModel(
                       precision = precision,
                       minibatchSize = 100
                     )(scope)
-                    .unsafeRunSync
+                    .unsafeRunSync()
                   prediction
                 case NNBase(hiddenSize, state) =>
                   val model = AutoLoop
@@ -275,7 +275,7 @@ case class EnsembleModel(
         }
 
         val numericalWithPredictions =
-          const(STen.cat(numerical.value +: basePredictions.toArray, 1))
+          const(STen.cat(numerical.value +: basePredictions, 1))
 
         val averagablePredictions = Scope { implicit scope =>
           selectionModels.map {
@@ -312,7 +312,7 @@ case class EnsembleModel(
                   precision = precision,
                   minibatchSize = 100
                 )(scope)
-                .unsafeRunSync
+                .unsafeRunSync()
               prediction
             case NNBase(hiddenSize, state) =>
               val model = AutoLoop
@@ -573,7 +573,7 @@ object AutoLoop {
               Mat(lamp.knn.regression(targetVec, indicesJvm))
           }
 
-          STen.fromMat(prediction, CPU, precision),
+          STen.fromMat(prediction, CPU, precision)
 
         }
 
@@ -595,7 +595,7 @@ object AutoLoop {
         if (predictionsOnBasemodels.isEmpty) (num, cat)
         else {
           val numWithPredictions =
-            STen.cat(num +: predictionsOnBasemodels.toArray, 1)
+            STen.cat(num +: predictionsOnBasemodels, 1)
           (numWithPredictions, cat)
         }
       }
@@ -909,7 +909,7 @@ object AutoLoop {
                       0
                     )
                   val mean =
-                    concat.mean(Array(0), false)
+                    concat.mean(List(0), false)
                   (instanceIdx, mean)
                 }
             }

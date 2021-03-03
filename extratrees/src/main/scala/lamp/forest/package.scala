@@ -259,7 +259,7 @@ package object extratrees {
         )
         .get
         .parSequence
-        .unsafeRunSync
+        .unsafeRunSync()
       fjp.shutdown()
       ec.shutdown()
 
@@ -316,7 +316,7 @@ package object extratrees {
         )
         .get
         .parSequence
-        .unsafeRunSync
+        .unsafeRunSync()
       fjp.shutdown()
       ec.shutdown()
 

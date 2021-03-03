@@ -36,7 +36,7 @@ class MLPSuite extends AnyFunSuite {
               )
             )
         )
-        .right
+        .toOption
         .get
       val testDataTensor =
         STen.fromMat(testData.filterIx(_ != "label").toMat, cuda)
@@ -57,7 +57,7 @@ class MLPSuite extends AnyFunSuite {
               )
             )
         )
-        .right
+        .toOption
         .get
       val trainDataTensor =
         STen.fromMat(trainData.filterIx(_ != "label").toMat, cuda)
@@ -67,7 +67,7 @@ class MLPSuite extends AnyFunSuite {
           cuda
         )
         .squeeze
-      val classWeights = STen.ones(Array(10), device.options(DoublePrecision))
+      val classWeights = STen.ones(List(10), device.options(DoublePrecision))
 
       val model = SupervisedModel(
         mlp(784, 10, device.options(DoublePrecision)),
@@ -140,8 +140,8 @@ class MLPSuite extends AnyFunSuite {
     }
     stop.stop()
     TensorLogger.detailAllTensorOptions(println)
-    assert(TensorLogger.queryActiveTensorOptions.size <= 3)
-    assert(TensorLogger.queryActiveTensors.size == 0)
+    assert(TensorLogger.queryActiveTensorOptions().size <= 3)
+    assert(TensorLogger.queryActiveTensors().size == 0)
     ()
   }
 }

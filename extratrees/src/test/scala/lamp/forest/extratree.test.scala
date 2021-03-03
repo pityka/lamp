@@ -99,7 +99,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(attr.deep == Vector(1, 0))
+    assert(attr.toVector == Vector(1, 0))
     assert(r == ((0, 3.424021023861243, 0)))
   }
   test("splitClassification 1 weighted") {
@@ -115,7 +115,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = Some(vec.ones(5)),
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(attr.deep == Vector(1, 0))
+    assert(attr.toVector == Vector(1, 0))
     assert(r == ((0, 3.424021023861243, 0)))
   }
   test("splitClassification 1 0-weighted") {
@@ -131,7 +131,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = Some(Vec(1d, 1d, 0d, 0d, 0d)),
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(attr.deep == Vector(0, 1))
+    assert(attr.toVector == Vector(0, 1))
     assert(r._1 == -1)
   }
   test("splitClassification 2") {
@@ -148,7 +148,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(r == ((1, 97.54668482609304, 1)))
-    assert(attr.deep == Vector(0, 1))
+    assert(attr.toVector == Vector(0, 1))
   }
   test("splitClassification 3") {
     val attr = Array(2, 1, 0)
@@ -168,7 +168,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(r == ((2, 97.54668482609304, 2)))
-    assert(attr.deep == Vector(0, 1, 2))
+    assert(attr.toVector == Vector(0, 1, 2))
   }
   test("splitClassification 4") {
     val attr = Array(2, 0, 1)
@@ -188,7 +188,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(r == ((2, 97.54668482609304, 1)))
-    assert(attr.deep == Vector(1, 0, 2))
+    assert(attr.toVector == Vector(1, 0, 2))
   }
   test("splitClassification 5") {
     val attr = Array(0, 2, 1)
@@ -208,7 +208,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(1L)
     )
     assert(r == ((2, 97.84900936098786, 1)))
-    assert(attr.deep == Vector(0, 1, 2))
+    assert(attr.toVector == Vector(0, 1, 2))
   }
   test("splitClassification 6") {
     val attr = Array(0, 2, 1)
@@ -228,7 +228,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(123L)
     )
     assert(r == ((2, 96.07259095141863, 2)))
-    assert(attr.deep == Vector(0, 1, 2))
+    assert(attr.toVector == Vector(0, 1, 2))
   }
   test("splitClassification 7") {
     val attr = Array(1, 2, 0)
@@ -248,7 +248,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(123L)
     )
     assert(r == ((2, 96.07259095141863, 2)))
-    assert(attr.deep == Vector(1, 0, 2))
+    assert(attr.toVector == Vector(1, 0, 2))
   }
 
   test("mnist") {
@@ -261,7 +261,7 @@ class ExtraTreesSuite extends AnyFunSuite {
             )
           )
       )
-      .right
+      .toOption
       .get
     val target =
       Mat(data.firstCol("label").toVec.map(_.toLong))
@@ -299,7 +299,7 @@ class ExtraTreesSuite extends AnyFunSuite {
             )
           )
       )
-      .right
+      .toOption
       .get
     val target =
       Mat(data.firstCol("label").toVec.map(_.toLong))
@@ -339,7 +339,7 @@ class ExtraTreesSuite extends AnyFunSuite {
             )
           )
       )
-      .right
+      .toOption
       .get
     val datatest = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
@@ -350,7 +350,7 @@ class ExtraTreesSuite extends AnyFunSuite {
             )
           )
       )
-      .right
+      .toOption
       .get
     val target =
       Mat(data.firstCol("label").toVec.map(_.toLong))
@@ -389,7 +389,7 @@ class ExtraTreesSuite extends AnyFunSuite {
             )
           )
       )
-      .right
+      .toOption
       .get
     val target =
       Mat(data.firstCol("label").toVec.map(_.toLong)).toVec.map(_.toDouble)

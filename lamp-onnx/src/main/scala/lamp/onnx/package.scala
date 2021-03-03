@@ -110,7 +110,7 @@ package object onnx {
     val nameMap = info.map { input => input.variable.id -> input.name }.toMap
 
     def makeName(u: UUID) =
-      nameMap.get(u).getOrElse(u.toString.replaceAllLiterally("-", "_"))
+      nameMap.get(u).getOrElse(u.toString.replace("-", "_"))
 
     val namer = new NameMap {
       def apply(u: UUID): String = makeName(u)

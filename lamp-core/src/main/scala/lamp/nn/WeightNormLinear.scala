@@ -44,14 +44,14 @@ object WeightNormLinear {
   ): WeightNormLinear =
     WeightNormLinear(
       weightsV = param(
-        STen.normal(0d, math.sqrt(2d / (in + out)), Array(out, in), tOpt)
+        STen.normal(0d, math.sqrt(2d / (in + out)), List(out, in), tOpt)
       ),
       weightsG = param(
-        STen.normal(0d, 0.01, Array(1, in), tOpt)
+        STen.normal(0d, 0.01, List(1, in), tOpt)
       ),
       bias =
         if (bias)
-          Some(param(STen.zeros(Array(1, out), tOpt)))
+          Some(param(STen.zeros(List(1, out), tOpt)))
         else None
     )
 }

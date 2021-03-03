@@ -26,13 +26,13 @@ class TransformerSuite extends AnyFunSuite {
       .fromInputStream(getClass.getResourceAsStream("/clickbait_data"))(
         Codec.UTF8
       )
-      .getLines
+      .getLines()
       .toVector
     val negatives = scala.io.Source
       .fromInputStream(getClass.getResourceAsStream("/non_clickbait_data"))(
         Codec.UTF8
       )
-      .getLines
+      .getLines()
       .toVector
 
     val (vocab, _) = Text.charsToIntegers((positives ++ negatives).mkString)
@@ -56,7 +56,7 @@ class TransformerSuite extends AnyFunSuite {
     val trainTarget = shuffledT.take(trainIdx)
     val trainF = shuffledF.row(trainIdx)
 
-    val rng = org.saddle.spire.random.rng.Cmwc5.apply
+    val rng = org.saddle.spire.random.rng.Cmwc5.apply()
 
     Scope.root { implicit scope =>
       val tOpt = device.options(precision)
@@ -76,7 +76,7 @@ class TransformerSuite extends AnyFunSuite {
               rng
             )
 
-        val classWeights = STen.ones(Array(2), device.options(precision))
+        val classWeights = STen.ones(List(2), device.options(precision))
         val model = SupervisedModel(
           sequence(
             lamp.nn.TransformerEmbedding(

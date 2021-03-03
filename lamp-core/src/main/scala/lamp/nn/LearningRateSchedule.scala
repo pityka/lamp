@@ -69,7 +69,10 @@ object LearningRateSchedule {
     )
   def linear(start: Double, end: Double, maxSteps: Long) =
     fromEpochCount((stepCount: Long) => {
-      math.max(end, interpolate(start, end, maxSteps, stepCount))
+      math.max(
+        end,
+        interpolate(start, end, maxSteps.toDouble, stepCount.toDouble)
+      )
     })
   def stepAfter(steps: Long, factor: Double) =
     fromEpochCount((stepCount: Long) => {
@@ -82,7 +85,12 @@ object LearningRateSchedule {
     fromEpochCount((stepCount: Long) => {
       val l = stepCount % periodLength
       if (l > periodLength / 2)
-        maxFactor + interpolate(maxFactor, 1d, periodLength / 2, l)
+        maxFactor + interpolate(
+          maxFactor,
+          1d,
+          (periodLength / 2).toDouble,
+          l.toDouble
+        )
       else interpolate(1d, maxFactor, periodLength / 2d, l.toDouble)
     })
 }

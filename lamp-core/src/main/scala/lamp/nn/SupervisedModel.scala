@@ -78,7 +78,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     Scope.leak { implicit scope =>
       val (loss, examples, _) =
         lossCalculation(samples, target, module, lossFunction, false)
-      acc += (loss.value * examples)
+      acc += (loss.value * examples.toDouble)
       examples
     }
   }
@@ -91,7 +91,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     Scope.leak { implicit scope =>
       val (loss, numInstances, mayGradients) =
         lossCalculation(samples, target, module, lossFunction, true)
-      acc += (loss.value * numInstances)
+      acc += (loss.value * numInstances.toDouble)
 
       (numInstances, mayGradients.get)
     }
@@ -108,6 +108,6 @@ case class ModelWithOptimizer[I, M <: GenericModule[I, Variable]](
     optimizer: Optimizer
 ) {
   def release() = {
-    optimizer.release
+    optimizer.release()
   }
 }

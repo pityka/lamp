@@ -44,7 +44,7 @@ object SWA {
       }
   }
 
-  def epochs[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
+  def epochs[I, M <: GenericModule[I, Variable]: Load](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I],
