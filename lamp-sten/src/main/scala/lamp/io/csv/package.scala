@@ -280,7 +280,7 @@ package object csv {
       header
     )(prepare, addToBuffer)
 
-    done.right.flatMap { colIndex =>
+    done.flatMap { colIndex =>
       val columns = bufdata map { b =>
         val arrays = b.toArrays
         Scope { implicit scope =>

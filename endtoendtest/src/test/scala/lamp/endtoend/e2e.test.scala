@@ -32,7 +32,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         recordSeparator = "\n",
         fieldSeparator = '\t'
       )
-      .right
+      .toOption
       .get
     val features = frame.filterIx(_ != "target")
     val target = frame.firstCol("target")
@@ -110,13 +110,13 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       val numClasses = target.toVec.toSeq.distinct.max.toInt + 1
       val numFeatures = features.numCols
       val classWeights =
-        STen.ones(Array(numClasses), device.options(SinglePrecision))
+        STen.ones(List(numClasses), device.options(SinglePrecision))
 
       val model = SupervisedModel(
         mlp(numFeatures, numClasses, device.options(SinglePrecision)),
         LossFunctions.NLL(numClasses, classWeights)
       )
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
       val makeTrainingBatch = () =>
         BatchStream.minibatchesFromFull(
           1024,
@@ -143,7 +143,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         .map(
           _._2.module.forward(const(testFeaturesTensor))
         )
-        .unsafeRunSync
+        .unsafeRunSync()
       val prediction = output.toMat.rows.map(_.argmax).toVec
       val accuracy = prediction
         .zipMap(testTarget.toVec)((a, b) => if (a.toInt == b.toInt) 1d else 0d)

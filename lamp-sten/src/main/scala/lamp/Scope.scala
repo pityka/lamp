@@ -330,7 +330,7 @@ object Scope {
   def inResource =
     Resource.make(IO {
       Scope.free
-    })(scope => IO { scope.release })
+    })(scope => IO { scope.release() })
 
   /** Create new Scope bound to a cats-effect IO.
     *

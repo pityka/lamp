@@ -491,7 +491,7 @@ class GradientSuite extends AnyFunSuite {
             STen.fromLongMat(Mat(Vec(1L, 0L), Vec(0L, 1L)), cuda)
           val values = STen.fromVec(Vec(2d, 3d), cuda)
           val topt = if (cuda) STenOptions.d.cudaIndex(0) else STenOptions.d
-          val sp = STen.sparse_coo(idx, values, Array(3, 2), topt)
+          val sp = STen.sparse_coo(idx, values, List(3, 2), topt)
           const(sp)
         }
         val L = x2.mm(x1).sum
@@ -907,7 +907,7 @@ class GradientSuite extends AnyFunSuite {
       val data = const(STen.fromMat(mat3x2))
       val y =
         const(STen.fromMat(Mat(Vec(0d, 1d, 0.5d), Vec(0d, 0.5, 1d))))
-      val classWeights = STen.ones(Array(1, 2), w.value.options)
+      val classWeights = STen.ones(List(1, 2), w.value.options)
       val L =
         ((data
           .mm(w))
@@ -930,7 +930,7 @@ class GradientSuite extends AnyFunSuite {
       val data = const(STen.fromMat(mat3x2))
       val y =
         const(STen.fromLongMat(Mat(Vec(0L, 1L, 2L))).squeeze)
-      val classWeights = STen.ones(Array(3), w.value.options)
+      val classWeights = STen.ones(List(3), w.value.options)
       val L =
         ((data
           .mm(w))
@@ -954,7 +954,7 @@ class GradientSuite extends AnyFunSuite {
       val data = const(STen.fromMat(mat3x2))
       val y =
         const(STen.fromLongMat(Mat(Vec(0L, 1L, 2L))).squeeze)
-      val classWeights = STen.ones(Array(3), w.value.options)
+      val classWeights = STen.ones(List(3), w.value.options)
       val L =
         ((data
           .mm(w))

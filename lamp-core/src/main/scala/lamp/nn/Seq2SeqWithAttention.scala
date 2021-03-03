@@ -86,7 +86,7 @@ object Seq2SeqWithAttention {
   implicit def load[
       S0,
       S1,
-      M0 <: Module: TrainingMode: Load,
+      M0 <: Module: Load,
       M1 <: StatefulModule2[Variable, Variable, S0, S1]: Load,
       M2 <: StatefulModule[
         Variable,
@@ -107,7 +107,7 @@ object Seq2SeqWithAttention {
   implicit def initState[
       S0,
       S1,
-      M0 <: Module: TrainingMode,
+      M0 <: Module,
       M1 <: StatefulModule2[
         Variable,
         Variable,

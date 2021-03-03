@@ -29,11 +29,10 @@ object EitherModule {
       M2 <: GenericModule[A, B]: TrainingMode
   ] =
     TrainingMode.make[EitherModule[A, B, M1, M2]](
-      module =>
-        EitherModule(module.members.left.map(_.asEval).right.map(_.asEval)),
+      module => EitherModule(module.members.left.map(_.asEval).map(_.asEval)),
       module =>
         EitherModule(
-          module.members.left.map(_.asTraining).right.map(_.asTraining)
+          module.members.left.map(_.asTraining).map(_.asTraining)
         )
     )
 

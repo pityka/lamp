@@ -71,7 +71,7 @@ object TensorLogger {
       detailNum: Int
   ): Unit = {
     val now = System.nanoTime()
-    val data = queryActiveTensors
+    val data = queryActiveTensors()
     val str = makeLog(now, data, filter, detailMinMs, detailMaxMs, detailNum)
     logger("Tensors - " + str)
   }

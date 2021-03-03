@@ -37,7 +37,7 @@ class IOLoopSuite extends AnyFunSuite {
               )
             )
         )
-        .right
+        .toOption
         .get
 
       import scala.concurrent.duration._
@@ -59,7 +59,7 @@ class IOLoopSuite extends AnyFunSuite {
           )
           .squeeze
 
-      val classWeights = STen.ones(Array(10), x.options)
+      val classWeights = STen.ones(List(10), x.options)
 
       val model = SupervisedModel(
         logisticRegression(
@@ -97,7 +97,7 @@ class IOLoopSuite extends AnyFunSuite {
         trainedModel
           .addTotalLossAndReturnGradientsAndNumExamples(const(x), target, acc)
       val loss = acc.toMat.raw(0) / n
-      tensorLogger.cancel
+      tensorLogger.cancel()
 
       assert(epoch == 25)
       println(loss)
@@ -119,7 +119,7 @@ class IOLoopSuite extends AnyFunSuite {
               )
             )
         )
-        .right
+        .toOption
         .get
       val x =
         STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
@@ -131,7 +131,7 @@ class IOLoopSuite extends AnyFunSuite {
           )
           .squeeze
 
-      val classWeights = STen.ones(Array(10), x.options)
+      val classWeights = STen.ones(List(10), x.options)
 
       val model = SupervisedModel(
         logisticRegression(

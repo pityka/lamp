@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd._
+import lamp.autograd.{BatchNorm => _, Dropout => _, _}
 import aten.ATen
 import lamp.Sc
 import lamp.STen

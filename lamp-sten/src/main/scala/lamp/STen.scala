@@ -213,6 +213,7 @@ object STen {
       tensorOptions: STenOptions = STen.dOptions
   ) =
     owned(ATen.arange(start, end, step, tensorOptions.value))
+
   def linspace[S: Sc](
       start: Double,
       end: Double,
@@ -762,7 +763,7 @@ case class STen private (
     owned(ATen.sub_0(value, other.value, 1d))
 
   /** Subtracts other in place. */
-  def -=[S: Sc](other: STen): Unit =
+  def -=(other: STen): Unit =
     ATen.sub_out(value, value, other.value, 1d)
 
   /** Subtracts other after multiplying with a number. */
@@ -786,11 +787,11 @@ case class STen private (
     owned(ATen.mul_1(value, other))
 
   /** In place multiplication. */
-  def *=[S: Sc](other: STen): Unit =
+  def *=(other: STen): Unit =
     ATen.mul_out(value, value, other.value)
 
   /** In place multiplication. */
-  def *=[S: Sc](other: Double): Unit =
+  def *=(other: Double): Unit =
     value.mul_(other)
 
   /** Division. */
@@ -806,7 +807,7 @@ case class STen private (
     owned(ATen.div_1(value, other))
 
   /** In place division. */
-  def /=[S: Sc](other: STen): Unit =
+  def /=(other: STen): Unit =
     ATen.div_out(value, value, other.value)
 
   /** Matrix multiplication. Maps to Aten.mm. */
@@ -900,7 +901,7 @@ case class STen private (
   def asin[S: Sc] = owned(ATen.asin(value))
   def asin_() = ATen.asin_(value)
   def sqrt[S: Sc] = owned(ATen.sqrt(value))
-  def sqrt_[S: Sc] = ATen.sqrt_(value)
+  def sqrt_() = ATen.sqrt_(value)
   def square[S: Sc] = owned(ATen.square(value))
   def square_() = ATen.square_(value)
   def abs[S: Sc] = owned(ATen.abs(value))

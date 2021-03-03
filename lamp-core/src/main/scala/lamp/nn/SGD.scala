@@ -29,8 +29,8 @@ case class SGDW(
     }
 
   var stepCount = 0L
-  def release = {
-    velocity.foreach(_.foreach(_._1.release))
+  def release() = {
+    velocity.foreach(_.foreach(_._1.release()))
   }
   def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }

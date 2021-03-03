@@ -86,8 +86,8 @@ class GCNSuite extends AnyFunSuite {
         ResidualModule(
           sequence(
             Linear(
-              weights = param(STen.ones(Array(4, 3), tOpt)),
-              bias = Some(param(STen.ones(Array(1, 3), tOpt)))
+              weights = param(STen.ones(List(4, 3), tOpt)),
+              bias = Some(param(STen.ones(List(1, 3), tOpt)))
             ),
             Fun(implicit scope => variable => variable.relu)
           )
@@ -131,7 +131,7 @@ class GCNSuite extends AnyFunSuite {
         val frame = Frame(
           scala.io.Source
             .fromInputStream(getClass.getResourceAsStream("/cora.content"))
-            .getLines
+            .getLines()
             .map { line =>
               val spl = line.split("\t")
               val key = spl.head
@@ -163,7 +163,7 @@ class GCNSuite extends AnyFunSuite {
         val mat = Mat(
           scala.io.Source
             .fromInputStream(getClass.getResourceAsStream("/cora.cites"))
-            .getLines
+            .getLines()
             .map { line =>
               val spl = line.split("\t")
               val key1 = spl(0)
@@ -177,7 +177,7 @@ class GCNSuite extends AnyFunSuite {
 
       }
       val trainedModel = Scope { implicit scope =>
-        val classWeights = STen.ones(Array(7), device.options(precision))
+        val classWeights = STen.ones(List(7), device.options(precision))
         val model = SupervisedModel(
           sequence(
             GCN.gcn(
@@ -258,7 +258,7 @@ class GCNSuite extends AnyFunSuite {
       assert(accuracy > 0.7)
     }
 
-    tensorLogger.cancel
+    tensorLogger.cancel()
     TensorLogger.detailAllTensors(s => scribe.info(s))
     TensorLogger.detailAllTensorOptions(s => scribe.info(s))
   }
@@ -271,7 +271,7 @@ class GCNSuite extends AnyFunSuite {
         val frame = Frame(
           scala.io.Source
             .fromInputStream(getClass.getResourceAsStream("/cora.content"))
-            .getLines
+            .getLines()
             .map { line =>
               val spl = line.split("\t")
               val key = spl.head
@@ -303,7 +303,7 @@ class GCNSuite extends AnyFunSuite {
         val mat = Mat(
           scala.io.Source
             .fromInputStream(getClass.getResourceAsStream("/cora.cites"))
-            .getLines
+            .getLines()
             .map { line =>
               val spl = line.split("\t")
               val key1 = spl(0)
@@ -316,7 +316,7 @@ class GCNSuite extends AnyFunSuite {
         STen.fromLongMat(mat.map(_.toLong), device)
 
       }
-      val classWeights = STen.ones(Array(7), device.options(precision))
+      val classWeights = STen.ones(List(7), device.options(precision))
 
       val model = SupervisedModel(
         sequence(
@@ -413,7 +413,7 @@ class GCNSuite extends AnyFunSuite {
           )
         )
       )
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
       val targets = STen.fromVec(Vec(0d, 1d), device, precision)
       val (batch, _) = GraphBatchStream
         .smallGraphMode(2, graphs.toVec, targets, device, Some(rng))
@@ -465,8 +465,8 @@ class GCNSuite extends AnyFunSuite {
         ResidualModule(
           sequence(
             Linear(
-              weights = param(STen.ones(Array(2, 3), tOpt)),
-              bias = Some(param(STen.ones(Array(1, 3), tOpt)))
+              weights = param(STen.ones(List(2, 3), tOpt)),
+              bias = Some(param(STen.ones(List(1, 3), tOpt)))
             ),
             Fun(implicit scope => _.relu)
           )

@@ -131,7 +131,7 @@ object Train extends App {
         scribe.info(
           s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
         )
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply
+        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
         val trainEpochs = () =>
           BatchStream.minibatchesFromFull(
             config.trainBatchSize,
@@ -212,12 +212,13 @@ object Train extends App {
                         totalGLoss,
                         generatorLoss.value,
                         batchSize.toDouble
-                    )
-                    instances += batchSize
+                      )
+                      instances += batchSize
 
+                    }
                   }
-                }
-            } unsafeRunSync
+              }
+              .unsafeRunSync()
 
             println(
               s"D-loss: ${totalDLoss.toMat.raw(0) / instances}, G-loss: ${totalGLoss.toMat

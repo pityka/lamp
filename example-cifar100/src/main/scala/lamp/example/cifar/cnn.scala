@@ -22,7 +22,7 @@ case class Residual[M1 <: Module, M2 <: Module](
 }
 
 object Residual {
-  implicit def trainingMode[M1 <: Module: Load, M2 <: Module: Load] =
+  implicit def trainingMode[M1 <: Module, M2 <: Module] =
     TrainingMode.identity[Residual[M1, M2]]
   implicit def load[M1 <: Module: Load, M2 <: Module: Load] =
     Load.make[Residual[M1, M2]] { m => t =>

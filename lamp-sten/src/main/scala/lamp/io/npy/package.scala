@@ -110,7 +110,7 @@ package object npy {
     val (descriptor, iterator) =
       org.saddle.io.npy
         .readFromChannel(dtype, channel)
-        .right
+        .toOption
         .get
     assert(!descriptor.fortran, "Fortran (column-wise) layout not supported")
     val dim = descriptor.shape
@@ -120,7 +120,7 @@ package object npy {
     )
     var offset = 0L
     iterator.foreach { arr =>
-      val ar = arr.right.get.asInstanceOf[Array[Double]]
+      val ar = arr.toOption.get.asInstanceOf[Array[Double]]
       copy(ar, offset, t)
       offset += ar.length
     }

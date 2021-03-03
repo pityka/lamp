@@ -46,7 +46,7 @@ class TextGenerationSuite extends AnyFunSuite {
       val tensorOptions = device.options(precision)
       val model = {
         val classWeights =
-          STen.ones(Array(vocabularSize), tensorOptions)
+          STen.ones(List(vocabularSize), tensorOptions)
         val net =
           statefulSequence(
             Embedding(
@@ -69,7 +69,7 @@ class TextGenerationSuite extends AnyFunSuite {
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
       val trainEpochs = () =>
         Text
           .minibatchesFromText(
@@ -119,7 +119,7 @@ class TextGenerationSuite extends AnyFunSuite {
       val tensorOptions = device.options(precision)
       val model = {
         val classWeights =
-          STen.ones(Array(vocabularSize), tensorOptions)
+          STen.ones(List(vocabularSize), tensorOptions)
         val net =
           statefulSequence(
             Embedding(
@@ -146,7 +146,7 @@ class TextGenerationSuite extends AnyFunSuite {
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
       val trainEpochs = () =>
         Text
           .minibatchesFromText(
@@ -216,7 +216,7 @@ class TextGenerationSuite extends AnyFunSuite {
         val is = getClass.getResourceAsStream("/checkpoint.test")
         java.nio.channels.Channels.newChannel(is)
       })(v => IO { v.close })
-      Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
+      Reader.loadFromChannel(net, channel, device).unsafeRunSync().toOption.get
       val textVariable = Text
         .sequencePrediction(
           List("time machine").map(t =>
@@ -271,7 +271,7 @@ class TextGenerationSuite extends AnyFunSuite {
         val is = getClass.getResourceAsStream("/checkpoint.test")
         java.nio.channels.Channels.newChannel(is)
       })(v => IO { v.close })
-      Reader.loadFromChannel(net, channel, device).unsafeRunSync().right.get
+      Reader.loadFromChannel(net, channel, device).unsafeRunSync().toOption.get
       val textVariables = Text
         .sequencePredictionBeam(
           List("time machine")

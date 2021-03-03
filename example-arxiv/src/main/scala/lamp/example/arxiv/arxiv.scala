@@ -20,7 +20,7 @@ object Train extends App {
   val parser1 = {
     import builder._
     OParser.sequence(
-      opt[String]("folder").action((x, c) => c.copy(folder = x)).required,
+      opt[String]("folder").action((x, c) => c.copy(folder = x)).required(),
       opt[Unit]("gpu").action((_, c) => c.copy(cuda = true)),
       opt[String]("checkpoint-save").action((x, c) =>
         c.copy(checkpointSave = Some(x))
@@ -80,7 +80,7 @@ object Train extends App {
         Scope.root { implicit scope =>
           val numClasses = 40
           val classWeights =
-            STen.ones(Array(numClasses), device.options(precision))
+            STen.ones(List(numClasses), device.options(precision))
 
           val model = SupervisedModel(
             sequence(

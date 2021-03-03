@@ -116,7 +116,7 @@ object Train extends App {
         val tensorOptions = device.options(precision)
         val model = {
           val classWeights =
-            STen.ones(Array(vocabularSize), tensorOptions)
+            STen.ones(List(vocabularSize), tensorOptions)
           val net1 =
             statefulSequence(
               Embedding(
@@ -146,7 +146,7 @@ object Train extends App {
               Reader
                 .loadFromFile(net1, new File(load), device)
                 .unsafeRunSync()
-                .right
+                .toOption
                 .get
             }
 
@@ -156,7 +156,7 @@ object Train extends App {
             LossFunctions.SequenceNLL(vocabularSize, classWeights)
           )
         }
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply
+        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
         val trainEpochs = () =>
           Text
             .minibatchesFromText(

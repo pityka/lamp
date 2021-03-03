@@ -48,9 +48,9 @@ case class AdamW(
   }
 
   var stepCount = 0L
-  def release = {
-    mt.foreach(_.release)
-    vt.foreach(_.release)
+  def release() = {
+    mt.foreach(_.release())
+    vt.foreach(_.release())
   }
   def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
@@ -85,8 +85,8 @@ case class AdamW(
           val stepParam =
             if (debias)
               scheduleFactor * lr * math.sqrt(
-                (1 - math.pow(b2, stepCount))
-              ) / (1 - math.pow(b1, stepCount))
+                (1 - math.pow(b2, stepCount.toDouble))
+              ) / (1 - math.pow(b1, stepCount.toDouble))
             else scheduleFactor * lr
 
           val stepWd = scheduleFactor * wd

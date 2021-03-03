@@ -68,7 +68,7 @@ object IOLoops {
     loop(batchStream.nextBatch, Nil)
   }
 
-  def withSWA[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
+  def withSWA[I, M <: GenericModule[I, Variable]: Load](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I],
@@ -137,7 +137,7 @@ object IOLoops {
     }
   }
 
-  def epochs[I, M <: GenericModule[I, Variable]: Load: TrainingMode](
+  def epochs[I, M <: GenericModule[I, Variable]: Load](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I],

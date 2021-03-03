@@ -52,9 +52,9 @@ object Translation {
     val source = spl(0)
     val target = spl(1)
     val source1 =
-      (startOfSentence + source + endOfSentence)
+      (startOfSentence.toString + source + endOfSentence)
     val target1 =
-      (startOfSentence + target + endOfSentence)
+      (startOfSentence.toString + target + endOfSentence)
     (source1, target1)
   }
 }
@@ -125,10 +125,15 @@ object Train extends App {
         val (vocab1, _) =
           Text.charsToIntegers(trainText + testText.getOrElse(""))
         val vocab =
-          vocab1 + ('#' -> vocab1.size, '|' -> (vocab1.size + 1), '*' -> (vocab1.size + 2), '=' -> (vocab1.size + 3))
+          vocab1 ++ List(
+            '#' -> vocab1.size,
+            '|' -> (vocab1.size + 1),
+            '*' -> (vocab1.size + 2),
+            '=' -> (vocab1.size + 3)
+          )
         val trainTokenized = scala.io.Source
           .fromString(trainText)
-          .getLines
+          .getLines()
           .toVector
           .map { line =>
             val (feature, target) = Translation.prepare(
@@ -154,7 +159,7 @@ object Train extends App {
         val testTokenized = testText.map { t =>
           scala.io.Source
             .fromString(t)
-            .getLines
+            .getLines()
             .toVector
             .map { line =>
               val (feature, target) = Translation.prepare(
@@ -192,7 +197,7 @@ object Train extends App {
           if (config.singlePrecision) SinglePrecision else DoublePrecision
         val tensorOptions = device.options(precision)
         val classWeights =
-          STen.ones(Array(vocabularSize), tensorOptions)
+          STen.ones(List(vocabularSize), tensorOptions)
         val encoder = statefulSequence(
           Embedding(
             classes = vocabularSize,
@@ -246,7 +251,7 @@ object Train extends App {
               Reader
                 .loadFromFile(net1, new File(load), device)
                 .unsafeRunSync()
-                .right
+                .toOption
                 .get
             }
 
@@ -257,7 +262,7 @@ object Train extends App {
               .SequenceNLL(vocabularSize, classWeights, ignore = vocab('#'))
           )
         }
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply
+        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
         val trainEpochs = () =>
           Text
             .minibatchesForSeq2Seq(
@@ -341,7 +346,7 @@ object Train extends App {
                     .mkString
                 }
               }
-            }(b => IO(b.release))
+            }(b => IO(b.release()))
             .unsafeRunSync()
 
           scribe.info(

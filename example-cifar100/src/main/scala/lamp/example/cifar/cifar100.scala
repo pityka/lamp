@@ -134,7 +134,7 @@ object Train extends App {
         val tensorOptions = device.options(precision)
         val model = {
           val numClasses = 100
-          val classWeights = STen.ones(Array(numClasses), tensorOptions)
+          val classWeights = STen.ones(List(numClasses), tensorOptions)
           val net =
             // if (config.network == "lenet")
             //   Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
@@ -146,7 +146,7 @@ object Train extends App {
               Reader
                 .loadFromFile(net, new File(file), device)
                 .unsafeRunSync()
-                .right
+                .toOption
                 .get
           }
           scribe.info("Learnable parametes: " + net.learnableParameters)
@@ -165,13 +165,13 @@ object Train extends App {
           .fromAutoCloseable(IO {
             scala.io.Source.fromFile(config.labels)
           })
-          .use(src => IO { src.getLines.toVector })
-          .unsafeRunSync
+          .use(src => IO { src.getLines().toVector })
+          .unsafeRunSync()
 
         scribe.info(
           s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
         )
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply
+        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
         val trainEpochs = () =>
           BatchStream.minibatchesFromFull(
             config.trainBatchSize,
@@ -210,35 +210,39 @@ object Train extends App {
           )
           .unsafeRunSync()
 
-        testEpochs().nextBatch.use {
-          case batch =>
-            IO {
-              val output = trained.module.forward(batch.get._1)
-              val file = new java.io.File("cifar10.lamp.example.onnx")
-              lamp.onnx.serializeToFile(
-                file,
-                output,
-                domain = "lamp.example.cifar"
-              ) {
-                case x if x == output =>
-                  VariableInfo(
-                    variable = output,
-                    name = "output",
-                    input = false,
-                    docString = "log probabilities"
-                  )
-                case x if x == batch.get._1 =>
-                  VariableInfo(
-                    variable = batch.get._1,
-                    name = "input",
-                    input = true,
-                    docString = "Nx3xHxW"
-                  )
+        testEpochs().nextBatch
+          .use {
+            case batch =>
+              IO {
+                val output = trained.module.forward(batch.get._1)
+                val file = new java.io.File("cifar10.lamp.example.onnx")
+                lamp.onnx.serializeToFile(
+                  file,
+                  output,
+                  domain = "lamp.example.cifar"
+                ) {
+                  case x if x == output =>
+                    VariableInfo(
+                      variable = output,
+                      name = "output",
+                      input = false,
+                      docString = "log probabilities"
+                    )
+                  case x if x == batch.get._1 =>
+                    VariableInfo(
+                      variable = batch.get._1,
+                      name = "input",
+                      input = true,
+                      docString = "Nx3xHxW"
+                    )
+                }
+                println(
+                  "Model exported to ONNX into file" + file.getAbsolutePath
+                )
               }
-              println("Model exported to ONNX into file" + file.getAbsolutePath)
-            }
 
-        }.unsafeRunSync
+          }
+          .unsafeRunSync()
 
         ()
       }

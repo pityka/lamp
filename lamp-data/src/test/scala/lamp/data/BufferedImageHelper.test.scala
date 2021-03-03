@@ -14,14 +14,14 @@ class BufferedImageHelperSuite extends AnyFunSuite {
     }
     bi.setRGB(0, 0, new Color(255, 0, 0).getRGB())
     bi.setRGB(2, 3, new Color(0, 255, 0).getRGB())
-    val biData = bi.getRGB(0, 0, 3, 4, null, 0, 3).deep
+    val biData = bi.getRGB(0, 0, 3, 4, null, 0, 3).toVector
     val tensor = BufferedImageHelper.toFloatTensor(bi)
     val expected = Vec(255.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 255.0, 0.0,
       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0).map(_.toFloat)
     assert(NDArray.tensorToFloatNDArray(tensor).toVec == expected)
     val bi2 = BufferedImageHelper.fromFloatTensor(tensor)
-    val bi2Data = bi2.getRGB(0, 0, 3, 4, null, 0, 3).deep
+    val bi2Data = bi2.getRGB(0, 0, 3, 4, null, 0, 3).toVector
     assert(bi2Data == biData)
   }
 }

@@ -44,9 +44,9 @@ case class RAdam(
   }
 
   var stepCount = 0L
-  def release = {
-    mt.foreach(_.release)
-    vt.foreach(_.release)
+  def release() = {
+    mt.foreach(_.release())
+    vt.foreach(_.release())
   }
   def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
@@ -72,7 +72,7 @@ case class RAdam(
           vt.mul_(b2)
           ATen.addcmul_out(vt, vt, gradients.value, gradients.value, 1 - b2)
 
-          val beta2PowT = math.pow(b2, stepCount)
+          val beta2PowT = math.pow(b2, stepCount.toDouble)
 
           val rhoInf = (2d / (1d - b2)) - 1
           val rho = rhoInf - (2d * stepCount * beta2PowT / (1d - beta2PowT))
@@ -89,7 +89,7 @@ case class RAdam(
           if (rho > 4) {
             val stepParam = scheduleFactor * lr * math.sqrt(
               (1 - beta2PowT) * ((rho - 4) / (rhoInf - 4)) * ((rho - 2) / rho) * (rhoInf / (rhoInf - 2))
-            ) / (1 - math.pow(b1, stepCount))
+            ) / (1 - math.pow(b1, stepCount.toDouble))
 
             // println("A")
             // println(stepParam)
@@ -108,7 +108,8 @@ case class RAdam(
 
           } else {
             // println("B")
-            val stepParam = scheduleFactor * lr / (1 - math.pow(b1, stepCount))
+            val stepParam =
+              scheduleFactor * lr / (1 - math.pow(b1, stepCount.toDouble))
             ATen.add_out(param.value, param.value, mt, -1 * stepParam)
           }
 

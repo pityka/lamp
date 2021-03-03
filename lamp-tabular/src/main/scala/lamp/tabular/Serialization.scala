@@ -134,8 +134,8 @@ object Serialization {
     })
     for {
 
-      selectionModels <- selectionModels.right
-      baseModels <- baseModels.right
+      selectionModels <- selectionModels
+      baseModels <- baseModels
     } yield {
       EnsembleModel(
         selectionModels,

@@ -27,7 +27,7 @@ object TestTrain {
     val numInstances = features.sizes.apply(0).toInt
 
     val minibatchSize = 1024
-    val rng = org.saddle.spire.random.rng.Cmwc5.apply
+    val rng = org.saddle.spire.random.rng.Cmwc5.apply()
     val cvFolds =
       AutoLoop.makeCVFolds(
         numInstances,
@@ -81,7 +81,7 @@ class HousePricesSuite extends AnyFunSuite {
             ),
           recordSeparator = "\n"
         )
-        .right
+        .toOption
         .get
       val rawTrainingData = rawTrainingData0.row(0 -> 999)
       val rawTestData = rawTrainingData0.row(1000 -> *)
