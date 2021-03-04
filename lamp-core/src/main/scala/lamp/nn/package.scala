@@ -21,7 +21,7 @@ import lamp.autograd.{Constant, param}
   * Modules facilitating composing other modules:
   *   - [[nn.Sequential]] composes a homogenous list of modules (analogous to List)
   *   - [[nn.sequence]] composes a heterogeneous list of modules (analogous to tuples)
-  *   - [[nn.EitherModule]] composes two modules in a [[scala.Either]]
+  *   - [[nn.EitherModule]] composes two modules in a scala.Either
   *
   * Examples of neural network building blocks, layers etc:
   *   - [[nn.Linear]] implements `W X + b` with parameters `W` and `b` and input `X`
