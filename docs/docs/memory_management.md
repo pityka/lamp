@@ -21,7 +21,6 @@ Example:
 
 ```scala mdoc
   import lamp.{STen,Scope}
-  import cats.effect.IO
   def squaredEuclideanDistance(v1: STen, v2: STen)(
       implicit scope: Scope // parent scope
   ): STen = {

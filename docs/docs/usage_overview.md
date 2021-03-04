@@ -80,7 +80,7 @@ First get some tabular data into the JVM memory:
           ),
         maxLines = 100L
       )
-      .right
+      .toOption
       .get
     val trainData = org.saddle.csv.CsvParser
       .parseSourceWithHeader[Double](
@@ -92,7 +92,7 @@ First get some tabular data into the JVM memory:
           ),
         maxLines = 100L
       )
-      .right
+      .toOption
       .get
 ```
 
@@ -169,7 +169,7 @@ val makeTrainingBatch = () =>
         features = trainDataTensor,
         target =trainTarget,
         device = device,
-        rng = org.saddle.spire.random.rng.Cmwc5.apply
+        rng = org.saddle.spire.random.rng.Cmwc5.apply()
       )
 ```
 
@@ -198,13 +198,13 @@ For other capabilities of this training loop see the scaladoc of `IOLoops.epochs
 The `IOLoop.epochs` method returns an `IO` which will run into the trained model once executed:
 
 ```scala mdoc
-val (epochOfModel, trainedModel, learningCurve) = trainedModelIO.unsafeRunSync
+val (epochOfModel, trainedModel, learningCurve) = trainedModelIO.unsafeRunSync()
 val module = trainedModel.module
 ```
 
 The trained model we can use for prediction:
 ```scala mdoc
-val bogusData = STen.ones(Array(1,784),tensorOptions)
+val bogusData = STen.ones(List(1,784),tensorOptions)
 val classProbabilities = module.forward(const(bogusData)).toMat.map(math.exp)
 println(classProbabilities)
 ```
