@@ -26,11 +26,12 @@ object IOLoops {
   ): IO[Unit] = {
 
     def loop(
-        batch: Resource[IO, Option[(I, STen)]]
+        batch: Resource[IO, StreamControl[(I, STen)]]
     ): IO[Unit] = {
       batch.use {
-        case None => IO.pure(false)
-        case Some((x, _)) =>
+        case EndStream  => IO.pure(false)
+        case EmptyBatch => IO.pure(true)
+        case NonEmptyBatch((x, _)) =>
           IO { Scope.root { implicit scope => model.forward(x) }; true }
       } flatMap {
         case true  => loop(batchStream.nextBatch)
@@ -46,12 +47,13 @@ object IOLoops {
   )(implicit scope: Scope) = {
 
     def loop(
-        batch: Resource[IO, Option[(I, STen)]],
+        batch: Resource[IO, StreamControl[(I, STen)]],
         acc: List[STen]
     ): IO[List[STen]] = {
       batch.use {
-        case None => IO.pure(Left(acc.reverse))
-        case Some((x, _)) =>
+        case EndStream  => IO.pure(Left(acc.reverse))
+        case EmptyBatch => IO.pure(Right(acc))
+        case NonEmptyBatch((x, _)) =>
           IO {
             Right(Scope { implicit scope =>
               model.forward(x).value
@@ -289,30 +291,29 @@ object IOLoops {
   ): IO[Double] = {
 
     def processBatch(
-        option: Option[(I, STen)],
+        elem: StreamControl[(I, STen)],
         lossAcc: STen
-    ): Option[Long] = {
-      option.map {
-        case (sample, target) =>
-          val (numInstances, gradients) =
-            model.model.addTotalLossAndReturnGradientsAndNumExamples(
-              sample,
-              target,
-              lossAcc
-            )
+    ): StreamControl[Long] = elem.map {
+      case (sample, target) =>
+        val (numInstances, gradients) =
+          model.model.addTotalLossAndReturnGradientsAndNumExamples(
+            sample,
+            target,
+            lossAcc
+          )
 
-          model.optimizer.step(gradients, learningRateScheduleFactor)
-          numInstances
+        model.optimizer.step(gradients, learningRateScheduleFactor)
+        numInstances
 
-      }
     }
 
     def simpleLoop(lossAcc: STen, numInstancesAcc: Long): IO[Long] = {
       trainBatches.nextBatch
-        .use { option => IO { processBatch(option, lossAcc) } }
+        .use { batch => IO { processBatch(batch, lossAcc) } }
         .flatMap {
-          case None => IO.pure(numInstancesAcc)
-          case Some(numInstances) =>
+          case EndStream  => IO.pure(numInstancesAcc)
+          case EmptyBatch => simpleLoop(lossAcc, numInstancesAcc)
+          case NonEmptyBatch(numInstances) =>
             simpleLoop(
               lossAcc,
               numInstances + numInstancesAcc
@@ -321,8 +322,8 @@ object IOLoops {
     }
 
     def prefetch[A, B](
-        fetch: () => Resource[IO, Option[A]],
-        transform: (Int, Option[A]) => IO[Option[B]],
+        fetch: () => Resource[IO, StreamControl[A]],
+        transform: (Int, StreamControl[A]) => IO[StreamControl[B]],
         reduce: (B, B) => B,
         zero: B,
         cs1: ContextShift[IO],
@@ -332,7 +333,7 @@ object IOLoops {
       def loop(
           counter: Int,
           acc: B,
-          prefetching: Fiber[IO, (Option[A], IO[Unit])]
+          prefetching: Fiber[IO, (StreamControl[A], IO[Unit])]
       ): IO[B] =
         for {
           fetched <- prefetching.join
@@ -346,8 +347,10 @@ object IOLoops {
           )
           _ <- release
           loopDone <- done match {
-            case None    => IO.pure(acc)
-            case Some(b) => loop(counter + 1, reduce(b, acc), nextPrefetch)
+            case EndStream  => IO.pure(acc)
+            case EmptyBatch => loop(counter, acc, nextPrefetch)
+            case NonEmptyBatch(b) =>
+              loop(counter + 1, reduce(b, acc), nextPrefetch)
           }
         } yield loopDone
 
@@ -426,9 +429,9 @@ object IOLoops {
         totalExamples: Long
     ): IO[(STen, Long)] = {
       validationBatches.nextBatch
-        .use { option =>
+        .use { elem =>
           IO {
-            option.map {
+            elem.map {
               case (validationSample, validationTarget) =>
                 val numExamples = model.asEval
                   .addTotalLossAndReturnNumExamples(
@@ -441,8 +444,9 @@ object IOLoops {
           }
         }
         .flatMap {
-          case None => IO.pure((totalLoss, totalExamples))
-          case Some(examples) =>
+          case EndStream  => IO.pure((totalLoss, totalExamples))
+          case EmptyBatch => loop(batchCount, totalLoss, totalExamples)
+          case NonEmptyBatch(examples) =>
             loop(
               batchCount + 1,
               totalLoss,

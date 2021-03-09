@@ -25,6 +25,7 @@ import lamp.SinglePrecision
 import lamp.Scope
 import lamp.STen
 import lamp.onnx.VariableInfo
+import lamp.data.{EndStream, EmptyBatch, NonEmptyBatch}
 
 object Cifar {
   def loadImageFile(
@@ -212,9 +213,9 @@ object Train extends App {
 
         testEpochs().nextBatch
           .use {
-            case batch =>
+            case NonEmptyBatch(batch) =>
               IO {
-                val output = trained.module.forward(batch.get._1)
+                val output = trained.module.forward(batch._1)
                 val file = new java.io.File("cifar10.lamp.example.onnx")
                 lamp.onnx.serializeToFile(
                   file,
@@ -228,9 +229,9 @@ object Train extends App {
                       input = false,
                       docString = "log probabilities"
                     )
-                  case x if x == batch.get._1 =>
+                  case x if x == batch._1 =>
                     VariableInfo(
-                      variable = batch.get._1,
+                      variable = batch._1,
                       name = "input",
                       input = true,
                       docString = "Nx3xHxW"
@@ -240,6 +241,8 @@ object Train extends App {
                   "Model exported to ONNX into file" + file.getAbsolutePath
                 )
               }
+            case EndStream | EmptyBatch =>
+              IO { println("First batch is empty or stream ended") }
 
           }
           .unsafeRunSync()

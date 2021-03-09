@@ -26,6 +26,7 @@ import lamp.Scope
 import lamp.STen
 import lamp.Movable
 import lamp.STenOptions
+import lamp.data.{StreamControl, EndStream}
 
 sealed trait BaseModel
 case class KnnBase(
@@ -405,14 +406,13 @@ object AutoLoop {
         val tcl = target.index(idxT)
         val d1 = device.to(numCl)
         val d2 = device.to(tcl)
-        Some(((catCls, const(d1)), d2)): Option[
-          ((Seq[Variable], Variable), STen)
-        ]
+        StreamControl(((catCls, const(d1)), d2))
 
       }
     }
     val emptyResource =
-      Resource.pure[IO, Option[((Seq[Variable], Variable), STen)]](None)
+      Resource
+        .pure[IO, StreamControl[((Seq[Variable], Variable), STen)]](EndStream)
 
     val idx = {
       val t = array
@@ -425,7 +425,8 @@ object AutoLoop {
 
     val batchStream = new BatchStream[(Seq[Variable], Variable)] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[((Seq[Variable], Variable), STen)]] =
+      def nextBatch
+          : Resource[IO, StreamControl[((Seq[Variable], Variable), STen)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>

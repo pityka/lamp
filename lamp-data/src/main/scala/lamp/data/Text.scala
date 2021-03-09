@@ -245,14 +245,13 @@ object Text {
           )
         )
 
-        Some(
+        StreamControl(
           (const(STen.owned(transposedFeatures)), STen.owned(transposedTarget))
-        ): Option[
-          (Variable, STen)
-        ]
+        )
 
       }
-    val emptyResource = Resource.pure[IO, Option[(Variable, STen)]](None)
+    val emptyResource =
+      Resource.pure[IO, StreamControl[(Variable, STen)]](EndStream)
 
     val dropped = text.drop(scala.util.Random.nextInt(timeSteps))
     val numSamples = (dropped.size - 1) / timeSteps
@@ -268,7 +267,7 @@ object Text {
     assert(idx.forall(_.size == minibatchSize))
     new BatchStream[Variable] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[(Variable, STen)]] =
+      def nextBatch: Resource[IO, StreamControl[(Variable, STen)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>
@@ -358,7 +357,7 @@ object Text {
           )
         )
 
-        Some(
+        StreamControl(
           (
             (
               const(STen.owned(transposedSource)),
@@ -366,13 +365,11 @@ object Text {
             ),
             STen.owned(transposedTarget)
           )
-        ): Option[
-          ((Variable, Variable), STen)
-        ]
+        )
 
       }
     val emptyResource =
-      Resource.pure[IO, Option[((Variable, Variable), STen)]](None)
+      Resource.pure[IO, StreamControl[((Variable, Variable), STen)]](EndStream)
 
     val idx = array
       .shuffle(array.range(0, text.size), rng)
@@ -386,7 +383,7 @@ object Text {
     assert(idx.forall(_.size == minibatchSize))
     new BatchStream[(Variable, Variable)] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[((Variable, Variable), STen)]] =
+      def nextBatch: Resource[IO, StreamControl[((Variable, Variable), STen)]] =
         remaining match {
           case Nil => emptyResource
           case x :: tail =>

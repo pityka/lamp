@@ -104,13 +104,15 @@ object GraphBatchStream {
           device.to(selectedTarget)
         }
 
-        Option(
+        StreamControl(
           ((nodesV, edgesV, graphIndicesV), selectedTargetOnDevice)
         )
       }
     }
     val emptyResource = Resource
-      .pure[IO, Option[((Variable, Variable, Variable), STen)]](None)
+      .pure[IO, StreamControl[((Variable, Variable, Variable), STen)]](
+        EndStream
+      )
 
     val idx =
       rng
@@ -128,7 +130,7 @@ object GraphBatchStream {
         )
     new BatchStream[(Variable, Variable, Variable)] {
       private var remaining = idx
-      def nextBatch: Resource[IO, Option[
+      def nextBatch: Resource[IO, StreamControl[
         ((Variable, Variable, Variable), STen)
       ]] =
         remaining match {
@@ -153,7 +155,7 @@ object GraphBatchStream {
   ): BatchStream[(Variable, Variable)] =
     new BatchStream[(Variable, Variable)] {
       var i = 1
-      def nextBatch: Resource[IO, Option[
+      def nextBatch: Resource[IO, StreamControl[
         ((Variable, Variable), STen)
       ]] = {
         if (i == 1) {
@@ -162,11 +164,11 @@ object GraphBatchStream {
             val nodesV = const(nodes)
             val edgesV = const(edges)
 
-            Option(
+            StreamControl(
               ((nodesV, edgesV), targetPerNode)
             )
           }
-        } else { Resource.make(IO(None))(_ => IO.unit) }
+        } else { Resource.make(IO(EndStream))(_ => IO.unit) }
       }
     }
 
