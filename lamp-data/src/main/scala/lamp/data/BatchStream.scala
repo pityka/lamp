@@ -7,6 +7,7 @@ import lamp.Device
 import lamp.autograd.Variable
 import lamp.Scope
 import lamp.STen
+import lamp.Movable
 
 sealed trait StreamControl[+I] {
   def map[B](f: I => B): StreamControl[B]
@@ -14,6 +15,15 @@ sealed trait StreamControl[+I] {
 }
 object StreamControl {
   def apply[I](i: I): StreamControl[I] = NonEmptyBatch(i)
+  implicit def StreamControlIsMovable[T: Movable] =
+    new Movable[StreamControl[T]] {
+      def list(m: StreamControl[T]) =
+        m match {
+          case EndStream            => Nil
+          case EmptyBatch           => Nil
+          case NonEmptyBatch(batch) => implicitly[Movable[T]].list(batch)
+        }
+    }
 }
 case object EmptyBatch extends StreamControl[Nothing] {
   def map[B](f: Nothing => B): StreamControl[B] = this
