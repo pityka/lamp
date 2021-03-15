@@ -41,111 +41,149 @@ object TensorHelpers {
       }
     }
 
-  def toMat(t: Tensor) = {
-    if (t.scalarTypeByte() == 6) toFloatMat(t).map(_.toDouble)
-    else {
-      assert(
-        t.scalarTypeByte == 7,
-        s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
-      )
-      val shape = t.sizes()
-      if (shape.size == 2) {
-        val arr = Array.ofDim[Double]((shape(0) * shape(1)).toInt)
-        assert(t.copyToDoubleArray(arr), "failed to copy")
-        Mat.apply(shape(0).toInt, shape(1).toInt, arr)
-      } else if (shape.size == 0) {
-        val arr = Array.ofDim[Double](1)
-        assert(t.copyToDoubleArray(arr))
-        Mat.apply(1, 1, arr)
-      } else if (shape.size == 1) {
-        val arr = Array.ofDim[Double](shape(0).toInt)
-        assert(t.copyToDoubleArray(arr))
-        Mat.apply(1, shape(0).toInt, arr)
-      } else throw new RuntimeException("shape: " + shape.toVector)
+  def toMat(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      if (t.scalarTypeByte() == 6) toFloatMat(t).map(_.toDouble)
+      else {
+        assert(
+          t.scalarTypeByte == 7,
+          s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
+        )
+        val shape = t.sizes()
+        if (shape.size == 2) {
+          val arr = Array.ofDim[Double]((shape(0) * shape(1)).toInt)
+          require(t.copyToDoubleArray(arr), "failed to copy")
+          Mat.apply(shape(0).toInt, shape(1).toInt, arr)
+        } else if (shape.size == 0) {
+          val arr = Array.ofDim[Double](1)
+          require(t.copyToDoubleArray(arr))
+          Mat.apply(1, 1, arr)
+        } else if (shape.size == 1) {
+          val arr = Array.ofDim[Double](shape(0).toInt)
+          require(t.copyToDoubleArray(arr))
+          Mat.apply(1, shape(0).toInt, arr)
+        } else throw new RuntimeException("shape: " + shape.toVector)
+
+      }
+    } finally {
+      if (t != t0) { t.release }
     }
   }
-  def toVec(t: Tensor) = {
-    if (t.scalarTypeByte() == 6) {
+  def toVec(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      if (t.scalarTypeByte() == 6) {
+        assert(
+          t.numel <= Int.MaxValue,
+          "Tensor too long to fit into a java array"
+        )
+        val arr = Array.ofDim[Float](t.numel.toInt)
+        assert(t.copyToFloatArray(arr))
+        arr.toVec.map(_.toDouble)
+      } else {
+        assert(
+          t.scalarTypeByte == 7,
+          s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
+        )
+        assert(
+          t.numel <= Int.MaxValue,
+          "Tensor too long to fit into a java array"
+        )
+        val arr = Array.ofDim[Double](t.numel.toInt)
+        assert(t.copyToDoubleArray(arr))
+        arr.toVec
+      }
+    } finally {
+      if (t != t0) { t.release }
+    }
+
+  }
+  def toLongVec(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      assert(
+        t.scalarTypeByte == 4,
+        s"Expected Long Tensor. Got scalartype: ${t.scalarTypeByte}"
+      )
+      assert(
+        t.numel <= Int.MaxValue,
+        "Tensor too long to fit into a java array"
+      )
+      val arr = Array.ofDim[Long](t.numel.toInt)
+      assert(t.copyToLongArray(arr))
+      arr.toVec
+    } finally {
+      if (t != t0) { t.release }
+    }
+  }
+  def toFloatVec(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      assert(
+        t.scalarTypeByte == 6,
+        s"Expected Float Tensor. Got scalartype: ${t.scalarTypeByte}"
+      )
       assert(
         t.numel <= Int.MaxValue,
         "Tensor too long to fit into a java array"
       )
       val arr = Array.ofDim[Float](t.numel.toInt)
       assert(t.copyToFloatArray(arr))
-      arr.toVec.map(_.toDouble)
-    } else {
-      assert(
-        t.scalarTypeByte == 7,
-        s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
-      )
-      assert(
-        t.numel <= Int.MaxValue,
-        "Tensor too long to fit into a java array"
-      )
-      val arr = Array.ofDim[Double](t.numel.toInt)
-      assert(t.copyToDoubleArray(arr))
       arr.toVec
+    } finally {
+      if (t != t0) { t.release }
     }
   }
-  def toLongVec(t: Tensor) = {
-    assert(
-      t.scalarTypeByte == 4,
-      s"Expected Long Tensor. Got scalartype: ${t.scalarTypeByte}"
-    )
-    assert(t.numel <= Int.MaxValue, "Tensor too long to fit into a java array")
-    val arr = Array.ofDim[Long](t.numel.toInt)
-    assert(t.copyToLongArray(arr))
-    arr.toVec
+  def toFloatMat(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      assert(
+        t.scalarTypeByte == 6,
+        s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
+      )
+      val shape = t.sizes()
+      if (shape.size == 2) {
+        val arr = Array.ofDim[Float]((shape(0) * shape(1)).toInt)
+        assert(t.copyToFloatArray(arr))
+        Mat.apply(shape(0).toInt, shape(1).toInt, arr)
+      } else if (shape.size == 0) {
+        val arr = Array.ofDim[Float](1)
+        assert(t.copyToFloatArray(arr))
+        Mat.apply(1, 1, arr)
+      } else if (shape.size == 1) {
+        val arr = Array.ofDim[Float](shape(0).toInt)
+        assert(t.copyToFloatArray(arr))
+        Mat.apply(1, shape(0).toInt, arr)
+      } else throw new RuntimeException("shape: " + shape.toVector)
+    } finally {
+      if (t != t0) { t.release }
+    }
   }
-  def toFloatVec(t: Tensor) = {
-    assert(
-      t.scalarTypeByte == 6,
-      s"Expected Float Tensor. Got scalartype: ${t.scalarTypeByte}"
-    )
-    assert(t.numel <= Int.MaxValue, "Tensor too long to fit into a java array")
-    val arr = Array.ofDim[Float](t.numel.toInt)
-    assert(t.copyToFloatArray(arr))
-    arr.toVec
-  }
-  def toFloatMat(t: Tensor) = {
-    assert(
-      t.scalarTypeByte == 6,
-      s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
-    )
-    val shape = t.sizes()
-    if (shape.size == 2) {
-      val arr = Array.ofDim[Float]((shape(0) * shape(1)).toInt)
-      assert(t.copyToFloatArray(arr))
-      Mat.apply(shape(0).toInt, shape(1).toInt, arr)
-    } else if (shape.size == 0) {
-      val arr = Array.ofDim[Float](1)
-      assert(t.copyToFloatArray(arr))
-      Mat.apply(1, 1, arr)
-    } else if (shape.size == 1) {
-      val arr = Array.ofDim[Float](shape(0).toInt)
-      assert(t.copyToFloatArray(arr))
-      Mat.apply(1, shape(0).toInt, arr)
-    } else throw new RuntimeException("shape: " + shape.toVector)
-  }
-  def toLongMat(t: Tensor) = {
-    assert(
-      t.scalarTypeByte == 4,
-      s"Expected Long Tensor. Got scalartype: ${t.scalarTypeByte}"
-    )
-    val shape = t.sizes()
-    if (shape.size == 2) {
-      val arr = Array.ofDim[Long]((shape(0) * shape(1)).toInt)
-      assert(t.copyToLongArray(arr))
-      Mat.apply(shape(0).toInt, shape(1).toInt, arr)
-    } else if (shape.size == 0) {
-      val arr = Array.ofDim[Long](1)
-      assert(t.copyToLongArray(arr))
-      Mat.apply(1, 1, arr)
-    } else if (shape.size == 1) {
-      val arr = Array.ofDim[Long](shape(0).toInt)
-      assert(t.copyToLongArray(arr))
-      Mat.apply(1, shape(0).toInt, arr)
-    } else ???
+  def toLongMat(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      assert(
+        t.scalarTypeByte == 4,
+        s"Expected Long Tensor. Got scalartype: ${t.scalarTypeByte}"
+      )
+      val shape = t.sizes()
+      if (shape.size == 2) {
+        val arr = Array.ofDim[Long]((shape(0) * shape(1)).toInt)
+        assert(t.copyToLongArray(arr))
+        Mat.apply(shape(0).toInt, shape(1).toInt, arr)
+      } else if (shape.size == 0) {
+        val arr = Array.ofDim[Long](1)
+        assert(t.copyToLongArray(arr))
+        Mat.apply(1, 1, arr)
+      } else if (shape.size == 1) {
+        val arr = Array.ofDim[Long](shape(0).toInt)
+        assert(t.copyToLongArray(arr))
+        Mat.apply(1, shape(0).toInt, arr)
+      } else ???
+    } finally {
+      if (t != t0) { t.release }
+    }
   }
   def fromMatList(
       m: Seq[Mat[Double]],
