@@ -24,7 +24,7 @@ object CudaTest extends Tag("cuda")
 object SlowTest extends Tag("slow")
 
 class NNSuite extends AnyFunSuite {
-
+  aten.Tensor.manual_seed(13223L)
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }
@@ -203,6 +203,7 @@ class NNSuite extends AnyFunSuite {
       expectedValue: Double
   ) =
     test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+
       Scope.root { implicit scope =>
         val d = const(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
         val module = moduleF(scope)
@@ -276,7 +277,8 @@ class NNSuite extends AnyFunSuite {
   def testGradientAndValueNDLong[T, M <: StatefulModule[Variable, Variable, T]: Load](
       id: String,
       st: T,
-      cuda: Boolean = false
+      cuda: Boolean = false,
+      gradientCheck: Boolean = true
   )(
       m: NDArray[Long],
       moduleF: Scope => M with StatefulModule[
@@ -346,9 +348,11 @@ class NNSuite extends AnyFunSuite {
             r
         }
         assert(gradAuto.size == gradNum.size)
-        gradAuto.zip(gradNum).foreach {
-          case (a, b) =>
-            assert(a.toVec.roundTo(4) == b.toVec.roundTo(4))
+        if (gradientCheck) {
+          gradAuto.zip(gradNum).foreach {
+            case (a, b) =>
+              assert(a.toVec.roundTo(4) == b.toVec.roundTo(4))
+          }
         }
         assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
         ()
@@ -446,53 +450,53 @@ class NNSuite extends AnyFunSuite {
     nd1x2x3,
     implicit pool =>
       Conv1D(
-        param(STen.ones(List(1, 2, 3), STenOptions.d)),
-        param(STen.ones(List(1), STenOptions.d)),
+        param(STen.rand(List(1, 2, 3), STenOptions.d)),
+        param(STen.rand(List(1), STenOptions.d)),
         stride = 1,
         padding = 0,
         dilation = 1,
         groups = 1
       ).lift,
-    22d
+    11.1712
   )
   testGradientAndValueND("Conv1D/cuda ", (), true)(
     nd1x2x3,
     implicit pool =>
       Conv1D(
-        param(STen.ones(List(1, 2, 3), STenOptions.d.cudaIndex(0))),
-        param(STen.ones(List(1), STenOptions.d.cuda)),
+        param(STen.rand(List(1, 2, 3), STenOptions.d.cudaIndex(0))),
+        param(STen.rand(List(1), STenOptions.d.cuda)),
         stride = 1,
         padding = 0,
         dilation = 1,
         groups = 1
       ).lift,
-    22d
+    14.2116
   )
   testGradientAndValueND("Conv2D ", (), false)(
     nd1x2x3x3,
     implicit pool =>
       Conv2D(
-        param(STen.ones(List(1, 2, 3, 3), STenOptions.d)),
-        param(STen.ones(List(1), STenOptions.d)),
+        param(STen.rand(List(1, 2, 3, 3), STenOptions.d)),
+        param(STen.rand(List(1), STenOptions.d)),
         stride = 1,
         padding = 0,
         dilation = 1,
         groups = 1
       ).lift,
-    154d
+    79.2702
   )
   testGradientAndValueND("Conv2D/cuda ", (), true)(
     nd1x2x3x3,
     implicit pool =>
       Conv2D(
-        param(STen.ones(List(1, 2, 3, 3), STenOptions.d.cuda)),
-        param(STen.ones(List(1), STenOptions.d.cuda)),
+        param(STen.rand(List(1, 2, 3, 3), STenOptions.d.cuda)),
+        param(STen.rand(List(1), STenOptions.d.cuda)),
         stride = 1,
         padding = 0,
         dilation = 1,
         groups = 1
       ).lift,
-    154d
+    73.9732
   )
   testGradientAndValueND("BatchNorm ", (), false)(
     nd1x2x3x3,
@@ -517,84 +521,85 @@ class NNSuite extends AnyFunSuite {
     nd2x3L,
     implicit pool =>
       Embedding(
-        weights = param(STen.ones(List(2, 4), STenOptions.d))
+        weights = param(STen.rand(List(2, 4), STenOptions.d))
       ).lift,
-    24d
+    7.1808
   )
   testGradientAndValueND("RNN ", Option.empty[Variable], false)(
     nd2x3x2,
     implicit pool =>
       RNN(
-        weightXh = param(STen.ones(List(2, 4), STenOptions.d)),
-        weightHh = param(STen.ones(List(4, 4), STenOptions.d)),
-        biasH = param(STen.ones(List(4), STenOptions.d))
+        weightXh = param(STen.rand(List(2, 4), STenOptions.d)),
+        weightHh = param(STen.rand(List(4, 4), STenOptions.d)),
+        biasH = param(STen.rand(List(4), STenOptions.d))
       ),
-    23.8561
+    21.9659
   )
   testGradientAndValueNDLong(
     "FreeRunning ",
     ((), Option.empty[Variable]),
+    false,
     false
   )(
     nd2x3L,
     implicit pool => {
       val rnn = statefulSequence(
         Embedding
-          .apply(weights = param(STen.ones(List(7, 4), STenOptions.d)))
+          .apply(weights = param(STen.rand(List(7, 4), STenOptions.d)))
           .lift,
         RNN(
-          weightXh = param(STen.ones(List(4, 4), STenOptions.d)),
-          weightHh = param(STen.ones(List(4, 4), STenOptions.d)),
-          biasH = param(STen.ones(List(4), STenOptions.d))
+          weightXh = param(STen.rand(List(4, 4), STenOptions.d)),
+          weightHh = param(STen.rand(List(4, 4), STenOptions.d)),
+          biasH = param(STen.rand(List(4), STenOptions.d))
         )
       )
       FreeRunningRNN(rnn, 3)
     },
-    36d
+    35.6847
   )
   testGradientAndValueND("SeqLinear ", (), false)(
     nd2x3x2,
     implicit pool =>
       SeqLinear(
-        weight = param(STen.ones(List(2, 4), STenOptions.d)),
-        bias = param(STen.ones(List(4), STenOptions.d))
+        weight = param(STen.rand(List(2, 4), STenOptions.d)),
+        bias = param(STen.rand(List(4), STenOptions.d))
       ).lift,
-    288d
+    90.2684
   )
   testGradientAndValueND("GRU ", Option.empty[Variable], false)(
     nd2x3x2,
     implicit pool =>
       GRU(
-        weightXh = param(STen.ones(List(2, 4), STenOptions.d)),
-        weightXr = param(STen.ones(List(2, 4), STenOptions.d)),
-        weightXz = param(STen.ones(List(2, 4), STenOptions.d)),
-        weightHh = param(STen.ones(List(4, 4), STenOptions.d)),
-        weightHz = param(STen.ones(List(4, 4), STenOptions.d)),
-        weightHr = param(STen.ones(List(4, 4), STenOptions.d)),
-        biasH = param(STen.ones(List(4), STenOptions.d)),
-        biasZ = param(STen.ones(List(4), STenOptions.d)),
-        biasR = param(STen.ones(List(4), STenOptions.d))
+        weightXh = param(STen.rand(List(2, 4), STenOptions.d)),
+        weightXr = param(STen.rand(List(2, 4), STenOptions.d)),
+        weightXz = param(STen.rand(List(2, 4), STenOptions.d)),
+        weightHh = param(STen.rand(List(4, 4), STenOptions.d)),
+        weightHz = param(STen.rand(List(4, 4), STenOptions.d)),
+        weightHr = param(STen.rand(List(4, 4), STenOptions.d)),
+        biasH = param(STen.rand(List(4), STenOptions.d)),
+        biasZ = param(STen.rand(List(4), STenOptions.d)),
+        biasR = param(STen.rand(List(4), STenOptions.d))
       ),
-    0.9395
+    2.0383
   )
   testGradientAndValueND("LSTM ", Option.empty[(Variable, Variable)], false)(
     nd2x3x2,
     implicit pool =>
       LSTM(
-        weightXi = param(STen.ones(List(2, 4), STenOptions.d)),
-        weightXo = param(STen.ones(List(2, 4), STenOptions.d)),
-        weightXf = param(STen.ones(List(2, 4), STenOptions.d)),
-        weightXc = param(STen.ones(List(2, 4), STenOptions.d)),
-        weightHi = param(STen.ones(List(4, 4), STenOptions.d)),
-        weightHo = param(STen.ones(List(4, 4), STenOptions.d)),
-        weightHf = param(STen.ones(List(4, 4), STenOptions.d)),
-        weightHc = param(STen.ones(List(4, 4), STenOptions.d)),
-        biasI = param(STen.ones(List(4), STenOptions.d)),
-        biasO = param(STen.ones(List(4), STenOptions.d)),
-        biasF = param(STen.ones(List(4), STenOptions.d)),
-        biasC = param(STen.ones(List(4), STenOptions.d))
+        weightXi = param(STen.rand(List(2, 4), STenOptions.d)),
+        weightXo = param(STen.rand(List(2, 4), STenOptions.d)),
+        weightXf = param(STen.rand(List(2, 4), STenOptions.d)),
+        weightXc = param(STen.rand(List(2, 4), STenOptions.d)),
+        weightHi = param(STen.rand(List(4, 4), STenOptions.d)),
+        weightHo = param(STen.rand(List(4, 4), STenOptions.d)),
+        weightHf = param(STen.rand(List(4, 4), STenOptions.d)),
+        weightHc = param(STen.rand(List(4, 4), STenOptions.d)),
+        biasI = param(STen.rand(List(4), STenOptions.d)),
+        biasO = param(STen.rand(List(4), STenOptions.d)),
+        biasF = param(STen.rand(List(4), STenOptions.d)),
+        biasC = param(STen.rand(List(4), STenOptions.d))
       ),
-    20.0321
+    17.8239
   )
   test("RNN shape and loss") {
     Scope.root { implicit scope =>
