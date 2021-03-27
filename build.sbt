@@ -3,6 +3,22 @@ resolvers in ThisBuild += Resolver.githubPackages("pityka")
 githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
   .Environment("GITHUB_TOKEN")
 
+inThisBuild(
+  List(
+    organization := "io.github.pityka",
+    homepage := Some(url("https://pityka.github.io/lamp/")),
+    licenses := List(("MIT", url("https://opensource.org/licenses/MIT"))),
+    developers := List(
+      Developer(
+        "pityka",
+        "Istvan Bartha",
+        "bartha.pityu@gmail.com",
+        url("https://github.com/pityka/lamp")
+      )
+    )
+  )
+)
+
 lazy val commonSettings = Seq(
   scalaVersion := "2.13.5",
   parallelExecution in Test := false,
@@ -40,17 +56,6 @@ lazy val commonSettings = Seq(
   ),
   scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings"))
 ) ++ Seq(
-  organization := "io.github.pityka",
-  licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
-  pomExtra in Global := {
-    <url>https://github.com/pityka/lamp</url>
-      <developers>
-        <developer>
-          <id>pityka</id>
-          <name>Istvan Bartha</name>
-        </developer>
-      </developers>
-  },
   fork := true,
   run / javaOptions += "-Xmx12G",
   cancelable in Global := true,

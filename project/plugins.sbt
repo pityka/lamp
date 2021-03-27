@@ -1,4 +1,6 @@
-addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.0")
+addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.2")
+
+addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.5.6")
 
 resolvers += Resolver.bintrayRepo("djspiewak", "maven")
 

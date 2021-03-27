@@ -43,4 +43,4 @@ jobs:
     - name: git reset
       run: git restore README.md LICENSE
     - name: Publish
-      run: sbt -mem 3000 clean publish
+      run: sbt -mem 3000 clean ci-release
