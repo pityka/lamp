@@ -113,6 +113,20 @@ Examples for various tasks:
 - Machine translation: `bash run_translation.sh` runs the code in `example-translation/`.
 - Graph node property prediction: `bash run_arxiv.sh` runs the code in `example-arxiv/`.
 
+# Building from source
+
+First, one has to build the JNI binding to libtorch, then build lamp itself.
+
+## Building the JNI binding
+
+The JNI binding is hosted in the [pityka/aten-scala](https://github.com/pityka/aten-scala) git repository.
+Refer to the readme in that repository on how to build the JNI sources and publish them as a scala library.
+
+## Building lamp locally
+
+Lamp itself is a pure Scala library and builds like any other Scala project. 
+Once `aten-scala` is published to a local repository invoking `sbt compile` will work.
+If you modified the package name, version or organization in the `aten-scala` build, then you have to adjust the build definition of lamp.
 
 # License
 
