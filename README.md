@@ -5,7 +5,7 @@
 [![doc](https://img.shields.io/badge/api-scaladoc-green)](https://pityka.github.io/lamp/api/lamp/index.html)
 [![doc](https://img.shields.io/badge/docs-green)](https://pityka.github.io/lamp)
 [![maven](https://img.shields.io/maven-central/v/io.github.pityka/lamp-core_2.13.svg)](https://repo1.maven.org/maven2/io/github/pityka/lamp-core_2.13/)
-![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/io.github.pityka/lamp-core_2.13?label=sonatype-snapshots&server=https%3A%2F%2Foss.sonatype.org)
+[![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/io.github.pityka/lamp-core_2.13?label=sonatype-snapshots&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/content/repositories/snapshots/io/github/pityka/lamp-core_2.13/)
 
 Lamp is a Scala library for deep learning and scientific computing. 
 It features a native CPU and GPU backend and operates on off-heap memory. 
