@@ -23,7 +23,6 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.13.5",
   parallelExecution in Test := false,
   scalacOptions ++= Seq(
-    "-no-link-warnings",
     "-opt-warnings",
     "-deprecation", // Emit warning and location for usages of deprecated APIs.
     "-encoding",
@@ -55,7 +54,8 @@ lazy val commonSettings = Seq(
     "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
     "-Ywarn-unused:privates" // Warn if a private member is unused.
   ),
-  scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings"))
+  scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings")),
+  scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings"))
 ) ++ Seq(
   fork := true,
   run / javaOptions += "-Xmx12G",
