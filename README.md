@@ -1,9 +1,10 @@
 # Lamp
 
 [![codecov](https://codecov.io/gh/pityka/lamp/branch/master/graph/badge.svg)](https://codecov.io/gh/pityka/lamp)
-[![](https://github.com/pityka/lamp/workflows/CI/badge.svg)](https://github.com/pityka/lamp/actions?query=workflow%3ACI)
+[![master](https://github.com/pityka/lamp/actions/workflows/master.yml/badge.svg)](https://github.com/pityka/lamp/actions/workflows/master.yml)
 [![doc](https://img.shields.io/badge/api-scaladoc-green)](https://pityka.github.io/lamp/api/lamp/index.html)
 [![doc](https://img.shields.io/badge/docs-green)](https://pityka.github.io/lamp)
+[![maven](https://img.shields.io/maven-central/v/io.github.pityka/lamp-core_2.13.svg)](https://repo1.maven.org/maven2/io/github/pityka/lamp-core_2.13/)
 
 Lamp is a Scala library for deep learning and scientific computing. 
 It features a native CPU and GPU backend and operates on off-heap memory. 
@@ -39,9 +40,9 @@ This repository also hosts some other loosely related libraries.
 
 # Platforms
 
-Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.7.1 shared libraries in its linker path.
+Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.8.0 shared libraries in its linker path.
 
-On mac it suffices to copy the shared libraries from `https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.7.1.zip` to e.g. `/usr/local/lib/`.
+On mac it suffices to copy the shared libraries from `https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.8.0.zip` to e.g. `/usr/local/lib/`.
 On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile).
 
 # Dependencies
@@ -61,38 +62,13 @@ There is substantial test coverage in terms of unit tests and a suite of end to 
 
 # Getting started
 
-Artifacts of lamp and aten-scala are delivered to Github Packages. 
-
 A minimal sbt project to use lamp:
 
 ```scala
 // in build.sbt
-scalaVersion := "2.12.13"
-
-resolvers in ThisBuild += Resolver.githubPackages("pityka")
-
-githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
-  .Environment("GITHUB_TOKEN")
+scalaVersion := "2.13.5"
 
 libraryDependencies += "io.github.pityka" %% "lamp-data" % "VERSION" // look at the github project page for version
-```
-
-```scala
-// in project/plugins.sbt
-addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.0")
-
-resolvers += Resolver.bintrayRepo("djspiewak", "maven")
-```
-
-```scala
-// in project/build.properties
-sbt.version=1.4.7
-```
-
-Github Packages needs a github user token available either in a $GITHUB_TOKEN environmental variable, or in the git global configuration (`~/.gitconfig`): 
-```gitconfig
-[github]
-  token = TOKEN_DATA
 ```
 
 
