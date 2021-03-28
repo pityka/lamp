@@ -6,9 +6,11 @@ weight: 1
 # Lamp
 
 [![codecov](https://codecov.io/gh/pityka/lamp/branch/master/graph/badge.svg)](https://codecov.io/gh/pityka/lamp)
-[![](https://github.com/pityka/lamp/workflows/CI/badge.svg)](https://github.com/pityka/lamp/actions?query=workflow%3ACI)
+[![master](https://github.com/pityka/lamp/actions/workflows/master.yml/badge.svg)](https://github.com/pityka/lamp/actions/workflows/master.yml)
 [![doc](https://img.shields.io/badge/api-scaladoc-green)](https://pityka.github.io/lamp/api/lamp/index.html)
 [![doc](https://img.shields.io/badge/docs-green)](https://pityka.github.io/lamp)
+[![maven](https://img.shields.io/maven-central/v/io.github.pityka/lamp-core_2.13.svg)](https://repo1.maven.org/maven2/io/github/pityka/lamp-core_2.13/)
+![Sonatype Nexus (Snapshots)](https://img.shields.io/nexus/s/io.github.pityka/lamp-core_2.13?label=sonatype-snapshots&server=https%3A%2F%2Foss.sonatype.org)
 
 Lamp is a deep learning library for Scala with native CPU and GPU backend. 
 
