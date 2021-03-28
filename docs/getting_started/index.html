@@ -127,25 +127,11 @@
 <div class="content anchor-link-enabled">
   
 
-<p>Artifacts of lamp and aten-scala are delivered to Github Packages. Despite the artifacts being public, you need to authenticate to Github.</p>
-
 <p>A minimal sbt project to use lamp:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#75715e">// in build.sbt
-</span><span style="color:#75715e"></span>scalaVersion <span style="color:#66d9ef">:</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;2.12.12&#34;</span>
+</span><span style="color:#75715e"></span>scalaVersion <span style="color:#66d9ef">:</span><span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;2.13.5&#34;</span>
 
-resolvers in <span style="color:#a6e22e">ThisBuild</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">Resolver</span><span style="color:#f92672">.</span>githubPackages<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;pityka&#34;</span><span style="color:#f92672">)</span>
-
-githubTokenSource <span style="color:#66d9ef">:</span><span style="color:#f92672">=</span> <span style="color:#a6e22e">TokenSource</span><span style="color:#f92672">.</span><span style="color:#a6e22e">GitConfig</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;github.token&#34;</span><span style="color:#f92672">)</span> <span style="color:#f92672">||</span> <span style="color:#a6e22e">TokenSource</span>
-  <span style="color:#f92672">.</span><span style="color:#a6e22e">Environment</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;GITHUB_TOKEN&#34;</span><span style="color:#f92672">)</span>
-
-libraryDependencies <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#34;io.github.pityka&#34;</span> <span style="color:#f92672">%%</span> <span style="color:#e6db74">&#34;lamp-data&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;VERSION&#34;</span> <span style="color:#f92672">//</span> look at the github project page <span style="color:#66d9ef">for</span> version</code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#75715e">// in project/plugins.sbt
-</span><span style="color:#75715e"></span>addSbtPlugin<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;com.codecommit&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;sbt-github-packages&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;0.5.0&#34;</span><span style="color:#f92672">)</span>
-
-resolvers <span style="color:#f92672">+=</span> <span style="color:#a6e22e">Resolver</span><span style="color:#f92672">.</span>bintrayRepo<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;djspiewak&#34;</span><span style="color:#f92672">,</span> <span style="color:#e6db74">&#34;maven&#34;</span><span style="color:#f92672">)</span></code></pre></div><div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#75715e">// in project/build.properties
-</span><span style="color:#75715e"></span>sbt<span style="color:#f92672">.</span>version<span style="color:#66d9ef">=</span><span style="color:#ae81ff">1.3</span><span style="color:#f92672">.</span><span style="color:#ae81ff">13</span></code></pre></div>
-<p>Github Packages needs a github user token available either in a $GITHUB_TOKEN environmental variable, or in the git global configuration (<code>~/.gitconfig</code>):</p>
-<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-gitconfig" data-lang="gitconfig">[github]
-  token = TOKEN_DATA</code></pre></div>
+libraryDependencies <span style="color:#f92672">+=</span> <span style="color:#e6db74">&#34;io.github.pityka&#34;</span> <span style="color:#f92672">%%</span> <span style="color:#e6db74">&#34;lamp-data&#34;</span> <span style="color:#f92672">%</span> <span style="color:#e6db74">&#34;VERSION&#34;</span> <span style="color:#f92672">//</span> look at the github project page <span style="color:#66d9ef">for</span> version</code></pre></div>
 <h3 id="dependencies">Dependencies</h3>
 
 <ul>
@@ -153,13 +139,13 @@ resolvers <span style="color:#f92672">+=</span> <span style="color:#a6e22e">Reso
 <li><code>lamp-data</code> in addition depends on <a href="https://github.com/outr/scribe">scribe</a> and <a href="https://github.com/lihaoyi/upickle">ujson</a></li>
 </ul>
 
-<p>Lamp depends on aten-scala is a JNI binding to libtorch. It has has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.7.1 shared libraries in its linker path.</p>
+<p>Lamp depends on aten-scala is a JNI binding to libtorch. It has has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.8.0 shared libraries in its linker path.</p>
 
 <h3 id="verify-installation">Verify installation</h3>
 
 <p>This will allocate an identity matrix of 32-bit floats in the main memory:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">aten<span style="color:#f92672">.</span><span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>eye_0<span style="color:#f92672">(</span><span style="color:#ae81ff">2L</span><span style="color:#f92672">,</span>aten<span style="color:#f92672">.</span><span style="color:#a6e22e">TensorOptions</span><span style="color:#f92672">.</span>dtypeFloat<span style="color:#f92672">)</span>
-<span style="color:#f92672">//</span> res0<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">140402761326944</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPUFloatType</span></code></pre></div>
+<span style="color:#f92672">//</span> res0<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">aten.Tensor</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">140148625061696</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPUFloatType</span></code></pre></div>
 <p>The following will allocate an identity matrix of 32-bit floats in the GPU memory. It will throw an exception if GPU support is not available</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">aten<span style="color:#f92672">.</span><span style="color:#a6e22e">ATen</span><span style="color:#f92672">.</span>eye_0<span style="color:#f92672">(</span><span style="color:#ae81ff">2L</span><span style="color:#f92672">,</span>aten<span style="color:#f92672">.</span><span style="color:#a6e22e">TensorOptions</span><span style="color:#f92672">.</span>dtypeFloat<span style="color:#f92672">.</span>cuda<span style="color:#f92672">)</span></code></pre></div>
 </div>
