@@ -21,6 +21,7 @@ inThisBuild(
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.13.5",
+  crossScalaVersions := Seq("2.13.5", "2.12.13"),
   parallelExecution in Test := false,
   scalacOptions ++= Seq(
     "-opt-warnings",
@@ -70,7 +71,7 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "2.2.3"
+val saddleVersion = "2.2.5"
 val upickleVersion = "1.2.0"
 val scalaTestVersion = "3.2.5"
 val scribeVersion = "3.4.0"
@@ -83,7 +84,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+72-be4eba0c",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+82-3a4916da",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
       "org.typelevel" %% "cats-core" % "2.4.2",
@@ -336,6 +337,7 @@ lazy val docs = project
 lazy val root = project
   .in(file("."))
   .settings(
+    crossScalaVersions := Nil,
     publishArtifact := false,
     skip in publish := true
   )

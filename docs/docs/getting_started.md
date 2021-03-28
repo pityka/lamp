@@ -6,10 +6,7 @@ weight: 1
 A minimal sbt project to use lamp:
 
 ```scala
-// in build.sbt
-scalaVersion := "2.13.5"
-
-libraryDependencies += "io.github.pityka" %% "lamp-data" % "VERSION" // look at the github project page for version
+libraryDependencies += "io.github.pityka" %% "lamp-data" % "VERSION" // look at the github page for version
 ```
 
 ### Dependencies
