@@ -1,8 +1,4 @@
-addSbtPlugin("com.codecommit" % "sbt-github-packages" % "0.5.2")
-
 addSbtPlugin("com.geirsson" % "sbt-ci-release" % "1.5.6")
-
-resolvers += Resolver.bintrayRepo("djspiewak", "maven")
 
 addSbtPlugin("com.eed3si9n" % "sbt-unidoc" % "0.4.3")
 

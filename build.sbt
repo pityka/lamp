@@ -1,8 +1,3 @@
-resolvers in ThisBuild += Resolver.githubPackages("pityka")
-
-githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
-  .Environment("GITHUB_TOKEN")
-
 inThisBuild(
   List(
     organization := "io.github.pityka",
@@ -60,11 +55,7 @@ lazy val commonSettings = Seq(
 ) ++ Seq(
   fork := true,
   run / javaOptions += "-Xmx12G",
-  cancelable in Global := true,
-  githubTokenSource := TokenSource.GitConfig("github.token") || TokenSource
-    .Environment("GITHUB_TOKEN"),
-  githubOwner := "pityka",
-  githubRepository := "lamp"
+  cancelable in Global := true
 )
 
 lazy val Cuda = config("cuda").extend(Test)
