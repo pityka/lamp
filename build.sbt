@@ -175,9 +175,9 @@ lazy val umap = project
     name := "lamp-umap",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-      "io.github.pityka" %% "saddle-linalg" % saddleVersion
-      // "io.github.pityka" %% "nspl-awt" % "0.0.22" % "test",
-      // "io.github.pityka" %% "nspl-saddle" % "0.0.22" % "test"
+      "io.github.pityka" %% "saddle-linalg" % saddleVersion,
+      "io.github.pityka" %% "nspl-awt" % "0.0.24" % "test",
+      "io.github.pityka" %% "nspl-saddle" % "0.0.24" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),

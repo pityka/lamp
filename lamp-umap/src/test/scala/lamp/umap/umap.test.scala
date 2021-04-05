@@ -66,24 +66,24 @@ class UmapSuite extends AnyFunSuite {
       iterations = 1000
     )
 
-    // import org.nspl._
-    // import org.nspl.awtrenderer._
-    // import org.nspl.saddle._
-    // println(
-    //   pdfToFile(
-    //     xyplot(
-    //       Frame(
-    //         Mat(
-    //           locs.cols :+ data.rowIx.toVec: _*
-    //         )
-    //       ).setRowIndex(data.rowIx).colAt(0, 1, 2) -> point(
-    //         size = 1d,
-    //         labelText = false,
-    //         color = DiscreteColors(10)
-    //       )
-    //     )().build
-    //   )
-    // )
+    import org.nspl._
+    import org.nspl.awtrenderer._
+    import org.nspl.saddle._
+    println(
+      pdfToFile(
+        xyplot(
+          Frame(
+            Mat(
+              locs.cols :+ data.rowIx.toVec: _*
+            )
+          ).setRowIndex(data.rowIx).colAt(0, 1, 2) -> point(
+            size = 1d,
+            labelText = false,
+            color = DiscreteColors(10)
+          )
+        )().build
+      )
+    )
 
     assert(loss < 0.7)
     val _ = locs
