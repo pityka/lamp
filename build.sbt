@@ -304,7 +304,7 @@ lazy val example_arxiv = project
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "com.lihaoyi" %% "requests" % "0.6.5",
-      "com.lihaoyi" %% "os-lib" % "0.7.1"
+      "com.lihaoyi" %% "os-lib" % "0.7.4"
     )
   )
   .dependsOn(core, data)
