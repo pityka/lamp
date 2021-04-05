@@ -62,7 +62,7 @@ lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "2.2.5"
-val upickleVersion = "1.2.3"
+val upickleVersion = "1.3.11"
 val scalaTestVersion = "3.2.5"
 val scribeVersion = "3.5.1"
 
