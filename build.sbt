@@ -64,7 +64,7 @@ lazy val AllTest = config("alltest").extend(Test)
 val saddleVersion = "2.2.5"
 val upickleVersion = "1.2.0"
 val scalaTestVersion = "3.2.5"
-val scribeVersion = "3.4.0"
+val scribeVersion = "3.5.1"
 
 lazy val sten = project
   .in(file("lamp-sten"))
