@@ -217,7 +217,7 @@ lazy val forest = project
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-      "org.typelevel" %% "cats-effect" % "2.1.3",
+      "org.typelevel" %% "cats-effect" % "2.1.4",
       "io.github.pityka" %% "saddle-linalg" % saddleVersion
     )
   )
