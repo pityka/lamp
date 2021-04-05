@@ -78,7 +78,7 @@ lazy val sten = project
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
       "org.typelevel" %% "cats-core" % "2.4.2",
-      "org.typelevel" %% "cats-effect" % "2.4.1",
+      "org.typelevel" %% "cats-effect" % "3.0.1",
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
