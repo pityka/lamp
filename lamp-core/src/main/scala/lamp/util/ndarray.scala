@@ -31,18 +31,15 @@ case class NDArray[@specialized(Long, Double, Float) T](
       f: (T, List[Int]) => B
   ): NDArray[B] = {
     val k = shapeOffsets
-    val arr = data.zipWithIndex.map {
-      case (d, i) =>
-        val idx =
-          k.scanLeft((i, 0)) {
-              case ((a, _), offset) =>
-                val x = a / offset
-                val y = a - x * offset
-                (y, x)
-            }
-            .drop(1)
-            .map(_._2)
-        f(d, idx)
+    val arr = data.zipWithIndex.map { case (d, i) =>
+      val idx =
+        k.scanLeft((i, 0)) { case ((a, _), offset) =>
+          val x = a / offset
+          val y = a - x * offset
+          (y, x)
+        }.drop(1)
+          .map(_._2)
+      f(d, idx)
     }
     NDArray(arr.toArray, shape)
   }

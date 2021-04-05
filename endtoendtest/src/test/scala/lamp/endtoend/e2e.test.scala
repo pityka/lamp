@@ -43,13 +43,13 @@ class EndToEndClassificationSuite extends AnyFunSuite {
   val datasetroot = new File(
     "../datasets/penn-ml-benchmarks/classification/"
   )
-  val datasets = datasetroot.listFiles().filter(_.isDirectory()).flatMap {
-    folder =>
+  val datasets =
+    datasetroot.listFiles().filter(_.isDirectory()).flatMap { folder =>
       val dataFile =
         folder.listFiles
           .find(f => f.isFile() && f.getName().endsWith(".tsv.gz"))
       dataFile.toList.map(f => (folder.getName, f))
-  }
+    }
 
   def trainAndPredictPytorch(
       target: Series[Int, Double],
@@ -189,52 +189,49 @@ class EndToEndClassificationSuite extends AnyFunSuite {
 
   test("e2e - extratrees", SlowTest) {
     val accuracies = datasets.toList
-      .map {
-        case (dsName, dsFile) =>
-          val (target, features) = parseDataset(dsFile)
-          val inbalance = target.toVec.toSeq
-            .groupBy(identity)
-            .toSeq
-            .map(v => (v._1, v._2.size.toDouble / target.count))
-            .sortBy(_._2)
-            .reverse
-            .head
-            ._2
-          (dsName, inbalance, target.count, features.numCols, target, dsFile)
+      .map { case (dsName, dsFile) =>
+        val (target, features) = parseDataset(dsFile)
+        val inbalance = target.toVec.toSeq
+          .groupBy(identity)
+          .toSeq
+          .map(v => (v._1, v._2.size.toDouble / target.count))
+          .sortBy(_._2)
+          .reverse
+          .head
+          ._2
+        (dsName, inbalance, target.count, features.numCols, target, dsFile)
       }
-      .filter {
-        case (_, inbalance, length, numFeatures, target, _) =>
-          inbalance < 0.6 && length > 300 && length < 20000 && numFeatures > 5 && numFeatures < 1000 && target.toVec.toSeq
-            .forall(_ >= 0d)
+      .filter { case (_, inbalance, length, numFeatures, target, _) =>
+        inbalance < 0.6 && length > 300 && length < 20000 && numFeatures > 5 && numFeatures < 1000 && target.toVec.toSeq
+          .forall(_ >= 0d)
       }
       // .take(10)
-      .map {
-        case (dsName, _, _, _, _, dsFile) =>
-          val (target, features) = parseDataset(dsFile)
-          val t1 = System.nanoTime()
-          val extraTreesAccuracy =
-            trainAndPredictExtraTrees(target, features)
-          val t2 = System.nanoTime
+      .map { case (dsName, _, _, _, _, dsFile) =>
+        val (target, features) = parseDataset(dsFile)
+        val t1 = System.nanoTime()
+        val extraTreesAccuracy =
+          trainAndPredictExtraTrees(target, features)
+        val t2 = System.nanoTime
 
-          val inbalance = target.toVec.toSeq
-            .groupBy(identity)
-            .toSeq
-            .map(v => (v._1, v._2.size.toDouble / target.count))
-            .sortBy(_._2)
-            .reverse
-            .head
-            ._2
+        val inbalance = target.toVec.toSeq
+          .groupBy(identity)
+          .toSeq
+          .map(v => (v._1, v._2.size.toDouble / target.count))
+          .sortBy(_._2)
+          .reverse
+          .head
+          ._2
 
-          val r = (
-            dsName,
-            Series(
-              "majority-class-frequency" -> inbalance,
-              "extratrees-accuracy" -> extraTreesAccuracy,
-              "extratrees-time" -> (t2 - t1) / 1e9
-            )
+        val r = (
+          dsName,
+          Series(
+            "majority-class-frequency" -> inbalance,
+            "extratrees-accuracy" -> extraTreesAccuracy,
+            "extratrees-time" -> (t2 - t1) / 1e9
           )
-          // ???
-          r
+        )
+        // ???
+        r
       }
       .toFrame
       .T
@@ -246,62 +243,59 @@ class EndToEndClassificationSuite extends AnyFunSuite {
   }
   test("e2e", SlowTest) {
     val accuracies = datasets.toList
-      .map {
-        case (dsName, dsFile) =>
-          val (target, features) = parseDataset(dsFile)
-          val inbalance = target.toVec.toSeq
-            .groupBy(identity)
-            .toSeq
-            .map(v => (v._1, v._2.size.toDouble / target.count))
-            .sortBy(_._2)
-            .reverse
-            .head
-            ._2
-          (dsName, inbalance, target.count, features.numCols, target, dsFile)
+      .map { case (dsName, dsFile) =>
+        val (target, features) = parseDataset(dsFile)
+        val inbalance = target.toVec.toSeq
+          .groupBy(identity)
+          .toSeq
+          .map(v => (v._1, v._2.size.toDouble / target.count))
+          .sortBy(_._2)
+          .reverse
+          .head
+          ._2
+        (dsName, inbalance, target.count, features.numCols, target, dsFile)
       }
-      .filter {
-        case (_, inbalance, length, numFeatures, target, _) =>
-          inbalance < 0.6 && length > 300 && length < 20000 && numFeatures > 5 && numFeatures < 1000 && target.toVec.toSeq
-            .forall(_ >= 0d)
+      .filter { case (_, inbalance, length, numFeatures, target, _) =>
+        inbalance < 0.6 && length > 300 && length < 20000 && numFeatures > 5 && numFeatures < 1000 && target.toVec.toSeq
+          .forall(_ >= 0d)
       }
       // .take(10)
-      .map {
-        case (dsName, _, _, _, _, dsFile) =>
-          val (target, features) = parseDataset(dsFile)
-          val t1 = System.nanoTime()
-          val lampAccuracy1 =
-            trainAndPredictLamp(target, features, cuda = false)
-          val t2 = System.nanoTime
-          val lampAccuracy2 =
-            trainAndPredictLamp(target, features, cuda = false)
-          val t3 = System.nanoTime
+      .map { case (dsName, _, _, _, _, dsFile) =>
+        val (target, features) = parseDataset(dsFile)
+        val t1 = System.nanoTime()
+        val lampAccuracy1 =
+          trainAndPredictLamp(target, features, cuda = false)
+        val t2 = System.nanoTime
+        val lampAccuracy2 =
+          trainAndPredictLamp(target, features, cuda = false)
+        val t3 = System.nanoTime
 
-          val (torchAccuracy1, torchTime1) =
-            trainAndPredictPytorch(target, features)
+        val (torchAccuracy1, torchTime1) =
+          trainAndPredictPytorch(target, features)
 
-          val inbalance = target.toVec.toSeq
-            .groupBy(identity)
-            .toSeq
-            .map(v => (v._1, v._2.size.toDouble / target.count))
-            .sortBy(_._2)
-            .reverse
-            .head
-            ._2
+        val inbalance = target.toVec.toSeq
+          .groupBy(identity)
+          .toSeq
+          .map(v => (v._1, v._2.size.toDouble / target.count))
+          .sortBy(_._2)
+          .reverse
+          .head
+          ._2
 
-          val r = (
-            dsName,
-            Series(
-              "majority-class-frequency" -> inbalance,
-              "lamp-accuracy" -> lampAccuracy1,
-              "lamp-accuracy" -> lampAccuracy2,
-              "torch-accuracy" -> torchAccuracy1,
-              "lamp-time" -> (t2 - t1) / 1e9,
-              "lamp-time" -> (t3 - t2) / 1e9,
-              "torch-time" -> torchTime1
-            )
+        val r = (
+          dsName,
+          Series(
+            "majority-class-frequency" -> inbalance,
+            "lamp-accuracy" -> lampAccuracy1,
+            "lamp-accuracy" -> lampAccuracy2,
+            "torch-accuracy" -> torchAccuracy1,
+            "lamp-time" -> (t2 - t1) / 1e9,
+            "lamp-time" -> (t3 - t2) / 1e9,
+            "torch-time" -> torchTime1
           )
-          // ???
-          r
+        )
+        // ???
+        r
       }
       .toFrame
       .T

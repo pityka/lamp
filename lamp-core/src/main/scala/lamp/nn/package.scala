@@ -27,7 +27,6 @@ import lamp.autograd.{Constant, param}
   *   - [[nn.Linear]] implements `W X + b` with parameters `W` and `b` and input `X`
   *   - [[nn.BatchNorm]], [[nn.LayerNorm]] implement batch and layer normalization
   *   - [[nn.MLP]] is a factory of a multilayer perceptron architecture
-  *
   */
 package object nn {
   type Module = GenericModule[Variable, Variable]
@@ -52,8 +51,8 @@ package object nn {
   }
   implicit class ToUnlift[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
       mod: M with StatefulModule2[A, B, C, D]
-  )(
-      implicit is: InitState[M, C]
+  )(implicit
+      is: InitState[M, C]
   ) {
     def unlift = UnliftedModule(mod)(is)
   }

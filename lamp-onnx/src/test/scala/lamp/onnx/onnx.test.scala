@@ -12,8 +12,8 @@ import java.nio._
 
 class OnnxSuite extends AnyFunSuite {
 
-  def runModel(file: File, input: Map[String, STen], `type`: Byte)(
-      implicit scope: Scope
+  def runModel(file: File, input: Map[String, STen], `type`: Byte)(implicit
+      scope: Scope
   ) = {
     val env = OrtEnvironment.getEnvironment();
     val session =

@@ -18,10 +18,10 @@ case class TabularEmbedding(
       categoricals.size == categoricalEmbeddings.size,
       s"${categoricals.size} vs ${categoricalEmbeddings.size}"
     )
-    val embeddedCategoricals = categoricals.zip(categoricalEmbeddings).map {
-      case (v, embedding) =>
+    val embeddedCategoricals =
+      categoricals.zip(categoricalEmbeddings).map { case (v, embedding) =>
         embedding.forward(v).view(List(v.shape.head.toInt, -1))
-    }
+      }
     Variable.cat(embeddedCategoricals :+ numericals, dim = 1)
   }
 

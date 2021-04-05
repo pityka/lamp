@@ -3,7 +3,12 @@ package lamp.nn
 import lamp.autograd.Variable
 import lamp.Sc
 
-case class Seq2Seq[S0, S1, M1 <: StatefulModule2[Variable, Variable, S0, S1], M2 <: StatefulModule[
+case class Seq2Seq[S0, S1, M1 <: StatefulModule2[
+  Variable,
+  Variable,
+  S0,
+  S1
+], M2 <: StatefulModule[
   Variable,
   Variable,
   S1
@@ -37,7 +42,12 @@ object Seq2Seq {
       m => m.copy(m.encoder.asEval, m.decoder.asEval),
       m => m.copy(m.encoder.asTraining, m.decoder.asTraining)
     )
-  implicit def load[S0, S1, M1 <: StatefulModule2[Variable, Variable, S0, S1]: Load, M2 <: StatefulModule[
+  implicit def load[S0, S1, M1 <: StatefulModule2[
+    Variable,
+    Variable,
+    S0,
+    S1
+  ]: Load, M2 <: StatefulModule[
     Variable,
     Variable,
     S1

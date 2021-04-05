@@ -1,5 +1,4 @@
-/**
-  * This code is copied with modifications from https://github.com/denisrosset/meta
+/** This code is copied with modifications from https://github.com/denisrosset/meta
   * The MIT License (MIT)
   * =====================
   *
@@ -33,8 +32,8 @@ private[lamp] final class Buffer[@specialized V](
     var length: Int,
     var full: List[Array[V]],
     maxArrayLength: Int = Int.MaxValue - 5
-)(
-    implicit val ctV: ClassTag[V]
+)(implicit
+    val ctV: ClassTag[V]
 ) {
 
   final def toArrays: List[Array[V]] = {

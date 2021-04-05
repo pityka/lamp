@@ -29,8 +29,10 @@ object OgbArxivDataset {
     val nodeYear = folder1 / "arxiv" / "raw" / "node_year.csv.gz"
     val nodeFeat = folder1 / "arxiv" / "raw" / "node-feat.csv.gz"
     val nodeLabel = folder1 / "arxiv" / "raw" / "node-label.csv.gz"
-    if (os.exists(edge) && os.exists(nodeYear) && os.exists(nodeFeat) && os
-          .exists(nodeLabel)) {
+    if (
+      os.exists(edge) && os.exists(nodeYear) && os.exists(nodeFeat) && os
+        .exists(nodeLabel)
+    ) {
       scribe.info("Found csv.gz files.")
       (edge, nodeYear, nodeFeat, nodeLabel)
     } else {

@@ -69,10 +69,13 @@ object SWA {
           val ec1 = ExecutionContext.fromExecutor(ex1)
           val ex2 = Executors.newSingleThreadExecutor()
           val ec2 = ExecutionContext.fromExecutor(ex2)
-          (Option((ec1, ec2)), IO.delay {
-            ex1.shutdown()
-            ex2.shutdown()
-          })
+          (
+            Option((ec1, ec2)),
+            IO.delay {
+              ex1.shutdown()
+              ex2.shutdown()
+            }
+          )
         } else (None, IO.unit)
       })
 
@@ -145,22 +148,26 @@ object SWA {
               prefetchEC = maybeExecutionContext
             )
 
-            _ <- if (checkpointFile.isDefined)
-              writeCheckpoint(checkpointFile.get, model.module)
-            else IO.unit
-            maybeValidationLoss <- if (epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined)
-              IOLoops
-                .validationOneEpoch(
-                  model = modelWithOptimizer.model,
-                  validationBatches = validationBatchesOverEpoch.get(),
-                  validationCallback = validationCallback,
-                  logger = logger,
-                  epochCount = epoch,
-                  minimumCheckpointFile = minimumCheckpointFile,
-                  minimumValidationLossSoFar = minValidationLoss
-                )
-                .map(Some(_))
-            else IO.pure(None)
+            _ <-
+              if (checkpointFile.isDefined)
+                writeCheckpoint(checkpointFile.get, model.module)
+              else IO.unit
+            maybeValidationLoss <-
+              if (
+                epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
+              )
+                IOLoops
+                  .validationOneEpoch(
+                    model = modelWithOptimizer.model,
+                    validationBatches = validationBatchesOverEpoch.get(),
+                    validationCallback = validationCallback,
+                    logger = logger,
+                    epochCount = epoch,
+                    minimumCheckpointFile = minimumCheckpointFile,
+                    minimumValidationLossSoFar = minValidationLoss
+                  )
+                  .map(Some(_))
+              else IO.pure(None)
 
             _ <- IO {
               maybeValidationLoss.foreach(validationLoss =>
@@ -168,17 +175,21 @@ object SWA {
               )
             }
 
-            nextMinValidationLoss = if (maybeValidationLoss.isEmpty)
-              minValidationLoss
-            else if (minValidationLoss.isEmpty) maybeValidationLoss
-            else Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
+            nextMinValidationLoss =
+              if (maybeValidationLoss.isEmpty)
+                minValidationLoss
+              else if (minValidationLoss.isEmpty) maybeValidationLoss
+              else
+                Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
 
-            nextAveragedModel = if (accumulate) Some(updateAccumulator)
-            else averagedModels
+            nextAveragedModel =
+              if (accumulate) Some(updateAccumulator)
+              else averagedModels
 
-            nextNumberOfAveragedModels = if (accumulate)
-              numberOfAveragedModels + 1
-            else numberOfAveragedModels
+            nextNumberOfAveragedModels =
+              if (accumulate)
+                numberOfAveragedModels + 1
+              else numberOfAveragedModels
 
             next <- loop(
               epoch = epoch + 1,

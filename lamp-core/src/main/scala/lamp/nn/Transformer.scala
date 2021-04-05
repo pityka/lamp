@@ -37,18 +37,16 @@ object TransformerEncoder {
       m => m.copy(blocks = m.blocks.map(_.asTraining))
     )
   implicit val load = Load.make[TransformerEncoder] { m => tensors =>
-    m.blocks.foldLeft((List[Unit](), tensors)) {
-      case ((acc, params), member) =>
-        val numParam = member.state.size
-        val loaded = member.load(params.take(numParam))
-        (acc.:+(loaded), params.drop(numParam))
+    m.blocks.foldLeft((List[Unit](), tensors)) { case ((acc, params), member) =>
+      val numParam = member.state.size
+      val loaded = member.load(params.take(numParam))
+      (acc.:+(loaded), params.drop(numParam))
 
     }
 
   }
 
-  /**
-    * Factory for the encoder module of transformer
+  /** Factory for the encoder module of transformer
     * Does *not* include embedding and positional encoding
     *
     * Input is `(data, tokens)` where
@@ -202,8 +200,7 @@ object TransformerEncoderBlock {
     }
 }
 
-/**
-  * Multi-head scaled dot product attention module
+/** Multi-head scaled dot product attention module
   *
   * Input: (query,key,value,tokens) where
   *  query: batch x num queries x query dim
@@ -212,7 +209,6 @@ object TransformerEncoderBlock {
   *  tokens: batch x num queries, long type
   *
   * Tokens is used to carry over padding information and ignore the padding
-  *
   */
 case class MultiheadAttention(
     wQ: Constant,
@@ -298,8 +294,7 @@ object MultiheadAttention {
       }
     )
 
-  /**
-    * @param tokens batch x seq , type long
+  /** @param tokens batch x seq , type long
     * @param maskable batch x seq x ???
     * @param pad
     * @param fill
@@ -322,8 +317,7 @@ object MultiheadAttention {
 
   }
 
-  /**
-    * @param input batch x seq x ???
+  /** @param input batch x seq x ???
     * @param mask scalar long
     * @param tokens batch x seq , long
     * @return batch x seq x ???
@@ -558,8 +552,7 @@ object PositionalEmbedding {
     STen.fromMat(m, device, precision)
   }
 
-  /**
-    * p(i,j) = min(maxDist,abs(i-j))
+  /** p(i,j) = min(maxDist,abs(i-j))
     * returns the first `dimension` left singular vectors of the row normalized p
     */
   def simpleSequence(
@@ -568,8 +561,8 @@ object PositionalEmbedding {
       maxDistance: Int,
       device: Device,
       precision: FloatingPointPrecision
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = {
     val m = org.saddle.mat.zeros(sequenceLength, sequenceLength)
     var i = 0
@@ -594,8 +587,7 @@ object PositionalEmbedding {
   }
 }
 
-/**
-  * Gradients are not computed for `positionalEmbedding`
+/** Gradients are not computed for `positionalEmbedding`
   */
 case class TransformerEmbedding(
     embedding: lamp.nn.Embedding,
@@ -603,7 +595,9 @@ case class TransformerEmbedding(
     positionalEmbedding: Constant
 ) extends GenericModule[Variable, (Variable, STen)] {
   def state =
-    List(positionalEmbedding -> TransformerEmbedding.Embedding) ++ embedding.state
+    List(
+      positionalEmbedding -> TransformerEmbedding.Embedding
+    ) ++ embedding.state
   def forward[S: Sc](x: Variable): (Variable, STen) = {
     val embedded = embedding.forward(x)
     val viewed = positionalEmbedding.view(1L +: positionalEmbedding.shape)

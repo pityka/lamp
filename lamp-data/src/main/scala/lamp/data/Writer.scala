@@ -214,14 +214,13 @@ object Writer {
       tensors: Seq[Tensor],
       channel: WritableByteChannel
   ): Either[String, Seq[Unit]] =
-    Reader.sequence(tensors.map {
-      case t =>
-        val st = t.scalarType() match {
-          case 4 => ScalarTagLong
-          case 6 => ScalarTagFloat
-          case 7 => ScalarTagDouble
-        }
-        writeTensorIntoChannel(t, channel)(st)
+    Reader.sequence(tensors.map { case t =>
+      val st = t.scalarType() match {
+        case 4 => ScalarTagLong
+        case 6 => ScalarTagFloat
+        case 7 => ScalarTagDouble
+      }
+      writeTensorIntoChannel(t, channel)(st)
     })
 
   def writeCheckpoint[A, B](file: File, model: GenericModule[A, B]) = {

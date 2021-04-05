@@ -119,8 +119,8 @@ object Seq2SeqWithAttention {
         Variable,
         S1
       ]
-  ](
-      implicit is: InitState[M1, S0]
+  ](implicit
+      is: InitState[M1, S0]
   ): InitState[Seq2SeqWithAttention[S0, S1, M0, M1, M2], S0] =
     InitState.make[Seq2SeqWithAttention[S0, S1, M0, M1, M2], S0] { m =>
       m.encoder.initState

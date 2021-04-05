@@ -208,7 +208,11 @@ class TextGenerationSuite extends AnyFunSuite {
             tOpt = tensorOptions
           ),
           Fun(implicit scope => _.relu).lift,
-          SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
+          SeqLinear(
+            in = hiddenSize,
+            out = vocabularSize,
+            tOpt = tensorOptions
+          ).lift,
           Fun(implicit scope => _.logSoftMax(2)).lift
         )
 
@@ -263,7 +267,11 @@ class TextGenerationSuite extends AnyFunSuite {
             tOpt = tensorOptions
           ),
           Fun(implicit scope => _.relu).lift,
-          SeqLinear(in = hiddenSize, out = vocabularSize, tOpt = tensorOptions).lift,
+          SeqLinear(
+            in = hiddenSize,
+            out = vocabularSize,
+            tOpt = tensorOptions
+          ).lift,
           Fun(implicit scope => _.logSoftMax(2)).lift
         )
 

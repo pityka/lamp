@@ -55,16 +55,14 @@ case class Sequential[A, M <: GenericModule[A, A]](
     members: M with GenericModule[A, A]*
 ) extends GenericModule[A, A] {
   override def state =
-    members.zipWithIndex.flatMap {
-      case (member, idx) =>
-        member.state.map {
-          case (param, ptag) => (param, Sequential.Tag(ptag, idx))
-        }
+    members.zipWithIndex.flatMap { case (member, idx) =>
+      member.state.map { case (param, ptag) =>
+        (param, Sequential.Tag(ptag, idx))
+      }
     }
   def forward[S: Sc](x: A) =
-    members.foldLeft(x) {
-      case (x, m) =>
-        m.forward(x)
+    members.foldLeft(x) { case (x, m) =>
+      m.forward(x)
     }
 
 }
@@ -142,7 +140,8 @@ case class UnliftedModule[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
 }
 object UnliftedModule {
   implicit def trainingMode[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
-      implicit t: TrainingMode[M],
+      implicit
+      t: TrainingMode[M],
       is: InitState[M, C]
   ) =
     TrainingMode.make[UnliftedModule[A, B, C, D, M]](
@@ -153,8 +152,8 @@ object UnliftedModule {
     Load.make[UnliftedModule[A, B, C, D, M]](m =>
       tensors => m.statefulModule.load(tensors)
     )
-  implicit def initState[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
-      implicit is: InitState[M, C]
+  implicit def initState[A, B, C, D, M <: StatefulModule2[A, B, C, D]](implicit
+      is: InitState[M, C]
   ) =
     InitState.make[UnliftedModule[A, B, C, D, M], Unit](m =>
       is.initState(m.statefulModule)
@@ -197,7 +196,7 @@ object GenericModule {
   *    bias.map(_ + v).getOrElse(v)
   *
   *  }
-  *}
+  * }
   * }}}
   *
   * Some other attributes of modules are attached by type classes e.g. with the [[nn.TrainingMode]], [[nn.Load]]
@@ -212,7 +211,6 @@ trait GenericModule[A, B] {
   /** The implementation of the function.
     *
     * In addition of `x` it can also use all the `state to compute its value.
-    *
     */
   def forward[S: Sc](x: A): B
 
@@ -229,25 +227,24 @@ trait GenericModule[A, B] {
   final def parameters =
     state.filter(v => v._1.needsGrad)
 
-  /** Computes the gradient of loss with respect to the parameters.  */
+  /** Computes the gradient of loss with respect to the parameters. */
   final def gradients(
       loss: Variable,
       zeroGrad: Boolean = true
   ): Seq[Option[STen]] = {
     if (zeroGrad) {
-      parameters.foreach {
-        case (param, _) =>
-          param.zeroGrad()
+      parameters.foreach { case (param, _) =>
+        param.zeroGrad()
       }
     }
     loss.backprop()
-    val g = parameters.map {
-      case (param, _) => param.partialDerivative
+    val g = parameters.map { case (param, _) =>
+      param.partialDerivative
     }
     g
   }
 
-  /** Returns the total number of optimizable parameters.  */
+  /** Returns the total number of optimizable parameters. */
   final def learnableParameters =
     parameters.filter(_._1.needsGrad).map(_._1.value.numel).sum
 }
@@ -312,8 +309,8 @@ case class MappedState[A, B, C, D, M <: StatefulModule[A, B, C]](
   }
 }
 object MappedState {
-  implicit def trainingMode[A, B, C, D, M <: StatefulModule[A, B, C]](
-      implicit t: TrainingMode[M]
+  implicit def trainingMode[A, B, C, D, M <: StatefulModule[A, B, C]](implicit
+      t: TrainingMode[M]
   ) =
     TrainingMode.make[MappedState[A, B, C, D, M]](
       m => MappedState[A, B, C, D, M](m.statefulModule.asEval, m.map),
@@ -323,8 +320,8 @@ object MappedState {
     Load.make[MappedState[A, B, C, D, M]](m =>
       tensors => m.statefulModule.load(tensors)
     )
-  implicit def initState[A, B, C, D, M <: StatefulModule[A, B, C]](
-      implicit is: InitState[M, C]
+  implicit def initState[A, B, C, D, M <: StatefulModule[A, B, C]](implicit
+      is: InitState[M, C]
   ) =
     InitState.make[MappedState[A, B, C, D, M], C](m =>
       is.initState(m.statefulModule)

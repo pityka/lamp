@@ -18,8 +18,8 @@ package object knn {
       jaccardDistance(a, b)
   }
 
-  def squaredEuclideanDistance(v1: STen, v2: STen)(
-      implicit scope: Scope
+  def squaredEuclideanDistance(v1: STen, v2: STen)(implicit
+      scope: Scope
   ): STen = {
     Scope { implicit scope =>
       val outer = v1.mm(v2.t)
@@ -29,8 +29,8 @@ package object knn {
     }
   }
 
-  def jaccardDistance(v1: STen, v2: STen)(
-      implicit scope: Scope
+  def jaccardDistance(v1: STen, v2: STen)(implicit
+      scope: Scope
   ): STen = {
     Scope { implicit scope =>
       val outer = v1.mm(v2.t)

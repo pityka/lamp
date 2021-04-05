@@ -250,16 +250,22 @@ trait DefaultOpSet1 extends OpSet {
 
       case op: ConstAdd =>
         Ops(out, "Add")(nm).appendInput(
-          Ops.tensorFromDoubleScalar(op.b, Scope.leak { implicit scope =>
-            op.a.options.scalarTypeByte
-          })
+          Ops.tensorFromDoubleScalar(
+            op.b,
+            Scope.leak { implicit scope =>
+              op.a.options.scalarTypeByte
+            }
+          )
         ) :: Nil
 
       case op: ConstMult =>
         Ops(out, "Mul")(nm).appendInput(
-          Ops.tensorFromDoubleScalar(op.b, Scope.leak { implicit scope =>
-            op.a.options.scalarTypeByte
-          })
+          Ops.tensorFromDoubleScalar(
+            op.b,
+            Scope.leak { implicit scope =>
+              op.a.options.scalarTypeByte
+            }
+          )
         ) :: Nil
 
       case op: Sum =>
@@ -286,12 +292,17 @@ trait DefaultOpSet1 extends OpSet {
 
       case op: PowConst =>
         Ops(out, "Pow")(nm).appendInput(
-          Ops.tensorFromDoubleScalar(op.exponent, Scope.leak { implicit scope =>
-            op.a.options.scalarTypeByte
-          })
+          Ops.tensorFromDoubleScalar(
+            op.exponent,
+            Scope.leak { implicit scope =>
+              op.a.options.scalarTypeByte
+            }
+          )
         ) :: Nil
       case op: LogSoftMax =>
-        Ops(out, "LogSoftmax", attributes = List(Ops.attr("axis", op.dim)))(nm) :: Nil
+        Ops(out, "LogSoftmax", attributes = List(Ops.attr("axis", op.dim)))(
+          nm
+        ) :: Nil
       case op: Mean =>
         val axes =
           (if (op.dim.nonEmpty)

@@ -43,23 +43,23 @@ object GraphBatchStream {
             )
           ) {
             case (
-                (
-                  offset,
-                  graphIndex,
-                  nodeAccumalator,
-                  edgeAccumulatorI,
-                  edgeAccumulatorJ,
-                  graphIndicesAccumulator
-                ),
-                (nextNodes, nextEdges)
+                  (
+                    offset,
+                    graphIndex,
+                    nodeAccumalator,
+                    edgeAccumulatorI,
+                    edgeAccumulatorJ,
+                    graphIndicesAccumulator
+                  ),
+                  (nextNodes, nextEdges)
                 ) =>
               val numNodes = nextNodes.sizes.head.toInt
               val edges = nextEdges.toLongMat.rows
                 .map(v => v.raw(0) -> v.raw(1))
               assert(edges.map(_._1).forall(e => e >= 0 && e < numNodes))
               assert(edges.map(_._2).forall(e => e >= 0 && e < numNodes))
-              val mappedEdges = edges.map {
-                case (i, j) => (i + offset, j + offset)
+              val mappedEdges = edges.map { case (i, j) =>
+                (i + offset, j + offset)
               }
               val graphIndices =
                 (0 until numNodes map (_ => graphIndex)).toVector

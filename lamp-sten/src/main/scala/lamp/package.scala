@@ -25,7 +25,6 @@ import aten.Tensor
   *
   * ===How to train models===
   * See the training loops in [[lamp.data.IOLoops]]
-  *
   */
 package object lamp {
   type Sc[_] = Scope

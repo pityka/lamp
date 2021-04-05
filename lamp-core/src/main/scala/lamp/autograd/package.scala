@@ -39,7 +39,6 @@ package lamp
   *   // `y`'s partial derivatie is defined and is computed
   *   // it holds `y`'s partial derivative with respect to `w`, the scalar which we called backprop() on
   *   assert(y.partialDerivative.isDefined)
-
   *
   * }
   * }}}
@@ -47,10 +46,8 @@ package lamp
   * This package may be used to compute the derivative of any function, provided the function can
   * be composed out of the provided methods. A particular use case is gradient based optimization.
   *
-  *
   * @see [[https://arxiv.org/pdf/1811.05031.pdf]] for a review of the algorithm
   * @see [[lamp.autograd.Op]] for how to implement a new operation
-  *
   */
 package object autograd {
 

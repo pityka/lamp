@@ -157,7 +157,6 @@ object Movable {
   *    // `sum` is freed once this block exits
   * }
   * }}}
-  *
   */
 final class Scope private {
 
@@ -234,7 +233,8 @@ final class Scope private {
     } finally {
       closed = true
       var rs = resources.distinct
-      resources = null // allow GC, in case something is holding a reference to `this`
+      resources =
+        null // allow GC, in case something is holding a reference to `this`
       while (rs.nonEmpty) {
         val resource = rs.head
         rs = rs.tail
@@ -265,27 +265,27 @@ final class Scope private {
           )
         (Option(last), movables, releasable, Option.empty[Throwable])
       }
-      .recover {
-        case t: Throwable => (Option.empty[A], Nil, resources, Some(t))
+      .recover { case t: Throwable =>
+        (Option.empty[A], Nil, resources, Some(t))
       }
-      .flatMap {
-        case (last, movables, releasable, error) =>
-          closed = true
-          var rs = releasable.distinct
-          this.resources = null // allow GC, in case something is holding a reference to `this`
-          var toThrow: Throwable = null
-          while (rs.nonEmpty) {
-            val resource = rs.head
-            rs = rs.tail
-            try resource.fold(_.release(), _.release())
-            catch {
-              case t: Throwable =>
-                toThrow = t
-            }
+      .flatMap { case (last, movables, releasable, error) =>
+        closed = true
+        var rs = releasable.distinct
+        this.resources =
+          null // allow GC, in case something is holding a reference to `this`
+        var toThrow: Throwable = null
+        while (rs.nonEmpty) {
+          val resource = rs.head
+          rs = rs.tail
+          try resource.fold(_.release(), _.release())
+          catch {
+            case t: Throwable =>
+              toThrow = t
           }
-          if (toThrow != null) IO.raiseError(toThrow)
-          else if (error.isDefined) IO.raiseError(error.get)
-          else IO.pure((last.get, movables))
+        }
+        if (toThrow != null) IO.raiseError(toThrow)
+        else if (error.isDefined) IO.raiseError(error.get)
+        else IO.pure((last.get, movables))
       }
 
   }
@@ -302,7 +302,8 @@ final class Scope private {
     } finally {
       closed = true
       var rs = resources.distinct
-      resources = null // allow GC, in case something is holding a reference to `this`
+      resources =
+        null // allow GC, in case something is holding a reference to `this`
       while (rs.nonEmpty) {
         val resource = rs.head
         rs = rs.tail
@@ -340,12 +341,11 @@ object Scope {
   def bracket[A: Movable](
       use: Scope => IO[A]
   )(implicit parent: Scope): IO[A] =
-    Scope.free.manageMovableIO(use).flatMap {
-      case (last, movables) =>
-        IO {
-          movables.foreach(a => a.fold(parent.register, parent.register))
-          last
-        }
+    Scope.free.manageMovableIO(use).flatMap { case (last, movables) =>
+      IO {
+        movables.foreach(a => a.fold(parent.register, parent.register))
+        last
+      }
     }
 
   /** Create new Scope bound to a cats-effect IO.

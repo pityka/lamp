@@ -62,20 +62,19 @@ case class LSTM(
     val outputs = mutable.ArrayBuffer[Variable]()
     val init = state.getOrElse(initHidden(batchSize))
     val (lastHidden, lastMemory) =
-      (0 until timesteps.toInt).foldLeft(init) {
-        case ((h, c), t) =>
-          val xt = x.select(0, t)
-          val it = (xt.mm(weightXi) + h.mm(weightHi) + biasI).sigmoid
-          val ft = (xt.mm(weightXf) + h.mm(weightHf) + biasF).sigmoid
-          val ot = (xt.mm(weightXo) + h.mm(weightHo) + biasO).sigmoid
+      (0 until timesteps.toInt).foldLeft(init) { case ((h, c), t) =>
+        val xt = x.select(0, t)
+        val it = (xt.mm(weightXi) + h.mm(weightHi) + biasI).sigmoid
+        val ft = (xt.mm(weightXf) + h.mm(weightHf) + biasF).sigmoid
+        val ot = (xt.mm(weightXo) + h.mm(weightHo) + biasO).sigmoid
 
-          val ccap = (xt.mm(weightXc) + h.mm(weightHc) + biasC).tanh
+        val ccap = (xt.mm(weightXc) + h.mm(weightHc) + biasC).tanh
 
-          val ct = ft * c + it * ccap
-          val ht = ot * ct.tanh
+        val ct = ft * c + it * ccap
+        val ht = ot * ct.tanh
 
-          outputs.append(ht)
-          (ht, ct)
+        outputs.append(ht)
+        (ht, ct)
       }
     (
       Variable.concatenateAddNewDim(outputs.toSeq),

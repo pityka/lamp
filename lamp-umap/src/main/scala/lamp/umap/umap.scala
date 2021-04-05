@@ -87,25 +87,24 @@ object Umap {
           val r = rho.raw(i)
           val s = sigma.raw(i)
           val dists = knnDistances.row(i)
-          knn.row(i).toSeq.zipWithIndex.flatMap {
-            case (j, jidx) =>
-              if (i == j) Nil
-              else {
-                val d = dists.raw(jidx)
-                val wij = math.exp((-1 * math.max(0, d - r)) / s)
-                val wji = {
-                  val r = rho.raw(j)
-                  val s = sigma.raw(j)
-                  val l = knn.row(j).findOne(_ == i)
-                  if (l == -1) 0d
-                  else {
-                    val d = knnDistances.raw(j, l)
-                    math.exp((-1 * math.max(0, d - r)) / s)
-                  }
+          knn.row(i).toSeq.zipWithIndex.flatMap { case (j, jidx) =>
+            if (i == j) Nil
+            else {
+              val d = dists.raw(jidx)
+              val wij = math.exp((-1 * math.max(0, d - r)) / s)
+              val wji = {
+                val r = rho.raw(j)
+                val s = sigma.raw(j)
+                val l = knn.row(j).findOne(_ == i)
+                if (l == -1) 0d
+                else {
+                  val d = knnDistances.raw(j, l)
+                  math.exp((-1 * math.max(0, d - r)) / s)
                 }
-                val b = wij + wji - wij * wji
-                List(Vec(i.toDouble, j.toDouble, b))
               }
+              val b = wij + wji - wij * wji
+              List(Vec(i.toDouble, j.toDouble, b))
+            }
           }
         }
         .toIndexedSeq: _*
@@ -151,7 +150,11 @@ object Umap {
         if (minDist == 0d) {
           (locNorm1 * b).sum * (-1)
         } else {
-          (new CappedShiftedNegativeExponential(scope, locNorm1, minDist).value.log * b).sum
+          (new CappedShiftedNegativeExponential(
+            scope,
+            locNorm1,
+            minDist
+          ).value.log * b).sum
         }
 
       val locNorm2 =
@@ -160,7 +163,11 @@ object Umap {
         if (minDist == 0d) (((locNorm2 * (-1)).exp * (-1))).log1p.sum
         else {
           val p =
-            new CappedShiftedNegativeExponential(scope, locNorm2, minDist).value * (-1) + 1e-6
+            new CappedShiftedNegativeExponential(
+              scope,
+              locNorm2,
+              minDist
+            ).value * (-1) + 1e-6
           p.log1p.sum
         }
 
@@ -203,8 +210,8 @@ object Umap {
         clip = Some(1d)
       )(List(locations.value -> NoTag))
 
-      def sampleRepulsivePairsT(n: Int, positiveSample: Option[STen])(
-          implicit scope: Scope
+      def sampleRepulsivePairsT(n: Int, positiveSample: Option[STen])(implicit
+          scope: Scope
       ) = {
         Scope { implicit scope =>
           val ii = positiveSample
@@ -280,8 +287,7 @@ object Umap {
 
   }
 
-  /**
-    * Dimension reduction similar to UMAP
+  /** Dimension reduction similar to UMAP
     * For reference see [[https://arxiv.org/abs/1802.03426]]
     * This method does not follow the above paper exactly.
     *
@@ -355,14 +361,13 @@ object Umap {
       knnMinibatchSize
     )
 
-    val knnDistances = knn.mapRows {
-      case (row, rowIdx) =>
-        val row1 = data.row(rowIdx)
-        row.map { idx2 =>
-          val row2 = data.row(idx2)
-          val d = row1 - row2
-          math.sqrt(d vv d)
-        }
+    val knnDistances = knn.mapRows { case (row, rowIdx) =>
+      val row1 = data.row(rowIdx)
+      row.map { idx2 =>
+        val row2 = data.row(idx2)
+        val d = row1 - row2
+        math.sqrt(d vv d)
+      }
     }
 
     umapCustomKnn(

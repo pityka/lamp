@@ -37,7 +37,10 @@ class NNSuite extends AnyFunSuite {
       moduleF: Scope => M with Module,
       expectedValue: Double
   ) =
-    test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+    test(
+      id + ": gradient is correct",
+      (if (cuda) List(CudaTest) else Nil): _*
+    ) {
 
       Scope.root { implicit scope =>
         val d = const(STen.fromMat(m, cuda))
@@ -46,18 +49,16 @@ class NNSuite extends AnyFunSuite {
         {
           val module1 = moduleF(scope)
           val state = module1.state
-          val modifiedState = state.map {
-            case (v, _) =>
-              v.value * (-1)
+          val modifiedState = state.map { case (v, _) =>
+            v.value * (-1)
           }
           module1.load(modifiedState)
-          (module1.state zip modifiedState).foreach {
-            case ((st1, _), (st2)) =>
-              assert(
-                NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
-                  .tensorToNDArray(st2.value)
-                  .toVec
-              )
+          (module1.state zip modifiedState).foreach { case ((st1, _), (st2)) =>
+            assert(
+              NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
+                .tensorToNDArray(st2.value)
+                .toVec
+            )
           }
         }
 
@@ -65,50 +66,52 @@ class NNSuite extends AnyFunSuite {
         val sum = output.sum
         val value = sum.toMat.raw(0)
         val gradAuto = module.gradients(sum).map(_.get).map(_.toMat)
-        val gradNum = module.parameters.map {
-          case (paramT, _) =>
-            val oldparam = paramT.value.cloneTensor
-            val param = paramT.toMat
-            def f(p: Mat[Double]) = {
-              val p2 = STen.fromMat(p, cuda)
-              paramT.value.zero_()
-              ATen.add_out(
-                paramT.value.value,
-                paramT.value.value,
-                ATen._unsafe_view(p2.value, paramT.sizes.toArray),
-                1d
-              )
-              module.forward(d).sum.value.toMat.raw(0)
-            }
-            val eps = 1e-6
-            val r = mat.zeros(param.numRows, param.numCols).mapRows {
-              case (row, i) =>
-                (0 until row.length).map { j =>
-                  val epsM = mat.zeros(param.numRows, param.numCols)
-                  epsM(i, j) = eps
-
-                  (f(param + epsM) - f(param - epsM)) / (2 * eps)
-                }.toVec
-            }
+        val gradNum = module.parameters.map { case (paramT, _) =>
+          val oldparam = paramT.value.cloneTensor
+          val param = paramT.toMat
+          def f(p: Mat[Double]) = {
+            val p2 = STen.fromMat(p, cuda)
             paramT.value.zero_()
             ATen.add_out(
               paramT.value.value,
               paramT.value.value,
-              oldparam.value,
+              ATen._unsafe_view(p2.value, paramT.sizes.toArray),
               1d
             )
-            r
+            module.forward(d).sum.value.toMat.raw(0)
+          }
+          val eps = 1e-6
+          val r =
+            mat.zeros(param.numRows, param.numCols).mapRows { case (row, i) =>
+              (0 until row.length).map { j =>
+                val epsM = mat.zeros(param.numRows, param.numCols)
+                epsM(i, j) = eps
+
+                (f(param + epsM) - f(param - epsM)) / (2 * eps)
+              }.toVec
+            }
+          paramT.value.zero_()
+          ATen.add_out(
+            paramT.value.value,
+            paramT.value.value,
+            oldparam.value,
+            1d
+          )
+          r
         }
         assert(gradAuto.size == gradNum.size)
-        gradAuto.zip(gradNum).foreach {
-          case (a, b) =>
-            assert(a.roundTo(4) == b.roundTo(4))
+        gradAuto.zip(gradNum).foreach { case (a, b) =>
+          assert(a.roundTo(4) == b.roundTo(4))
         }
         assert(math.abs(value - expectedValue) < 1e-6)
         ()
       }
     }
-  def testGradientAndValueND[T, M <: StatefulModule[Variable, Variable, T]: Load](
+  def testGradientAndValueND[T, M <: StatefulModule[
+    Variable,
+    Variable,
+    T
+  ]: Load](
       id: String,
       st: T,
       cuda: Boolean = false
@@ -121,7 +124,10 @@ class NNSuite extends AnyFunSuite {
       ],
       expectedValue: Double
   ) =
-    test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+    test(
+      id + ": gradient is correct",
+      (if (cuda) List(CudaTest) else Nil): _*
+    ) {
       Scope.root { implicit scope =>
         val d = const(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
         val module = moduleF(scope)
@@ -129,18 +135,16 @@ class NNSuite extends AnyFunSuite {
         {
           val module1 = moduleF(scope)
           val state = module1.state
-          val modifiedState = state.map {
-            case (v, _) =>
-              v.value * (-1)
+          val modifiedState = state.map { case (v, _) =>
+            v.value * (-1)
           }
           module1.load(modifiedState)
-          (module1.state zip modifiedState).foreach {
-            case ((st1, _), (st2)) =>
-              assert(
-                NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
-                  .tensorToNDArray(st2.value)
-                  .toVec
-              )
+          (module1.state zip modifiedState).foreach { case ((st1, _), (st2)) =>
+            assert(
+              NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
+                .tensorToNDArray(st2.value)
+                .toVec
+            )
           }
         }
 
@@ -149,44 +153,42 @@ class NNSuite extends AnyFunSuite {
         val value = NDArray.tensorToNDArray(sum.value.value).data(0)
         val gradAuto =
           module.gradients(sum).map(_.get.value).map(NDArray.tensorToNDArray)
-        val gradNum = module.parameters.map {
-          case (paramT, _) =>
-            val oldparam = paramT.value.cloneTensor
-            val param = NDArray.tensorToNDArray(paramT.value.value)
-            def f(p: NDArray[Double]) = {
-              val p2 = NDArray.tensorFromNDArray(p, cuda)
-              paramT.value.zero_()
-              ATen.add_out(
-                paramT.value.value,
-                paramT.value.value,
-                p2,
-                1d
-              )
-              module.forward((d, st))._1.sum.value.toMat.raw(0)
-            }
-            val eps = 1e-6
-            val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
-              case (_, idx) =>
-                val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
-                epsM.set(idx, eps)
-                val a = f(param + epsM)
-                val b = f(param - epsM)
-                val r = (a - b) / (2 * eps)
-                r
-            }
+        val gradNum = module.parameters.map { case (paramT, _) =>
+          val oldparam = paramT.value.cloneTensor
+          val param = NDArray.tensorToNDArray(paramT.value.value)
+          def f(p: NDArray[Double]) = {
+            val p2 = NDArray.tensorFromNDArray(p, cuda)
             paramT.value.zero_()
             ATen.add_out(
               paramT.value.value,
               paramT.value.value,
-              oldparam.value,
+              p2,
               1d
             )
-            r
+            module.forward((d, st))._1.sum.value.toMat.raw(0)
+          }
+          val eps = 1e-6
+          val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
+            case (_, idx) =>
+              val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
+              epsM.set(idx, eps)
+              val a = f(param + epsM)
+              val b = f(param - epsM)
+              val r = (a - b) / (2 * eps)
+              r
+          }
+          paramT.value.zero_()
+          ATen.add_out(
+            paramT.value.value,
+            paramT.value.value,
+            oldparam.value,
+            1d
+          )
+          r
         }
         assert(gradAuto.size == gradNum.size)
-        gradAuto.zip(gradNum).foreach {
-          case (a, b) =>
-            assert(a.toVec.roundTo(4) == b.toVec.roundTo(4))
+        gradAuto.zip(gradNum).foreach { case (a, b) =>
+          assert(a.toVec.roundTo(4) == b.toVec.roundTo(4))
         }
         assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
         ()
@@ -202,7 +204,10 @@ class NNSuite extends AnyFunSuite {
       moduleF: Scope => M with GenericModule[A, B],
       expectedValue: Double
   ) =
-    test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+    test(
+      id + ": gradient is correct",
+      (if (cuda) List(CudaTest) else Nil): _*
+    ) {
 
       Scope.root { implicit scope =>
         val d = const(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
@@ -211,18 +216,16 @@ class NNSuite extends AnyFunSuite {
         {
           val module1 = moduleF(scope)
           val state = module1.state
-          val modifiedState = state.map {
-            case (v, _) =>
-              v.value * (-1)
+          val modifiedState = state.map { case (v, _) =>
+            v.value * (-1)
           }
           module1.load(modifiedState)
-          (module1.state zip modifiedState).foreach {
-            case ((st1, _), (st2)) =>
-              assert(
-                NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
-                  .tensorToNDArray(st2.value)
-                  .toVec
-              )
+          (module1.state zip modifiedState).foreach { case ((st1, _), (st2)) =>
+            assert(
+              NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
+                .tensorToNDArray(st2.value)
+                .toVec
+            )
           }
         }
 
@@ -231,50 +234,52 @@ class NNSuite extends AnyFunSuite {
         val value = NDArray.tensorToNDArray(sum.value.value).data(0)
         val gradAuto =
           module.gradients(sum).map(_.get.value).map(NDArray.tensorToNDArray)
-        val gradNum = module.parameters.map {
-          case (paramT, _) =>
-            val oldparam = paramT.value.cloneTensor
-            val param = NDArray.tensorToNDArray(paramT.value.value)
-            def f(p: NDArray[Double]) = {
-              val p2 = NDArray.tensorFromNDArray(p, cuda)
-              paramT.value.zero_()
-              ATen.add_out(
-                paramT.value.value,
-                paramT.value.value,
-                p2,
-                1d
-              )
-              bToVar(module.forward(inputToA(d))).sum.value.toMat.raw(0)
-            }
-            val eps = 1e-8
-            val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
-              case (_, idx) =>
-                val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
-                epsM.set(idx, eps)
-                val a = f(param + epsM)
-                val b = f(param - epsM)
-                val r = (a - b) / (2 * eps)
-                r
-            }
+        val gradNum = module.parameters.map { case (paramT, _) =>
+          val oldparam = paramT.value.cloneTensor
+          val param = NDArray.tensorToNDArray(paramT.value.value)
+          def f(p: NDArray[Double]) = {
+            val p2 = NDArray.tensorFromNDArray(p, cuda)
             paramT.value.zero_()
             ATen.add_out(
               paramT.value.value,
               paramT.value.value,
-              oldparam.value,
+              p2,
               1d
             )
-            r
+            bToVar(module.forward(inputToA(d))).sum.value.toMat.raw(0)
+          }
+          val eps = 1e-8
+          val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
+            case (_, idx) =>
+              val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
+              epsM.set(idx, eps)
+              val a = f(param + epsM)
+              val b = f(param - epsM)
+              val r = (a - b) / (2 * eps)
+              r
+          }
+          paramT.value.zero_()
+          ATen.add_out(
+            paramT.value.value,
+            paramT.value.value,
+            oldparam.value,
+            1d
+          )
+          r
         }
         assert(gradAuto.size == gradNum.size)
-        gradAuto.zip(gradNum).foreach {
-          case (a, b) =>
-            assert(a.toVec.roundTo(10) == b.toVec.roundTo(10))
+        gradAuto.zip(gradNum).foreach { case (a, b) =>
+          assert(a.toVec.roundTo(10) == b.toVec.roundTo(10))
         }
         assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
         ()
       }
     }
-  def testGradientAndValueNDLong[T, M <: StatefulModule[Variable, Variable, T]: Load](
+  def testGradientAndValueNDLong[T, M <: StatefulModule[
+    Variable,
+    Variable,
+    T
+  ]: Load](
       id: String,
       st: T,
       cuda: Boolean = false,
@@ -288,7 +293,10 @@ class NNSuite extends AnyFunSuite {
       ],
       expectedValue: Double
   ) =
-    test(id + ": gradient is correct", (if (cuda) List(CudaTest) else Nil): _*) {
+    test(
+      id + ": gradient is correct",
+      (if (cuda) List(CudaTest) else Nil): _*
+    ) {
       Scope.root { implicit scope =>
         val d = const(STen.owned(NDArray.tensorFromLongNDArray(m, cuda)))
         val module = moduleF(scope)
@@ -296,18 +304,16 @@ class NNSuite extends AnyFunSuite {
         {
           val module1 = moduleF(scope)
           val state = module1.state
-          val modifiedState = state.map {
-            case (v, _) =>
-              v.value * -1d
+          val modifiedState = state.map { case (v, _) =>
+            v.value * -1d
           }
           module1.load(modifiedState)
-          (module1.state zip modifiedState).foreach {
-            case ((st1, _), (st2)) =>
-              assert(
-                NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
-                  .tensorToNDArray(st2.value)
-                  .toVec
-              )
+          (module1.state zip modifiedState).foreach { case ((st1, _), (st2)) =>
+            assert(
+              NDArray.tensorToNDArray(st1.value.value).toVec == NDArray
+                .tensorToNDArray(st2.value)
+                .toVec
+            )
           }
         }
 
@@ -316,42 +322,40 @@ class NNSuite extends AnyFunSuite {
         val value = NDArray.tensorToNDArray(sum.value.value).data(0)
         val gradAuto =
           module.gradients(sum).map(_.get.value).map(NDArray.tensorToNDArray)
-        val gradNum = module.parameters.map {
-          case (paramT, _) =>
-            val oldparam = ATen.clone(paramT.value.value)
-            val param = NDArray.tensorToNDArray(paramT.value.value)
-            def f(p: NDArray[Double]) = {
-              val p2 = NDArray.tensorFromNDArray(p, cuda)
-              ATen.zero_(paramT.value.value)
-              ATen.add_out(
-                paramT.value.value,
-                paramT.value.value,
-                p2,
-                1d
-              )
-              TensorHelpers
-                .toMat(module.forward((d, st))._1.sum.value.value)
-                .raw(0)
-            }
-            val eps = 1e-6
-            val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
-              case (_, idx) =>
-                val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
-                epsM.set(idx, eps)
-                val a = f(param + epsM)
-                val b = f(param - epsM)
-                val r = (a - b) / (2 * eps)
-                r
-            }
+        val gradNum = module.parameters.map { case (paramT, _) =>
+          val oldparam = ATen.clone(paramT.value.value)
+          val param = NDArray.tensorToNDArray(paramT.value.value)
+          def f(p: NDArray[Double]) = {
+            val p2 = NDArray.tensorFromNDArray(p, cuda)
             ATen.zero_(paramT.value.value)
-            ATen.add_out(paramT.value.value, paramT.value.value, oldparam, 1d)
-            r
+            ATen.add_out(
+              paramT.value.value,
+              paramT.value.value,
+              p2,
+              1d
+            )
+            TensorHelpers
+              .toMat(module.forward((d, st))._1.sum.value.value)
+              .raw(0)
+          }
+          val eps = 1e-6
+          val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
+            case (_, idx) =>
+              val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
+              epsM.set(idx, eps)
+              val a = f(param + epsM)
+              val b = f(param - epsM)
+              val r = (a - b) / (2 * eps)
+              r
+          }
+          ATen.zero_(paramT.value.value)
+          ATen.add_out(paramT.value.value, paramT.value.value, oldparam, 1d)
+          r
         }
         assert(gradAuto.size == gradNum.size)
         if (gradientCheck) {
-          gradAuto.zip(gradNum).foreach {
-            case (a, b) =>
-              assert(a.toVec.roundTo(4) == b.toVec.roundTo(4))
+          gradAuto.zip(gradNum).foreach { case (a, b) =>
+            assert(a.toVec.roundTo(4) == b.toVec.roundTo(4))
           }
         }
         assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))

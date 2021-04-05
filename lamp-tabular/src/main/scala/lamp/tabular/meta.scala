@@ -77,13 +77,12 @@ object StringMetadata {
         levelSizes.filter(_._2 >= minimumLevelSize).size - 1
 
       val levels = levelSizes.reverse.zipWithIndex
-        .map {
-          case ((asString, size), asInt) =>
-            (
-              asString,
-              if (size >= minimumLevelSize) asInt.toDouble
-              else smallestEligibleLevel.toDouble
-            )
+        .map { case ((asString, size), asInt) =>
+          (
+            asString,
+            if (size >= minimumLevelSize) asInt.toDouble
+            else smallestEligibleLevel.toDouble
+          )
         }
       Categorical(
         levels,
@@ -98,17 +97,16 @@ object StringMetadata {
       categoricalThreshold: Int = 100,
       categoricalMissing: String = "NA"
   ): Seq[(C, StringMetadata)] = {
-    frame.toColSeq.map {
-      case (c, col) =>
-        (
-          c,
-          inferFromColumn(
-            col.toVec,
-            numericNaN,
-            categoricalThreshold,
-            categoricalMissing
-          )
+    frame.toColSeq.map { case (c, col) =>
+      (
+        c,
+        inferFromColumn(
+          col.toVec,
+          numericNaN,
+          categoricalThreshold,
+          categoricalMissing
         )
+      )
     }
   }
 
@@ -188,16 +186,15 @@ object StringMetadata {
       columns: Seq[(Vec[Double], Metadata)],
       oneHotThreshold: Int
   ) =
-    columns.flatMap {
-      case (column, meta) =>
-        meta match {
-          case lamp.tabular.Numerical => List((column, meta))
-          case lamp.tabular.Categorical(classes) =>
-            if (classes > oneHotThreshold) List((column, meta))
-            else {
-              oneHot1(column, classes)
-            }
-        }
+    columns.flatMap { case (column, meta) =>
+      meta match {
+        case lamp.tabular.Numerical => List((column, meta))
+        case lamp.tabular.Categorical(classes) =>
+          if (classes > oneHotThreshold) List((column, meta))
+          else {
+            oneHot1(column, classes)
+          }
+      }
     }
 
   def convertFrameToTensor[R, C](
@@ -212,8 +209,8 @@ object StringMetadata {
     val mappedColumnsWithMeta2 =
       frame.toColSeq.map(_._2.toVec).zip(metadata).flatMap {
         case (
-            column,
-            NumericNormal(mean, std, min, max, indicators, missingCount)
+              column,
+              NumericNormal(mean, std, min, max, indicators, missingCount)
             ) =>
           convertNumericNormalColumn(
             column,

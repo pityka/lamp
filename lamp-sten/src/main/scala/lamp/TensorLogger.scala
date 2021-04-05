@@ -38,9 +38,8 @@ object TensorLogger {
     val currentTime = nanoTime
 
     val lifetimes = actives
-      .map {
-        case data =>
-          (data, (currentTime - data.getBirth) * 1e-6)
+      .map { case data =>
+        (data, (currentTime - data.getBirth) * 1e-6)
       }
       .filter(filter.tupled)
     val histogram = {
@@ -51,13 +50,11 @@ object TensorLogger {
         300e3 -> 3600e3,
         3600e3 -> Double.MaxValue
       )
-      tranches.map {
-        case (low, high) =>
-          val count = lifetimes.count {
-            case (_, duration) =>
-              duration >= low && duration < high
-          }
-          (low, high, count)
+      tranches.map { case (low, high) =>
+        val count = lifetimes.count { case (_, duration) =>
+          duration >= low && duration < high
+        }
+        (low, high, count)
       }
     }
 
@@ -109,9 +106,8 @@ object TensorLogger {
       .mkString("|")}, total=${histogram.map(_._3).sum}. ${actives
       .filter { case (_, ms) => ms >= detailMinMs && ms <= detailMaxMs }
       .take(detailNum)
-      .map {
-        case (data, duration) =>
-          s"${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
+      .map { case (data, duration) =>
+        s"${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
       }
       .mkString("\n", ";\n", "")}"
 
@@ -121,26 +117,22 @@ object TensorLogger {
   def detailAllTensors(logger: String => Unit): Unit = {
     val currentTime = System.nanoTime
     val actives = queryActiveTensors()
-    val lifetimes = actives.map {
-      case data =>
-        (data, (currentTime - data.getBirth) * 1e-6)
+    val lifetimes = actives.map { case data =>
+      (data, (currentTime - data.getBirth) * 1e-6)
     }
-    val strings = lifetimes.map {
-      case (data, duration) =>
-        s"\t${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
+    val strings = lifetimes.map { case (data, duration) =>
+      s"\t${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
     }
     logger("\n" + strings.mkString("\n"))
   }
   def detailAllTensorOptions(logger: String => Unit): Unit = {
     val currentTime = System.nanoTime
     val actives = queryActiveTensorOptions()
-    val lifetimes = actives.map {
-      case data =>
-        (data, (currentTime - data.getBirth) * 1e-6)
+    val lifetimes = actives.map { case data =>
+      (data, (currentTime - data.getBirth) * 1e-6)
     }
-    val strings = lifetimes.map {
-      case (data, duration) =>
-        s"\t${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
+    val strings = lifetimes.map { case (data, duration) =>
+      s"\t${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
     }
     logger("\n" + strings.mkString("\n"))
   }

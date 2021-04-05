@@ -148,7 +148,9 @@ class GCNSuite extends AnyFunSuite {
         val labelIntMasked = {
           val keep =
             Index(
-              0 until 7 map (i => labelInt.find(_ == i).head(20)) reduce (_ concat _)
+              0 until 7 map (i =>
+                labelInt.find(_ == i).head(20)
+              ) reduce (_ concat _)
             )
           labelInt.zipMapIdx((i, idx) => if (keep.contains(idx)) i else -100)
         }
@@ -288,7 +290,9 @@ class GCNSuite extends AnyFunSuite {
         val labelIntMasked = {
           val keep =
             Index(
-              0 until 7 map (i => labelInt.find(_ == i).head(20)) reduce (_ concat _)
+              0 until 7 map (i =>
+                labelInt.find(_ == i).head(20)
+              ) reduce (_ concat _)
             )
           labelInt.zipMapIdx((i, idx) => if (keep.contains(idx)) i else -100)
         }
