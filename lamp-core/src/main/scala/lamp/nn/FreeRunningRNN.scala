@@ -2,10 +2,8 @@ package lamp.nn
 import lamp.autograd.Variable
 import lamp.Sc
 
-/**
-  * Wraps a (sequence x batch) long -> (sequence x batch x dim) double stateful module
+/** Wraps a (sequence x batch) long -> (sequence x batch x dim) double stateful module
   * and runs in it greedy (argmax) generation mode over `timeSteps` steps.
-  *
   */
 case class FreeRunningRNN[T, M <: StatefulModule[Variable, Variable, T]](
     module: M with StatefulModule[Variable, Variable, T],
@@ -56,13 +54,17 @@ case class FreeRunningRNN[T, M <: StatefulModule[Variable, Variable, T]](
   }
 }
 object FreeRunningRNN {
-  implicit def trainingMode[T, M <: StatefulModule[Variable, Variable, T]: TrainingMode] =
+  implicit def trainingMode[T, M <: StatefulModule[
+    Variable,
+    Variable,
+    T
+  ]: TrainingMode] =
     TrainingMode.make[FreeRunningRNN[T, M]](
       m => m.copy(module = m.module.asEval),
       m => m.copy(module = m.module.asTraining)
     )
-  implicit def is[T, M <: StatefulModule[Variable, Variable, T]](
-      implicit st: InitState[M, T]
+  implicit def is[T, M <: StatefulModule[Variable, Variable, T]](implicit
+      st: InitState[M, T]
   ) =
     InitState.make[FreeRunningRNN[T, M], T](m => m.module.initState)
   implicit def load[T, M <: StatefulModule[Variable, Variable, T]: Load] =

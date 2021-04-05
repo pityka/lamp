@@ -19,8 +19,8 @@ object Cnn {
       BatchNorm2D(out, tOpt),
       Fun(implicit scope => _.leakyRelu(0.2))
     )
-  def generatorblock(in: Int, out: Int, tOpt: STenOptions)(
-      implicit scope: Scope
+  def generatorblock(in: Int, out: Int, tOpt: STenOptions)(implicit
+      scope: Scope
   ) =
     Sequential(
       Conv2DTransposed(

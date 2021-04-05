@@ -6,8 +6,7 @@ import lamp.Sc
 import lamp.scope
 import lamp.STen
 
-/**
-  * Learnable mapping from classes to dense vectors.
+/** Learnable mapping from classes to dense vectors.
   * Equivalent to L * W where
   *   L is the n x C one-hot encoded matrix of the classes
   *   * is matrix multiplication

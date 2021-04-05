@@ -101,8 +101,8 @@ object Train extends App {
   }
 
   val latentDim = 100
-  def makeNoise(instances: Int, tensorOptions: STenOptions)(
-      implicit scope: Scope
+  def makeNoise(instances: Int, tensorOptions: STenOptions)(implicit
+      scope: Scope
   ) =
     const(STen.randn(List(instances, latentDim, 1, 1), tensorOptions))
 
@@ -167,56 +167,55 @@ object Train extends App {
             var instances = 0L
 
             batches
-              .foldLeft(()) {
-                case (_, (feature, _)) =>
-                  Scope.inResource.use { implicit scope =>
-                    IO {
-                      val batchSize = feature.shape(0)
-                      val noise =
-                        makeNoise(batchSize.toInt, tensorOptions)
-                      val ones = STen.ones(List(batchSize), tensorOptions)
-                      val zeros = STen.zeros(List(batchSize), tensorOptions)
-                      val discriminatorOutput =
-                        discriminator.forward(feature)
-                      val generatorOutput = generator.forward(noise)
-                      val discriminatorOutputOnGenerated =
-                        discriminator.forward(generatorOutput.detached)
-                      val discriminatorLoss =
-                        (loss(discriminatorOutput, ones)._1 + loss(
-                          discriminatorOutputOnGenerated,
-                          zeros
-                        )._1) * 0.5
-                      optimizerDiscriminator.step(
-                        discriminator.gradients(discriminatorLoss),
-                        1d
-                      )
+              .foldLeft(()) { case (_, (feature, _)) =>
+                Scope.inResource.use { implicit scope =>
+                  IO {
+                    val batchSize = feature.shape(0)
+                    val noise =
+                      makeNoise(batchSize.toInt, tensorOptions)
+                    val ones = STen.ones(List(batchSize), tensorOptions)
+                    val zeros = STen.zeros(List(batchSize), tensorOptions)
+                    val discriminatorOutput =
+                      discriminator.forward(feature)
+                    val generatorOutput = generator.forward(noise)
+                    val discriminatorOutputOnGenerated =
+                      discriminator.forward(generatorOutput.detached)
+                    val discriminatorLoss =
+                      (loss(discriminatorOutput, ones)._1 + loss(
+                        discriminatorOutputOnGenerated,
+                        zeros
+                      )._1) * 0.5
+                    optimizerDiscriminator.step(
+                      discriminator.gradients(discriminatorLoss),
+                      1d
+                    )
 
-                      val discriminatorOutputOnGenerated2 =
-                        discriminator.forward(generatorOutput)
-                      val generatorLoss =
-                        loss(discriminatorOutputOnGenerated2, ones)._1
+                    val discriminatorOutputOnGenerated2 =
+                      discriminator.forward(generatorOutput)
+                    val generatorLoss =
+                      loss(discriminatorOutputOnGenerated2, ones)._1
 
-                      optimizerGenerator.step(
-                        generator.gradients(generatorLoss),
-                        1d
-                      )
+                    optimizerGenerator.step(
+                      generator.gradients(generatorLoss),
+                      1d
+                    )
 
-                      STen.addOut(
-                        totalDLoss,
-                        totalDLoss,
-                        discriminatorLoss.value,
-                        batchSize.toDouble
-                      )
-                      STen.addOut(
-                        totalGLoss,
-                        totalGLoss,
-                        generatorLoss.value,
-                        batchSize.toDouble
-                      )
-                      instances += batchSize
+                    STen.addOut(
+                      totalDLoss,
+                      totalDLoss,
+                      discriminatorLoss.value,
+                      batchSize.toDouble
+                    )
+                    STen.addOut(
+                      totalGLoss,
+                      totalGLoss,
+                      generatorLoss.value,
+                      batchSize.toDouble
+                    )
+                    instances += batchSize
 
-                    }
                   }
+                }
               }
               .unsafeRunSync()
 

@@ -43,13 +43,12 @@ class GradientSuite extends AnyFunSuite {
 
   def diff(m: Mat[Double])(f: Mat[Double] => Double): Mat[Double] = {
     val eps = 1e-6
-    mat.zeros(m.numRows, m.numCols).mapRows {
-      case (row, i) =>
-        (0 until row.length).map { j =>
-          val epsM = mat.zeros(m.numRows, m.numCols)
-          epsM(i, j) = eps
-          (f(m + epsM) - f(m - epsM)) / (2 * eps)
-        }.toVec
+    mat.zeros(m.numRows, m.numCols).mapRows { case (row, i) =>
+      (0 until row.length).map { j =>
+        val epsM = mat.zeros(m.numRows, m.numCols)
+        epsM(i, j) = eps
+        (f(m + epsM) - f(m - epsM)) / (2 * eps)
+      }.toVec
     }
 
   }
@@ -58,14 +57,13 @@ class GradientSuite extends AnyFunSuite {
   )(f: NDArray[Double] => Double): NDArray[Double] = {
     val eps = 1e-6
 
-    NDArray.zeros(m.shape).mapWithIndex {
-      case (_, idx) =>
-        val epsM = NDArray.zeros(m.shape)
-        epsM.set(idx, eps)
-        val a = f(m + epsM)
-        val b = f(m - epsM)
-        val r = (a - b) / (2 * eps)
-        r
+    NDArray.zeros(m.shape).mapWithIndex { case (_, idx) =>
+      val epsM = NDArray.zeros(m.shape)
+      epsM.set(idx, eps)
+      val a = f(m + epsM)
+      val b = f(m - epsM)
+      val r = (a - b) / (2 * eps)
+      r
     }
 
   }

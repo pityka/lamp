@@ -71,11 +71,10 @@ class ReadWriteSuite extends AnyFunSuite {
       Writer.writeCheckpoint(file, net).unsafeRunSync()
       val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt))
       Reader.loadFromFile(net2, file, CPU).unsafeRunSync().toOption.get
-      net2.state.zip(net.state).foreach {
-        case ((loaded, _), (orig, _)) =>
-          val ndL = NDArray.tensorToFloatNDArray(loaded.value.value)
-          val ndO = NDArray.tensorToFloatNDArray(orig.value.value)
-          assert(ndL.toVec == ndO.toVec)
+      net2.state.zip(net.state).foreach { case ((loaded, _), (orig, _)) =>
+        val ndL = NDArray.tensorToFloatNDArray(loaded.value.value)
+        val ndO = NDArray.tensorToFloatNDArray(orig.value.value)
+        assert(ndL.toVec == ndO.toVec)
       }
     }
   }
@@ -88,18 +87,17 @@ class ReadWriteSuite extends AnyFunSuite {
       Writer.writeCheckpoint(file, net).unsafeRunSync()
       val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt.toDouble))
       Reader.loadFromFile(net2, file, CPU).unsafeRunSync().toOption.get
-      net2.state.zip(net.state).foreach {
-        case ((loaded, _), (orig, _)) =>
-          loaded.value.scalarTypeByte match {
-            case 6 =>
-              val ndL = NDArray.tensorToFloatNDArray(loaded.value.value)
-              val ndO = NDArray.tensorToFloatNDArray(orig.value.value)
-              assert(ndL.toVec == ndO.toVec)
-            case 7 =>
-              val ndL = NDArray.tensorToNDArray(loaded.value.value)
-              val ndO = NDArray.tensorToNDArray(orig.value.value)
-              assert(ndL.toVec == ndO.toVec)
-          }
+      net2.state.zip(net.state).foreach { case ((loaded, _), (orig, _)) =>
+        loaded.value.scalarTypeByte match {
+          case 6 =>
+            val ndL = NDArray.tensorToFloatNDArray(loaded.value.value)
+            val ndO = NDArray.tensorToFloatNDArray(orig.value.value)
+            assert(ndL.toVec == ndO.toVec)
+          case 7 =>
+            val ndL = NDArray.tensorToNDArray(loaded.value.value)
+            val ndO = NDArray.tensorToNDArray(orig.value.value)
+            assert(ndL.toVec == ndO.toVec)
+        }
       }
 
     }

@@ -5,8 +5,7 @@ import lamp.Sc
 
 object Attention {
 
-  /**
-    * @param tokens seq x batch (long)
+  /** @param tokens seq x batch (long)
     * @param maskable batch x seq
     * @param maskedToken
     * @param fill
@@ -103,7 +102,11 @@ object Attention {
   }
 }
 
-case class AttentionDecoder[T, M <: StatefulModule[Variable, Variable, T], M0 <: Module](
+case class AttentionDecoder[T, M <: StatefulModule[
+  Variable,
+  Variable,
+  T
+], M0 <: Module](
     decoder: M with StatefulModule[Variable, Variable, T],
     embedding: M0 with Module,
     stateToKey: T => Variable,

@@ -3,7 +3,11 @@ package lamp.nn
 import lamp.Sc
 
 object statefulSequence {
-  def apply[T1, T2, T3, S1, S2, M1 <: StatefulModule[T1, T2, S1], M2 <: StatefulModule[
+  def apply[T1, T2, T3, S1, S2, M1 <: StatefulModule[
+    T1,
+    T2,
+    S1
+  ], M2 <: StatefulModule[
     T2,
     T3,
     S2
@@ -89,7 +93,11 @@ object statefulSequence {
   ) = StatefulSeq5(m1, m2, m3, m4, m5)
 }
 
-case class StatefulSeq2[T1, T2, T3, S1, S2, M1 <: StatefulModule[T1, T2, S1], M2 <: StatefulModule[
+case class StatefulSeq2[T1, T2, T3, S1, S2, M1 <: StatefulModule[
+  T1,
+  T2,
+  S1
+], M2 <: StatefulModule[
   T2,
   T3,
   S2
@@ -99,7 +107,7 @@ case class StatefulSeq2[T1, T2, T3, S1, S2, M1 <: StatefulModule[T1, T2, S1], M2
 ) extends StatefulModule[T1, T3, (S1, S2)] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) }
 
   def forward[S: Sc](x: (T1, (S1, S2))) = forward1(x._1, x._2)
@@ -175,7 +183,7 @@ case class StatefulSeq3[T1, T2, T3, T4, S1, S2, S3, M1 <: StatefulModule[
 ) extends StatefulModule[T1, T4, (S1, S2, S3)] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) }
 
@@ -251,8 +259,8 @@ object StatefulSeq3 {
     T3,
     T4,
     S3
-  ]](
-      implicit is1: InitState[M1, S1],
+  ]](implicit
+      is1: InitState[M1, S1],
       is2: InitState[M2, S2],
       is3: InitState[M3, S3]
   ) =
@@ -294,7 +302,7 @@ case class StatefulSeq4[
 ) extends StatefulModule[T1, T5, (S1, S2, S3, S4)] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) } ++
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) }
@@ -422,21 +430,34 @@ object StatefulSeq4 {
         T5,
         S4
       ]
-  ](
-      implicit is1: InitState[M1, S1],
+  ](implicit
+      is1: InitState[M1, S1],
       is2: InitState[M2, S2],
       is3: InitState[M3, S3],
       is4: InitState[M4, S4]
   ) =
     InitState
-      .make[StatefulSeq4[T1, T2, T3, T4, T5, S1, S2, S3, S4, M1, M2, M3, M4], (S1, S2, S3, S4)](
-        module =>
-          (
-            module.m1.initState,
-            module.m2.initState,
-            module.m3.initState,
-            module.m4.initState
-          )
+      .make[StatefulSeq4[
+        T1,
+        T2,
+        T3,
+        T4,
+        T5,
+        S1,
+        S2,
+        S3,
+        S4,
+        M1,
+        M2,
+        M3,
+        M4
+      ], (S1, S2, S3, S4)](module =>
+        (
+          module.m1.initState,
+          module.m2.initState,
+          module.m3.initState,
+          module.m4.initState
+        )
       )
 
 }
@@ -475,7 +496,7 @@ case class StatefulSeq5[
 ) extends StatefulModule[T1, T6, (S1, S2, S3, S4, S5)] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) } ++
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) } ++
@@ -676,8 +697,8 @@ object StatefulSeq5 {
         T6,
         S5
       ]
-  ](
-      implicit is1: InitState[M1, S1],
+  ](implicit
+      is1: InitState[M1, S1],
       is2: InitState[M2, S2],
       is3: InitState[M3, S3],
       is4: InitState[M4, S4],

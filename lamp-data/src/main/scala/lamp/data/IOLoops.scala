@@ -16,7 +16,6 @@ import java.util.concurrent.Executors
   * The two training loops implemented here are:
   *   - [[lamp.data.IOLoops.epochs]]
   *   - [[lamp.data.IOLoops.withSWA]] implements Stochastic Weight Averaging
-  *
   */
 object IOLoops {
 
@@ -164,10 +163,13 @@ object IOLoops {
           val ec1 = ExecutionContext.fromExecutor(ex1)
           val ex2 = Executors.newSingleThreadExecutor()
           val ec2 = ExecutionContext.fromExecutor(ex2)
-          (Option((ec1, ec2)), IO.delay {
-            ex1.shutdown()
-            ex2.shutdown()
-          })
+          (
+            Option((ec1, ec2)),
+            IO.delay {
+              ex1.shutdown()
+              ex2.shutdown()
+            }
+          )
         } else (None, IO.unit)
       })
 
@@ -228,20 +230,24 @@ object IOLoops {
               prefetchEC = maybeExecutionContext
             )
 
-            _ <- if (checkpointFile.isDefined)
-              writeCheckpoint(checkpointFile.get, model.module)
-            else IO.unit
-            maybeValidationLoss <- if (epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined)
-              validationOneEpoch(
-                model = modelWithOptimizer.model,
-                validationBatches = validationBatchesOverEpoch.get(),
-                validationCallback = validationCallback,
-                logger = logger,
-                epochCount = epoch,
-                minimumCheckpointFile = minimumCheckpointFile,
-                minimumValidationLossSoFar = minValidationLoss
-              ).map(Some(_))
-            else IO.pure(None)
+            _ <-
+              if (checkpointFile.isDefined)
+                writeCheckpoint(checkpointFile.get, model.module)
+              else IO.unit
+            maybeValidationLoss <-
+              if (
+                epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
+              )
+                validationOneEpoch(
+                  model = modelWithOptimizer.model,
+                  validationBatches = validationBatchesOverEpoch.get(),
+                  validationCallback = validationCallback,
+                  logger = logger,
+                  epochCount = epoch,
+                  minimumCheckpointFile = minimumCheckpointFile,
+                  minimumValidationLossSoFar = minValidationLoss
+                ).map(Some(_))
+              else IO.pure(None)
 
             _ <- IO {
               maybeValidationLoss.foreach(validationLoss =>
@@ -249,20 +255,27 @@ object IOLoops {
               )
             }
 
-            nextMinValidationLoss = if (maybeValidationLoss.isEmpty || !returnMinValidationLossModel
-                                          .contains(epoch))
-              minValidationLoss
-            else if (minValidationLoss.isEmpty) maybeValidationLoss
-            else Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
+            nextMinValidationLoss =
+              if (
+                maybeValidationLoss.isEmpty || !returnMinValidationLossModel
+                  .contains(epoch)
+              )
+                minValidationLoss
+              else if (minValidationLoss.isEmpty) maybeValidationLoss
+              else
+                Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
 
-            nextMinValidationLossModel = if (returnMinValidationLossModel
-                                               .contains(epoch)) {
-              if (maybeValidationLoss.isEmpty) minValidationLossModel
-              else if (minValidationLoss.isEmpty) Some(copyModel)
-              else if (minValidationLoss.get > maybeValidationLoss.get)
-                Some(copyModel)
-              else minValidationLossModel
-            } else minValidationLossModel
+            nextMinValidationLossModel =
+              if (
+                returnMinValidationLossModel
+                  .contains(epoch)
+              ) {
+                if (maybeValidationLoss.isEmpty) minValidationLossModel
+                else if (minValidationLoss.isEmpty) Some(copyModel)
+                else if (minValidationLoss.get > maybeValidationLoss.get)
+                  Some(copyModel)
+                else minValidationLossModel
+              } else minValidationLossModel
             next <- loop(
               epoch = epoch + 1,
               lastValidationLoss = maybeValidationLoss,
@@ -293,17 +306,16 @@ object IOLoops {
     def processBatch(
         elem: StreamControl[(I, STen)],
         lossAcc: STen
-    ): StreamControl[Long] = elem.map {
-      case (sample, target) =>
-        val (numInstances, gradients) =
-          model.model.addTotalLossAndReturnGradientsAndNumExamples(
-            sample,
-            target,
-            lossAcc
-          )
+    ): StreamControl[Long] = elem.map { case (sample, target) =>
+      val (numInstances, gradients) =
+        model.model.addTotalLossAndReturnGradientsAndNumExamples(
+          sample,
+          target,
+          lossAcc
+        )
 
-        model.optimizer.step(gradients, learningRateScheduleFactor)
-        numInstances
+      model.optimizer.step(gradients, learningRateScheduleFactor)
+      numInstances
 
     }
 
@@ -431,15 +443,14 @@ object IOLoops {
       validationBatches.nextBatch
         .use { elem =>
           IO {
-            elem.map {
-              case (validationSample, validationTarget) =>
-                val numExamples = model.asEval
-                  .addTotalLossAndReturnNumExamples(
-                    validationSample,
-                    validationTarget,
-                    totalLoss
-                  )
-                numExamples
+            elem.map { case (validationSample, validationTarget) =>
+              val numExamples = model.asEval
+                .addTotalLossAndReturnNumExamples(
+                  validationSample,
+                  validationTarget,
+                  totalLoss
+                )
+              numExamples
             }
           }
         }
@@ -461,22 +472,24 @@ object IOLoops {
         0,
         STen.scalarDouble(0d, model.module.state.head._1.options),
         0L
-      ).flatMap {
-        case (totalLoss, totalExamples) =>
-          val validationLoss = totalLoss.toMat.raw(0) / totalExamples
-          for {
-            _ <- IO {
-              logger.foreach(
-                _.info(
-                  s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
-                )
+      ).flatMap { case (totalLoss, totalExamples) =>
+        val validationLoss = totalLoss.toMat.raw(0) / totalExamples
+        for {
+          _ <- IO {
+            logger.foreach(
+              _.info(
+                s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
               )
-            }
-            _ <- IO {
-              validationCallback(epochCount, validationLoss)
-            }
+            )
+          }
+          _ <- IO {
+            validationCallback(epochCount, validationLoss)
+          }
 
-            _ <- if (minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss))
+          _ <-
+            if (
+              minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss)
+            )
               IO {
                 scribe.info(
                   s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
@@ -485,7 +498,7 @@ object IOLoops {
                 writeCheckpoint(minimumCheckpointFile.get, model.module)
               )
             else IO.unit
-          } yield validationLoss
+        } yield validationLoss
       }
     }
   }

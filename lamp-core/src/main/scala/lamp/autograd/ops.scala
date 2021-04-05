@@ -50,22 +50,20 @@ case class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
   val ashapes = a.map(_.shape(dim.toInt))
   val boundaries =
     ashapes.scanLeft(0L)(_ + _).sliding(2).toList.map(g => g(0) -> g(1))
-  val params = a.zip(boundaries).toList.map {
-    case (a, (from, to)) =>
-      a.zipBackward { (p, out) =>
-        Scope.root { implicit scope => out += p.slice(dim, from, to, 1L) }
-      }
+  val params = a.zip(boundaries).toList.map { case (a, (from, to)) =>
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope => out += p.slice(dim, from, to, 1L) }
+    }
   }
   val value =
     Variable(this, STen.cat(a.map(_.value), dim)(scope))(scope)
 }
 
 case class Stack(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
-  val params = a.zipWithIndex.toList.map {
-    case (a, idx) =>
-      a.zipBackward { (p, out) =>
-        Scope.root { implicit scope => out += p.select(dim, idx) }
-      }
+  val params = a.zipWithIndex.toList.map { case (a, idx) =>
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope => out += p.select(dim, idx) }
+    }
   }
   val value =
     Variable(this, STen.stack(a.map(_.value), dim)(scope))(scope)
@@ -96,13 +94,15 @@ case class Select(scope: Scope, a: Variable, dim: Long, index: Long)
 case class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
 
   val params = List()
-  val value = Variable(this, {
-    implicit val sc = scope
-    Scope { implicit sc =>
-      val r = a.value.equ(b)
-      r
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc =>
+        val r = a.value.equ(b)
+        r
+      }
     }
-  })(scope)
+  )(scope)
 }
 case class MaskSelect(scope: Scope, input: Variable, mask: Variable)
     extends Op {
@@ -210,12 +210,14 @@ case class CastToPrecision(
       throw new RuntimeException("Cast to Precision is not differentiable")
     }
   )
-  val value = Variable(this, {
-    precision match {
-      case DoublePrecision => a.value.castToDouble(scope)
-      case SinglePrecision => a.value.castToFloat(scope)
+  val value = Variable(
+    this, {
+      precision match {
+        case DoublePrecision => a.value.castToDouble(scope)
+        case SinglePrecision => a.value.castToFloat(scope)
+      }
     }
-  })(scope)
+  )(scope)
 }
 
 case class ScatterAdd(
@@ -988,8 +990,7 @@ case class NllLoss(
 
 }
 
-/**
-  * input: (N,T) where T>=1 are multiple independent tasks
+/** input: (N,T) where T>=1 are multiple independent tasks
   * target: same shape as input, float with in [0,1]
   * posWeight: is (T)
   */
@@ -1050,11 +1051,13 @@ case class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
     out.addcmulSelf(p, a.value, 2d)
   })
   val value =
-    Variable(this, {
-      val fr = a.value.frobeniusNorm(scope)
-      fr.pow_(2d)
-      fr
-    })(scope)
+    Variable(
+      this, {
+        val fr = a.value.frobeniusNorm(scope)
+        fr.pow_(2d)
+        fr
+      }
+    )(scope)
 }
 
 /** 1D convolution
@@ -1186,19 +1189,21 @@ case class Conv1D(
   )
 
   val value =
-    Variable(this, {
-      STen.owned(
-        ATen.conv1d(
-          input.value.value,
-          weight.value.value,
-          bias.value.value,
-          Array(stride),
-          Array(padding),
-          Array(dilation),
-          groups
-        )
-      )(scope)
-    })(scope)
+    Variable(
+      this, {
+        STen.owned(
+          ATen.conv1d(
+            input.value.value,
+            weight.value.value,
+            bias.value.value,
+            Array(stride),
+            Array(padding),
+            Array(dilation),
+            groups
+          )
+        )(scope)
+      }
+    )(scope)
 }
 
 /** 2D convolution
@@ -1249,7 +1254,9 @@ case class Conv2D(
         val pSize = p.sizes
         val zeros = ATen.zeros(Array(inputChannels), p.options(scope).value)
         val outputSizeWithoutExtraPadding =
-          (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
+          (pSize(
+            2
+          ) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
         val extraPaddingH = out.sizes.apply(2) - outputSizeWithoutExtraPadding
         val extraPaddingW = out.sizes.apply(3) - outputSizeWithoutExtraPadding
         val tmp = ATen.conv_transpose2d(
@@ -1406,19 +1413,21 @@ case class Conv2D(
   )
 
   val value =
-    Variable(this, {
-      STen.owned(
-        ATen.conv2d(
-          input.value.value,
-          weight.value.value,
-          bias.value.value,
-          Array(stride),
-          Array(padding),
-          Array(dilation),
-          groups
-        )
-      )(scope)
-    })(scope)
+    Variable(
+      this, {
+        STen.owned(
+          ATen.conv2d(
+            input.value.value,
+            weight.value.value,
+            bias.value.value,
+            Array(stride),
+            Array(padding),
+            Array(dilation),
+            groups
+          )
+        )(scope)
+      }
+    )(scope)
 }
 
 case class Conv2DTransposed(

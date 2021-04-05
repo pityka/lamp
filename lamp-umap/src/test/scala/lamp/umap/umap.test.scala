@@ -21,14 +21,13 @@ class UmapSuite extends AnyFunSuite {
       100
     )
 
-    val knnDistances = knn.mapRows {
-      case (row, rowIdx) =>
-        val row1 = data.row(rowIdx)
-        row.map { idx2 =>
-          val row2 = data.row(idx2)
-          val d = row1 - row2
-          math.sqrt(d vv d)
-        }
+    val knnDistances = knn.mapRows { case (row, rowIdx) =>
+      val row1 = data.row(rowIdx)
+      row.map { idx2 =>
+        val row2 = data.row(idx2)
+        val d = row1 - row2
+        math.sqrt(d vv d)
+      }
     }
 
     val b = Umap.edgeWeights(knnDistances, knn)

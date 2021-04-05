@@ -116,25 +116,23 @@ package object onnx {
       def apply(u: UUID): String = makeName(u)
     }
 
-    val constantNodes = graph.collect {
-      case x: ConstantWithoutGrad => x
+    val constantNodes = graph.collect { case x: ConstantWithoutGrad =>
+      x
     }
     val (inputNodes, nonInputConstantNodes) =
       constantNodes.partition(v => inputs.contains(v.id))
 
-    val parameters = graph.collect {
-      case x: ConstantWithGrad => x
+    val parameters = graph.collect { case x: ConstantWithGrad =>
+      x
     }
-    val convertedNodes = graph.collect {
-      case variable: VariableNonConstant =>
-        opset.translate(namer, variable)
+    val convertedNodes = graph.collect { case variable: VariableNonConstant =>
+      opset.translate(namer, variable)
 
     }
     val nodes = convertedNodes.flatMap(_.map(_.node))
     val constants = convertedNodes.flatMap {
-      _.flatMap {
-        case Converted(_, constants) =>
-          constants
+      _.flatMap { case Converted(_, constants) =>
+        constants
       }
     }
     ox.ModelProto(
@@ -175,40 +173,39 @@ package object onnx {
           sparseInitializer = (nonInputConstantNodes ++ parameters)
             .filter(v => Scope.leak { implicit scope => v.options.isSparse })
             .map { variable =>
-              Scope.leak {
-                implicit scope =>
-                  val coalesced = variable.value.coalesce
-                  val values = coalesced.values
-                  val indices = coalesced.indices
-                  ox.SparseTensorProto(
-                    values = Some(
-                      ox.TensorProto(
-                        name = Some(makeName(variable.id)),
-                        docString = info
-                          .find(_.variable.id == variable.id)
-                          .map(_.docString),
-                        dims = values.shape,
-                        dataType = values.options.scalarTypeByte match {
-                          case 4 => Some(ox.TensorProto.DataType.INT64.index)
-                          case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
-                          case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
-                        },
-                        rawData = Some(tensorAsByteString(values))
-                      )
-                    ),
-                    indices = Some(
-                      ox.TensorProto(
-                        dims = indices.shape,
-                        dataType = indices.options.scalarTypeByte match {
-                          case 4 => Some(ox.TensorProto.DataType.INT64.index)
-                          case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
-                          case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
-                        },
-                        rawData = Some(tensorAsByteString(indices))
-                      )
-                    ),
-                    dims = variable.shape
-                  )
+              Scope.leak { implicit scope =>
+                val coalesced = variable.value.coalesce
+                val values = coalesced.values
+                val indices = coalesced.indices
+                ox.SparseTensorProto(
+                  values = Some(
+                    ox.TensorProto(
+                      name = Some(makeName(variable.id)),
+                      docString = info
+                        .find(_.variable.id == variable.id)
+                        .map(_.docString),
+                      dims = values.shape,
+                      dataType = values.options.scalarTypeByte match {
+                        case 4 => Some(ox.TensorProto.DataType.INT64.index)
+                        case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
+                        case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
+                      },
+                      rawData = Some(tensorAsByteString(values))
+                    )
+                  ),
+                  indices = Some(
+                    ox.TensorProto(
+                      dims = indices.shape,
+                      dataType = indices.options.scalarTypeByte match {
+                        case 4 => Some(ox.TensorProto.DataType.INT64.index)
+                        case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
+                        case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
+                      },
+                      rawData = Some(tensorAsByteString(indices))
+                    )
+                  ),
+                  dims = variable.shape
+                )
               }
             },
           input = inputNodes.map { variable =>

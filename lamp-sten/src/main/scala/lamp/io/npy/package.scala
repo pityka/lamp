@@ -20,47 +20,47 @@ package object npy {
   def readDoubleFromChannel(
       channel: ReadableByteChannel,
       device: Device
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = readFromChannel(7, channel, device)
   def readFloatFromChannel(
       channel: ReadableByteChannel,
       device: Device
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = readFromChannel(6, channel, device)
   def readLongFromChannel(
       channel: ReadableByteChannel,
       device: Device
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = readFromChannel(4, channel, device)
 
   def readDoubleFromFile(
       file: File,
       device: Device
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = readFromFile(7, file, device)
   def readFloatFromFile(
       file: File,
       device: Device
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = readFromFile(6, file, device)
   def readLongFromFile(
       file: File,
       device: Device
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = readFromFile(4, file, device)
 
   def readFromFile(
       scalarType: Byte,
       file: File,
       device: Device
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = {
     val fis = new java.io.FileInputStream(file)
     val channel = fis.getChannel
@@ -75,8 +75,8 @@ package object npy {
       scalarType: Byte,
       channel: ReadableByteChannel,
       device: Device
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ) = {
     val (dtype, topt, copy) = scalarType match {
       case 4 =>

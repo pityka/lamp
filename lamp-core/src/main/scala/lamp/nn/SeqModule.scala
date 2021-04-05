@@ -112,7 +112,7 @@ case class Seq2[T1, T2, T3, M1 <: GenericModule[T1, T2], M2 <: GenericModule[
 ) extends GenericModule[T1, T3] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) }
 
   def forward[S: Sc](x: T1) = m2.forward(m1.forward(x))
@@ -164,7 +164,7 @@ case class Seq3[T1, T2, T3, T4, M1 <: GenericModule[
 ) extends GenericModule[T1, T4] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) }
 
@@ -243,7 +243,7 @@ case class Seq4[
 ) extends GenericModule[T1, T5] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) } ++
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) }
@@ -352,7 +352,7 @@ case class Seq5[
 ) extends GenericModule[T1, T6] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) } ++
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) } ++
@@ -512,7 +512,7 @@ case class Seq6[
 ) extends GenericModule[T1, T7] {
 
   override def state =
-    m1.state.map { case (param, ptag)   => (param, Sequential.Tag(ptag, 0)) } ++
+    m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) } ++
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) } ++

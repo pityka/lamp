@@ -238,8 +238,8 @@ object Train extends App {
           val net1 =
             Seq2SeqWithAttention(
               destinationEmbedding,
-              encoder.mapState {
-                case (_, lstmState) => (lstmState, (), (), ())
+              encoder.mapState { case (_, lstmState) =>
+                (lstmState, (), (), ())
               },
               decoder,
               vocab('#').toLong

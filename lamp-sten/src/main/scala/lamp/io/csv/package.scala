@@ -30,8 +30,8 @@ package object csv {
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
       header: Boolean = false
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
     readFromChannel(
       4,
@@ -55,8 +55,8 @@ package object csv {
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
       header: Boolean = false
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
     readFromChannel(
       6,
@@ -80,8 +80,8 @@ package object csv {
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
       header: Boolean = false
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
     readFromChannel(
       7,
@@ -106,8 +106,8 @@ package object csv {
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
       header: Boolean = false
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
     readFromFile(
       4,
@@ -131,8 +131,8 @@ package object csv {
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
       header: Boolean = false
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
     readFromFile(
       6,
@@ -156,8 +156,8 @@ package object csv {
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
       header: Boolean = false
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
     readFromFile(
       7,
@@ -183,8 +183,8 @@ package object csv {
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
       header: Boolean = false
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ): Either[String, (Option[List[String]], STen)] = {
     val fis = new java.io.FileInputStream(file)
     val channel = fis.getChannel
@@ -216,8 +216,8 @@ package object csv {
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
       header: Boolean = false
-  )(
-      implicit scope: Scope
+  )(implicit
+      scope: Scope
   ): Either[String, (Option[List[String]], STen)] = {
     val (append, allocBuffer, copy) = scalarType match {
       case 4 =>

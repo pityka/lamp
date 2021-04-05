@@ -21,7 +21,16 @@ case class Conv1D(
   )
 
   def forward[S: Sc](x: Variable): Variable =
-    new Conv1dOp(scope, x, weights, bias, stride, padding, dilation, groups).value
+    new Conv1dOp(
+      scope,
+      x,
+      weights,
+      bias,
+      stride,
+      padding,
+      dilation,
+      groups
+    ).value
 
 }
 

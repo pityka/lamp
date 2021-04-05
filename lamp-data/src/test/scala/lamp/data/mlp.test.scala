@@ -10,8 +10,8 @@ import lamp.STen
 import lamp.STenOptions
 
 class MLPSuite extends AnyFunSuite {
-  def mlp(dim: Int, k: Int, tOpt: STenOptions)(
-      implicit pool: Scope
+  def mlp(dim: Int, k: Int, tOpt: STenOptions)(implicit
+      pool: Scope
   ) =
     sequence(
       MLP(dim, k, List(64, 32), tOpt, dropout = 0.2),

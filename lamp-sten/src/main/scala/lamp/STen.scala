@@ -489,8 +489,6 @@ object STenOptions {
   * }}}
   *
   * The companion object contains various factories which copy data from the JVM memory to STen tensors.
-  *
-  *
   */
 case class STen private (
     value: Tensor

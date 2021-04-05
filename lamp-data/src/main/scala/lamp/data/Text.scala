@@ -21,8 +21,8 @@ object Text {
       device: Device,
       module: M with StatefulModule[Variable, Variable, T],
       steps: Int
-  )(
-      implicit is: InitState[M, T],
+  )(implicit
+      is: InitState[M, T],
       scope: Scope
   ): STen = {
     Scope { implicit scope =>
@@ -43,8 +43,8 @@ object Text {
       steps: Int,
       startSequence: Int,
       endOfSequence: Int
-  )(
-      implicit is: InitState[M, T],
+  )(implicit
+      is: InitState[M, T],
       scope: Scope
   ): Seq[(STen, Double)] = {
     val k = 3
@@ -60,47 +60,46 @@ object Text {
         if (n == 0) {
           buffers.map(b => (b._1.map(_._1), b._2))
         } else {
-          val candidates = buffers.flatMap {
-            case (sequence, logProb0) =>
-              val (lastOutput, lastState, lastToken) = sequence.last
-              if (lastToken == endOfSequence) {
-                List(
-                  (
-                    sequence,
-                    lastOutput,
-                    logProb0,
-                    lastState,
-                    lastToken
-                  )
+          val candidates = buffers.flatMap { case (sequence, logProb0) =>
+            val (lastOutput, lastState, lastToken) = sequence.last
+            if (lastToken == endOfSequence) {
+              List(
+                (
+                  sequence,
+                  lastOutput,
+                  logProb0,
+                  lastState,
+                  lastToken
                 )
-              } else {
-                val (output, state) =
-                  module.forward((lastOutput, lastState))
+              )
+            } else {
+              val (output, state) =
+                module.forward((lastOutput, lastState))
 
-                val lastChar = if (output.shape(0) > 1) {
-                  val lastTimeStep1 =
-                    output.select(0, output.shape(0) - 1)
+              val lastChar = if (output.shape(0) > 1) {
+                val lastTimeStep1 =
+                  output.select(0, output.shape(0) - 1)
 
-                  lastTimeStep1.view((1L :: lastTimeStep1.shape))
+                lastTimeStep1.view((1L :: lastTimeStep1.shape))
 
-                } else output
+              } else output
 
-                (0 until lastChar.shape(2).toInt).map { i =>
-                  val selected = lastChar.select(2L, i.toLong)
-                  val tmp =
-                    Tensor.scalarLong(i.toLong, selected.options.toLong.value)
-                  val index = ATen._unsafe_view(tmp, Array(1L, 1L))
-                  tmp.release
-                  val logProb = selected.toMat.raw(0)
-                  (
-                    sequence,
-                    selected.assign(const(STen.owned(index))),
-                    logProb + logProb0,
-                    state,
-                    i
-                  )
-                }
+              (0 until lastChar.shape(2).toInt).map { i =>
+                val selected = lastChar.select(2L, i.toLong)
+                val tmp =
+                  Tensor.scalarLong(i.toLong, selected.options.toLong.value)
+                val index = ATen._unsafe_view(tmp, Array(1L, 1L))
+                tmp.release
+                val logProb = selected.toMat.raw(0)
+                (
+                  sequence,
+                  selected.assign(const(STen.owned(index))),
+                  logProb + logProb0,
+                  state,
+                  i
+                )
               }
+            }
 
           }
           val (chosen, _) = candidates.sortBy(_._3).reverse.splitAt(k)
@@ -121,15 +120,14 @@ object Text {
         Seq(Seq((predictionBatch, module.initState, startSequence)) -> 0d)
       ).sortBy(_._2)
         .reverse
-        .map {
-          case (seq, logProb) =>
-            val catted = Variable
-              .concatenateAddNewDim(
-                seq.map(v => v.select(0, v.shape(0) - 1))
-              )
-              .view(List(seq.size))
+        .map { case (seq, logProb) =>
+          val catted = Variable
+            .concatenateAddNewDim(
+              seq.map(v => v.select(0, v.shape(0) - 1))
+            )
+            .view(List(seq.size))
 
-            (catted, logProb)
+          (catted, logProb)
         }
 
       ret.map(v => (v._1.value.cloneTensor, v._2))
@@ -161,8 +159,8 @@ object Text {
     val chars = text.toSeq
       .groupBy(identity)
       .toSeq
-      .map {
-        case (char, group) => (char, group.size)
+      .map { case (char, group) =>
+        (char, group.size)
       }
       .sortBy(_._2)
       .reverse
@@ -196,8 +194,7 @@ object Text {
     const(tensor)
   }
 
-  /**
-    * Yields tensors of shape (time step x batch size)
+  /** Yields tensors of shape (time step x batch size)
     */
   def minibatchesFromText(
       text: Vector[Int],
@@ -279,8 +276,7 @@ object Text {
 
   }
 
-  /**
-    * Yields tensors of shape (time step x batch size)
+  /** Yields tensors of shape (time step x batch size)
     * @param text pairs of (source,destination) units
     */
   def minibatchesForSeq2Seq(

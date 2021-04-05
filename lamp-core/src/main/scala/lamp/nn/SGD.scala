@@ -23,9 +23,8 @@ case class SGDW(
     clip: Option[Double] = None
 ) extends Optimizer {
   val velocity: Seq[Option[(Tensor, OptimizerHyperparameter)]] =
-    parameters.toList.map {
-      case (param, _) =>
-        momentum.map { m => (Tensor.zeros_like(param.value), m) }
+    parameters.toList.map { case (param, _) =>
+      momentum.map { m => (Tensor.zeros_like(param.value), m) }
     }
 
   var stepCount = 0L

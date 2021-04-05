@@ -12,8 +12,7 @@ import lamp.STen
 
 trait LossFunction {
 
-  /**
-    * Returns the loss averaged over examples and the number of examples
+  /** Returns the loss averaged over examples and the number of examples
     */
   def apply[S: Sc](output: Variable, target: STen): (Variable, Long)
 }
@@ -64,8 +63,7 @@ object LossFunctions {
     }
   }
 
-  /**
-    * Return a loss function which takes outputs of time step x batch x classes
+  /** Return a loss function which takes outputs of time step x batch x classes
     * and targets of time step x batch
     * The returned loss is averaged over the batch and the time steps
     */

@@ -255,13 +255,11 @@ object GCN {
     (degrees, a)
   }
 
-  /**
-    * Performs D^-0.5 (A+A'+I) D^-0.5 W
+  /** Performs D^-0.5 (A+A'+I) D^-0.5 W
     *   where are node features (N x D)
     *   A is the asymmetric adjacency matrix without self loops, elements in {0,1}
     *   I is identity
     *   D is degree(A+I)
-    *
     *
     * @param nodeFeatures N x D node features
     * @param edgeList N x 2 long tensor the edges in A (asymmetric, no diagonal)

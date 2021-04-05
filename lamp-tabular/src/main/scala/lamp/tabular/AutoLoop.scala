@@ -38,7 +38,9 @@ case class KnnBase(
 object KnnBase {
   implicit object IsMovable extends Movable[KnnBase] {
     def list(m: KnnBase) =
-      (m.target.value +: m.features.value +: m.predictedFeatures.map(_.value)).toList
+      (m.target.value +: m.features.value +: m.predictedFeatures.map(
+        _.value
+      )).toList
   }
 }
 case class ExtratreesBase(
@@ -206,72 +208,71 @@ case class EnsembleModel(
         val categorical = categorical0.map(v => const(v._1) -> v._2)
 
         val basePredictions = Scope { implicit scope =>
-          baseModels.map {
-            case averagableModels =>
-              val averagablePredictions = averagableModels.map {
-                case ExtratreesBase(trees) =>
-                  val features = AutoLoop.makeFusedFeatureMatrix(
-                    data,
+          baseModels.map { case averagableModels =>
+            val averagablePredictions = averagableModels.map {
+              case ExtratreesBase(trees) =>
+                val features = AutoLoop.makeFusedFeatureMatrix(
+                  data,
+                  dataLayout,
+                  Nil,
+                  precision,
+                  device
+                )
+                val featuresJ = features.toMat
+                val predicted = trees match {
+                  case Left(trees) =>
+                    lamp.extratrees
+                      .predictClassification(trees, featuresJ)
+                      .map(v => math.log(v + 1e-6))
+                  case Right(trees) =>
+                    Mat(lamp.extratrees.predictRegression(trees, featuresJ))
+                }
+                STen.fromMat(predicted, device, precision)
+
+              case KnnBase(k, features, predictedFeatures, target) =>
+                assert(predictedFeatures.isEmpty)
+                val prediction = AutoLoop
+                  .trainAndPredictKnn(
+                    k = k,
+                    data = features,
+                    predictables = dataOnDevice,
+                    predictionsOnBasemodels = Nil,
+                    predictablesPredictionsOnBasemodels = Nil,
+                    target = target,
+                    targetType = targetType,
+                    dataLayout = dataLayout,
+                    device = device,
+                    precision = precision,
+                    minibatchSize = 100
+                  )(scope)
+                  .unsafeRunSync()
+                prediction
+              case NNBase(hiddenSize, state) =>
+                val model = AutoLoop
+                  .makeModel(
                     dataLayout,
-                    Nil,
-                    precision,
-                    device
+                    0d,
+                    hiddenSize,
+                    outputSize,
+                    softmax,
+                    selectFirstOutputDimension,
+                    tOpt
                   )
-                  val featuresJ = features.toMat
-                  val predicted = trees match {
-                    case Left(trees) =>
-                      lamp.extratrees
-                        .predictClassification(trees, featuresJ)
-                        .map(v => math.log(v + 1e-6))
-                    case Right(trees) =>
-                      Mat(lamp.extratrees.predictRegression(trees, featuresJ))
-                  }
-                  STen.fromMat(predicted, device, precision)
 
-                case KnnBase(k, features, predictedFeatures, target) =>
-                  assert(predictedFeatures.isEmpty)
-                  val prediction = AutoLoop
-                    .trainAndPredictKnn(
-                      k = k,
-                      data = features,
-                      predictables = dataOnDevice,
-                      predictionsOnBasemodels = Nil,
-                      predictablesPredictionsOnBasemodels = Nil,
-                      target = target,
-                      targetType = targetType,
-                      dataLayout = dataLayout,
-                      device = device,
-                      precision = precision,
-                      minibatchSize = 100
-                    )(scope)
-                    .unsafeRunSync()
-                  prediction
-                case NNBase(hiddenSize, state) =>
-                  val model = AutoLoop
-                    .makeModel(
-                      dataLayout,
-                      0d,
-                      hiddenSize,
-                      outputSize,
-                      softmax,
-                      selectFirstOutputDimension,
-                      tOpt
+                model.load(state)
+                val prediction =
+                  model.asEval.forward(
+                    (
+                      categorical
+                        .map(_._1),
+                      numerical
                     )
-
-                  model.load(state)
-                  val prediction =
-                    model.asEval.forward(
-                      (
-                        categorical
-                          .map(_._1),
-                        numerical
-                      )
-                    )
-                  prediction.value.cloneTensor
-              }
-              val stacked = STen.stack(averagablePredictions, 0)
-              val meaned = stacked.mean(List(0), false)
-              meaned
+                  )
+                prediction.value.cloneTensor
+            }
+            val stacked = STen.stack(averagablePredictions, 0)
+            val meaned = stacked.mean(List(0), false)
+            meaned
           }
         }
 
@@ -493,8 +494,7 @@ object AutoLoop {
     )
 
     val residual = TabularResidual.make(
-      inChannels =
-        categoricalEmbeddingSizes.map(_._2).sum + numericalCount,
+      inChannels = categoricalEmbeddingSizes.map(_._2).sum + numericalCount,
       hiddenChannels = hiddenSize,
       outChannels = outputSize,
       tOpt = modelTensorOptions,
@@ -600,16 +600,15 @@ object AutoLoop {
           (numWithPredictions, cat)
         }
       }
-      val categoricalOneHot = trainCategorical.map {
-        case (t, numClasses) =>
-          Scope { implicit scope =>
-            val t2 = t.oneHot(numClasses)
-            precision match {
-              case SinglePrecision => t2.castToFloat
-              case DoublePrecision => t2.castToDouble
-            }
-
+      val categoricalOneHot = trainCategorical.map { case (t, numClasses) =>
+        Scope { implicit scope =>
+          val t2 = t.oneHot(numClasses)
+          precision match {
+            case SinglePrecision => t2.castToFloat
+            case DoublePrecision => t2.castToDouble
           }
+
+        }
       }
       device.to(STen.cat((categoricalOneHot :+ trainNumerical), 1))
 
@@ -832,27 +831,25 @@ object AutoLoop {
               epoch + 1, {
                 logger.foreach(_.info(s"Epoch $epoch done."))
                 if (epochs.contains(epoch)) {
-                  Scope {
-                    implicit scope =>
-                      val predicted = modelWithOptimizer.model.module
-                        .forward(
-                          (
-                            predictCategorical.map(v => const(device.to(v))),
-                            const(device.to(predictNumerical))
-                          )
+                  Scope { implicit scope =>
+                    val predicted = modelWithOptimizer.model.module
+                      .forward(
+                        (
+                          predictCategorical.map(v => const(device.to(v))),
+                          const(device.to(predictNumerical))
                         )
-                      val copy =
-                        predicted.value.copyTo(predictNumerical.options)
-                      val modelState = model.state.map {
-                        case (stateVar, ptag) =>
-                          Scope { implicit scope =>
-                            val clone = stateVar.value.cloneTensor
-                            val onCpu = clone.copyToDevice(CPU)
-                            (onCpu, ptag)
-                          }
+                      )
+                    val copy =
+                      predicted.value.copyTo(predictNumerical.options)
+                    val modelState = model.state.map { case (stateVar, ptag) =>
+                      Scope { implicit scope =>
+                        val clone = stateVar.value.cloneTensor
+                        val onCpu = clone.copyToDevice(CPU)
+                        (onCpu, ptag)
                       }
+                    }
 
-                      (epoch, copy, modelState) +: predictedAtEpochs
+                    (epoch, copy, modelState) +: predictedAtEpochs
                   }
                 } else predictedAtEpochs
               }
@@ -870,63 +867,60 @@ object AutoLoop {
       byEpoch: Seq[(Int, Seq[(Int, STen, ModelState, Seq[Int])])],
       expectedRows: Long
   )(implicit scope: Scope): Seq[(Int, STen, Seq[ModelState])] =
-    byEpoch.map {
-      case (epoch, folds) =>
-        val concat = Scope { implicit scope =>
-          val predictionsWithInstanceIDs: Vector[(STen, Seq[Int])] =
-            folds.map {
-              case (_, prediction, _, idx) => (prediction, idx)
-            }.toVector
-          // (instanceID, index within fold, index of fold)
-          val indices: Seq[(Int, Int, Int)] =
-            predictionsWithInstanceIDs.zipWithIndex.flatMap {
-              case ((_, instanceIdx), foldIdx) =>
-                instanceIdx.zipWithIndex.map {
-                  case (instanceIdx, innerIdx) =>
-                    (instanceIdx, innerIdx, foldIdx)
-                }
+    byEpoch.map { case (epoch, folds) =>
+      val concat = Scope { implicit scope =>
+        val predictionsWithInstanceIDs: Vector[(STen, Seq[Int])] =
+          folds.map { case (_, prediction, _, idx) =>
+            (prediction, idx)
+          }.toVector
+        // (instanceID, index within fold, index of fold)
+        val indices: Seq[(Int, Int, Int)] =
+          predictionsWithInstanceIDs.zipWithIndex.flatMap {
+            case ((_, instanceIdx), foldIdx) =>
+              instanceIdx.zipWithIndex.map { case (instanceIdx, innerIdx) =>
+                (instanceIdx, innerIdx, foldIdx)
+              }
+          }
+
+        val averagedPredictionsInEpoch = indices
+          .groupBy(_._1)
+          .toSeq
+          .map { case (instanceIdx, group) =>
+            Scope { implicit scope =>
+              val locations = group.map { case (_, innerIdx, foldIdx) =>
+                (innerIdx, foldIdx)
+              }
+              val tensorsOfPredictionsOfInstance = locations.map {
+                case (innerIdx, foldIdx) =>
+                  predictionsWithInstanceIDs(foldIdx)._1.select(
+                    0,
+                    innerIdx
+                  )
+
+              }
+              val concat =
+                STen.stack(
+                  tensorsOfPredictionsOfInstance,
+                  0
+                )
+              val mean =
+                concat.mean(List(0), false)
+              (instanceIdx, mean)
             }
+          }
+          .sortBy(_._1)
+          .map(_._2)
 
-          val averagedPredictionsInEpoch = indices
-            .groupBy(_._1)
-            .toSeq
-            .map {
-              case (instanceIdx, group) =>
-                Scope { implicit scope =>
-                  val locations = group.map {
-                    case (_, innerIdx, foldIdx) => (innerIdx, foldIdx)
-                  }
-                  val tensorsOfPredictionsOfInstance = locations.map {
-                    case (innerIdx, foldIdx) =>
-                      predictionsWithInstanceIDs(foldIdx)._1.select(
-                        0,
-                        innerIdx
-                      )
-
-                  }
-                  val concat =
-                    STen.stack(
-                      tensorsOfPredictionsOfInstance,
-                      0
-                    )
-                  val mean =
-                    concat.mean(List(0), false)
-                  (instanceIdx, mean)
-                }
-            }
-            .sortBy(_._1)
-            .map(_._2)
-
-          val concat =
-            STen.stack(averagedPredictionsInEpoch, 0)
-          assert(
-            concat.sizes.head == expectedRows,
-            s"${concat.sizes.head} != $expectedRows"
-          )
-          assert(concat.sizes.size == 2)
-          concat
-        }
-        (epoch, concat, folds.map(_._3))
+        val concat =
+          STen.stack(averagedPredictionsInEpoch, 0)
+        assert(
+          concat.sizes.head == expectedRows,
+          s"${concat.sizes.head} != $expectedRows"
+        )
+        assert(concat.sizes.size == 2)
+        concat
+      }
+      (epoch, concat, folds.map(_._3))
 
     }
 
@@ -983,61 +977,59 @@ object AutoLoop {
   )(outerScope: Scope) = {
     def trainedFolds(scope: Scope) =
       folds.zipWithIndex
-        .map {
-          case ((trainIdx, predictIdx), foldIdx) =>
-            assert((trainIdx.toSet & predictIdx.toSet).size == 0)
-            Scope.bracket(scope) { implicit scope =>
-              for {
-                sliced <- IO {
-                  slice(
-                    dataFullbatch = dataFullbatch,
-                    targetFullbatch = targetFullbatch,
-                    predictions = predictions,
-                    trainIdx = trainIdx,
-                    predictIdx = predictIdx
-                  )
-                }
-                (
-                  trainFeatures,
-                  trainPredictions,
-                  trainTarget,
-                  predictableFeatures,
-                  predictablePredictions
-                ) = sliced
-                _ <- IO {
-                  logger.foreach(
-                    _.info(
-                      s"Train KNN model, fold ${foldIdx + 1} / ${folds.size}"
-                    )
-                  )
-                }
-
-                result <- trainAndPredictExtratrees(
-                  k = k,
-                  m = m,
-                  nMin = nMin,
-                  parallelism = parallelism,
-                  data = trainFeatures,
-                  predictables = predictableFeatures,
-                  predictionsOnBasemodels = trainPredictions,
-                  predictablesPredictionsOnBasemodels = predictablePredictions,
-                  target = trainTarget,
-                  targetType = targetType,
-                  dataLayout = dataLayout
-                )(scope).map {
-                  case (prediction, model) =>
-                    (
-                      0,
-                      prediction,
-                      model,
-                      predictIdx
-                    )
-                }
-              } yield {
-
-                result
+        .map { case ((trainIdx, predictIdx), foldIdx) =>
+          assert((trainIdx.toSet & predictIdx.toSet).size == 0)
+          Scope.bracket(scope) { implicit scope =>
+            for {
+              sliced <- IO {
+                slice(
+                  dataFullbatch = dataFullbatch,
+                  targetFullbatch = targetFullbatch,
+                  predictions = predictions,
+                  trainIdx = trainIdx,
+                  predictIdx = predictIdx
+                )
               }
+              (
+                trainFeatures,
+                trainPredictions,
+                trainTarget,
+                predictableFeatures,
+                predictablePredictions
+              ) = sliced
+              _ <- IO {
+                logger.foreach(
+                  _.info(
+                    s"Train KNN model, fold ${foldIdx + 1} / ${folds.size}"
+                  )
+                )
+              }
+
+              result <- trainAndPredictExtratrees(
+                k = k,
+                m = m,
+                nMin = nMin,
+                parallelism = parallelism,
+                data = trainFeatures,
+                predictables = predictableFeatures,
+                predictionsOnBasemodels = trainPredictions,
+                predictablesPredictionsOnBasemodels = predictablePredictions,
+                target = trainTarget,
+                targetType = targetType,
+                dataLayout = dataLayout
+              )(scope).map { case (prediction, model) =>
+                (
+                  0,
+                  prediction,
+                  model,
+                  predictIdx
+                )
+              }
+            } yield {
+
+              result
             }
+          }
         }
         .toList
         .sequence
@@ -1051,19 +1043,21 @@ object AutoLoop {
               s"Folds done. Aggregating predictions.."
             )
           )
-          val byEpoch = trainedFolds.groupBy {
-            case (epoch, _, _, _) => epoch
+          val byEpoch = trainedFolds.groupBy { case (epoch, _, _, _) =>
+            epoch
           }.toSeq
 
           aggregatePredictionsAndModelsPerEpoch(
             byEpoch,
             dataFullbatch.sizes.head
-          )(scope).map {
-            case (epoch, prediction, models) =>
-              (epoch, prediction, models.map {
-                case trees =>
-                  ExtratreesBase(trees)
-              })
+          )(scope).map { case (epoch, prediction, models) =>
+            (
+              epoch,
+              prediction,
+              models.map { case trees =>
+                ExtratreesBase(trees)
+              }
+            )
           }
         }
       } yield aggregatedByEpochs
@@ -1084,59 +1078,58 @@ object AutoLoop {
   )(outerScope: Scope) = {
     def trainedFolds(scope: Scope) =
       folds.zipWithIndex
-        .map {
-          case ((trainIdx, predictIdx), foldIdx) =>
-            assert((trainIdx.toSet & predictIdx.toSet).size == 0)
-            Scope.bracket(scope) { scope =>
-              for {
-                sliced <- IO {
-                  slice(
-                    dataFullbatch = dataFullbatch,
-                    targetFullbatch = targetFullbatch,
-                    predictions = predictions,
-                    trainIdx = trainIdx,
-                    predictIdx = predictIdx
-                  )(scope)
-                }
-                (
-                  trainFeatures,
-                  trainPredictions,
-                  trainTarget,
-                  predictableFeatures,
-                  predictablePredictions
-                ) = sliced
-                _ <- IO {
-                  logger.foreach(
-                    _.info(
-                      s"Train KNN model, fold ${foldIdx + 1} / ${folds.size}"
-                    )
-                  )
-                }
-
-                result <- trainAndPredictKnn(
-                  k = k,
-                  data = trainFeatures,
-                  predictables = predictableFeatures,
-                  predictionsOnBasemodels = trainPredictions,
-                  predictablesPredictionsOnBasemodels = predictablePredictions,
-                  target = trainTarget,
-                  targetType = targetType,
-                  dataLayout = dataLayout,
-                  device = device,
-                  precision = precision,
-                  minibatchSize = minibatchSize
-                )(scope).map { prediction =>
-                  (
-                    0,
-                    prediction,
-                    (k, trainFeatures, trainPredictions, trainTarget),
-                    predictIdx
-                  )
-                }
-              } yield {
-                result
+        .map { case ((trainIdx, predictIdx), foldIdx) =>
+          assert((trainIdx.toSet & predictIdx.toSet).size == 0)
+          Scope.bracket(scope) { scope =>
+            for {
+              sliced <- IO {
+                slice(
+                  dataFullbatch = dataFullbatch,
+                  targetFullbatch = targetFullbatch,
+                  predictions = predictions,
+                  trainIdx = trainIdx,
+                  predictIdx = predictIdx
+                )(scope)
               }
+              (
+                trainFeatures,
+                trainPredictions,
+                trainTarget,
+                predictableFeatures,
+                predictablePredictions
+              ) = sliced
+              _ <- IO {
+                logger.foreach(
+                  _.info(
+                    s"Train KNN model, fold ${foldIdx + 1} / ${folds.size}"
+                  )
+                )
+              }
+
+              result <- trainAndPredictKnn(
+                k = k,
+                data = trainFeatures,
+                predictables = predictableFeatures,
+                predictionsOnBasemodels = trainPredictions,
+                predictablesPredictionsOnBasemodels = predictablePredictions,
+                target = trainTarget,
+                targetType = targetType,
+                dataLayout = dataLayout,
+                device = device,
+                precision = precision,
+                minibatchSize = minibatchSize
+              )(scope).map { prediction =>
+                (
+                  0,
+                  prediction,
+                  (k, trainFeatures, trainPredictions, trainTarget),
+                  predictIdx
+                )
+              }
+            } yield {
+              result
             }
+          }
         }
         .toList
         .sequence
@@ -1150,19 +1143,21 @@ object AutoLoop {
               s"Folds done. Aggregating predictions.."
             )
           )
-          val byEpoch = trainedFolds.groupBy {
-            case (epoch, _, _, _) => epoch
+          val byEpoch = trainedFolds.groupBy { case (epoch, _, _, _) =>
+            epoch
           }.toSeq
 
           aggregatePredictionsAndModelsPerEpoch(
             byEpoch,
             dataFullbatch.sizes.head
-          )(scope).map {
-            case (epoch, prediction, models) =>
-              (epoch, prediction, models.map {
-                case (k, features, predictedFeatures, target) =>
-                  KnnBase(k, features, predictedFeatures, target)
-              })
+          )(scope).map { case (epoch, prediction, models) =>
+            (
+              epoch,
+              prediction,
+              models.map { case (k, features, predictedFeatures, target) =>
+                KnnBase(k, features, predictedFeatures, target)
+              }
+            )
           }
         }
       } yield aggregatedByEpochs
@@ -1188,57 +1183,56 @@ object AutoLoop {
   )(outerScope: Scope) = {
     def trainedFolds(scope: Scope) =
       folds.zipWithIndex
-        .map {
-          case ((trainIdx, predictIdx), foldIdx) =>
-            assert((trainIdx.toSet & predictIdx.toSet).size == 0)
-            Scope.bracket(scope) { implicit scope =>
-              for {
-                sliced <- IO {
-                  slice(
-                    dataFullbatch = dataFullbatch,
-                    targetFullbatch = targetFullbatch,
-                    predictions = predictions,
-                    trainIdx = trainIdx,
-                    predictIdx = predictIdx
+        .map { case ((trainIdx, predictIdx), foldIdx) =>
+          assert((trainIdx.toSet & predictIdx.toSet).size == 0)
+          Scope.bracket(scope) { implicit scope =>
+            for {
+              sliced <- IO {
+                slice(
+                  dataFullbatch = dataFullbatch,
+                  targetFullbatch = targetFullbatch,
+                  predictions = predictions,
+                  trainIdx = trainIdx,
+                  predictIdx = predictIdx
+                )
+              }
+              (
+                trainFeatures,
+                trainPredictions,
+                trainTarget,
+                predictableFeatures,
+                predictablePredictions
+              ) = sliced
+              _ <- IO {
+                logger.foreach(
+                  _.info(
+                    s"Train model, hd=$hiddenSize wd=$weightDecay, dro=$dropout fold ${foldIdx + 1} / ${folds.size}"
                   )
-                }
-                (
-                  trainFeatures,
-                  trainPredictions,
-                  trainTarget,
-                  predictableFeatures,
-                  predictablePredictions
-                ) = sliced
-                _ <- IO {
-                  logger.foreach(
-                    _.info(
-                      s"Train model, hd=$hiddenSize wd=$weightDecay, dro=$dropout fold ${foldIdx + 1} / ${folds.size}"
-                    )
-                  )
-                }
+                )
+              }
 
-                result <- trainAndPredict1(
-                  data = trainFeatures,
-                  predictables = predictableFeatures,
-                  predictionsOnBasemodels = trainPredictions,
-                  predictablesPredictionsOnBasemodels = predictablePredictions,
-                  target = trainTarget,
-                  targetType = targetType,
-                  dataLayout = dataLayout,
-                  epochs = epochs,
-                  learningRate = learningRate,
-                  weightDecay = weightDecay,
-                  dropout = dropout,
-                  hiddenSize = hiddenSize,
-                  device = device,
-                  precision = precision,
-                  minibatchSize = minibatchSize,
-                  logger = logger,
-                  rng = rng
-                ).map(_.map(v => (v._1, v._2, v._3, predictIdx)))
-              } yield result
+              result <- trainAndPredict1(
+                data = trainFeatures,
+                predictables = predictableFeatures,
+                predictionsOnBasemodels = trainPredictions,
+                predictablesPredictionsOnBasemodels = predictablePredictions,
+                target = trainTarget,
+                targetType = targetType,
+                dataLayout = dataLayout,
+                epochs = epochs,
+                learningRate = learningRate,
+                weightDecay = weightDecay,
+                dropout = dropout,
+                hiddenSize = hiddenSize,
+                device = device,
+                precision = precision,
+                minibatchSize = minibatchSize,
+                logger = logger,
+                rng = rng
+              ).map(_.map(v => (v._1, v._2, v._3, predictIdx)))
+            } yield result
 
-            }
+          }
         }
         .toList
         .sequence
@@ -1252,18 +1246,21 @@ object AutoLoop {
               s"Folds done. Aggregating predictions.."
             )
           )
-          val byEpoch = trainedFolds.flatten.groupBy {
-            case (epoch, _, _, _) => epoch
+          val byEpoch = trainedFolds.flatten.groupBy { case (epoch, _, _, _) =>
+            epoch
           }.toSeq
 
           aggregatePredictionsAndModelsPerEpoch(
             byEpoch,
             dataFullbatch.sizes.head
-          ).map {
-            case (epoch, prediction, models) =>
-              (epoch, prediction, models.map {
-                case state => NNBase(hiddenSize, state.map(_._1))
-              })
+          ).map { case (epoch, prediction, models) =>
+            (
+              epoch,
+              prediction,
+              models.map { case state =>
+                NNBase(hiddenSize, state.map(_._1))
+              }
+            )
           }
         }
       } yield aggregatedByEpochs
@@ -1342,32 +1339,30 @@ object AutoLoop {
 
     def baseModels(hp: Seq[(Double, Double, Int)])(scope: Scope) = {
       val nn = hp
-        .map {
-          case (wd, dro, hiddenSize) =>
-            val predictionsInFolds = trainAndAverageFolds(
-              dataFullbatch = dataFullbatch,
-              targetFullbatch = targetFullbatch,
-              predictions = Nil,
-              folds = folds,
-              targetType = targetType,
-              dataLayout = dataLayout,
-              epochs = epochs,
-              weightDecay = wd,
-              dropout = dro,
-              hiddenSize = hiddenSize,
-              learningRate = learningRate,
-              device = device,
-              precision = precision,
-              minibatchSize = minibatchSize,
-              logger = logger,
-              rng = rng
-            )(scope)
-            predictionsInFolds.map(_.map {
-              case (epoch, prediction, models) =>
-                assert(prediction.isCPU)
-                assert(models.forall(_.state.forall(_.isCPU)))
-                (epoch, prediction, models)
-            })
+        .map { case (wd, dro, hiddenSize) =>
+          val predictionsInFolds = trainAndAverageFolds(
+            dataFullbatch = dataFullbatch,
+            targetFullbatch = targetFullbatch,
+            predictions = Nil,
+            folds = folds,
+            targetType = targetType,
+            dataLayout = dataLayout,
+            epochs = epochs,
+            weightDecay = wd,
+            dropout = dro,
+            hiddenSize = hiddenSize,
+            learningRate = learningRate,
+            device = device,
+            precision = precision,
+            minibatchSize = minibatchSize,
+            logger = logger,
+            rng = rng
+          )(scope)
+          predictionsInFolds.map(_.map { case (epoch, prediction, models) =>
+            assert(prediction.isCPU)
+            assert(models.forall(_.state.forall(_.isCPU)))
+            (epoch, prediction, models)
+          })
         }
         .toList
         .sequence
@@ -1388,12 +1383,11 @@ object AutoLoop {
             minibatchSize = knnMinibatchSize,
             logger = logger
           )(scope)
-          predictionsInFolds.map(_.map {
-            case (epoch, prediction, models) =>
-              assert(prediction.isCPU)
-              assert(models.forall(_.features.isCPU))
-              assert(models.forall(_.target.isCPU))
-              (epoch, prediction, models)
+          predictionsInFolds.map(_.map { case (epoch, prediction, models) =>
+            assert(prediction.isCPU)
+            assert(models.forall(_.features.isCPU))
+            assert(models.forall(_.target.isCPU))
+            (epoch, prediction, models)
           })
         }
         .toList
@@ -1401,26 +1395,24 @@ object AutoLoop {
         .map(_.flatten)
 
       val extratrees = extratreesHyperparameters
-        .map {
-          case (k, m, nMin) =>
-            val predictionsInFolds = trainAndAverageFoldsExtratrees(
-              k = k,
-              m = m,
-              nMin = nMin,
-              parallelism = extratreeParallelism,
-              dataFullbatch = dataFullbatch,
-              targetFullbatch = targetFullbatch,
-              predictions = Nil,
-              folds = folds,
-              targetType = targetType,
-              dataLayout = dataLayout,
-              logger = logger
-            )(scope)
-            predictionsInFolds.map(_.map {
-              case (epoch, prediction, models) =>
-                assert(prediction.isCPU)
-                (epoch, prediction, models)
-            })
+        .map { case (k, m, nMin) =>
+          val predictionsInFolds = trainAndAverageFoldsExtratrees(
+            k = k,
+            m = m,
+            nMin = nMin,
+            parallelism = extratreeParallelism,
+            dataFullbatch = dataFullbatch,
+            targetFullbatch = targetFullbatch,
+            predictions = Nil,
+            folds = folds,
+            targetType = targetType,
+            dataLayout = dataLayout,
+            logger = logger
+          )(scope)
+          predictionsInFolds.map(_.map { case (epoch, prediction, models) =>
+            assert(prediction.isCPU)
+            (epoch, prediction, models)
+          })
         }
         .toList
         .sequence
@@ -1436,45 +1428,43 @@ object AutoLoop {
 
     def highLevelModels(predictions: Seq[STen])(scope: Scope) = {
       val nn = hyperparameters
-        .map {
-          case (wd, dro, hiddenSize) =>
-            for {
-              trainedEnsembleFolds <- trainAndAverageFolds(
-                dataFullbatch = dataFullbatch,
-                targetFullbatch = targetFullbatch,
-                predictions = predictions,
-                folds = ensembleFolds,
-                targetType = targetType,
-                dataLayout = dataLayout,
-                epochs = epochs,
-                weightDecay = wd,
-                dropout = dro,
-                hiddenSize = hiddenSize,
-                learningRate = learningRate,
-                device = device,
-                precision = precision,
-                minibatchSize = minibatchSize,
-                logger = logger,
-                rng = rng
-              )(scope)
+        .map { case (wd, dro, hiddenSize) =>
+          for {
+            trainedEnsembleFolds <- trainAndAverageFolds(
+              dataFullbatch = dataFullbatch,
+              targetFullbatch = targetFullbatch,
+              predictions = predictions,
+              folds = ensembleFolds,
+              targetType = targetType,
+              dataLayout = dataLayout,
+              epochs = epochs,
+              weightDecay = wd,
+              dropout = dro,
+              hiddenSize = hiddenSize,
+              learningRate = learningRate,
+              device = device,
+              precision = precision,
+              minibatchSize = minibatchSize,
+              logger = logger,
+              rng = rng
+            )(scope)
 
-              withValidationErrors <- IO {
-                trainedEnsembleFolds.map {
-                  case (_, pred, models) =>
-                    assert(pred.isCPU)
-                    assert(models.forall(_.state.forall(_.isCPU)))
-                    val lossM = computeValidationErrors(
-                      pred,
-                      targetType,
-                      precision,
-                      targetFullbatch
-                    )(scope)
-                    (lossM, models)
+            withValidationErrors <- IO {
+              trainedEnsembleFolds.map { case (_, pred, models) =>
+                assert(pred.isCPU)
+                assert(models.forall(_.state.forall(_.isCPU)))
+                val lossM = computeValidationErrors(
+                  pred,
+                  targetType,
+                  precision,
+                  targetFullbatch
+                )(scope)
+                (lossM, models)
 
-                }
               }
+            }
 
-            } yield withValidationErrors
+          } yield withValidationErrors
         }
         .toList
         .sequence
@@ -1498,18 +1488,17 @@ object AutoLoop {
             )(scope)
 
             withValidationErrors <- IO {
-              trainedEnsembleFolds.map {
-                case (_, pred, models) =>
-                  assert(pred.isCPU)
-                  assert(models.forall(_.features.isCPU))
-                  assert(models.forall(_.target.isCPU))
-                  val lossM = computeValidationErrors(
-                    pred,
-                    targetType,
-                    precision,
-                    targetFullbatch
-                  )(scope)
-                  (lossM, models)
+              trainedEnsembleFolds.map { case (_, pred, models) =>
+                assert(pred.isCPU)
+                assert(models.forall(_.features.isCPU))
+                assert(models.forall(_.target.isCPU))
+                val lossM = computeValidationErrors(
+                  pred,
+                  targetType,
+                  precision,
+                  targetFullbatch
+                )(scope)
+                (lossM, models)
 
               }
             }
@@ -1521,39 +1510,37 @@ object AutoLoop {
         .map(_.flatten)
 
       val extratrees = extratreesHyperparameters
-        .map {
-          case (k, m, nMin) =>
-            for {
-              trainedEnsembleFolds <- trainAndAverageFoldsExtratrees(
-                k = k,
-                m = m,
-                nMin = nMin,
-                parallelism = extratreeParallelism,
-                dataFullbatch = dataFullbatch,
-                targetFullbatch = targetFullbatch,
-                predictions = predictions,
-                folds = ensembleFolds,
-                targetType = targetType,
-                dataLayout = dataLayout,
-                logger = logger
-              )(scope)
+        .map { case (k, m, nMin) =>
+          for {
+            trainedEnsembleFolds <- trainAndAverageFoldsExtratrees(
+              k = k,
+              m = m,
+              nMin = nMin,
+              parallelism = extratreeParallelism,
+              dataFullbatch = dataFullbatch,
+              targetFullbatch = targetFullbatch,
+              predictions = predictions,
+              folds = ensembleFolds,
+              targetType = targetType,
+              dataLayout = dataLayout,
+              logger = logger
+            )(scope)
 
-              withValidationErrors <- IO {
-                trainedEnsembleFolds.map {
-                  case (_, pred, models) =>
-                    assert(pred.isCPU)
-                    val lossM = computeValidationErrors(
-                      pred,
-                      targetType,
-                      precision,
-                      targetFullbatch
-                    )(scope)
-                    (lossM, models)
+            withValidationErrors <- IO {
+              trainedEnsembleFolds.map { case (_, pred, models) =>
+                assert(pred.isCPU)
+                val lossM = computeValidationErrors(
+                  pred,
+                  targetType,
+                  precision,
+                  targetFullbatch
+                )(scope)
+                (lossM, models)
 
-                }
               }
+            }
 
-            } yield withValidationErrors
+          } yield withValidationErrors
         }
         .toList
         .sequence
@@ -1597,13 +1584,11 @@ object AutoLoop {
         )
 
         EnsembleModel(
-          selectionModels = selected.flatMap {
-            case (_, models) =>
-              models
+          selectionModels = selected.flatMap { case (_, models) =>
+            models
           },
-          baseModels = pred.map {
-            case (_, _, models) =>
-              models
+          baseModels = pred.map { case (_, _, models) =>
+            models
           },
           dataLayout = dataLayout,
           targetType = targetType,

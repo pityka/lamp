@@ -27,8 +27,7 @@ object AdamW {
       )
 }
 
-/**
-  * @see https://arxiv.org/pdf/1711.05101.pdf Algorithm 2
+/** @see https://arxiv.org/pdf/1711.05101.pdf Algorithm 2
   */
 case class AdamW(
     parameters: Seq[(STen, PTag)],
@@ -40,11 +39,11 @@ case class AdamW(
     clip: Option[Double] = None,
     debias: Boolean = true
 ) extends Optimizer {
-  val mt: List[Tensor] = parameters.toList.map {
-    case (param, _) => Tensor.zeros_like(param.value)
+  val mt: List[Tensor] = parameters.toList.map { case (param, _) =>
+    Tensor.zeros_like(param.value)
   }
-  val vt: List[Tensor] = parameters.toList.map {
-    case (param, _) => Tensor.zeros_like(param.value)
+  val vt: List[Tensor] = parameters.toList.map { case (param, _) =>
+    Tensor.zeros_like(param.value)
   }
 
   var stepCount = 0L

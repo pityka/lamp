@@ -12,8 +12,8 @@ import lamp.STen
 import lamp.STenOptions
 
 class IOLoopSuite extends AnyFunSuite {
-  def logisticRegression(dim: Int, k: Int, tOpt: STenOptions)(
-      implicit pool: Scope
+  def logisticRegression(dim: Int, k: Int, tOpt: STenOptions)(implicit
+      pool: Scope
   ) =
     Seq2(
       Linear(dim, k, tOpt = tOpt),

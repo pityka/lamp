@@ -169,9 +169,8 @@ object Reader {
       channel: ReadableByteChannel,
       device: Device
   ): Either[String, Seq[Tensor]] =
-    Reader.sequence(types.map {
-      case st =>
-        readTensorFromChannel(channel, device)(st)
+    Reader.sequence(types.map { case st =>
+      readTensorFromChannel(channel, device)(st)
     })
 
   class ByteChannel(src: ByteBuffer) extends ReadableByteChannel {

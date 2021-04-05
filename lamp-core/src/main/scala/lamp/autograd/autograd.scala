@@ -20,7 +20,6 @@ import lamp.Movable
   * The value `dy/dy` is 1 and from this `dy/dw2` is recursed in the backward pass.
   * The Jacobian function of `dw2/dw1` is computed symbolically and hard coded.
   *
-  *
   * The anonymous function which `Op`s must implement is `dy/dw2 => dy/dw2 * dw2/dw1`.
   * The argument of that function (`dy/dw2`) is coming down from the backward pass.
   * The `Op` must implement `dy/dw2 * dw2/dw1`.
@@ -50,15 +49,14 @@ import lamp.Movable
   *   Scope.root { implicit scope => out += (p * a.value).unbroadcast(b.sizes) }
   *
   *   }
-  *)
+  * )
   * //The value of this operation, i.e. the forward pass
   * val value = Variable(this, a.value.*(b.value)(scope))(scope)
   *
-  *}
-  *}}}
+  * }
+  * }}}
   * @see [[https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation]]
   * @see [[http://www.cs.cmu.edu/~wcohen/10-605/notes/autodiff.pdf]]
-  *
   */
 trait Op {
 
@@ -77,14 +75,13 @@ trait Op {
     * do not include that argument in this list.
     *
     * @see The documentation on the trait [[lamp.autograd.Op]] for more details and example.
-    *
     */
   val params: List[(Variable, (STen, STen) => Unit)]
 }
 
 object Variable {
-  def apply(op: Op, value: STen)(
-      implicit scope: Scope
+  def apply(op: Op, value: STen)(implicit
+      scope: Scope
   ): Variable =
     VariableNonConstant(
       op,
@@ -215,9 +212,8 @@ sealed trait Variable {
     if (partialDerivative.isDefined) {
       partialDerivative.get.fill_(1d)
       wengert.foreach { v =>
-        v.op.foreach(_.params.foreach {
-          case (v1, computeGrad) =>
-            v1.accumulateGrad(v.partialDerivative.get, computeGrad)
+        v.op.foreach(_.params.foreach { case (v1, computeGrad) =>
+          v1.accumulateGrad(v.partialDerivative.get, computeGrad)
 
         })
       }
