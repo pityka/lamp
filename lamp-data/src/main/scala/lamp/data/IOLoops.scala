@@ -10,6 +10,7 @@ import lamp.STen
 import lamp.Scope
 import scala.concurrent.ExecutionContext
 import java.util.concurrent.Executors
+import cats.effect.Spawn
 
 /** Contains a training loops and helpers around it
   *
@@ -338,7 +339,6 @@ object IOLoops {
         transform: (Int, StreamControl[A]) => IO[StreamControl[B]],
         reduce: (B, B) => B,
         zero: B,
-        cs1: ContextShift[IO],
         cs2: ContextShift[IO]
     ): IO[B] = {
 
@@ -349,7 +349,7 @@ object IOLoops {
       ): IO[B] =
         for {
           fetched <- prefetching.join
-          _ <- cs2.shift
+          _ <- Spawn[IO].cede
           a = fetched._1
           release = fetched._2
           nextPrefetch <- fetch().allocated.start(cs1)
@@ -367,7 +367,7 @@ object IOLoops {
         } yield loopDone
 
       for {
-        _ <- cs2.shift
+        _ <- Spawn[IO].cede
         f <- IO { fetch().allocated }
         f <- f.start(cs1)
         l <- loop(0, zero, f)
