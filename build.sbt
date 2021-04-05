@@ -63,8 +63,10 @@ lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "2.2.5"
 val upickleVersion = "1.2.3"
-val scalaTestVersion = "3.2.5"
+val scalaTestVersion = "3.2.7"
 val scribeVersion = "3.5.1"
+val catsEffectVersion = "2.4.1"
+val catsCoreVersion = "2.5.0"
 
 lazy val sten = project
   .in(file("lamp-sten"))
@@ -77,8 +79,8 @@ lazy val sten = project
       "io.github.pityka" %% "aten-scala-core" % "0.0.0+82-3a4916da",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
-      "org.typelevel" %% "cats-core" % "2.4.2",
-      "org.typelevel" %% "cats-effect" % "2.4.1",
+      "org.typelevel" %% "cats-core" % catsCoreVersion,
+      "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
@@ -217,7 +219,7 @@ lazy val forest = project
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-      "org.typelevel" %% "cats-effect" % "2.1.4",
+      "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "io.github.pityka" %% "saddle-linalg" % saddleVersion
     )
   )
@@ -303,7 +305,7 @@ lazy val example_arxiv = project
       "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
-      "com.lihaoyi" %% "requests" % "0.6.5",
+      "com.lihaoyi" %% "requests" % "0.6.7",
       "com.lihaoyi" %% "os-lib" % "0.7.4"
     )
   )
