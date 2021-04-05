@@ -250,7 +250,7 @@ lazy val example_cifar100 = project
     publishArtifact := false,
     skip in publish := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion
     )
   )
@@ -262,7 +262,7 @@ lazy val example_gan = project
     publishArtifact := false,
     skip in publish := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion
     )
   )
@@ -274,7 +274,7 @@ lazy val example_timemachine = project
     publishArtifact := false,
     skip in publish := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion
     )
   )
@@ -287,7 +287,7 @@ lazy val example_translation = project
     publishArtifact := false,
     skip in publish := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion
     )
   )
@@ -300,7 +300,7 @@ lazy val example_arxiv = project
     publishArtifact := false,
     skip in publish := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.0-RC2",
+      "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "com.lihaoyi" %% "requests" % "0.6.5",
