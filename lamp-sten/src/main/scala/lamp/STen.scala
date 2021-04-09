@@ -1321,8 +1321,51 @@ case class STen private (
     (ut.owned, s.owned, v.owned)
   }
 
-  // todo:
-  // ATen.eig
-  // ATen.svd
+  def slogdet[S: Sc] = {
+    val (a, b) = ATen.linalg_slogdet(value)
+    (a.owned, b.owned)
+  }
+  def eigh[S: Sc](uplo: String) = {
+    val (a, b) = ATen.linalg_eigh(value, uplo)
+    (a.owned, b.owned)
+  }
+  def eigvalsh[S: Sc](uplo: String) = {
+    val a = ATen.linalg_eigvalsh(value, uplo)
+    a.owned
+  }
+  def inv[S: Sc] = {
+    ATen.linalg_inv(value).owned
+  }
+  def inner[S: Sc](other: STen) = {
+    ATen.inner(value, other.value).owned
+  }
+  def outer[S: Sc](other: STen) = {
+    ATen.outer(value, other.value).owned
+  }
+  def cond[S: Sc] = {
+    ATen.linalg_cond_0(value).owned
+  }
+  def cond[S: Sc](norm: String) = {
+    ATen.linalg_cond_1(value, norm).owned
+  }
+  def cond[S: Sc](hermitian: Boolean) = {
+    ATen.linalg_pinv_0(value, 1e-15, hermitian).owned
+  }
+  def solve[S: Sc](other: Tensor) = {
+    ATen.linalg_solve(value, other).owned
+  }
+  def tensorinv[S: Sc](int: Int) = {
+    ATen.linalg_tensorinv(value, int).owned
+  }
+  def tensorsolve[S: Sc](other: Tensor) = {
+    ATen.linalg_tensorsolve(value, other).owned
+  }
+  def qr[S: Sc](mode: String) = {
+    val (a, b) = ATen.linalg_qr(value, mode)
+    (a.owned, b.owned)
+  }
+  def matrixRank[S: Sc](hermitian: Boolean) = {
+    ATen.linalg_matrix_rank(value, hermitian).owned
+  }
 
 }
