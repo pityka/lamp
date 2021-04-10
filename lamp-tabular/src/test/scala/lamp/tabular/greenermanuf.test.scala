@@ -12,6 +12,7 @@ import lamp.DoublePrecision
 import scribe.Logger
 import lamp.STen
 import lamp.Scope
+import cats.effect.unsafe.implicits.global
 
 class GreenerManufacturingSuite extends AnyFunSuite {
 

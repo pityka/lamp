@@ -23,6 +23,7 @@ import lamp.nn.LossFunctions.BCEWithLogits
 import lamp.STenOptions
 import lamp.data.Writer
 import javax.imageio.ImageIO
+import cats.effect.unsafe.implicits.global
 
 object GAN {
   def loadImageFile(

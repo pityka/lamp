@@ -11,6 +11,7 @@ import java.io.File
 import lamp.CPU
 import lamp.Scope
 import lamp.STenOptions
+import cats.effect.unsafe.implicits.global
 
 class ReadWriteSuite extends AnyFunSuite {
   test("to tensor") {

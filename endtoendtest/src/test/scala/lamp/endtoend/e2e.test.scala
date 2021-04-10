@@ -18,7 +18,7 @@ import org.saddle.index.InnerJoin
 import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
-
+import cats.effect.unsafe.implicits.global
 class EndToEndClassificationSuite extends AnyFunSuite {
 
   def parseDataset(file: File) = {

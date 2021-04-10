@@ -11,6 +11,7 @@ import lamp.Device
 import lamp.DoublePrecision
 import lamp.STen
 import lamp.Scope
+import cats.effect.unsafe.implicits.global
 
 object TestTrain {
   def train(

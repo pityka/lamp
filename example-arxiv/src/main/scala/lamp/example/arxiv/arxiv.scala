@@ -5,6 +5,7 @@ import lamp._
 import lamp.autograd._
 import lamp.nn._
 import lamp.data._
+import cats.effect.unsafe.implicits.global
 
 case class CliConfig(
     folder: String = "",
@@ -145,7 +146,7 @@ object Train extends App {
               validationBatchesOverEpoch = Some(makeValidationBatch),
               epochs = 500,
               logger = Some(scribe.Logger("b")),
-              prefetchData = true
+              prefetch = true
             )
             .unsafeRunSync()
 

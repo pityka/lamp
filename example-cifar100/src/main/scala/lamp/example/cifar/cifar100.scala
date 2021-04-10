@@ -26,6 +26,7 @@ import lamp.Scope
 import lamp.STen
 import lamp.onnx.VariableInfo
 import lamp.data.{EndStream, EmptyBatch, NonEmptyBatch}
+import cats.effect.unsafe.implicits.global
 
 object Cifar {
   def loadImageFile(

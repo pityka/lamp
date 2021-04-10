@@ -315,7 +315,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 2,
       k = 32,
       m = 1,
-      parallelism = 1
+      parallelism = 8
     )
     println((System.nanoTime() - t1) * 1e-9)
     val output = predictClassification(trees, features)
@@ -365,7 +365,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 2,
       k = 32,
       m = 10,
-      parallelism = 1
+      parallelism = 8
     )
     println((System.nanoTime() - t1) * 1e-9)
     val output = predictClassification(trees, testfeatures)
@@ -401,7 +401,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 2,
       k = 32,
       m = 1,
-      parallelism = 1
+      parallelism = 8
     )
     println((System.nanoTime - t1) * 1e-9)
     val output = predictRegression(trees, features)

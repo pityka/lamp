@@ -21,6 +21,7 @@ import lamp.nn.SeqLinear
 import lamp.nn.statefulSequence
 import lamp.Scope
 import lamp.STen
+import cats.effect.unsafe.implicits.global
 
 class TextGenerationSuite extends AnyFunSuite {
   val asciiSilentCharsetDecoder = Charset

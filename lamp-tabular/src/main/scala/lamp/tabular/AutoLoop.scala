@@ -27,6 +27,7 @@ import lamp.STen
 import lamp.Movable
 import lamp.STenOptions
 import lamp.data.{StreamControl, EndStream}
+import cats.effect.unsafe.implicits.global
 
 sealed trait BaseModel
 case class KnnBase(
@@ -825,7 +826,7 @@ object AutoLoop {
               batchStream,
               logger,
               learningRateSchedule.learningRateFactor(epoch.toLong, None),
-              None
+              false
             )
             next <- loop(
               epoch + 1, {
