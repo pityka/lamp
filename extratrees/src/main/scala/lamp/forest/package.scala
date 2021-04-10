@@ -2,12 +2,10 @@ package lamp
 
 import org.saddle._
 import org.saddle.macros.BinOps._
-import java.util.concurrent.ForkJoinPool
-import scala.concurrent.ExecutionContext
 import cats.effect.IO
-import cats.syntax.parallel._
-import cats.data.NonEmptyList
+import cats.effect.syntax.all._
 import scala.reflect.ClassTag
+import cats.effect.unsafe.implicits.global
 
 package object extratrees {
 
@@ -235,12 +233,9 @@ package object extratrees {
         )
       )
     } else {
-      val fjp = new ForkJoinPool(parallelism)
-      val ec = ExecutionContext.fromExecutorService(fjp)
-      implicit val cs = IO.contextShift(ec)
-      val trees = NonEmptyList
-        .fromList(
-          (0 until m).toList map (_ =>
+      val trees =
+        (0 until m).toList
+          .parTraverseN(parallelism)(_ =>
             IO {
               buildTreeClassification(
                 data,
@@ -256,12 +251,7 @@ package object extratrees {
               )
             }
           )
-        )
-        .get
-        .parSequence
-        .unsafeRunSync()
-      fjp.shutdown()
-      ec.shutdown()
+          .unsafeRunSync()
 
       trees.toList
     }
@@ -294,12 +284,9 @@ package object extratrees {
         )
       )
     } else {
-      val fjp = new ForkJoinPool(parallelism)
-      val ec = ExecutionContext.fromExecutorService(fjp)
-      implicit val cs = IO.contextShift(ec)
-      val trees = NonEmptyList
-        .fromList(
-          (0 until m).toList map (_ =>
+      val trees =
+        (0 until m).toList
+          .parTraverseN(parallelism)(_ =>
             IO {
               buildTreeRegression(
                 data,
@@ -313,12 +300,7 @@ package object extratrees {
               )
             }
           )
-        )
-        .get
-        .parSequence
-        .unsafeRunSync()
-      fjp.shutdown()
-      ec.shutdown()
+          .unsafeRunSync()
 
       trees.toList
     }

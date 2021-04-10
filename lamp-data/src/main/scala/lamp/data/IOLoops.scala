@@ -8,8 +8,7 @@ import Writer.writeCheckpoint
 import lamp.autograd.Variable
 import lamp.STen
 import lamp.Scope
-import scala.concurrent.ExecutionContext
-import java.util.concurrent.Executors
+import cats.effect.std.Queue
 
 /** Contains a training loops and helpers around it
   *
@@ -90,7 +89,7 @@ object IOLoops {
           maxFactor = 1d,
           cycleLength = 10
         ),
-      prefetchData: Boolean = true
+      prefetch: Boolean = false
   ) = {
     for {
       warmedup <- epochs(
@@ -107,7 +106,7 @@ object IOLoops {
         logger,
         returnMinValidationLossModel,
         learningRateSchedule,
-        prefetchData
+        prefetch
       )
       warmupEpochReturned = warmedup._1
       warmedupModel = warmedup._2
@@ -125,7 +124,7 @@ object IOLoops {
         1,
         logger,
         swaLearningRateSchedule,
-        prefetchData
+        prefetch
       )
     } yield {
       val swaModel = swaResult._1
@@ -152,145 +151,126 @@ object IOLoops {
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule = LearningRateSchedule.noop,
-      prefetchData: Boolean = false
+      prefetch: Boolean = false
   ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
-    val ec =
-      Resource(IO.delay {
-        if (prefetchData) {
-          val ex1 = Executors.newSingleThreadExecutor()
-          val ec1 = ExecutionContext.fromExecutor(ex1)
-          val ex2 = Executors.newSingleThreadExecutor()
-          val ec2 = ExecutionContext.fromExecutor(ex2)
-          (
-            Option((ec1, ec2)),
-            IO.delay {
-              ex1.shutdown()
-              ex2.shutdown()
-            }
-          )
-        } else (None, IO.unit)
-      })
-
-    ec.use { maybeExecutionContext =>
-      def loop(
-          epoch: Int,
-          lastValidationLoss: Option[Double],
-          minValidationLoss: Option[Double],
-          minValidationLossModel: Option[(Int, Seq[Tensor])],
-          learningCurve: List[(Int, Double, Option[Double])]
-      ): IO[
-        (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])
-      ] = {
-        val learningRateFactor = learningRateSchedule.learningRateFactor(
-          epoch = epoch,
-          lastValidationLoss = lastValidationLoss
-        )
-        if (epoch >= epochs || learningRateFactor <= 0d)
-          IO.pure {
-            modelWithOptimizer.optimizer.release()
-            minValidationLossModel match {
-              case None =>
-                (epoch - 1, modelWithOptimizer.model, learningCurve.reverse)
-              case Some((epochOfMinValidation, state)) =>
-                Scope.root { implicit scope =>
-                  val stateOnDevice = state.map { t => STen.owned(t) }
-                  model.module.load(stateOnDevice)
-                }
-                (
-                  epochOfMinValidation,
-                  modelWithOptimizer.model,
-                  learningCurve.reverse
-                )
-            }
-          }
-        else {
-
-          def copyModel = {
-
-            logger.foreach(_.info(s"Copying model at epoch $epoch"))
-            minValidationLossModel.foreach(_._2.foreach(_.release))
-            val copiedState =
-              model.module.state.map(_._1.value).map { t =>
-                aten.ATen.clone(t.value)
+    def loop(
+        epoch: Int,
+        lastValidationLoss: Option[Double],
+        minValidationLoss: Option[Double],
+        minValidationLossModel: Option[(Int, Seq[Tensor])],
+        learningCurve: List[(Int, Double, Option[Double])]
+    ): IO[
+      (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])
+    ] = {
+      val learningRateFactor = learningRateSchedule.learningRateFactor(
+        epoch = epoch,
+        lastValidationLoss = lastValidationLoss
+      )
+      if (epoch >= epochs || learningRateFactor <= 0d)
+        IO.pure {
+          modelWithOptimizer.optimizer.release()
+          minValidationLossModel match {
+            case None =>
+              (epoch - 1, modelWithOptimizer.model, learningCurve.reverse)
+            case Some((epochOfMinValidation, state)) =>
+              Scope.root { implicit scope =>
+                val stateOnDevice = state.map { t => STen.owned(t) }
+                model.module.load(stateOnDevice)
               }
-
-            (epoch, copiedState)
+              (
+                epochOfMinValidation,
+                modelWithOptimizer.model,
+                learningCurve.reverse
+              )
           }
+        }
+      else {
 
-          for {
-            trainingLoss <- oneEpoch(
-              epoch,
-              trainingCallback,
-              modelWithOptimizer,
-              trainBatchesOverEpoch(),
-              logger,
-              learningRateFactor,
-              prefetchEC = maybeExecutionContext
-            )
+        def copyModel = {
 
-            _ <-
-              if (checkpointFile.isDefined)
-                writeCheckpoint(checkpointFile.get, model.module)
-              else IO.unit
-            maybeValidationLoss <-
-              if (
-                epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
-              )
-                validationOneEpoch(
-                  model = modelWithOptimizer.model,
-                  validationBatches = validationBatchesOverEpoch.get(),
-                  validationCallback = validationCallback,
-                  logger = logger,
-                  epochCount = epoch,
-                  minimumCheckpointFile = minimumCheckpointFile,
-                  minimumValidationLossSoFar = minValidationLoss
-                ).map(Some(_))
-              else IO.pure(None)
-
-            _ <- IO {
-              maybeValidationLoss.foreach(validationLoss =>
-                validationCallback.apply(epoch, validationLoss)
-              )
+          logger.foreach(_.info(s"Copying model at epoch $epoch"))
+          minValidationLossModel.foreach(_._2.foreach(_.release))
+          val copiedState =
+            model.module.state.map(_._1.value).map { t =>
+              aten.ATen.clone(t.value)
             }
 
-            nextMinValidationLoss =
-              if (
-                maybeValidationLoss.isEmpty || !returnMinValidationLossModel
-                  .contains(epoch)
-              )
-                minValidationLoss
-              else if (minValidationLoss.isEmpty) maybeValidationLoss
-              else
-                Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
-
-            nextMinValidationLossModel =
-              if (
-                returnMinValidationLossModel
-                  .contains(epoch)
-              ) {
-                if (maybeValidationLoss.isEmpty) minValidationLossModel
-                else if (minValidationLoss.isEmpty) Some(copyModel)
-                else if (minValidationLoss.get > maybeValidationLoss.get)
-                  Some(copyModel)
-                else minValidationLossModel
-              } else minValidationLossModel
-            next <- loop(
-              epoch = epoch + 1,
-              lastValidationLoss = maybeValidationLoss,
-              minValidationLoss = nextMinValidationLoss,
-              minValidationLossModel = nextMinValidationLossModel,
-              learningCurve =
-                (epoch, trainingLoss, maybeValidationLoss) :: learningCurve
-            )
-          } yield next
+          (epoch, copiedState)
         }
+
+        for {
+          trainingLoss <- oneEpoch(
+            epoch,
+            trainingCallback,
+            modelWithOptimizer,
+            trainBatchesOverEpoch(),
+            logger,
+            learningRateFactor,
+            prefetch
+          )
+
+          _ <-
+            if (checkpointFile.isDefined)
+              writeCheckpoint(checkpointFile.get, model.module)
+            else IO.unit
+          maybeValidationLoss <-
+            if (
+              epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
+            )
+              validationOneEpoch(
+                model = modelWithOptimizer.model,
+                validationBatches = validationBatchesOverEpoch.get(),
+                validationCallback = validationCallback,
+                logger = logger,
+                epochCount = epoch,
+                minimumCheckpointFile = minimumCheckpointFile,
+                minimumValidationLossSoFar = minValidationLoss
+              ).map(Some(_))
+            else IO.pure(None)
+
+          _ <- IO {
+            maybeValidationLoss.foreach(validationLoss =>
+              validationCallback.apply(epoch, validationLoss)
+            )
+          }
+
+          nextMinValidationLoss =
+            if (
+              maybeValidationLoss.isEmpty || !returnMinValidationLossModel
+                .contains(epoch)
+            )
+              minValidationLoss
+            else if (minValidationLoss.isEmpty) maybeValidationLoss
+            else
+              Some(math.min(minValidationLoss.get, maybeValidationLoss.get))
+
+          nextMinValidationLossModel =
+            if (
+              returnMinValidationLossModel
+                .contains(epoch)
+            ) {
+              if (maybeValidationLoss.isEmpty) minValidationLossModel
+              else if (minValidationLoss.isEmpty) Some(copyModel)
+              else if (minValidationLoss.get > maybeValidationLoss.get)
+                Some(copyModel)
+              else minValidationLossModel
+            } else minValidationLossModel
+          next <- loop(
+            epoch = epoch + 1,
+            lastValidationLoss = maybeValidationLoss,
+            minValidationLoss = nextMinValidationLoss,
+            minValidationLossModel = nextMinValidationLossModel,
+            learningCurve =
+              (epoch, trainingLoss, maybeValidationLoss) :: learningCurve
+          )
+        } yield next
       }
-
-      loop(0, None, None, None, Nil)
-
     }
+
+    loop(0, None, None, None, Nil)
+
   }
 
   def oneEpoch[I, M <: GenericModule[I, Variable]](
@@ -300,7 +280,7 @@ object IOLoops {
       trainBatches: BatchStream[I],
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
-      prefetchEC: Option[(ExecutionContext, ExecutionContext)]
+      prefetch: Boolean
   ): IO[Double] = {
 
     def processBatch(
@@ -333,74 +313,66 @@ object IOLoops {
         }
     }
 
-    def prefetch[A, B](
+    def prefetch1[A, B](
         fetch: () => Resource[IO, StreamControl[A]],
         transform: (Int, StreamControl[A]) => IO[StreamControl[B]],
         reduce: (B, B) => B,
-        zero: B,
-        cs1: ContextShift[IO],
-        cs2: ContextShift[IO]
+        zero: B
     ): IO[B] = {
 
       def loop(
           counter: Int,
           acc: B,
-          prefetching: Fiber[IO, (StreamControl[A], IO[Unit])]
-      ): IO[B] =
+          queue: Queue[IO, (StreamControl[A], IO[Unit])]
+      ): IO[B] = {
         for {
-          fetched <- prefetching.join
-          _ <- cs2.shift
+          fetched <- queue.take
           a = fetched._1
           release = fetched._2
-          nextPrefetch <- fetch().allocated.start(cs1)
-          done <- transform(
-            counter,
-            a
-          )
+          _ <- IO { fetch() }
+            .flatMap(resource => resource.allocated.flatMap(queue.offer))
+            .start
+          done <- transform(counter, a)
           _ <- release
           loopDone <- done match {
             case EndStream  => IO.pure(acc)
-            case EmptyBatch => loop(counter, acc, nextPrefetch)
+            case EmptyBatch => loop(counter, acc, queue)
             case NonEmptyBatch(b) =>
-              loop(counter + 1, reduce(b, acc), nextPrefetch)
+              loop(counter + 1, reduce(b, acc), queue)
           }
         } yield loopDone
+      }
 
       for {
-        _ <- cs2.shift
-        f <- IO { fetch().allocated }
-        f <- f.start(cs1)
-        l <- loop(0, zero, f)
+        q <- Queue.bounded[IO, (StreamControl[A], IO[Unit])](1)
+        _ <- IO { fetch() }.flatMap(_.allocated.flatMap(q.offer)).start
+        l <- loop(0, zero, q)
       } yield l
 
     }
 
     def prefetchLoop(
-        lossAcc: STen,
-        ec1: ExecutionContext,
-        ec2: ExecutionContext
+        lossAcc: STen
     ) = {
-      val cs1 =
-        IO.contextShift(ec1)
-      val cs2 =
-        IO.contextShift(ec2)
-      prefetch[(I, STen), Long](
+
+      prefetch1[(I, STen), Long](
         fetch = () => trainBatches.nextBatch,
-        transform = (_, batch) => IO { processBatch(batch, lossAcc) },
+        transform = (_, batch) =>
+          IO {
+            processBatch(batch, lossAcc)
+          },
         reduce = (b, acc) => (acc + b),
-        zero = 0L,
-        cs1 = cs1,
-        cs2 = cs2
+        zero = 0L
       )
     }
 
     val epochLoop = Scope.inResource.use { implicit scope =>
       val lossAcc =
         STen.scalarDouble(0d, model.model.module.state.head._1.options)
-      val loopDone = (if (prefetchEC.isDefined) {
-                        val (a, b) = prefetchEC.get
-                        prefetchLoop(lossAcc, a, b)
-                      } else simpleLoop(lossAcc, 0L))
+      val loopDone =
+        if (prefetch)
+          prefetchLoop(lossAcc)
+        else simpleLoop(lossAcc, 0L)
 
       loopDone.map { numInstances =>
         val totalLoss = lossAcc.toMat.raw(0)

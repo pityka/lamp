@@ -11,6 +11,7 @@ import lamp.SinglePrecision
 import lamp.Scope
 import lamp.TensorHelpers
 import lamp.STen
+import cats.effect.unsafe.implicits.global
 
 class GCNSuite extends AnyFunSuite {
   def test1(id: String)(fun: Boolean => Unit) = {

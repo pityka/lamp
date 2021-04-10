@@ -17,7 +17,7 @@ import java.io.File
 import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
-
+import cats.effect.unsafe.implicits.global
 class TabularResidualModuleSuite extends AnyFunSuite {
 
   def test1(id: String)(fun: Boolean => Unit) = {

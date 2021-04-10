@@ -198,6 +198,7 @@ For other capabilities of this training loop see the scaladoc of `IOLoops.epochs
 The `IOLoop.epochs` method returns an `IO` which will run into the trained model once executed:
 
 ```scala mdoc
+import cats.effect.unsafe.implicits.global
 val (epochOfModel, trainedModel, learningCurve) = trainedModelIO.unsafeRunSync()
 val module = trainedModel.module
 ```

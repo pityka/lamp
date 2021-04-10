@@ -8,6 +8,7 @@ import lamp.{CPU, CudaDevice, DoublePrecision}
 import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
+import cats.effect.unsafe.implicits.global
 
 class MLPSuite extends AnyFunSuite {
   def mlp(dim: Int, k: Int, tOpt: STenOptions)(implicit

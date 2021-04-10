@@ -10,6 +10,7 @@ import lamp.DoublePrecision
 import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
+import cats.effect.unsafe.implicits.global
 
 class IOLoopSuite extends AnyFunSuite {
   def logisticRegression(dim: Int, k: Int, tOpt: STenOptions)(implicit
@@ -162,7 +163,7 @@ class IOLoopSuite extends AnyFunSuite {
           validationCallback = ValidationCallback.noop,
           checkpointFile = None,
           minimumCheckpointFile = None,
-          prefetchData = true
+          prefetch = true
         )
         .unsafeRunSync()
 

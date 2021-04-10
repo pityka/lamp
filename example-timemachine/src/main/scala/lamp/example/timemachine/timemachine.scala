@@ -22,6 +22,7 @@ import lamp.nn.LSTM
 import lamp.nn.statefulSequence
 import lamp.Scope
 import lamp.STen
+import cats.effect.unsafe.implicits.global
 
 case class CliConfig(
     trainData: String = "",

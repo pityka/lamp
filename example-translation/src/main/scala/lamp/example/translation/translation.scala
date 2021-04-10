@@ -25,6 +25,7 @@ import lamp.data.Text
 import lamp.data.Reader
 import lamp.data.IOLoops
 import lamp.STen
+import cats.effect.unsafe.implicits.global
 
 case class CliConfig(
     trainData: String = "",
