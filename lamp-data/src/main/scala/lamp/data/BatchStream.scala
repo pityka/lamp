@@ -8,6 +8,8 @@ import lamp.autograd.Variable
 import lamp.Scope
 import lamp.STen
 import lamp.Movable
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicBoolean
 
 sealed trait StreamControl[+I] {
   def map[B](f: I => B): StreamControl[B]
@@ -39,27 +41,33 @@ case class NonEmptyBatch[I](batch: I) extends StreamControl[I] {
   def unsafeGet = batch
 }
 
-trait BatchStream[I] { self =>
-  def nextBatch: Resource[IO, StreamControl[(I, STen)]]
+trait BatchStream[+I] { self =>
+
+  /** May be called from multiple threads. */
+  def nextBatch(device: Device): Resource[IO, StreamControl[(I, STen)]]
 
   def map[I2](f: (I, STen) => Resource[IO, StreamControl[(I2, STen)]]) =
     new BatchStream[I2] {
-      def nextBatch: Resource[IO, StreamControl[(I2, STen)]] =
-        self.nextBatch.flatMap(maybe =>
-          maybe match {
-            case EndStream =>
-              Resource.pure[IO, StreamControl[(I2, STen)]](EndStream)
-            case EmptyBatch =>
-              Resource.pure[IO, StreamControl[(I2, STen)]](EmptyBatch)
-            case NonEmptyBatch(pair) =>
-              f.tupled(pair)
-          }
-        )
+      def nextBatch(device: Device): Resource[IO, StreamControl[(I2, STen)]] =
+        self
+          .nextBatch(device)
+          .flatMap(maybe =>
+            maybe match {
+              case EndStream =>
+                Resource.pure[IO, StreamControl[(I2, STen)]](EndStream)
+              case EmptyBatch =>
+                Resource.pure[IO, StreamControl[(I2, STen)]](EmptyBatch)
+              case NonEmptyBatch(pair) =>
+                f.tupled(pair)
+            }
+          )
     }
 
-  def foldLeft[B](zero: B)(f: (B, (I, STen)) => IO[B]): IO[B] = {
+  def foldLeft[B](zero: B, device: Device)(
+      f: (B, (I, STen)) => IO[B]
+  ): IO[B] = {
     def loop(b: B): IO[B] = {
-      nextBatch.allocated.flatMap {
+      nextBatch(device).allocated.flatMap {
         case (EndStream, release)  => release *> IO.pure(b)
         case (EmptyBatch, release) => release *> loop(b)
         case (NonEmptyBatch(batch), release) =>
@@ -81,6 +89,38 @@ trait BatchStream[I] { self =>
 
 object BatchStream {
 
+  def single[A](resource: Resource[IO, StreamControl[(A, STen)]]) =
+    new BatchStream[A] {
+      private val pulled = new AtomicBoolean(false)
+      def nextBatch(device: Device): Resource[IO, StreamControl[(A, STen)]] = {
+        val old = pulled.getAndSet(true)
+        if (!old)
+          resource
+        else Resource.pure[IO, StreamControl[(A, STen)]](EndStream)
+      }
+
+    }
+
+  def fromIndices[A](
+      indices: Array[Array[Int]]
+  )(
+      makeNonEmptyBatch: (
+          Array[Int],
+          Device
+      ) => Resource[IO, StreamControl[(A, STen)]]
+  ) =
+    new BatchStream[A] {
+      private val i = new AtomicInteger(0)
+      private val N = indices.length
+      def nextBatch(device: Device): Resource[IO, StreamControl[(A, STen)]] = {
+        val old = i.getAndIncrement()
+        if (old < N)
+          makeNonEmptyBatch(indices(old), device)
+        else Resource.pure[IO, StreamControl[(A, STen)]](EndStream)
+      }
+
+    }
+
   def scopeInResource =
     Resource.make(IO {
       Scope.free
@@ -91,10 +131,9 @@ object BatchStream {
       dropLast: Boolean,
       features: STen,
       target: STen,
-      device: Device,
       rng: org.saddle.spire.random.Generator
   ) = {
-    def makeNonEmptyBatch(idx: Array[Int]) = {
+    def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       scopeInResource.map { implicit scope =>
         val (d1, d2) = Scope { implicit scope =>
           val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
@@ -108,8 +147,6 @@ object BatchStream {
       }
 
     }
-    val endStream =
-      Resource.pure[IO, StreamControl[(Variable, STen)]](EndStream)
 
     val idx = {
       val t = array
@@ -120,17 +157,7 @@ object BatchStream {
       else t
     }
 
-    new BatchStream[Variable] {
-      private var remaining = idx
-      def nextBatch: Resource[IO, StreamControl[(Variable, STen)]] =
-        remaining match {
-          case Nil => endStream
-          case x :: tail =>
-            val r = makeNonEmptyBatch(x)
-            remaining = tail
-            r
-        }
-    }
+    BatchStream.fromIndices(idx.toArray)(makeNonEmptyBatch)
 
   }
 
@@ -141,15 +168,6 @@ object BatchStream {
       NonEmptyBatch((const(xcl), tcl)): StreamControl[(Variable, STen)]
 
     }
-    val endStream =
-      Resource.pure[IO, StreamControl[(Variable, STen)]](EndStream)
-    new BatchStream[Variable] {
-      private var pulled = false
-      def nextBatch: Resource[IO, StreamControl[(Variable, STen)]] =
-        if (!pulled) {
-          pulled = true
-          resource
-        } else endStream
-    }
+    BatchStream.single(resource)
   }
 }

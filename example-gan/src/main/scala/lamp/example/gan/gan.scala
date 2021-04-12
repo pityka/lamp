@@ -139,7 +139,6 @@ object Train extends App {
             false,
             trainFullbatch,
             trainTarget,
-            device,
             rng
           )
         val lr = 0.0005
@@ -168,7 +167,7 @@ object Train extends App {
             var instances = 0L
 
             batches
-              .foldLeft(()) { case (_, (feature, _)) =>
+              .foldLeft((), device) { case (_, (feature, _)) =>
                 Scope.inResource.use { implicit scope =>
                   IO {
                     val batchSize = feature.shape(0)

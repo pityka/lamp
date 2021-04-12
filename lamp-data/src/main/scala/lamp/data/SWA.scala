@@ -56,7 +56,8 @@ object SWA {
       logger: Option[Logger] = None,
       learningRateSchedule: SWALearningRateSchedule =
         SWALearningRateSchedule.constant(1d),
-      prefetch: Boolean = false
+      prefetch: Boolean = false,
+      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil
   ): IO[(SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
@@ -118,15 +119,27 @@ object SWA {
         }
 
         for {
-          trainingLoss <- IOLoops.oneEpoch(
-            epoch,
-            trainingCallback,
-            modelWithOptimizer,
-            trainBatchesOverEpoch(),
-            logger,
-            learningRateFactor,
-            prefetch
-          )
+          trainingLoss <-
+            if (dataParallelModels.isEmpty)
+              IOLoops.oneEpoch(
+                epoch,
+                trainingCallback,
+                modelWithOptimizer,
+                trainBatchesOverEpoch(),
+                logger,
+                learningRateFactor,
+                prefetch
+              )
+            else
+              DataParallel.oneEpoch(
+                epoch,
+                trainingCallback,
+                modelWithOptimizer,
+                trainBatchesOverEpoch(),
+                logger,
+                learningRateFactor,
+                dataParallelModels
+              )
 
           _ <-
             if (checkpointFile.isDefined)

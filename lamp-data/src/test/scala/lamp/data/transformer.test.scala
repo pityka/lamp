@@ -73,7 +73,6 @@ class TransformerSuite extends AnyFunSuite {
               false,
               trainFT,
               trainTargetT,
-              device,
               rng
             )
 

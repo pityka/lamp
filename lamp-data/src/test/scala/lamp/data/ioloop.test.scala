@@ -153,10 +153,10 @@ class IOLoopSuite extends AnyFunSuite {
               learningRate = simple(0.0001),
               weightDecay = simple(0.001d)
             ),
-          trainBatchesOverEpoch = () =>
-            BatchStream.minibatchesFromFull(200, true, x, target, device, rng),
+          trainBatchesOverEpoch =
+            () => BatchStream.minibatchesFromFull(200, true, x, target, rng),
           validationBatchesOverEpoch = Some(() =>
-            BatchStream.minibatchesFromFull(200, true, x, target, device, rng)
+            BatchStream.minibatchesFromFull(200, true, x, target, rng)
           ),
           epochs = 50,
           trainingCallback = TrainingCallback.noop,

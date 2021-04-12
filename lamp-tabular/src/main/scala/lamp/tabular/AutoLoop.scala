@@ -8,8 +8,6 @@ import lamp.nn._
 import lamp.Device
 import lamp.FloatingPointPrecision
 import lamp.data.BatchStream
-import lamp.autograd.Variable
-import cats.effect.Resource
 import cats.effect.IO
 import lamp.data.IOLoops
 import scribe.Logger
@@ -26,8 +24,8 @@ import lamp.Scope
 import lamp.STen
 import lamp.Movable
 import lamp.STenOptions
-import lamp.data.{StreamControl, EndStream}
 import cats.effect.unsafe.implicits.global
+import lamp.data.StreamControl
 
 sealed trait BaseModel
 case class KnnBase(
@@ -391,10 +389,9 @@ object AutoLoop {
       numericalFeatures: STen,
       categoricalFeatures: Seq[STen],
       target: STen,
-      device: Device,
       rng: org.saddle.spire.random.Generator
   ) = {
-    def makeNonEmptyBatch(idx: Array[Int]) = {
+    def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       BatchStream.scopeInResource.map { implicit scope =>
         val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
         val numCl = numericalFeatures.index(idxT)
@@ -412,9 +409,6 @@ object AutoLoop {
 
       }
     }
-    val emptyResource =
-      Resource
-        .pure[IO, StreamControl[((Seq[Variable], Variable), STen)]](EndStream)
 
     val idx = {
       val t = array
@@ -425,18 +419,7 @@ object AutoLoop {
       else t
     }
 
-    val batchStream = new BatchStream[(Seq[Variable], Variable)] {
-      private var remaining = idx
-      def nextBatch
-          : Resource[IO, StreamControl[((Seq[Variable], Variable), STen)]] =
-        remaining match {
-          case Nil => emptyResource
-          case x :: tail =>
-            val r = makeNonEmptyBatch(x)
-            remaining = tail
-            r
-        }
-    }
+    val batchStream = BatchStream.fromIndices(idx.toArray)(makeNonEmptyBatch)
 
     (batchStream, idx.size)
 
@@ -777,7 +760,6 @@ object AutoLoop {
           numericalFeatures = trainNumerical,
           categoricalFeatures = trainCategorical,
           target = target,
-          device = device,
           rng
         )
 

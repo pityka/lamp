@@ -1,7 +1,5 @@
 package lamp.data
 
-import cats.effect.Resource
-import cats.effect.IO
 import lamp.autograd.{const}
 import lamp.TensorHelpers
 import org.saddle._
@@ -200,10 +198,9 @@ object Text {
       text: Vector[Int],
       minibatchSize: Int,
       timeSteps: Int,
-      device: Device,
       rng: org.saddle.spire.random.Generator
   ) = {
-    def makeNonEmptyBatch(idx: Array[Int]) =
+    def makeNonEmptyBatch(idx: Array[Int], device: Device) =
       BatchStream.scopeInResource.map { implicit scope =>
         val pairs = idx.map { i =>
           val segmentFeature =
@@ -247,8 +244,6 @@ object Text {
         )
 
       }
-    val emptyResource =
-      Resource.pure[IO, StreamControl[(Variable, STen)]](EndStream)
 
     val dropped = text.drop(scala.util.Random.nextInt(timeSteps))
     val numSamples = (dropped.size - 1) / timeSteps
@@ -262,17 +257,7 @@ object Text {
       s"Total batches: ${idx.size}. Each $timeSteps token long and has $minibatchSize examples."
     )
     assert(idx.forall(_.size == minibatchSize))
-    new BatchStream[Variable] {
-      private var remaining = idx
-      def nextBatch: Resource[IO, StreamControl[(Variable, STen)]] =
-        remaining match {
-          case Nil => emptyResource
-          case x :: tail =>
-            val r = makeNonEmptyBatch(x)
-            remaining = tail
-            r
-        }
-    }
+    BatchStream.fromIndices(idx.toArray)(makeNonEmptyBatch)
 
   }
 
@@ -284,10 +269,9 @@ object Text {
       minibatchSize: Int,
       timeSteps: Int,
       pad: Long,
-      device: Device,
       rng: org.saddle.spire.random.Generator
   ): BatchStream[(Variable, Variable)] = {
-    def makeNonEmptyBatch(idx: Array[Int]) =
+    def makeNonEmptyBatch(idx: Array[Int], device: Device) =
       BatchStream.scopeInResource.map { implicit scope =>
         val pairs = idx.map { i =>
           val segmentSource =
@@ -364,8 +348,6 @@ object Text {
         )
 
       }
-    val emptyResource =
-      Resource.pure[IO, StreamControl[((Variable, Variable), STen)]](EndStream)
 
     val idx = array
       .shuffle(array.range(0, text.size), rng)
@@ -377,17 +359,7 @@ object Text {
       s"Total batches: ${idx.size}. Each $timeSteps token long and has $minibatchSize examples."
     )
     assert(idx.forall(_.size == minibatchSize))
-    new BatchStream[(Variable, Variable)] {
-      private var remaining = idx
-      def nextBatch: Resource[IO, StreamControl[((Variable, Variable), STen)]] =
-        remaining match {
-          case Nil => emptyResource
-          case x :: tail =>
-            val r = makeNonEmptyBatch(x)
-            remaining = tail
-            r
-        }
-    }
+    BatchStream.fromIndices(idx.toArray)(makeNonEmptyBatch)
 
   }
 

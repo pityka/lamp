@@ -583,6 +583,9 @@ case class STen private (
   /** Returns the device index. Only for Cuda tensors. */
   def deviceIndex = Scope.leak { implicit scope => options.deviceIndex }
 
+  /** Returns the Device this tensor resides on */
+  def device = Scope.leak { implicit scope => Device.fromOptions(options) }
+
   /** Returns the byte representation of the data type
     *
     * The mapping is:

@@ -123,7 +123,6 @@ class EndToEndClassificationSuite extends AnyFunSuite {
           false,
           trainFeaturesTensor,
           trainTargetTensor,
-          device,
           rng
         )
 

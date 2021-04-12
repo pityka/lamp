@@ -1,6 +1,5 @@
 package lamp.data
 
-import cats.effect._
 import org.saddle._
 import lamp.autograd.{const}
 import lamp.Device
@@ -18,10 +17,9 @@ object GraphBatchStream {
       minibatchSize: Int,
       graphNodesAndEdges: Vec[(STen, STen)],
       targetPerGraph: STen,
-      device: Device,
       rng: Option[org.saddle.spire.random.Generator]
   ): BatchStream[(Variable, Variable, Variable)] = {
-    def makeNonEmptyBatch(idx: Array[Int]) = {
+    def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       Scope.inResource.map { implicit scope =>
         val selectedGraphs = graphNodesAndEdges.take(idx).toSeq
         val (
@@ -109,10 +107,6 @@ object GraphBatchStream {
         )
       }
     }
-    val emptyResource = Resource
-      .pure[IO, StreamControl[((Variable, Variable, Variable), STen)]](
-        EndStream
-      )
 
     val idx =
       rng
@@ -128,19 +122,8 @@ object GraphBatchStream {
             .grouped(minibatchSize)
             .toList
         )
-    new BatchStream[(Variable, Variable, Variable)] {
-      private var remaining = idx
-      def nextBatch: Resource[IO, StreamControl[
-        ((Variable, Variable, Variable), STen)
-      ]] =
-        remaining match {
-          case Nil => emptyResource
-          case x :: tail =>
-            val r = makeNonEmptyBatch(x)
-            remaining = tail
-            r
-        }
-    }
+
+    BatchStream.fromIndices(idx.toArray)(makeNonEmptyBatch)
 
   }
 
@@ -153,23 +136,13 @@ object GraphBatchStream {
       edges: STen,
       targetPerNode: STen
   ): BatchStream[(Variable, Variable)] =
-    new BatchStream[(Variable, Variable)] {
-      var i = 1
-      def nextBatch: Resource[IO, StreamControl[
-        ((Variable, Variable), STen)
-      ]] = {
-        if (i == 1) {
-          i -= 1
-          Scope.inResource.map { _ =>
-            val nodesV = const(nodes)
-            val edgesV = const(edges)
+    BatchStream.single(Scope.inResource.map { _ =>
+      val nodesV = const(nodes)
+      val edgesV = const(edges)
 
-            StreamControl(
-              ((nodesV, edgesV), targetPerNode)
-            )
-          }
-        } else { Resource.make(IO(EndStream))(_ => IO.unit) }
-      }
-    }
+      StreamControl(
+        ((nodesV, edgesV), targetPerNode)
+      )
+    })
 
 }
