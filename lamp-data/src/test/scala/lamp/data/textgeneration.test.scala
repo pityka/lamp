@@ -77,7 +77,6 @@ class TextGenerationSuite extends AnyFunSuite {
             trainTokenized,
             64,
             lookAhead,
-            device,
             rng
           )
 
@@ -154,7 +153,6 @@ class TextGenerationSuite extends AnyFunSuite {
             trainTokenized,
             64,
             lookAhead,
-            device,
             rng
           )
 

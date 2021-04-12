@@ -164,7 +164,6 @@ object Train extends App {
               trainTokenized,
               config.trainBatchSize,
               lookAhead,
-              device,
               rng
             )
         val testEpochs = () =>
@@ -173,7 +172,6 @@ object Train extends App {
               testTokenized,
               config.validationBatchSize,
               lookAhead,
-              device,
               rng
             )
 

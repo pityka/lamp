@@ -83,7 +83,6 @@ class MLPSuite extends AnyFunSuite {
           true,
           testDataTensor,
           testTarget,
-          device,
           rng
         )
       val makeTrainingBatch = () =>
@@ -92,7 +91,6 @@ class MLPSuite extends AnyFunSuite {
           true,
           trainDataTensor,
           trainTarget,
-          device,
           rng
         )
 

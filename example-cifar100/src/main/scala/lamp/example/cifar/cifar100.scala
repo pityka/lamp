@@ -180,7 +180,6 @@ object Train extends App {
             true,
             trainFullbatch,
             trainTarget,
-            device,
             rng
           )
         val testEpochs = () =>
@@ -189,7 +188,6 @@ object Train extends App {
             true,
             testFullbatch,
             testTarget,
-            device,
             rng
           )
 
@@ -212,7 +210,8 @@ object Train extends App {
           )
           .unsafeRunSync()
 
-        testEpochs().nextBatch
+        testEpochs()
+          .nextBatch(device)
           .use {
             case NonEmptyBatch(batch) =>
               IO {

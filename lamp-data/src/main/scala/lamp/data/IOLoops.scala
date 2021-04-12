@@ -23,6 +23,8 @@ object IOLoops {
       model: M with GenericModule[I, Variable]
   ): IO[Unit] = {
 
+    val device = model.state.head._1.value.device
+
     def loop(
         batch: Resource[IO, StreamControl[(I, STen)]]
     ): IO[Unit] = {
@@ -32,17 +34,19 @@ object IOLoops {
         case NonEmptyBatch((x, _)) =>
           IO { Scope.root { implicit scope => model.forward(x) }; true }
       } flatMap {
-        case true  => loop(batchStream.nextBatch)
+        case true  => loop(batchStream.nextBatch(device))
         case false => IO.unit
       }
     }
 
-    loop(batchStream.nextBatch)
+    loop(batchStream.nextBatch(device))
   }
   def runBatchStream[I, M <: GenericModule[I, Variable]](
       batchStream: BatchStream[I],
       model: M with GenericModule[I, Variable]
   )(implicit scope: Scope) = {
+
+    val device = model.state.head._1.value.device
 
     def loop(
         batch: Resource[IO, StreamControl[(I, STen)]],
@@ -60,12 +64,12 @@ object IOLoops {
 
       } flatMap {
         case Left(acc)  => IO.pure(acc)
-        case Right(acc) => loop(batchStream.nextBatch, acc)
+        case Right(acc) => loop(batchStream.nextBatch(device), acc)
       }
 
     }
 
-    loop(batchStream.nextBatch, Nil)
+    loop(batchStream.nextBatch(device), Nil)
   }
 
   def withSWA[I, M <: GenericModule[I, Variable]: Load](
@@ -89,7 +93,8 @@ object IOLoops {
           maxFactor = 1d,
           cycleLength = 10
         ),
-      prefetch: Boolean = false
+      prefetch: Boolean = false,
+      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil
   ) = {
     for {
       warmedup <- epochs(
@@ -106,7 +111,8 @@ object IOLoops {
         logger,
         returnMinValidationLossModel,
         learningRateSchedule,
-        prefetch
+        prefetch,
+        dataParallelModels
       )
       warmupEpochReturned = warmedup._1
       warmedupModel = warmedup._2
@@ -124,7 +130,8 @@ object IOLoops {
         1,
         logger,
         swaLearningRateSchedule,
-        prefetch
+        prefetch,
+        dataParallelModels
       )
     } yield {
       val swaModel = swaResult._1
@@ -151,7 +158,8 @@ object IOLoops {
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule = LearningRateSchedule.noop,
-      prefetch: Boolean = false
+      prefetch: Boolean = false,
+      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil
   ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
@@ -201,15 +209,27 @@ object IOLoops {
         }
 
         for {
-          trainingLoss <- oneEpoch(
-            epoch,
-            trainingCallback,
-            modelWithOptimizer,
-            trainBatchesOverEpoch(),
-            logger,
-            learningRateFactor,
-            prefetch
-          )
+          trainingLoss <-
+            if (dataParallelModels.isEmpty)
+              oneEpoch(
+                epoch,
+                trainingCallback,
+                modelWithOptimizer,
+                trainBatchesOverEpoch(),
+                logger,
+                learningRateFactor,
+                prefetch
+              )
+            else
+              DataParallel.oneEpoch(
+                epoch,
+                trainingCallback,
+                modelWithOptimizer,
+                trainBatchesOverEpoch(),
+                logger,
+                learningRateFactor,
+                dataParallelModels
+              )
 
           _ <-
             if (checkpointFile.isDefined)
@@ -283,6 +303,8 @@ object IOLoops {
       prefetch: Boolean
   ): IO[Double] = {
 
+    val device = model.model.module.state.head._1.value.device
+
     def processBatch(
         elem: StreamControl[(I, STen)],
         lossAcc: STen
@@ -300,7 +322,8 @@ object IOLoops {
     }
 
     def simpleLoop(lossAcc: STen, numInstancesAcc: Long): IO[Long] = {
-      trainBatches.nextBatch
+      trainBatches
+        .nextBatch(device)
         .use { batch => IO { processBatch(batch, lossAcc) } }
         .flatMap {
           case EndStream  => IO.pure(numInstancesAcc)
@@ -356,7 +379,7 @@ object IOLoops {
     ) = {
 
       prefetch1[(I, STen), Long](
-        fetch = () => trainBatches.nextBatch,
+        fetch = () => trainBatches.nextBatch(device),
         transform = (_, batch) =>
           IO {
             processBatch(batch, lossAcc)
@@ -407,12 +430,15 @@ object IOLoops {
       minimumCheckpointFile: Option[File],
       minimumValidationLossSoFar: Option[Double]
   ): IO[Double] = {
+    val device = model.module.state.head._1.value.device
+
     def loop(
         batchCount: Int,
         totalLoss: STen,
         totalExamples: Long
     ): IO[(STen, Long)] = {
-      validationBatches.nextBatch
+      validationBatches
+        .nextBatch(device)
         .use { elem =>
           IO {
             elem.map { case (validationSample, validationTarget) =>

@@ -37,6 +37,10 @@ sealed trait Device { self =>
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions
   def setSeed(seed: Long): Unit
 }
+object Device {
+  def fromOptions(st: STenOptions) =
+    if (st.isCPU) CPU else CudaDevice(st.deviceIndex)
+}
 case object CPU extends Device {
   def to(t: Tensor) = {
     t.cpu
