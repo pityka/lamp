@@ -145,21 +145,30 @@ object Writer {
     case other => Left(s"Type $other not supported.")
   }
 
-  def tensorToArray[T: ST](tensor: Tensor, elem: Int) =
-    (implicitly[ST[T]] match {
+  def tensorToArray[T: ST](tensor0: Tensor, elem: Int) = {
+    val tensor = if (tensor0.isCuda()) tensor0.cpu else tensor0
+
+    val array = (implicitly[ST[T]] match {
       case ScalarTagDouble =>
         val arr = Array.ofDim[Double](elem)
-        tensor.copyToDoubleArray(arr)
+        assert(tensor.copyToDoubleArray(arr))
         arr
       case ScalarTagFloat =>
         val arr = Array.ofDim[Float](elem)
-        tensor.copyToFloatArray(arr)
+        assert(tensor.copyToFloatArray(arr))
         arr
       case ScalarTagLong =>
         val arr = Array.ofDim[Long](elem)
-        tensor.copyToLongArray(arr)
+        assert(tensor.copyToLongArray(arr))
         arr
     }).asInstanceOf[Array[T]]
+
+    if (tensor != tensor0) {
+      tensor.release()
+    }
+    array
+
+  }
 
   def writeTensorIntoChannel[T: ST](
       tensor: Tensor,

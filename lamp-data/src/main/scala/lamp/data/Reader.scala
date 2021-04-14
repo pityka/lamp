@@ -133,9 +133,9 @@ object Reader {
           }
           val t = ATen.zeros(shape.map(_.toLong).toArray, topt.cpu.value)
           implicitly[ST[T]] match {
-            case ScalarTagDouble => t.copyFromDoubleArray(data)
-            case ScalarTagFloat  => t.copyFromFloatArray(data)
-            case ScalarTagLong   => t.copyFromLongArray(data)
+            case ScalarTagDouble => assert(t.copyFromDoubleArray(data))
+            case ScalarTagFloat  => assert(t.copyFromFloatArray(data))
+            case ScalarTagLong   => assert(t.copyFromLongArray(data))
           }
           val tdevice = t.to(topt.value, true, true)
           t.release
