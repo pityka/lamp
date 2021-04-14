@@ -431,6 +431,7 @@ object IOLoops {
       minimumValidationLossSoFar: Option[Double]
   ): IO[Double] = {
     val device = model.module.state.head._1.value.device
+    val modelAsEval = model.asEval
 
     def loop(
         batchCount: Int,
@@ -442,8 +443,8 @@ object IOLoops {
         .use { elem =>
           IO {
             elem.map { case (validationSample, validationTarget) =>
-              val numExamples = model.asEval
-                .addTotalLossAndReturnNumExamples(
+              val numExamples =
+                modelAsEval.addTotalLossAndReturnNumExamples(
                   validationSample,
                   validationTarget,
                   totalLoss
