@@ -559,7 +559,7 @@ class NNSuite extends AnyFunSuite {
       )
       FreeRunningRNN(rnn, 3)
     },
-    35.6847
+    35.9078
   )
   testGradientAndValueND("SeqLinear ", (), false)(
     nd2x3x2,

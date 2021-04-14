@@ -231,7 +231,7 @@ class TextGenerationSuite extends AnyFunSuite {
         )
       val text = Text.convertIntegersToText(textVariable, rvocab)
 
-      assert(text == Vector(" the s and"))
+      assert(text == Vector(" the the t"))
     }
   }
   test("text generation - beam") {
@@ -299,7 +299,7 @@ class TextGenerationSuite extends AnyFunSuite {
       )
 
       assert(
-        text.map(_._1) == List("e theeeeeee", "ed theeeeee", "ed and and ")
+        text.map(_._1) == List("e theeeeeee", "ed and thee", "ed and and ")
       )
     }
   }
