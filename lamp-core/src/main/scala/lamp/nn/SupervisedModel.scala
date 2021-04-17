@@ -13,7 +13,8 @@ trait LossCalculation[I] {
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]])
 }
 
-class SimpleLossCalculation[I] extends LossCalculation[I] {
+class SimpleLossCalculation[I](gradientScaleFactor: Double = 1d)
+    extends LossCalculation[I] {
 
   def apply[M <: GenericModule[I, Variable]](
       samples: I,
@@ -23,9 +24,18 @@ class SimpleLossCalculation[I] extends LossCalculation[I] {
       computeGradients: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
     val output = module.forward(samples)
-    val (loss, numInstances) = lossFunction(output, target)
+    val (loss0, numInstances) = lossFunction(output, target)
+    val loss =
+      if (gradientScaleFactor == 1d) loss0 else loss0 * gradientScaleFactor
 
-    val gradients = if (computeGradients) Some(module.gradients(loss)) else None
+    val gradients =
+      if (computeGradients) Some(module.gradients(loss)) else None
+
+    if (gradientScaleFactor != 1d)
+      gradients.foreach {
+        _.foreach(_.foreach { grad => grad *= (1d / gradientScaleFactor) })
+      }
+
     (loss, numInstances, gradients)
   }
 
