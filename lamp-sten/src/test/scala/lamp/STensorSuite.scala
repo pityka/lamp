@@ -10,6 +10,14 @@ import org.scalatest.compatible.Assertion
 class STenSuite extends AnyFunSuite {
   implicit def AssertionIsMovable = Movable.empty[Assertion]
 
+  test("cast to half") {
+    Scope.root { implicit scope =>
+      val half = STen.ones(List(3)).castToHalf
+      assert(half.scalarTypeByte == 5)
+
+    }
+  }
+
   test("unique 1") {
     Scope.root { implicit scope =>
       val t =
