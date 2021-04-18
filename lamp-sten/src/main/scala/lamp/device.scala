@@ -5,9 +5,11 @@ import aten.Tensor
 sealed trait FloatingPointPrecision {
   def convertTensor(t: Tensor): Tensor
   def convertOption[S: Sc](t: STenOptions): STenOptions
+  def scalarTypeByte: Byte
 }
 
 case object DoublePrecision extends FloatingPointPrecision {
+  val scalarTypeByte = 7
   def convertTensor(t: Tensor): Tensor = {
     val opt = t.options().toDouble()
     val r = t.to(opt, true, true)
@@ -19,6 +21,7 @@ case object DoublePrecision extends FloatingPointPrecision {
   }
 }
 case object SinglePrecision extends FloatingPointPrecision {
+  val scalarTypeByte = 6
   def convertTensor(t: Tensor): Tensor = {
     val opt = t.options().toFloat()
     val r = t.to(opt, true, true)
@@ -27,6 +30,16 @@ case object SinglePrecision extends FloatingPointPrecision {
   }
   def convertOption[S: Sc](t: STenOptions): STenOptions = {
     t.toFloat
+  }
+}
+case object HalfPrecision extends FloatingPointPrecision {
+  val scalarTypeByte = 5
+  def convertTensor(t: Tensor): Tensor = {
+    aten.ATen._cast_Half(t, true)
+  }
+  def convertOption[S: Sc](t: STenOptions): STenOptions = {
+    // t.toHalf
+    ???
   }
 }
 

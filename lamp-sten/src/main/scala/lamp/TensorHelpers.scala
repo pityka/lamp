@@ -41,11 +41,15 @@ object TensorHelpers {
       }
     }
 
-  def toMat(t0: Tensor) = {
+  def toMat(t0: Tensor): Mat[Double] = {
     val t = if (t0.isCuda) t0.cpu else t0
     try {
-      if (t.scalarTypeByte() == 6) toFloatMat(t).map(_.toDouble)
-      else {
+      if (t.scalarTypeByte() != 7) {
+        val tmp = ATen._cast_Double(t0, true)
+        val mat = toMat(tmp)
+        tmp.release
+        mat
+      } else {
         assert(
           t.scalarTypeByte == 7,
           s"Expected Double Tensor. Got scalartype: ${t.scalarTypeByte}"
