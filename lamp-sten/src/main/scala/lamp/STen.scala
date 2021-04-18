@@ -840,6 +840,13 @@ case class STen private (
     (owned(a), owned(b), owned(c))
   }
 
+  def castToType[S: Sc](scalarType: Byte) = scalarType match {
+    case 7 => castToDouble
+    case 6 => castToFloat
+    case 5 => castToHalf
+    case 4 => castToLong
+  }
+
   /** Casts to char */
   def castToChar[S: Sc] = owned(ATen._cast_Char(value, true))
 
@@ -854,6 +861,9 @@ case class STen private (
 
   /** Casts to long */
   def castToLong[S: Sc] = owned(ATen._cast_Long(value, true))
+
+  /** Casts to half */
+  def castToHalf[S: Sc] = owned(ATen._cast_Half(value, true))
 
   /** Adds to tensors. */
   def +[S: Sc](other: STen) =

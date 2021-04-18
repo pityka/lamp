@@ -18,6 +18,13 @@ class STenSuite extends AnyFunSuite {
       assert(STen.atan2(minusOne, one).toMat.raw(0) == -0.25 * math.Pi)
     }
   }
+  test("cast to half") {
+    Scope.root { implicit scope =>
+      val half = STen.ones(List(3)).castToHalf
+      assert(half.scalarTypeByte == 5)
+
+    }
+  }
 
   test("unique 1") {
     Scope.root { implicit scope =>
