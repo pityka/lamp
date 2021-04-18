@@ -9,6 +9,7 @@ import lamp.SinglePrecision
 
 import lamp.Scope
 import lamp.STen
+import lamp.HalfPrecision
 
 case class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
     extends Op {
@@ -205,19 +206,28 @@ case class CastToPrecision(
     precision: FloatingPointPrecision
 ) extends Op {
 
+  val aScalarTypeByte = a.value.scalarTypeByte
+
   val params = List(
-    a.zipBackward { (_, _) =>
-      throw new RuntimeException("Cast to Precision is not differentiable")
-    }
-  )
-  val value = Variable(
-    this, {
-      precision match {
-        case DoublePrecision => a.value.castToDouble(scope)
-        case SinglePrecision => a.value.castToFloat(scope)
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        out += (p.castToType(a.value.scalarTypeByte))
       }
     }
-  )(scope)
+  )
+
+  val value =
+    if (aScalarTypeByte == precision.scalarTypeByte) a
+    else
+      Variable(
+        this, {
+          precision match {
+            case DoublePrecision => a.value.castToDouble(scope)
+            case SinglePrecision => a.value.castToFloat(scope)
+            case HalfPrecision   => a.value.castToHalf(scope)
+          }
+        }
+      )(scope)
 }
 
 case class ScatterAdd(
