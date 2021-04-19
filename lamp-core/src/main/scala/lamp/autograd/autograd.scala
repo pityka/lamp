@@ -5,6 +5,9 @@ import lamp.Scope
 import lamp.Sc
 import lamp.STen
 import lamp.Movable
+import lamp.DoublePrecision
+import lamp.SinglePrecision
+import lamp.HalfPrecision
 
 /** Represents an operation in the computational graph
   *
@@ -231,6 +234,7 @@ sealed trait Variable {
     computeGrad(incoming, partialDerivative.get)
   }
 
+  val DefaultGraphConfiguration = "shadow"
   import lamp.{scope => extractScope}
 
   /** Returns a new variable with the respective dimensions transposed. */
@@ -256,7 +260,15 @@ sealed trait Variable {
     new MaskSelect(extractScope, this, mask).value
   def makeBooleanMask[S: Sc](q: Long) = new EqWhere(extractScope, this, q).value
   def cast[S: Sc](precision: FloatingPointPrecision) =
-    new CastToPrecision(extractScope, this, precision).value
+    new CastToType(extractScope, this, precision.scalarTypeByte).value
+  def castToDouble[S: Sc] =
+    new CastToType(extractScope, this, DoublePrecision.scalarTypeByte).value
+  def castToSingle[S: Sc] =
+    new CastToType(extractScope, this, SinglePrecision.scalarTypeByte).value
+  def castToHalf[S: Sc] =
+    new CastToType(extractScope, this, HalfPrecision.scalarTypeByte).value
+  def castToLike[S: Sc](other: Variable) =
+    new CastToType(extractScope, this, other.value.scalarTypeByte).value
   def cat[S: Sc](other: Variable, dim: Long) =
     new Concatenate(extractScope, List(this, other), dim).value
   def +[S: Sc](other: Variable) = new Add(extractScope, this, other).value
@@ -265,13 +277,25 @@ sealed trait Variable {
   def *[S: Sc](other: Variable) = new Mult(extractScope, this, other).value
   def *[S: Sc](other: Double) = new ConstMult(extractScope, this, other).value
   def /[S: Sc](other: Variable) = new Div(extractScope, this, other).value
-  def mm[S: Sc](other: Variable) = new MatMul(extractScope, this, other).value
-  def bmm[S: Sc](other: Variable) =
-    new BatchedMatMul(extractScope, this, other).value
+  def mm(other: Variable)(implicit scope: Scope, conf: GraphConfiguration) =
+    new MatMul(
+      extractScope,
+      this,
+      other
+    ).value
+  def bmm[S: Sc](other: Variable)(implicit conf: GraphConfiguration) =
+    new BatchedMatMul(
+      extractScope,
+      this,
+      other
+    ).value
   def relu[S: Sc] = new Relu(extractScope, this).value
   def leakyRelu[S: Sc](negativeSlope: Double) =
     new LeakyRelu(extractScope, this, negativeSlope).value
-  def swish1[S: Sc] = this * this.sigmoid
+  def swish1[S: Sc] = {
+    val t = this
+    t * t.sigmoid
+  }
   def gelu[S: Sc] = new Gelu(extractScope, this).value
   def sigmoid[S: Sc] = new Sigmoid(extractScope, this).value
   def dropout[S: Sc](prob: Double, train: Boolean) =
@@ -295,7 +319,8 @@ sealed trait Variable {
   def tan[S: Sc] = new Tan(extractScope, this).value
   def tanh[S: Sc] = new Tanh(extractScope, this).value
   def atan[S: Sc] = new ArcTan(extractScope, this).value
-  def pow[S: Sc](const: Double) = new PowConst(extractScope, this, const).value
+  def pow[S: Sc](const: Double) =
+    new PowConst(extractScope, this, const).value
   def pow[S: Sc](exponent: Variable) =
     new Pow(extractScope, this, exponent).value
   def euclideanDistance[S: Sc](b: Variable, dim: Int) =
@@ -350,7 +375,8 @@ sealed trait Variable {
   def variance[S: Sc](dim: List[Int]) =
     new Variance(extractScope, this, dim).value
   def normalize[S: Sc](dim: List[Int]) = {
-    (this - this.mean(dim)) / ((this.variance(dim) + 1e-6).pow(0.5))
+    val t = this
+    (t - t.mean(dim)) / ((t.variance(dim) + 1e-6).pow(0.5))
   }
   def view[S: Sc](shape: List[Long]) =
     new View(extractScope, this, shape.toArray).value

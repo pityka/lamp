@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, Constant, param}
+import lamp.autograd.{Variable, Constant, param, GC, GraphConfiguration}
 import scala.collection.mutable
 import lamp.STenOptions
 import lamp.Sc
@@ -18,7 +18,8 @@ case class GRU(
     weightHz: Constant,
     biasR: Constant,
     biasZ: Constant,
-    biasH: Constant
+    biasH: Constant,
+    conf: GraphConfiguration
 ) extends StatefulModule[Variable, Variable, Option[Variable]] {
 
   val inputSize = weightXh.shape.last
@@ -43,6 +44,7 @@ case class GRU(
   def initState = None
   def forward[S: Sc](a: (Variable, Option[Variable])) = forward1(a._1, a._2)
   private def forward1[S: Sc](x: Variable, state: Option[Variable]) = {
+    implicit def conf_ = conf
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
     val outputs = mutable.ArrayBuffer[Variable]()
@@ -90,7 +92,7 @@ object GRU {
   case object BiasZ extends LeafTag
   case object BiasH extends LeafTag
 
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       in: Int,
       hiddenSize: Int,
       tOpt: STenOptions
@@ -161,7 +163,8 @@ object GRU {
           List(1, hiddenSize),
           tOpt
         )
-      )
+      ),
+      conf = implicitly[GraphConfiguration]
     )
 
 }

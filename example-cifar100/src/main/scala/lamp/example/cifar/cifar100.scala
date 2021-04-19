@@ -130,6 +130,9 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
       Scope.root { implicit scope =>
+        implicit val graphConfiguration =
+          lamp.autograd.implicits.defaultGraphConfiguration
+            .copy(downCastEnabled = true)
         val device = if (config.cuda) CudaDevice(0) else CPU
         val precision =
           if (config.singlePrecision) SinglePrecision else DoublePrecision
@@ -139,8 +142,8 @@ object Train extends App {
           val classWeights = STen.ones(List(numClasses), tensorOptions)
           val net =
             // if (config.network == "lenet")
-            //   Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
-            Cnn.resnet(numClasses, config.dropout, tensorOptions)
+            Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
+          // Cnn.resnet(numClasses, config.dropout, tensorOptions)
 
           config.checkpointLoad match {
             case None =>

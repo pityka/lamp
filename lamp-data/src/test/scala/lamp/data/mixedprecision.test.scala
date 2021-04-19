@@ -4,19 +4,21 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
 import lamp.autograd.{const}
 import lamp.nn._
-import lamp.{CPU, CudaDevice, DoublePrecision}
+import lamp.{CPU, CudaDevice}
 import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
-import lamp.autograd.implicits.defaultGraphConfiguration
+import lamp.SinglePrecision
 
-class MLPSuite extends AnyFunSuite {
+class MixedPrecisionSuite extends AnyFunSuite {
+  implicit val graphconf = lamp.autograd.implicits.defaultGraphConfiguration
+    .copy(downCastEnabled = true)
   def mlp(dim: Int, k: Int, tOpt: STenOptions)(implicit
       pool: Scope
   ) =
     sequence(
-      MLP(dim, k, List(64, 32), tOpt, dropout = 0.2),
+      MLP(dim, k, List(16, 16), tOpt, dropout = 0.2),
       Fun(implicit pool => _.logSoftMax(dim = 1))
     )
 
@@ -40,6 +42,7 @@ class MLPSuite extends AnyFunSuite {
         )
         .toOption
         .get
+        .row(0 -> 1000)
       val testDataTensor =
         STen.fromMat(testData.filterIx(_ != "label").toMat, cuda)
       val testTarget =
@@ -61,6 +64,7 @@ class MLPSuite extends AnyFunSuite {
         )
         .toOption
         .get
+        .row(0 -> 1000)
       val trainDataTensor =
         STen.fromMat(trainData.filterIx(_ != "label").toMat, cuda)
       val trainTarget = STen
@@ -69,60 +73,16 @@ class MLPSuite extends AnyFunSuite {
           cuda
         )
         .squeeze
-      val classWeights = STen.ones(List(10), device.options(DoublePrecision))
+      val classWeights = STen.ones(List(10), device.options(SinglePrecision))
 
       val model = SupervisedModel(
-        mlp(784, 10, device.options(DoublePrecision)),
-        LossFunctions.NLL(10, classWeights),
-        AdversarialTraining(2d)
+        mlp(784, 10, device.options(SinglePrecision)),
+        LossFunctions.NLL(10, classWeights)
       )
 
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-      val makeValidationBatch = () =>
-        BatchStream.minibatchesFromFull(
-          200,
-          true,
-          testDataTensor,
-          testTarget,
-          rng
-        )
-      val makeTrainingBatch = () =>
-        BatchStream.minibatchesFromFull(
-          200,
-          true,
-          trainDataTensor,
-          trainTarget,
-          rng
-        )
-
-      val (_, trainedModel, _) = IOLoops
-        .withSWA(
-          model = model,
-          optimizerFactory = SGDW
-            .factory(
-              learningRate = simple(0.01),
-              weightDecay = simple(0.001d)
-            ),
-          trainBatchesOverEpoch = makeTrainingBatch,
-          validationBatchesOverEpoch = Some(makeValidationBatch),
-          warmupEpochs = 10,
-          swaEpochs = 10,
-          logger = Some(scribe.Logger("sdf"))
-        )
-        .unsafeRunSync()
-      val acc = STen.scalarDouble(0d, testDataTensor.options)
-      val (numExamples, _) = trainedModel
-        .addTotalLossAndReturnGradientsAndNumExamples(
-          const(testDataTensor),
-          testTarget,
-          acc
-        )
-      val loss = acc.toMat.raw(0) / numExamples
-      assert(loss < 0.8)
-
       {
-        val input = const(testDataTensor)
-        val output = trainedModel.module.forward(input)
+        val input = const(testDataTensor.castToFloat)
+        val output = model.module.forward(input)
         val file = java.io.File.createTempFile("dfs", ".onnx")
         lamp.onnx.serializeToFile(
           file,
@@ -137,6 +97,50 @@ class MLPSuite extends AnyFunSuite {
         println(file)
 
       }
+
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+      val makeValidationBatch = () =>
+        BatchStream.minibatchesFromFull(
+          200,
+          true,
+          testDataTensor.castToFloat,
+          testTarget,
+          rng
+        )
+      val makeTrainingBatch = () =>
+        BatchStream.minibatchesFromFull(
+          200,
+          true,
+          trainDataTensor.castToFloat,
+          trainTarget,
+          rng
+        )
+
+      val (_, trainedModel, _) = IOLoops
+        .withSWA(
+          model = model,
+          optimizerFactory = SGDW
+            .factory(
+              learningRate = simple(0.01),
+              weightDecay = simple(0.001d)
+            ),
+          trainBatchesOverEpoch = makeTrainingBatch,
+          validationBatchesOverEpoch = Some(makeValidationBatch),
+          warmupEpochs = 1,
+          swaEpochs = 1,
+          logger = Some(scribe.Logger("sdf"))
+        )
+        .unsafeRunSync()
+      val acc = STen.scalarDouble(0d, testDataTensor.options)
+      val (numExamples, _) = trainedModel
+        .addTotalLossAndReturnGradientsAndNumExamples(
+          const(testDataTensor.castToFloat),
+          testTarget,
+          acc
+        )
+      val loss = acc.toMat.raw(0) / numExamples
+      assert(loss.isFinite)
+
     }
     stop.stop()
     TensorLogger.detailAllTensorOptions(println)

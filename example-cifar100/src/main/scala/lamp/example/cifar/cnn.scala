@@ -7,6 +7,7 @@ import lamp.autograd.AvgPool2D
 import lamp.Sc
 import lamp.Scope
 import lamp.STenOptions
+import lamp.autograd.GraphConfiguration
 
 case class Residual[M1 <: Module, M2 <: Module](
     right: M1 with Module,
@@ -36,7 +37,7 @@ object Residual {
       tOpt: STenOptions,
       dropout: Double,
       stride: Int
-  )(implicit pool: Scope) =
+  )(implicit pool: Scope, conf: GraphConfiguration) =
     sequence(
       Residual(
         right = Seq6(
@@ -90,7 +91,7 @@ object Cnn {
       numClasses: Int,
       dropout: Double,
       tOpt: STenOptions
-  )(implicit pool: Scope) =
+  )(implicit pool: Scope, conf: GraphConfiguration) =
     sequence(
       Conv2D(
         inChannels = 3,
@@ -140,58 +141,68 @@ object Cnn {
       numClasses: Int,
       dropOut: Double,
       tOpt: STenOptions
-  )(implicit pool: Scope) =
-    Sequential(
-      Conv2D(
-        inChannels = 3,
-        outChannels = 6,
-        kernelSize = 5,
-        padding = 2,
-        tOpt = tOpt
+  )(implicit pool: Scope, conf: GraphConfiguration) =
+    sequence(
+      sequence(
+        Conv2D(
+          inChannels = 3,
+          outChannels = 6,
+          kernelSize = 5,
+          padding = 2,
+          tOpt = tOpt
+        ),
+        BatchNorm2D(6, tOpt),
+        Fun(implicit pool => _.relu),
+        Dropout(dropOut, training = true),
+        Fun(implicit pool =>
+          new MaxPool2D(
+            pool,
+            _,
+            kernelSize = 2,
+            stride = 2,
+            padding = 0,
+            dilation = 1
+          ).value
+        )
       ),
-      BatchNorm2D(6, tOpt),
-      Fun(implicit pool => _.relu),
-      Dropout(dropOut, training = true),
-      Fun(implicit pool =>
-        new MaxPool2D(
-          pool,
-          _,
-          kernelSize = 2,
-          stride = 2,
-          padding = 0,
-          dilation = 1
-        ).value
+      sequence(
+        Conv2D(
+          inChannels = 6,
+          outChannels = 16,
+          kernelSize = 5,
+          padding = 2,
+          tOpt = tOpt
+        ),
+        BatchNorm2D(16, tOpt),
+        Fun(implicit pool => _.relu),
+        Dropout(dropOut, training = true),
+        Fun(implicit pool =>
+          new MaxPool2D(
+            pool,
+            _,
+            kernelSize = 2,
+            stride = 2,
+            padding = 0,
+            dilation = 1
+          ).value
+        )
       ),
-      Conv2D(
-        inChannels = 6,
-        outChannels = 16,
-        kernelSize = 5,
-        padding = 2,
-        tOpt = tOpt
+      sequence(
+        Fun(implicit pool => _.flattenLastDimensions(3)),
+        Linear(1024, 120, tOpt = tOpt),
+        BatchNorm(120, tOpt),
+        Fun(implicit pool => _.relu)
       ),
-      BatchNorm2D(16, tOpt),
-      Fun(implicit pool => _.relu),
-      Dropout(dropOut, training = true),
-      Fun(implicit pool =>
-        new MaxPool2D(
-          pool,
-          _,
-          kernelSize = 2,
-          stride = 2,
-          padding = 0,
-          dilation = 1
-        ).value
+      sequence(
+        Dropout(dropOut, training = true),
+        Linear(120, 84, tOpt = tOpt),
+        BatchNorm(84, tOpt),
+        Fun(implicit pool => _.relu),
+        Dropout(dropOut, training = true)
       ),
-      Fun(implicit pool => _.flattenLastDimensions(3)),
-      Linear(1024, 120, tOpt = tOpt),
-      BatchNorm(120, tOpt),
-      Fun(implicit pool => _.relu),
-      Dropout(dropOut, training = true),
-      Linear(120, 84, tOpt = tOpt),
-      BatchNorm(84, tOpt),
-      Fun(implicit pool => _.relu),
-      Dropout(dropOut, training = true),
-      Linear(84, numClasses, tOpt = tOpt),
-      Fun(implicit pool => _.logSoftMax(dim = 1))
+      sequence(
+        Linear(84, numClasses, tOpt = tOpt),
+        Fun(implicit pool => _.logSoftMax(dim = 1))
+      )
     )
 }

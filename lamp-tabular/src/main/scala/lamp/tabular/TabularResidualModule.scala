@@ -5,6 +5,7 @@ import lamp.autograd.Variable
 import lamp.Sc
 import lamp.Scope
 import lamp.STenOptions
+import lamp.autograd.GraphConfiguration
 
 case class TabularResidual[Block <: Module, B2 <: Module](
     straight: B2 with Module,
@@ -26,7 +27,7 @@ object TabularResidual {
       outChannels: Int,
       tOpt: STenOptions,
       dropout: Double
-  )(implicit scope: Scope) =
+  )(implicit scope: Scope, conf: GraphConfiguration) =
     TabularResidual(
       straight = sequence(
         BatchNorm(inChannels, tOpt),

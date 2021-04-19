@@ -51,6 +51,19 @@ package lamp
   */
 package object autograd {
 
+  type GC[_] = GraphConfiguration
+
+  def withDefaultGraphConfig[T](f: GraphConfiguration => T): T = f(
+    implicits.defaultGraphConfiguration
+  )
+
+  def graphConfiguration(implicit conf: GraphConfiguration) = conf
+
+  object implicits {
+    implicit val defaultGraphConfiguration =
+      GraphConfiguration(downCastEnabled = false)
+  }
+
   def const(m: STen): Constant =
     ConstantWithoutGrad(m)
 
@@ -78,4 +91,30 @@ package object autograd {
     println(s"$tag" + (t2 - t1) * 1e-9)
     r
   }
+
+  private[lamp] def atLeastFloat[S: Sc](op: STenOptions) = {
+    if (op.scalarTypeByte == HalfPrecision.scalarTypeByte) op.toFloat else op
+  }
+  private[lamp] def castUp[S: Sc](v: STen) = if (
+    v.scalarTypeByte == HalfPrecision.scalarTypeByte
+  ) v.castToFloat
+  else v
+  private[lamp] def castDown[S: Sc, G: GC](s: STen): STen =
+    if (implicitly[GraphConfiguration].downCastEnabled) s.castToHalf else s
+  private[lamp] def castUp[S: Sc](vs: Seq[STen]): Seq[STen] = vs.map(castUp)
+  private[lamp] def castUpOnCPU[S: Sc](v: STen) = if (
+    v.isCPU && v.scalarTypeByte == HalfPrecision.scalarTypeByte
+  ) v.castToFloat
+  else v
+
+  implicit class CastSyntax(v: STen) {
+    def castDown[S: Sc, G: GC] = lamp.autograd.castDown(v)
+    def castUp[S: Sc] = lamp.autograd.castUp(v)
+    def castUpOnCPU[S: Sc] = lamp.autograd.castUpOnCPU(v)
+
+  }
+  implicit class CastSyntaxSeq(v: Seq[STen]) {
+    def castUp[S: Sc] = lamp.autograd.castUp(v)
+  }
+
 }

@@ -7,6 +7,7 @@ import lamp.STen
 import lamp.SinglePrecision
 import lamp.DoublePrecision
 import lamp.Scope
+import lamp.HalfPrecision
 
 trait NameMap {
   def apply(u: UUID): String
@@ -416,17 +417,19 @@ trait DefaultOpSet1 extends OpSet {
           .appendInput(Ops.tensorFromSTen(op.runningMean))
           .appendInput(Ops.tensorFromSTen(op.runningVar)) :: Nil
 
-      case op: CastToPrecision =>
+      case op: CastToType =>
         Ops(
           out,
           "Cast",
           attributes = List(
             Ops.attr(
               "to",
-              op.precision match {
-                case SinglePrecision =>
+              op.targetScalarTypeByte match {
+                case HalfPrecision.scalarTypeByte =>
+                  ox.TensorProto.DataType.FLOAT16.index.toLong
+                case SinglePrecision.scalarTypeByte =>
                   ox.TensorProto.DataType.FLOAT.index.toLong
-                case DoublePrecision =>
+                case DoublePrecision.scalarTypeByte =>
                   ox.TensorProto.DataType.DOUBLE.index.toLong
               }
             )

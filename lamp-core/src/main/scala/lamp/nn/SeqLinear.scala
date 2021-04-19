@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, Constant, param}
+import lamp.autograd.{Variable, Constant, param, GraphConfiguration, GC}
 import lamp.Sc
 import lamp.STen
 import lamp.STenOptions
@@ -11,9 +11,9 @@ import lamp.STenOptions
   */
 case class SeqLinear(
     weight: Constant,
-    bias: Constant
+    bias: Constant,
+    conf: GraphConfiguration
 ) extends Module {
-
   override def state =
     List(
       (weight, SeqLinear.Weight),
@@ -21,6 +21,7 @@ case class SeqLinear(
     )
 
   override def forward[S: Sc](x: Variable) = {
+    implicit def _conf = conf
     val timesteps = x.shape.head
     val outputs = (0 until timesteps.toInt).map { t =>
       val xt = x.select(0, t)
@@ -42,7 +43,7 @@ object SeqLinear {
   case object Weight extends LeafTag
   case object Bias extends LeafTag
 
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       in: Int,
       out: Int,
       tOpt: STenOptions
@@ -61,7 +62,8 @@ object SeqLinear {
           List(1, out),
           tOpt
         )
-      )
+      ),
+      conf = implicitly[GraphConfiguration]
     )
 
 }

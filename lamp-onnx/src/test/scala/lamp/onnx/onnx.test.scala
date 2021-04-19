@@ -9,6 +9,7 @@ import ai.onnxruntime._
 // import org.saddle._
 import scala.jdk.CollectionConverters._
 import java.nio._
+import lamp.autograd.implicits.defaultGraphConfiguration
 
 class OnnxSuite extends AnyFunSuite {
 

@@ -11,6 +11,8 @@ import lamp.SinglePrecision
 import lamp.Scope
 import lamp.TensorHelpers
 import lamp.STen
+import lamp.autograd.implicits.defaultGraphConfiguration
+
 import cats.effect.unsafe.implicits.global
 
 class GCNSuite extends AnyFunSuite {
@@ -92,7 +94,8 @@ class GCNSuite extends AnyFunSuite {
             ),
             Fun(implicit scope => variable => variable.relu)
           )
-        )
+        ),
+        conf = defaultGraphConfiguration
       )
 
       val (nodeStates, _) = module.forward((nodes, edges))
@@ -475,7 +478,8 @@ class GCNSuite extends AnyFunSuite {
             ),
             Fun(implicit scope => _.relu)
           )
-        )
+        ),
+        conf = defaultGraphConfiguration
       )
 
       val (nodeStates, _) = module.forward((nodes, edges))

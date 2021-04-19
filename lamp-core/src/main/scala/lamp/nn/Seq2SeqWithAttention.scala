@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.Variable
+import lamp.autograd.{Variable, GraphConfiguration}
 import lamp.Sc
 
 case class Seq2SeqWithAttention[S0, S1, M0 <: Module, M1 <: StatefulModule2[
@@ -16,10 +16,11 @@ case class Seq2SeqWithAttention[S0, S1, M0 <: Module, M1 <: StatefulModule2[
     destinationEmbedding: M0 with Module,
     encoder: M1 with StatefulModule2[Variable, Variable, S0, S1],
     decoder: M2 with StatefulModule[Variable, Variable, S1],
-    padToken: Long
+    padToken: Long,
+    conf: GraphConfiguration
 )(val stateToKey: S1 => Variable)
     extends StatefulModule2[(Variable, Variable), Variable, S0, S1] {
-
+  implicit def _conf = conf
   def attentionDecoder(keyValue: Variable, source: Variable) =
     AttentionDecoder(
       decoder,
@@ -27,7 +28,8 @@ case class Seq2SeqWithAttention[S0, S1, M0 <: Module, M1 <: StatefulModule2[
       stateToKey,
       keyValue,
       source,
-      padToken
+      padToken,
+      conf
     )
 
   override def forward[S: Sc](x: ((Variable, Variable), S0)): (Variable, S1) = {
@@ -73,14 +75,16 @@ object Seq2SeqWithAttention {
           m.destinationEmbedding.asEval,
           m.encoder.asEval,
           m.decoder.asEval,
-          m.padToken
+          m.padToken,
+          m.conf
         )(m.stateToKey),
       m =>
         Seq2SeqWithAttention(
           m.destinationEmbedding.asTraining,
           m.encoder.asTraining,
           m.decoder.asTraining,
-          m.padToken
+          m.padToken,
+          m.conf
         )(m.stateToKey)
     )
   implicit def load[

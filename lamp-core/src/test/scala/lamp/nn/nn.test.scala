@@ -19,6 +19,7 @@ import lamp.Sc
 import lamp.util.NDArray
 import lamp.STen
 import lamp.STenOptions
+import lamp.autograd.implicits.defaultGraphConfiguration
 
 object CudaTest extends Tag("cuda")
 object SlowTest extends Tag("slow")
@@ -399,7 +400,8 @@ class NNSuite extends AnyFunSuite {
       WeightNormLinear(
         param(STen.ones(List(1, 3), STenOptions.d)),
         param(STen.ones(List(1, 3), STenOptions.d)),
-        Some(param(STen.ones(List(1), STenOptions.d)))
+        Some(param(STen.ones(List(1), STenOptions.d))),
+        defaultGraphConfiguration
       ),
     23d
   )
@@ -459,7 +461,8 @@ class NNSuite extends AnyFunSuite {
         stride = 1,
         padding = 0,
         dilation = 1,
-        groups = 1
+        groups = 1,
+        conf = defaultGraphConfiguration
       ).lift,
     11.1712
   )
@@ -472,7 +475,8 @@ class NNSuite extends AnyFunSuite {
         stride = 1,
         padding = 0,
         dilation = 1,
-        groups = 1
+        groups = 1,
+        conf = defaultGraphConfiguration
       ).lift,
     14.2116
   )
@@ -485,7 +489,8 @@ class NNSuite extends AnyFunSuite {
         stride = 1,
         padding = 0,
         dilation = 1,
-        groups = 1
+        groups = 1,
+        conf = defaultGraphConfiguration
       ).lift,
     79.2702
   )
@@ -498,7 +503,8 @@ class NNSuite extends AnyFunSuite {
         stride = 1,
         padding = 0,
         dilation = 1,
-        groups = 1
+        groups = 1,
+        conf = defaultGraphConfiguration
       ).lift,
     73.9732
   )
@@ -535,7 +541,8 @@ class NNSuite extends AnyFunSuite {
       RNN(
         weightXh = param(STen.rand(List(2, 4), STenOptions.d)),
         weightHh = param(STen.rand(List(4, 4), STenOptions.d)),
-        biasH = param(STen.rand(List(4), STenOptions.d))
+        biasH = param(STen.rand(List(4), STenOptions.d)),
+        conf = defaultGraphConfiguration
       ),
     21.9659
   )
@@ -554,7 +561,8 @@ class NNSuite extends AnyFunSuite {
         RNN(
           weightXh = param(STen.rand(List(4, 4), STenOptions.d)),
           weightHh = param(STen.rand(List(4, 4), STenOptions.d)),
-          biasH = param(STen.rand(List(4), STenOptions.d))
+          biasH = param(STen.rand(List(4), STenOptions.d)),
+          conf = defaultGraphConfiguration
         )
       )
       FreeRunningRNN(rnn, 3)
@@ -566,7 +574,8 @@ class NNSuite extends AnyFunSuite {
     implicit pool =>
       SeqLinear(
         weight = param(STen.rand(List(2, 4), STenOptions.d)),
-        bias = param(STen.rand(List(4), STenOptions.d))
+        bias = param(STen.rand(List(4), STenOptions.d)),
+        conf = defaultGraphConfiguration
       ).lift,
     90.2684
   )
@@ -582,7 +591,8 @@ class NNSuite extends AnyFunSuite {
         weightHr = param(STen.rand(List(4, 4), STenOptions.d)),
         biasH = param(STen.rand(List(4), STenOptions.d)),
         biasZ = param(STen.rand(List(4), STenOptions.d)),
-        biasR = param(STen.rand(List(4), STenOptions.d))
+        biasR = param(STen.rand(List(4), STenOptions.d)),
+        conf = defaultGraphConfiguration
       ),
     2.0383
   )
@@ -601,7 +611,8 @@ class NNSuite extends AnyFunSuite {
         biasI = param(STen.rand(List(4), STenOptions.d)),
         biasO = param(STen.rand(List(4), STenOptions.d)),
         biasF = param(STen.rand(List(4), STenOptions.d)),
-        biasC = param(STen.rand(List(4), STenOptions.d))
+        biasC = param(STen.rand(List(4), STenOptions.d)),
+        conf = defaultGraphConfiguration
       ),
     17.8239
   )
@@ -610,7 +621,8 @@ class NNSuite extends AnyFunSuite {
       val output = RNN(
         weightXh = param(STen.ones(List(2, 4), STenOptions.d)),
         weightHh = param(STen.ones(List(4, 4), STenOptions.d)),
-        biasH = param(STen.ones(List(4), STenOptions.d))
+        biasH = param(STen.ones(List(4), STenOptions.d)),
+        conf = defaultGraphConfiguration
       ).forward1(const(STen.owned(NDArray.tensorFromNDArray(nd2x3x2))), None)
         ._1
         .value
@@ -728,7 +740,8 @@ class NNSuite extends AnyFunSuite {
               train = true,
               numHeads = attentionNumHeads,
               padToken = padToken,
-              linearized = false
+              linearized = false,
+              conf = defaultGraphConfiguration
             ),
             layerNorm1 = LayerNorm(List(2), tOpt),
             layerNorm2 = LayerNorm(List(2), tOpt),
@@ -737,7 +750,8 @@ class NNSuite extends AnyFunSuite {
             w2 = param(STen.ones(List(mlpHiddenDim, in), tOpt) * 2),
             b2 = param(STen.ones(List(1, in), tOpt)),
             dropout = dropout,
-            train = true
+            train = true,
+            conf = defaultGraphConfiguration
           )
         )
       )
@@ -794,7 +808,8 @@ class NNSuite extends AnyFunSuite {
               train = true,
               numHeads = attentionNumHeads,
               padToken = padToken,
-              linearized = true
+              linearized = true,
+              conf = defaultGraphConfiguration
             ),
             layerNorm1 = LayerNorm(List(2), tOpt),
             layerNorm2 = LayerNorm(List(2), tOpt),
@@ -803,7 +818,8 @@ class NNSuite extends AnyFunSuite {
             w2 = param(STen.ones(List(mlpHiddenDim, in), tOpt) * 2),
             b2 = param(STen.ones(List(1, in), tOpt)),
             dropout = dropout,
-            train = true
+            train = true,
+            conf = defaultGraphConfiguration
           )
         )
       )

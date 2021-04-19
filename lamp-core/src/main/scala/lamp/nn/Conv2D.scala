@@ -1,6 +1,14 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, Constant, param, Conv2D => Conv2dOp, const}
+import lamp.autograd.{
+  Variable,
+  Constant,
+  param,
+  Conv2D => Conv2dOp,
+  const,
+  GC,
+  GraphConfiguration
+}
 import lamp.STenOptions
 import lamp.Sc
 import lamp.scope
@@ -11,7 +19,8 @@ case class Conv2D(
     stride: Long,
     padding: Long,
     dilation: Long,
-    groups: Long
+    groups: Long,
+    conf: GraphConfiguration
 ) extends Module {
 
   override val state = List(
@@ -19,7 +28,8 @@ case class Conv2D(
     bias -> Conv2D.Bias
   )
 
-  def forward[S: Sc](x: Variable): Variable =
+  def forward[S: Sc](x: Variable): Variable = {
+    implicit def _conf = conf
     new Conv2dOp(
       scope,
       x,
@@ -30,6 +40,7 @@ case class Conv2D(
       dilation,
       groups
     ).value
+  }
 
 }
 
@@ -43,7 +54,7 @@ object Conv2D {
   )
   case object Weights extends LeafTag
   case object Bias extends LeafTag
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       inChannels: Long,
       outChannels: Long,
       kernelSize: Long,
@@ -72,7 +83,8 @@ object Conv2D {
       stride,
       padding,
       dilation,
-      groups
+      groups,
+      implicitly[GraphConfiguration]
     )
 
   }

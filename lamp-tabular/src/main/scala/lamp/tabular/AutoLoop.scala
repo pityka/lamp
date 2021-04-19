@@ -26,6 +26,8 @@ import lamp.Movable
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
 import lamp.data.StreamControl
+import lamp.autograd.implicits.defaultGraphConfiguration
+import lamp.HalfPrecision
 
 sealed trait BaseModel
 case class KnnBase(
@@ -588,6 +590,7 @@ object AutoLoop {
         Scope { implicit scope =>
           val t2 = t.oneHot(numClasses)
           precision match {
+            case HalfPrecision   => t2.castToHalf
             case SinglePrecision => t2.castToFloat
             case DoublePrecision => t2.castToDouble
           }

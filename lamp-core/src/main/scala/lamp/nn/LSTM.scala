@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, Constant, param}
+import lamp.autograd.{Variable, Constant, param, GraphConfiguration, GC}
 import scala.collection.mutable
 import lamp.Sc
 import lamp.STen
@@ -21,7 +21,8 @@ case class LSTM(
     biasI: Constant,
     biasF: Constant,
     biasO: Constant,
-    biasC: Constant
+    biasC: Constant,
+    conf: GraphConfiguration
 ) extends StatefulModule[Variable, Variable, Option[(Variable, Variable)]] {
   val hiddenSize = biasI.shape.last
 
@@ -57,6 +58,7 @@ case class LSTM(
       x: Variable,
       state: Option[(Variable, Variable)]
   ) = {
+    implicit def _conf = conf
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
     val outputs = mutable.ArrayBuffer[Variable]()
@@ -116,7 +118,7 @@ object LSTM {
   case object BiasO extends LeafTag
   case object BiasC extends LeafTag
 
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       in: Int,
       hiddenSize: Int,
       tOpt: STenOptions
@@ -209,7 +211,8 @@ object LSTM {
           List(1, hiddenSize),
           tOpt
         )
-      )
+      ),
+      conf = implicitly[GraphConfiguration]
     )
 
 }

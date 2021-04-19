@@ -12,6 +12,8 @@ import org.saddle._
   */
 object STen {
 
+  def highestScalarTypeByte(ts: STen*) = ts.map(_.scalarTypeByte).max
+
   /** A tensor option specifying CPU and double */
   val dOptions = STenOptions(aten.TensorOptions.d)
 
@@ -716,12 +718,21 @@ case class STen private (
     (owned(a), owned(b), owned(c))
   }
 
-  def castToType[S: Sc](scalarType: Byte) = scalarType match {
-    case 7 => castToDouble
-    case 6 => castToFloat
-    case 5 => castToHalf
-    case 4 => castToLong
-  }
+  def castToType[S: Sc](scalarType: Byte) =
+    if (scalarType == this.scalarTypeByte) this
+    else
+      scalarType match {
+        case 7 => castToDouble
+        case 6 => castToFloat
+        case 5 => castToHalf
+        case 4 => castToLong
+      }
+
+  def castToLike[S: Sc](other: STen) = castToType(other.scalarTypeByte)
+  def castUpLike[S: Sc](other: STen) = if (
+    other.scalarTypeByte > this.scalarTypeByte
+  ) castToType(other.scalarTypeByte)
+  else this
 
   /** Casts to char */
   def castToChar[S: Sc] = owned(ATen._cast_Char(value, true))

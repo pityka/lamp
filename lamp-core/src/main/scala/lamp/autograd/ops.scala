@@ -3,13 +3,10 @@ import aten.Tensor
 import aten.ATen
 import lamp.TensorHelpers.{unbroadcast => ub}
 import lamp.util.syntax
-import lamp.FloatingPointPrecision
-import lamp.DoublePrecision
-import lamp.SinglePrecision
 
 import lamp.Scope
 import lamp.STen
-import lamp.HalfPrecision
+import lamp.STen.OwnedSyntax
 
 case class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
     extends Op {
@@ -53,21 +50,23 @@ case class Concatenate(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
     ashapes.scanLeft(0L)(_ + _).sliding(2).toList.map(g => g(0) -> g(1))
   val params = a.zip(boundaries).toList.map { case (a, (from, to)) =>
     a.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out += p.slice(dim, from, to, 1L) }
+      Scope.root { implicit scope =>
+        out += p.castToLike(out).slice(dim, from, to, 1L)
+      }
     }
   }
   val value =
-    Variable(this, STen.cat(a.map(_.value), dim)(scope))(scope)
+    Variable(this, STen.cat(a.map(_.value).castUp(scope), dim)(scope))(scope)
 }
 
 case class Stack(scope: Scope, a: Seq[Variable], dim: Long) extends Op {
   val params = a.zipWithIndex.toList.map { case (a, idx) =>
     a.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out += p.select(dim, idx) }
+      Scope.root { implicit scope => out += p.castToLike(out).select(dim, idx) }
     }
   }
   val value =
-    Variable(this, STen.stack(a.map(_.value), dim)(scope))(scope)
+    Variable(this, STen.stack(a.map(_.value).castUp(scope), dim)(scope))(scope)
 }
 
 case class Select(scope: Scope, a: Variable, dim: Long, index: Long)
@@ -200,10 +199,10 @@ case class OneHot(scope: Scope, a: Variable, numClasses: Int) extends Op {
   val value =
     Variable(this, a.value.oneHot(numClasses)(scope))(scope)
 }
-case class CastToPrecision(
+case class CastToType(
     scope: Scope,
     a: Variable,
-    precision: FloatingPointPrecision
+    targetScalarTypeByte: Byte
 ) extends Op {
 
   val aScalarTypeByte = a.value.scalarTypeByte
@@ -211,21 +210,17 @@ case class CastToPrecision(
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        out += (p.castToType(a.value.scalarTypeByte))
+        out += (p.castToLike(out))
       }
     }
   )
 
   val value =
-    if (aScalarTypeByte == precision.scalarTypeByte) a
+    if (aScalarTypeByte == targetScalarTypeByte) a
     else
       Variable(
         this, {
-          precision match {
-            case DoublePrecision => a.value.castToDouble(scope)
-            case SinglePrecision => a.value.castToFloat(scope)
-            case HalfPrecision   => a.value.castToHalf(scope)
-          }
+          a.value.castToType(targetScalarTypeByte)(scope)
         }
       )(scope)
 }
@@ -250,8 +245,8 @@ case class ScatterAdd(
     shape(dim) = maxIndex
     implicit val sc = scope
     val result = Scope { implicit sc =>
-      val zeros = STen.zeros(shape.toList, src.options)
-      zeros.scatterAdd(dim, index.value, src.value)
+      val zeros = STen.zeros(shape.toList, atLeastFloat(src.options))
+      zeros.scatterAdd(dim, index.value, src.value).castToLike(src.value)
     }
     Variable(this, result)(scope)
   }
@@ -275,8 +270,8 @@ case class IndexAdd(
     shape(dim) = maxIndex
     implicit val sc = scope
     val result = Scope { implicit sc =>
-      val zeros = STen.zeros(shape.toList, src.options)
-      zeros.indexAdd(dim, index.value, src.value)
+      val zeros = STen.zeros(shape.toList, atLeastFloat(src.options))
+      zeros.indexAdd(dim, index.value, src.value).castToLike(src.value)
     }
 
     Variable(this, result)(scope)
@@ -311,17 +306,32 @@ case class RepeatInterleave(
 
 case class Add(scope: Scope, a: Variable, b: Variable) extends Op {
 
+  val tpe = STen.highestScalarTypeByte(a.value, b.value)
+
   val params = List(
     a.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out += p.unbroadcast(a.sizes) }
+      Scope.root { implicit scope =>
+        out += p.unbroadcast(a.sizes).castToLike(out)
+      }
     },
     b.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out += p.unbroadcast(b.sizes) }
+      Scope.root { implicit scope =>
+        out += p.unbroadcast(b.sizes).castToLike(out)
+      }
 
     }
   )
   val value =
-    Variable(this, a.value.+(b.value)(scope))(scope)
+    Variable(
+      this, {
+        implicit val sc = scope
+        Scope { implicit sc =>
+          a.value
+            .castToType(tpe)
+            .+(b.value.castToType(tpe))
+        }
+      }
+    )(scope)
 
 }
 case class ConstAdd(scope: Scope, a: Variable, b: Double) extends Op {
@@ -337,18 +347,33 @@ case class ConstAdd(scope: Scope, a: Variable, b: Double) extends Op {
 }
 case class Minus(scope: Scope, a: Variable, b: Variable) extends Op {
 
+  val tpe = STen.highestScalarTypeByte(a.value, b.value)
+
   val params = List(
     a.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out += p.unbroadcast(a.sizes) }
+      Scope.root { implicit scope =>
+        out += p.unbroadcast(a.sizes).castToLike(out)
+      }
 
     },
     b.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out -= p.unbroadcast(b.sizes) }
+      Scope.root { implicit scope =>
+        out -= p.unbroadcast(b.sizes).castToLike(out)
+      }
 
     }
   )
   val value =
-    Variable(this, a.value.-(b.value)(scope))(scope)
+    Variable(
+      this, {
+        implicit val sc = scope
+        Scope { implicit sc =>
+          a.value
+            .castToType(tpe)
+            .-(b.value.castToType(tpe))
+        }
+      }
+    )(scope)
 
 }
 case class ConstMult(scope: Scope, a: Variable, b: Double) extends Op {
@@ -365,47 +390,85 @@ case class ConstMult(scope: Scope, a: Variable, b: Double) extends Op {
 }
 case class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
 
+  val tpe = STen.highestScalarTypeByte(a.value, b.value)
+
   val params = List(
     a.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out += (p * b.value).unbroadcast(a.sizes) }
+      Scope.root { implicit scope =>
+        out += (p * b.value.castToLike(p)).castToLike(out).unbroadcast(a.sizes)
+      }
 
     },
     b.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out += (p * a.value).unbroadcast(b.sizes) }
+      Scope.root { implicit scope =>
+        out += (p * a.value.castToLike(p))
+          .castToLike(out)
+          .unbroadcast(b.sizes)
+      }
 
     }
   )
 
-  val value = Variable(this, a.value.*(b.value)(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc =>
+        a.value
+          .castToType(tpe)
+          .*(b.value.castToType(tpe))
+      }
+    }
+  )(scope)
 
 }
 case class Div(scope: Scope, a: Variable, b: Variable) extends Op {
 
+  val tpe = STen.highestScalarTypeByte(a.value, b.value)
+
   val params = List(
     a.zipBackward { (p, out) =>
-      Scope.root { implicit scope => out += (p / b.value).unbroadcast(a.sizes) }
+      Scope.root { implicit scope =>
+        out += (p / b.value.castToLike(p))
+          .castToLike(out)
+          .unbroadcast(a.sizes)
+      }
 
     },
     b.zipBackward { (p, out) =>
       // out += p * (a.value * b.value.map(x => -1d / (x * x)))
       Scope.root { implicit scope =>
-        val tmp = value.value / b.value
+        val tmp = value.value / b.value.castToLike(value.value)
         tmp *= p
-        val t2 = tmp.unbroadcast(b.sizes)
+        val t2 = tmp.castToLike(out).unbroadcast(b.sizes)
         out -= t2
       }
     }
   )
 
-  val value = Variable(this, a.value./(b.value)(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc =>
+        a.value.castToType(tpe)./(b.value.castToType(tpe))
+      }
+    }
+  )(scope)
 }
 
 case class Sum(scope: Scope, a: Variable, dim: List[Int], keepDim: Boolean)
     extends Op {
 
-  val params = List(a.zipBackward { (p, out) => out += p })
+  val params = List(a.zipBackward { (p, out) =>
+    Scope.root { implicit scope => out += p.castToLike(out) }
+  })
 
-  val value = Variable(this, a.value.sum(dim, keepDim)(scope))(scope)
+  val value =
+    Variable(
+      this, {
+        implicit val sc = scope
+        Scope { implicit sc => a.value.castUp.sum(dim, keepDim) }
+      }
+    )(scope)
 
 }
 
@@ -419,64 +482,85 @@ case class ExpandAs(scope: Scope, a: Variable, as: STen) extends Op {
 }
 
 // http://cs231n.stanford.edu/handouts/derivatives.pdf
-case class MatMul(scope: Scope, a: Variable, b: Variable) extends Op {
+case class MatMul(scope: Scope, a: Variable, b: Variable)(implicit
+    config: GraphConfiguration
+) extends Op {
 
   val params =
     List(
       a.zipBackward { (p, out) =>
-        Tensor
-          .addmm_out_transposed2(
-            out.value,
-            out.value,
-            p.value,
-            b.value.value,
-            1d,
-            1d
-          )
+        Scope.root { implicit scope =>
+          Tensor
+            .addmm_out_transposed2(
+              out.value,
+              out.value,
+              p.castToLike(out).value,
+              b.value.castToLike(out).value,
+              1d,
+              1d
+            )
+        }
       },
       b.zipBackward { (p, out) =>
-        Tensor
-          .addmm_out_transposed1(
-            out.value,
-            out.value,
-            a.value.value,
-            p.value,
-            1d,
-            1d
-          )
+        Scope.root { implicit scope =>
+          Tensor
+            .addmm_out_transposed1(
+              out.value,
+              out.value,
+              a.value.castToLike(out).value,
+              p.castToLike(out).value,
+              1d,
+              1d
+            )
+        }
       }
     )
 
-  val value = Variable(this, a.value.mm(b.value)(scope))(scope)
+  val value = {
+    implicit val sc = scope
+    Variable(
+      this,
+      Scope(implicit sc => a.value.castDown.mm(b.value.castDown))
+    )
+  }
 
 }
-case class BatchedMatMul(scope: Scope, a: Variable, b: Variable) extends Op {
+case class BatchedMatMul(scope: Scope, a: Variable, b: Variable)(implicit
+    conf: GraphConfiguration
+) extends Op {
 
   val params =
     List(
       a.zipBackward { (p, out) =>
-        Tensor.baddbmm_out_transposed2(
-          out.value,
-          out.value,
-          p.value,
-          b.value.value,
-          1d,
-          1d
-        )
+        Scope.root { implicit scope =>
+          Tensor.baddbmm_out_transposed2(
+            out.value,
+            out.value,
+            p.castToLike(out) value,
+            b.value.castToLike(out).value,
+            1d,
+            1d
+          )
+        }
       },
       b.zipBackward { (p, out) =>
-        Tensor.baddbmm_out_transposed1(
-          out.value,
-          out.value,
-          a.value.value,
-          p.value,
-          1d,
-          1d
-        )
+        Scope.root { implicit scope =>
+          Tensor.baddbmm_out_transposed1(
+            out.value,
+            out.value,
+            a.value.castToLike(out).value,
+            p.castToLike(out).value,
+            1d,
+            1d
+          )
+        }
       }
     )
 
-  val value = Variable(this, a.value.bmm(b.value)(scope))(scope)
+  val value = {
+    implicit val sc = scope
+    Variable(this, Scope(implicit sc => a.value.castDown.bmm(b.value.castDown)))
+  }
 
 }
 case class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
@@ -487,19 +571,23 @@ case class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
       a.zipBackward { (p, out) =>
         Scope.root { implicit scope =>
           val tmp = diff / norm
-          out.addcmulSelf(p, tmp, 1d)
+          out.addcmulSelf(p.castToLike(out), tmp.castToLike(out), 1d)
         }
 
       },
       b.zipBackward { (p, out) =>
         Scope.root { implicit scope =>
           val tmp = diff / norm
-          out.addcmulSelf(p, tmp, -1d)
+          out.addcmulSelf(p.castToLike(out), tmp.castToLike(out), -1d)
         }
 
       }
     )
-  val diff = a.value.-(b.value)(scope)
+  val tpe = STen.highestScalarTypeByte(a.value, b.value)
+  val diff = {
+    implicit val sc = scope
+    Scope { implicit sc => a.value.castToType(tpe).-(b.value.castToType(tpe)) }
+  }
 
   val norm =
     diff.norm2(List(dim), true)(scope)
@@ -511,9 +599,16 @@ case class EuclideanDistance(scope: Scope, a: Variable, b: Variable, dim: Int)
 case class Exp(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
-    out.addcmulSelf(p, value.value, 1d)
+    Scope.root { implicit scope =>
+      out.addcmulSelf(p.castToLike(out), value.value.castToLike(out), 1d)
+    }
   })
-  val value = Variable(this, a.value.exp(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.exp }
+    }
+  )(scope)
 }
 case class CappedShiftedNegativeExponential(
     scope: Scope,
@@ -549,7 +644,12 @@ case class Log(scope: Scope, a: Variable) extends Op {
       out.addcmulSelf(p, tmp, 1d)
     }
   })
-  val value = Variable(this, a.value.log(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.log }
+    }
+  )(scope)
 }
 case class Log1p(scope: Scope, a: Variable) extends Op {
 
@@ -557,110 +657,154 @@ case class Log1p(scope: Scope, a: Variable) extends Op {
     Scope.root { implicit scope =>
       val tmp = a.value + 1d
       tmp.reciprocal_()
-      out.addcmulSelf(p, tmp, 1d)
+      out.addcmulSelf(p.castToLike(out), tmp.castToLike(out), 1d)
     }
 
   })
-  val value = Variable(this, a.value.log1p(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.log1p }
+    }
+  )(scope)
 }
 case class Sin(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
       val tmp = a.value.cos
-      out.addcmulSelf(p, tmp, 1d)
+      out.addcmulSelf(p.castToLike(out), tmp.castToLike(out), 1d)
     }
 
   })
-  val value = Variable(this, a.value.sin(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.sin }
+    }
+  )(scope)
 }
 case class Cos(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
       val tmp = a.value.sin
-      out.addcmulSelf(p, tmp, -1d)
+      out.addcmulSelf(p.castToLike(out), tmp.castToLike(out), -1d)
     }
 
   })
-  val value = Variable(this, a.value.cos(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.cos }
+    }
+  )(scope)
 }
 case class Tan(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
       val tmp1 = value.value.pow(2d)
-      val one = STen.ones(List(1), a.options)
+      val one = STen.ones(List(1), tmp1.options)
       tmp1 += one
-      out.addcmulSelf(p, tmp1, 1d)
+      out.addcmulSelf(p.castToLike(out), tmp1.castToLike(out), 1d)
     }
 
   })
-  val value = Variable(this, a.value.tan(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.tan }
+    }
+  )(scope)
 }
 case class Tanh(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
       val tmp1 = STen.tanh_backward(p, value.value)
-      out += tmp1
+      out += tmp1.castToLike(out)
     }
   })
-  val value = Variable(this, a.value.tanh(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.tanh }
+    }
+  )(scope)
 }
 case class ArcTan(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
       val tmp1 = a.value.pow(2d)
-      val one = STen.ones(List(1L), a.options)
+      val one = STen.ones(List(1L), tmp1.options)
       tmp1 += one
       tmp1.reciprocal_()
-      out.addcmulSelf(p, tmp1, 1d)
+      out.addcmulSelf(p.castToLike(out), tmp1.castToLike(out), 1d)
 
     }
 
   })
-  val value = Variable(this, a.value.atan(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.atan }
+    }
+  )(scope)
 }
 case class PowConst(scope: Scope, a: Variable, exponent: Double) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
     Scope.root { implicit scope =>
       val tmp1 = a.value.pow(exponent - 1)
-      out.addcmulSelf(p, tmp1, exponent)
+      out.addcmulSelf(p.castToLike(out), tmp1.castToLike(out), exponent)
     }
 
   })
-  val value = Variable(this, a.value.pow(exponent)(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.pow(exponent) }
+    }
+  )(scope)
 }
 case class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
 
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val exp = exponent.toMat.raw(0)
-        val tmp1 = a.value.pow(exp - 1)
-        out.addcmulSelf(p, tmp1, exp)
+        val exp = exponent.value.castUp.toMat.raw(0)
+        val tmp1 = a.value.castUp.pow(exp - 1)
+        out.addcmulSelf(
+          p.castToLike(out),
+          tmp1.castToLike(out),
+          exp
+        )
       }
 
     },
     exponent.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val exp = exponent.toMat.raw(0)
-        val tmp1 = a.value.pow(exp)
-        val tmp2 = a.value.log
+        val exp = exponent.value.castUp.toMat.raw(0)
+        val tmp1 = a.value.castUp.pow(exp)
+        val tmp2 = a.value.castUp.log
         val tmp3 = tmp1 * tmp2
         val p2 = p.unbroadcast(
           List(if (out.sizes.isEmpty) 1 else out.sizes.toList.head, 1)
         )
         val tmp4 = tmp3.sum
-        out.addcmulSelf(p2, tmp4, 1d)
+        out.addcmulSelf(p2.castToLike(out), tmp4.castToLike(out), 1d)
       }
     }
   )
   val value =
-    Variable(this, a.value.pow(exponent.value)(scope))(scope)
+    Variable(
+      this, {
+        implicit val sc = scope
+        Scope { implicit sc => a.value.castUp.pow(exponent.value.castUp) }
+      }
+    )(scope)
 }
 case class Relu(scope: Scope, a: Variable) extends Op {
 
@@ -668,17 +812,22 @@ case class Relu(scope: Scope, a: Variable) extends Op {
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
         val pred = a.value.lt(0d)
+        val opt = out.options
         val ones =
-          STen.ones(List(1), aOpt)
+          STen.ones(List(1), opt)
         val zeros =
-          STen.zeros(List(1), aOpt)
+          STen.zeros(List(1), opt)
         val tmp = STen.where(pred, zeros, ones)
-        out.addcmulSelf(p, tmp, 1d)
+        out.addcmulSelf(p.castToLike(out), tmp, 1d)
       }
     }
   )
-  val aOpt = a.options(scope)
-  val value = Variable(this, a.value.relu(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUpOnCPU.relu }
+    }
+  )(scope)
 }
 case class LeakyRelu(scope: Scope, a: Variable, slope: Double) extends Op {
 
@@ -709,15 +858,21 @@ case class LogSoftMax(scope: Scope, a: Variable, dim: Int) extends Op {
             p.value,
             value.value.value,
             dim,
-            a.value.value
+            a.value.castUp.value
           )
         )
-        out += tmp
+        out += tmp.castToLike(out)
 
       }
     }
   )
-  val value = Variable(this, a.value.logSoftMax(dim)(scope))(scope)
+  val value =
+    Variable(
+      this, {
+        implicit val sc = scope
+        Scope { implicit sc => a.value.castUp.logSoftMax(dim) }
+      }
+    )(scope)
 
 }
 case class Gelu(scope: Scope, a: Variable) extends Op {
@@ -725,12 +880,17 @@ case class Gelu(scope: Scope, a: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val tmp = STen.owned(ATen.gelu_backward(p.value, a.value.value))
-        out += tmp
+        val tmp = STen.owned(ATen.gelu_backward(p.value, a.value.castUp.value))
+        out += tmp.castToLike(out)
       }
     }
   )
-  val value = Variable(this, a.value.gelu(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.gelu }
+    }
+  )(scope)
 
 }
 case class Sigmoid(scope: Scope, a: Variable) extends Op {
@@ -738,13 +898,19 @@ case class Sigmoid(scope: Scope, a: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val tmp = STen.owned(ATen.sigmoid_backward(p.value, value.value.value))
-        out += tmp
+        val tmp =
+          STen.owned(ATen.sigmoid_backward(p.value, value.value.castUp.value))
+        out += tmp.castToLike(out)
       }
 
     }
   )
-  val value = Variable(this, a.value.sigmoid(scope))(scope)
+  val value = Variable(
+    this, {
+      implicit val sc = scope
+      Scope { implicit sc => a.value.castUp.sigmoid }
+    }
+  )(scope)
 
 }
 
@@ -753,14 +919,23 @@ case class Mean(scope: Scope, a: Variable, dim: List[Int], keepDim: Boolean)
 
   val params = List(
     a.zipBackward { (p, out) =>
-      STen.addOut(out, out, p, 1d / dim.map(l => a.sizes.apply(l.toInt)).sum)
+      Scope.root { implicit scope =>
+        STen.addOut(
+          out,
+          out,
+          p.castToLike(out),
+          1d / dim.map(l => a.sizes.apply(l.toInt)).sum
+        )
+      }
 
     }
   )
   val value =
     Variable(
-      this,
-      a.value.mean(dim, keepDim)(scope)
+      this, {
+        implicit val sc = scope
+        Scope { implicit sc => a.value.castUp.mean(dim, keepDim) }
+      }
     )(scope)
 
 }
@@ -769,10 +944,10 @@ case class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val s = a.value - m
+        val s = a.value.castUp - m
         out.addcmulSelf(
-          p,
-          s,
+          p.castToLike(out),
+          s.castToLike(out),
           2d / (dim.map(l => a.sizes.apply(l.toInt)).sum - 1)
         )
 
@@ -780,7 +955,10 @@ case class Variance(scope: Scope, a: Variable, dim: List[Int]) extends Op {
 
     }
   )
-  val (v, m) = a.value.varAndMean(dim, true, true)(scope)
+  val (v, m) = {
+    implicit val sc = scope
+    Scope { implicit sc => a.value.castUp.varAndMean(dim, true, true) }
+  }
   val value =
     Variable(
       this,
@@ -891,12 +1069,12 @@ case class MseLoss(
         val tmp =
           STen.mse_loss_backward(
             p,
-            input.value,
+            input.value.castUp,
             targetViewed,
             reduction.asLong
           )
 
-        out += tmp
+        out += tmp.castToLike(out)
       }
 
     }
@@ -904,8 +1082,12 @@ case class MseLoss(
   val targetViewed = target.view(input.shape: _*)(scope)
   val value =
     Variable(
-      this,
-      STen.mse_loss(input.value, targetViewed, reduction.asLong)(scope)
+      this, {
+        implicit val sc = scope
+        Scope { implicit sc =>
+          STen.mse_loss(input.value.castUp, targetViewed, reduction.asLong)
+        }
+      }
     )(scope)
 }
 case class L1Loss(
@@ -923,13 +1105,13 @@ case class L1Loss(
           STen.owned(
             ATen.l1_loss_backward(
               p.value,
-              input.value.value,
+              input.value.castUp.value,
               targetViewed.value,
               reduction.asLong
             )
           )
 
-        out += tmp
+        out += tmp.castToLike(out)
 
       }
     }
@@ -937,10 +1119,18 @@ case class L1Loss(
   val targetViewed = target.view(input.shape: _*)(scope)
   val value =
     Variable(
-      this,
-      STen.owned(
-        ATen.l1_loss(input.value.value, targetViewed.value, reduction.asLong)
-      )(scope)
+      this, {
+        implicit val sc = scope
+        Scope { implicit sc =>
+          STen.owned(
+            ATen.l1_loss(
+              input.value.castUp.value,
+              targetViewed.value,
+              reduction.asLong
+            )
+          )
+        }
+      }
     )(scope)
 }
 case class NllLoss(
@@ -969,33 +1159,37 @@ case class NllLoss(
           STen.owned(
             ATen.nll_loss_backward(
               p.value,
-              input.value.value,
-              target.value,
-              weights.value,
+              input.value.castUp.value,
+              target.castUp.value,
+              weights.castUp.value,
               reduction.asLong,
               ignore,
-              total_weight
+              total_weight.value
             )
           )
-        out += tmp
+        out += tmp.castToLike(out)
 
       }
     }
   )
-  val (value1, total_weight) =
-    ATen.nll_loss_forward(
-      input.value.value,
-      target.value,
-      weights.value,
-      reduction.asLong,
-      ignore
-    )
-  scope.register(total_weight)
+  val (value1, total_weight) = {
+    implicit val sc = scope
+    Scope { implicit sc =>
+      val (a, b) = ATen.nll_loss_forward(
+        input.value.castUp.value,
+        target.castUp.value,
+        weights.castUp.value,
+        reduction.asLong,
+        ignore
+      )
+      (a.owned, b.owned)
+    }
+  }
 
   val value =
     Variable(
       this,
-      STen.owned(value1)(scope)
+      value1
     )(scope)
 
 }
@@ -1025,32 +1219,38 @@ case class BinaryCrossEntropyWithLogitsLoss(
           STen.owned(
             ATen.binary_cross_entropy_with_logits_backward(
               p.value,
-              input.value.value,
-              target.value,
-              instanceWeights.value,
-              posWeights.value,
+              input.value.castUp.value,
+              target.castUp.value,
+              instanceWeights.castUp.value,
+              posWeights.castUp.value,
               reduction.asLong
             )
           )
-        out += tmp
+        out += tmp.castToLike(out)
 
       }
     }
   )
 
-  val (value1) =
-    ATen.binary_cross_entropy_with_logits(
-      input.value.value,
-      target.value,
-      instanceWeights.value,
-      posWeights.value,
-      reduction.asLong
-    )
+  val (value1) = {
+    implicit val sc = scope
+    Scope { implicit sc =>
+      ATen
+        .binary_cross_entropy_with_logits(
+          input.value.castUp.value,
+          target.castUp.value,
+          instanceWeights.castUp.value,
+          posWeights.castUp.value,
+          reduction.asLong
+        )
+        .owned
+    }
+  }
 
   val value =
     Variable(
       this,
-      STen.owned(value1)(scope)
+      value1
     )(scope)
 
 }
@@ -1086,8 +1286,8 @@ case class Conv1D(
     padding: Long,
     dilation: Long,
     groups: Long
-) extends Op {
-
+)(implicit conf: GraphConfiguration)
+    extends Op {
   assert(input.shape.size == 3, "Input dimensions must be 3")
   assert(weight.shape.size == 3, "Weight dimensions must be 3")
   val batchSize = input.shape(0)
@@ -1106,112 +1306,127 @@ case class Conv1D(
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      val pSize = p.sizes
-      val zeros = ATen.zeros(Array(inputChannels), p.options(scope).value)
-      val outputSizeWithoutExtraPadding =
-        (pSize(2) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
-      val extraPadding = out.sizes.apply(2) - outputSizeWithoutExtraPadding
-      val tmp = ATen.conv_transpose1d(
-        p.value,
-        weight.value.value,
-        zeros,
-        Array(stride),
-        Array(padding),
-        Array(extraPadding),
-        groups,
-        Array(dilation)
-      )
-      ATen.add_out(out.value, out.value, tmp, 1d)
-      tmp.release
-      zeros.release()
+      Scope.root { implicit scope =>
+        val pSize = p.sizes
+        val zeros = ATen.zeros(Array(inputChannels), p.options(scope).value)
+        val outputSizeWithoutExtraPadding =
+          (pSize(
+            2
+          ) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
+        val extraPadding = out.sizes.apply(2) - outputSizeWithoutExtraPadding
+        val tmp = ATen
+          .conv_transpose1d(
+            p.value,
+            weight.value.castDown.value,
+            zeros,
+            Array(stride),
+            Array(padding),
+            Array(extraPadding),
+            groups,
+            Array(dilation)
+          )
+          .owned
+        out += tmp.castToLike(out)
+        zeros.release()
+      }
     },
     weight.zipBackward { (p, out) =>
-      val p_repeated =
-        ATen.repeat_interleave_2(p.value, inputChannels / groups, 1)
-      val p_repeated_size = p_repeated.sizes
-      val p_repeated_viewed =
-        ATen._unsafe_view(
-          p_repeated,
-          Array(p_repeated_size(0) * p_repeated_size(1), 1, p_repeated_size(2))
+      Scope.root { implicit scope =>
+        val p_repeated =
+          ATen.repeat_interleave_2(p.value, inputChannels / groups, 1)
+        val p_repeated_size = p_repeated.sizes
+        val p_repeated_viewed =
+          ATen._unsafe_view(
+            p_repeated,
+            Array(
+              p_repeated_size(0) * p_repeated_size(1),
+              1,
+              p_repeated_size(2)
+            )
+          )
+        val input_viewed = ATen
+          ._unsafe_view(
+            input.value.value,
+            Array(1, batchSize * inputChannels, imageSize)
+          )
+          .owned
+        val zero = ATen
+          .zeros(
+            Array(p_repeated_viewed.sizes.apply(0)),
+            p.options(scope).value
+          )
+        val conv_0 = ATen.conv1d(
+          input_viewed.castDown.value,
+          p_repeated_viewed,
+          zero,
+          Array(dilation),
+          Array(padding),
+          Array(stride),
+          inputChannels * batchSize
         )
-      val input_viewed = ATen._unsafe_view(
-        input.value.value,
-        Array(1, batchSize * inputChannels, imageSize)
-      )
-      val zero = ATen
-        .zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options(scope).value)
-      val conv_0 = ATen.conv1d(
-        input_viewed,
-        p_repeated_viewed,
-        zero,
-        Array(dilation),
-        Array(padding),
-        Array(stride),
-        inputChannels * batchSize
-      )
-      val conv_0_sizes = conv_0.sizes
-      val conv_1 = ATen._unsafe_view(
-        conv_0,
-        Array(
-          batchSize,
-          conv_0_sizes.apply(1) / batchSize,
-          conv_0_sizes.apply(2)
+        val conv_0_sizes = conv_0.sizes
+        val conv_1 = ATen._unsafe_view(
+          conv_0,
+          Array(
+            batchSize,
+            conv_0_sizes.apply(1) / batchSize,
+            conv_0_sizes.apply(2)
+          )
         )
-      )
 
-      val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
-      val conv_1_sum_viewed =
-        ATen._unsafe_view(
-          conv_1_sum,
-          Array(inputChannels / groups, outChannels, conv_1.sizes.apply(2))
-        )
-      val conv_1_sum_viewed_transposed = ATen.transpose(conv_1_sum_viewed, 0, 1)
+        val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
+        val conv_1_sum_viewed =
+          ATen._unsafe_view(
+            conv_1_sum,
+            Array(inputChannels / groups, outChannels, conv_1.sizes.apply(2))
+          )
+        val conv_1_sum_viewed_transposed =
+          ATen.transpose(conv_1_sum_viewed, 0, 1)
 
-      val conv_1_sum_viewed_transposed_narrowed =
-        ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
-      ATen.add_out(
-        out.value,
-        out.value,
-        conv_1_sum_viewed_transposed_narrowed,
-        1d
-      )
+        val conv_1_sum_viewed_transposed_narrowed =
+          ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize).owned
+        out +=
+          conv_1_sum_viewed_transposed_narrowed.castToLike(out)
 
-      conv_1_sum_viewed_transposed_narrowed.release()
-      conv_1_sum_viewed_transposed.release
-      conv_1_sum_viewed.release
-      conv_1_sum.release
-      conv_1.release
-      conv_0.release
-      input_viewed.release()
-      p_repeated_viewed.release
-      p_repeated.release
+        conv_1_sum_viewed_transposed.release
+        conv_1_sum_viewed.release
+        conv_1_sum.release
+        conv_1.release
+        conv_0.release
+        p_repeated_viewed.release
+        p_repeated.release
+      }
 
     },
     bias.zipBackward { (p, out) =>
-      val p2 = ub(p.value, List(out.sizes.toList.head, 1)).getOrElse(p.value)
-      val p3 = ATen._unsafe_view(p2, out.sizes.toArray)
-      ATen.add_out(out.value, out.value, p3, 1d)
-      if (p2 != p.value) {
-        p2.release()
+      Scope.root { implicit scope =>
+        val p2 = ub(p.value, List(out.sizes.toList.head, 1)).getOrElse(p.value)
+        val p3 = ATen._unsafe_view(p2, out.sizes.toArray).owned
+        out += p3.castToLike(out)
+        if (p2 != p.value) {
+          p2.release()
+        }
       }
-      p3.release()
     }
   )
 
   val value =
     Variable(
       this, {
-        STen.owned(
-          ATen.conv1d(
-            input.value.value,
-            weight.value.value,
-            bias.value.value,
-            Array(stride),
-            Array(padding),
-            Array(dilation),
-            groups
+        implicit val sc = scope
+        Scope { implicit sc =>
+          STen.owned(
+            ATen.conv1d(
+              input.value.castDown.value,
+              weight.value.castDown.value,
+              bias.value.castDown.value,
+              Array(stride),
+              Array(padding),
+              Array(dilation),
+              groups
+            )
           )
-        )(scope)
+        }
       }
     )(scope)
 }
@@ -1232,8 +1447,8 @@ case class Conv2D(
     padding: Long,
     dilation: Long,
     groups: Long
-) extends Op {
-
+)(implicit conf: GraphConfiguration)
+    extends Op {
   assert(input.shape.size == 4, "Input dimensions must be 4")
   assert(weight.shape.size == 4, "Weight dimensions must be 4")
   val batchSize = input.shape(0)
@@ -1245,197 +1460,202 @@ case class Conv2D(
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      if (p.options(scope).value.isCuda()) {
-        val tmp = ATen.cudnn_convolution_backward_input(
-          input.shape.toArray,
-          p.value,
-          weight.value.value,
-          Array(padding, padding),
-          Array(stride, stride),
-          Array(dilation, dilation),
-          groups,
-          false,
-          false,
-          true
-        )
-        ATen.add_out(out.value, out.value, tmp, 1d)
-        tmp.release
-      } else {
-        val pSize = p.sizes
-        val zeros = ATen.zeros(Array(inputChannels), p.options(scope).value)
-        val outputSizeWithoutExtraPadding =
-          (pSize(
-            2
-          ) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
-        val extraPaddingH = out.sizes.apply(2) - outputSizeWithoutExtraPadding
-        val extraPaddingW = out.sizes.apply(3) - outputSizeWithoutExtraPadding
-        val tmp = ATen.conv_transpose2d(
-          p.value,
-          weight.value.value,
-          zeros,
-          Array(stride),
-          Array(padding),
-          Array(extraPaddingH, extraPaddingW),
-          groups,
-          Array(dilation)
-        )
-        ATen.add_out(out.value, out.value, tmp, 1d)
-        tmp.release
-        zeros.release()
+      Scope.root { implicit scope =>
+        if (p.options(scope).value.isCuda()) {
+          val tmp = ATen
+            .cudnn_convolution_backward_input(
+              input.shape.toArray,
+              p.value,
+              weight.value.castDown.value,
+              Array(padding, padding),
+              Array(stride, stride),
+              Array(dilation, dilation),
+              groups,
+              false,
+              false,
+              true
+            )
+            .owned
+          out += tmp.castToLike(out)
+        } else {
+          val pSize = p.sizes
+          val zeros = ATen.zeros(Array(inputChannels), p.options(scope).value)
+          val outputSizeWithoutExtraPadding =
+            (pSize(
+              2
+            ) - 1) * stride - 2 * padding + dilation * (kernelSize - 1) + 1
+          val extraPaddingH = out.sizes.apply(2) - outputSizeWithoutExtraPadding
+          val extraPaddingW = out.sizes.apply(3) - outputSizeWithoutExtraPadding
+          val tmp = ATen
+            .conv_transpose2d(
+              p.value,
+              weight.value.castDown.value,
+              zeros,
+              Array(stride),
+              Array(padding),
+              Array(extraPaddingH, extraPaddingW),
+              groups,
+              Array(dilation)
+            )
+            .owned
+          out += tmp.castToLike(out)
+          zeros.release()
+        }
       }
     },
     weight.zipBackward { (p, out) =>
-      if (p.options(scope).value.isCuda()) {
-        val tmp = ATen.cudnn_convolution_backward_weight(
-          weight.shape.toArray,
-          p.value,
-          input.value.value,
-          Array(padding, padding),
-          Array(stride, stride),
-          Array(dilation, dilation),
-          groups,
-          false,
-          false,
-          true
-        )
-        ATen.add_out(out.value, out.value, tmp, 1d)
-        tmp.release
-      } else {
-        if (groups == 1) {
-
-          val (a, b, c) = ATen.slow_conv_dilated2d_backward(
-            p.value,
-            input.value.value,
-            weight.value.value,
-            Array(kernelSize, kernelSize),
-            Array(stride, stride),
-            Array(padding, padding),
-            Array(dilation, dilation),
-            Array(false, true, false)
-          )
-
-          a.release
-          c.release
-          ATen.add_out(out.value, out.value, b, 1d)
-          b.release
-
+      Scope.root { implicit scope =>
+        if (p.options(scope).value.isCuda()) {
+          val tmp = ATen
+            .cudnn_convolution_backward_weight(
+              weight.shape.toArray,
+              p.value,
+              input.value.castDown.value,
+              Array(padding, padding),
+              Array(stride, stride),
+              Array(dilation, dilation),
+              groups,
+              false,
+              false,
+              true
+            )
+            .owned
+          out += tmp.castToLike(out)
         } else {
-          throw new NotImplementedError(
-            "Conv2d backward with groups>1 on cpu is not implemented"
-          )
-          val p_repeated =
-            ATen.repeat_interleave_2(p.value, inputChannels / groups, 1)
-          val p_repeated_size = p_repeated.sizes
-          val p_repeated_viewed =
-            ATen._unsafe_view(
-              p_repeated,
+          if (groups == 1) {
+
+            val (a, b, c) = ATen.slow_conv_dilated2d_backward(
+              p.value,
+              input.value.castDown.value,
+              weight.value.castDown.value,
+              Array(kernelSize, kernelSize),
+              Array(stride, stride),
+              Array(padding, padding),
+              Array(dilation, dilation),
+              Array(false, true, false)
+            )
+
+            a.release
+            c.release
+            out += b.owned.castToLike(out)
+
+          } else {
+            throw new NotImplementedError(
+              "Conv2d backward with groups>1 on cpu is not implemented"
+            )
+            val p_repeated =
+              ATen.repeat_interleave_2(p.value, inputChannels / groups, 1)
+            val p_repeated_size = p_repeated.sizes
+            val p_repeated_viewed =
+              ATen._unsafe_view(
+                p_repeated,
+                Array(
+                  p_repeated_size(0) * p_repeated_size(1),
+                  1,
+                  p_repeated_size(2),
+                  p_repeated_size(3)
+                )
+              )
+            val input_viewed = ATen._unsafe_view(
+              input.value.castDown.value,
+              Array(1, batchSize * inputChannels, imageHeight, imageWidth)
+            )
+            val zero =
+              ATen.zeros(
+                Array(p_repeated_viewed.sizes.apply(0)),
+                p.options(scope).value
+              )
+            val conv_0 = ATen.conv2d(
+              input_viewed,
+              p_repeated_viewed,
+              zero,
+              Array(dilation),
+              Array(padding),
+              Array(stride),
+              inputChannels * batchSize
+            )
+            val conv_0_sizes = conv_0.sizes
+            val conv_1 = ATen._unsafe_view(
+              conv_0,
               Array(
-                p_repeated_size(0) * p_repeated_size(1),
-                1,
-                p_repeated_size(2),
-                p_repeated_size(3)
+                batchSize,
+                conv_0_sizes.apply(1) / batchSize,
+                conv_0_sizes.apply(2),
+                conv_0_sizes.apply(3)
               )
             )
-          val input_viewed = ATen._unsafe_view(
-            input.value.value,
-            Array(1, batchSize * inputChannels, imageHeight, imageWidth)
-          )
-          val zero =
-            ATen.zeros(
-              Array(p_repeated_viewed.sizes.apply(0)),
-              p.options(scope).value
-            )
-          val conv_0 = ATen.conv2d(
-            input_viewed,
-            p_repeated_viewed,
-            zero,
-            Array(dilation),
-            Array(padding),
-            Array(stride),
-            inputChannels * batchSize
-          )
-          val conv_0_sizes = conv_0.sizes
-          val conv_1 = ATen._unsafe_view(
-            conv_0,
-            Array(
-              batchSize,
-              conv_0_sizes.apply(1) / batchSize,
-              conv_0_sizes.apply(2),
-              conv_0_sizes.apply(3)
-            )
-          )
-          val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
-          val conv_1_sum_viewed =
-            ATen._unsafe_view(
-              conv_1_sum,
-              Array(
-                inputChannels / groups,
-                outChannels,
-                conv_1.sizes.apply(2),
-                conv_1.sizes.apply(3)
+            val conv_1_sum = ATen.sum_1(conv_1, Array(0L), false)
+            val conv_1_sum_viewed =
+              ATen._unsafe_view(
+                conv_1_sum,
+                Array(
+                  inputChannels / groups,
+                  outChannels,
+                  conv_1.sizes.apply(2),
+                  conv_1.sizes.apply(3)
+                )
               )
-            )
-          val conv_1_sum_viewed_transposed =
-            ATen.transpose(conv_1_sum_viewed, 0, 1)
+            val conv_1_sum_viewed_transposed =
+              ATen.transpose(conv_1_sum_viewed, 0, 1)
 
-          val conv_1_sum_viewed_transposed_narrowed1 =
-            ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
-          val conv_1_sum_viewed_transposed_narrowed2 =
-            ATen
-              .narrow_0(
-                conv_1_sum_viewed_transposed_narrowed1,
-                3,
-                0,
-                kernelSize
-              )
+            val conv_1_sum_viewed_transposed_narrowed1 =
+              ATen.narrow_0(conv_1_sum_viewed_transposed, 2, 0, kernelSize)
+            val conv_1_sum_viewed_transposed_narrowed2 =
+              ATen
+                .narrow_0(
+                  conv_1_sum_viewed_transposed_narrowed1,
+                  3,
+                  0,
+                  kernelSize
+                )
 
-          ATen.add_out(
-            out.value,
-            out.value,
-            conv_1_sum_viewed_transposed_narrowed2,
-            1d
-          )
+            out += conv_1_sum_viewed_transposed_narrowed2.owned.castToLike(out)
 
-          conv_1_sum_viewed_transposed_narrowed1.release()
-          conv_1_sum_viewed_transposed_narrowed2.release()
-          conv_1_sum_viewed_transposed.release
-          conv_1_sum_viewed.release
-          conv_1_sum.release
-          conv_1.release
-          conv_0.release
-          input_viewed.release()
-          p_repeated_viewed.release
-          p_repeated.release
-          zero.release
+            conv_1_sum_viewed_transposed_narrowed1.release()
+            conv_1_sum_viewed_transposed.release
+            conv_1_sum_viewed.release
+            conv_1_sum.release
+            conv_1.release
+            conv_0.release
+            input_viewed.release()
+            p_repeated_viewed.release
+            p_repeated.release
+            zero.release
+          }
         }
       }
     },
     bias.zipBackward { (p, out) =>
-      val p2 = ub(p.value, List(out.sizes.toList.head, 1, 1)).getOrElse(p.value)
-      val p3 = ATen._unsafe_view(p2, out.sizes.toArray)
+      Scope.root { implicit scope =>
+        val p2 =
+          ub(p.value, List(out.sizes.toList.head, 1, 1)).getOrElse(p.value)
+        val p3 = ATen._unsafe_view(p2, out.sizes.toArray).owned
 
-      ATen.add_out(out.value, out.value, p3, 1d)
-      if (p2 != p.value) {
-        p2.release()
+        out += p3.castToLike(out)
+        if (p2 != p.value) {
+          p2.release()
+        }
       }
-      p3.release()
     }
   )
 
   val value =
     Variable(
       this, {
-        STen.owned(
-          ATen.conv2d(
-            input.value.value,
-            weight.value.value,
-            bias.value.value,
-            Array(stride),
-            Array(padding),
-            Array(dilation),
-            groups
+        implicit val sc = scope
+        Scope { implicit sc =>
+          STen.owned(
+            ATen.conv2d(
+              input.value.castDown.value,
+              weight.value.castDown.value,
+              bias.value.castDown.value,
+              Array(stride),
+              Array(padding),
+              Array(dilation),
+              groups
+            )
           )
-        )(scope)
+        }
       }
     )(scope)
 }
@@ -1449,8 +1669,8 @@ case class Conv2DTransposed(
     padding: Long,
     dilation: Long
     // groups: Long
-) extends Op {
-
+)(implicit conf: GraphConfiguration)
+    extends Op {
   assert(
     input.shape.size == 4,
     s"Input dimensions must be 4, got ${input.shape}"
@@ -1468,80 +1688,114 @@ case class Conv2DTransposed(
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      if (p.scalarTypeByte == 6 && p.options(scope).value.isCuda()) {
-        val tmp = ATen.cudnn_convolution_transpose_backward_input(
-          p.value,
-          weight.value.value,
-          Array(padding, padding),
-          Array(stride, stride),
-          Array(dilation, dilation),
-          1,
-          false,
-          false,
-          true
-        )
-        ATen.add_out(out.value, out.value, tmp, 1d)
-        tmp.release
-      } else {
+      Scope.root { implicit scope =>
+        if (
+          (p.scalarTypeByte == 6 || p.scalarTypeByte == 5) && p
+            .options(scope)
+            .value
+            .isCuda()
+        ) {
+          val tmp = ATen
+            .cudnn_convolution_transpose_backward_input(
+              p.value,
+              weight.value.castDown.value,
+              Array(padding, padding),
+              Array(stride, stride),
+              Array(dilation, dilation),
+              1,
+              false,
+              false,
+              true
+            )
+            .owned
+          out += tmp.castToLike(out)
+        } else {
 
-        val columns = STen.zerosLike(p)(scope)
-        val ones = STen.onesLike(p)(scope)
-        assert(input.shape(1) == weight.shape(0))
-        assert(p.shape(1) == weight.shape(1))
-        assert(p.shape(1) == bias.shape(0))
+          val columns = STen.zerosLike(p)(scope)
+          val ones = STen.onesLike(p)(scope)
+          assert(input.shape(1) == weight.shape(0))
+          assert(p.shape(1) == weight.shape(1))
+          assert(p.shape(1) == bias.shape(0))
 
-        assert(
-          p.shape(2) == ((imageWidth - 1) * stride - 2 * padding +
-            (dilation * (kernelSize - 1) + 1))
-        )
-        assert(
-          p.shape(3) == ((imageHeight - 1) * stride - 2 * padding +
-            (dilation * (kernelSize - 1) + 1))
-        )
-        val (a, b, c) = ATen.slow_conv_transpose2d_backward(
-          p.value,
-          input.value.value,
-          weight.value.value,
-          Array(kernelSize, kernelSize),
-          Array(stride, stride),
-          Array(padding, padding),
-          Array(0, 0),
-          Array(dilation, dilation),
-          columns.value,
-          ones.value,
-          Array(true, false, false)
-        )
+          assert(
+            p.shape(2) == ((imageWidth - 1) * stride - 2 * padding +
+              (dilation * (kernelSize - 1) + 1))
+          )
+          assert(
+            p.shape(3) == ((imageHeight - 1) * stride - 2 * padding +
+              (dilation * (kernelSize - 1) + 1))
+          )
+          val (a, b, c) = ATen.slow_conv_transpose2d_backward(
+            p.value,
+            input.value.castDown.value,
+            weight.value.castDown.value,
+            Array(kernelSize, kernelSize),
+            Array(stride, stride),
+            Array(padding, padding),
+            Array(0, 0),
+            Array(dilation, dilation),
+            columns.value,
+            ones.value,
+            Array(true, false, false)
+          )
 
-        b.release
-        c.release
-        ATen.add_out(out.value, out.value, a, 1d)
-        a.release
+          b.release
+          c.release
+          out += a.owned.castToLike(out)
 
+        }
       }
     },
     weight.zipBackward { (p, out) =>
-      if (p.scalarTypeByte == 6 && p.options(scope).value.isCuda()) {
-        val tmp = ATen.cudnn_convolution_transpose_backward_weight(
-          weight.shape.toArray,
-          p.value,
-          input.value.value,
-          Array(padding, padding),
-          Array(stride, stride),
-          Array(dilation, dilation),
-          1,
-          false,
-          false,
-          true
-        )
-        ATen.add_out(out.value, out.value, tmp, 1d)
-        tmp.release
-      } else {
+      Scope.root { implicit scope =>
+        if (p.scalarTypeByte == 6 && p.options(scope).value.isCuda()) {
+          val tmp = ATen
+            .cudnn_convolution_transpose_backward_weight(
+              weight.shape.toArray,
+              p.value,
+              input.value.castDown.value,
+              Array(padding, padding),
+              Array(stride, stride),
+              Array(dilation, dilation),
+              1,
+              false,
+              false,
+              true
+            )
+            .owned
+          out += tmp.castToLike(out)
+
+        } else {
+          val columns = STen.zerosLike(p)(scope)
+          val ones = STen.onesLike(p)(scope)
+          val (a, b, c) = ATen.slow_conv_transpose2d_backward(
+            p.value,
+            input.value.castDown.value,
+            weight.value.castDown.value,
+            Array(kernelSize, kernelSize),
+            Array(stride, stride),
+            Array(padding, padding),
+            Array(0, 0),
+            Array(dilation, dilation),
+            columns.value,
+            ones.value,
+            Array(false, true, false)
+          )
+
+          a.release
+          c.release
+          out += b.owned.castToLike(out)
+        }
+      }
+    },
+    bias.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
         val columns = STen.zerosLike(p)(scope)
         val ones = STen.onesLike(p)(scope)
         val (a, b, c) = ATen.slow_conv_transpose2d_backward(
           p.value,
-          input.value.value,
-          weight.value.value,
+          input.value.castDown.value,
+          weight.value.castDown.value,
           Array(kernelSize, kernelSize),
           Array(stride, stride),
           Array(padding, padding),
@@ -1549,54 +1803,34 @@ case class Conv2DTransposed(
           Array(dilation, dilation),
           columns.value,
           ones.value,
-          Array(false, true, false)
+          Array(false, false, true)
         )
 
-        a.release
-        c.release
-        ATen.add_out(out.value, out.value, b, 1d)
         b.release
+        a.release
+        out += c.owned.castToLike(out)
       }
-    },
-    bias.zipBackward { (p, out) =>
-      val columns = STen.zerosLike(p)(scope)
-      val ones = STen.onesLike(p)(scope)
-      val (a, b, c) = ATen.slow_conv_transpose2d_backward(
-        p.value,
-        input.value.value,
-        weight.value.value,
-        Array(kernelSize, kernelSize),
-        Array(stride, stride),
-        Array(padding, padding),
-        Array(0, 0),
-        Array(dilation, dilation),
-        columns.value,
-        ones.value,
-        Array(false, false, true)
-      )
-
-      b.release
-      a.release
-      ATen.add_out(out.value, out.value, c, 1d)
-      c.release
     }
   )
 
   val value =
     Variable(
       this, {
-        STen.owned(
-          ATen.conv_transpose2d(
-            input.value.value,
-            weight.value.value,
-            bias.value.value,
-            Array(stride, stride),
-            Array(padding, padding),
-            Array(0, 0),
-            1,
-            Array(dilation)
+        implicit val sc = scope
+        Scope { implicit sc =>
+          STen.owned(
+            ATen.conv_transpose2d(
+              input.value.castDown.value,
+              weight.value.castDown.value,
+              bias.value.castDown.value,
+              Array(stride, stride),
+              Array(padding, padding),
+              Array(0, 0),
+              1,
+              Array(dilation)
+            )
           )
-        )(scope)
+        }
       }
     )(scope)
 }
@@ -1803,7 +2037,7 @@ case class BatchNorm(
     eps: Double
 ) extends Op {
 
-  val input_flattened = ATen.flatten(input.value.value, 1, input.shape.size - 1)
+  val input_flattened = input.value.flatten(1, input.shape.size - 1)(scope)
   val expectedShape = List(input_flattened.shape.last)
   assert(
     expectedShape == weight.shape,
@@ -1822,21 +2056,24 @@ case class BatchNorm(
     s"Expected $expectedShape got runningVar shape ${runningVar.shape}"
   )
 
-  val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
-    input_flattened,
-    weight.value.value,
-    bias.value.value,
-    runningMean.value,
-    runningVar.value,
-    training,
-    momentum,
-    eps
-  )
+  val (output, saveMean, saveInvstd) =
+    Scope.leak { implicit sc =>
+      ATen.native_batch_norm(
+        input_flattened.castUp.value,
+        weight.value.castUp.value,
+        bias.value.castUp.value,
+        runningMean.castUp.value,
+        runningVar.castUp.value,
+        training,
+        momentum,
+        eps
+      )
+    }
+
   val output_reshaped = ATen._unsafe_view(output, input.shape.toArray)
 
   scope.register(saveMean)
   scope.register(saveInvstd)
-  scope.register(input_flattened)
   scope.register(output)
 
   override val value: Variable =
@@ -1844,60 +2081,66 @@ case class BatchNorm(
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      val flattened_p =
-        ATen.flatten(p.value, 1, p.shape.size - 1)
-      val (gradInput, a, b) = ATen.native_batch_norm_backward(
-        flattened_p,
-        input_flattened,
-        weight.value.value,
-        runningMean.value,
-        runningVar.value,
-        saveMean,
-        saveInvstd,
-        training,
-        eps,
-        Array(true, false, false)
-      )
-      val gradInput_reshaped = ATen._unsafe_view(gradInput, out.shape.toArray)
-      ATen.add_out(out.value, out.value, gradInput_reshaped, 1d)
-      gradInput.release
-      a.release
-      b.release
-      flattened_p.release()
-      gradInput_reshaped.release
+      Scope.root { implicit scope =>
+        val flattened_p =
+          ATen.flatten(p.value, 1, p.shape.size - 1)
+        val (gradInput, a, b) = ATen.native_batch_norm_backward(
+          flattened_p,
+          input_flattened.castUp.value,
+          weight.value.castUp.value,
+          runningMean.castUp.value,
+          runningVar.castUp.value,
+          saveMean,
+          saveInvstd,
+          training,
+          eps,
+          Array(true, false, false)
+        )
+        val gradInput_reshaped =
+          ATen._unsafe_view(gradInput, out.shape.toArray).owned
+        ATen.add_out(
+          out.value,
+          out.value,
+          gradInput_reshaped.castToLike(out).value,
+          1d
+        )
+        gradInput.release
+        a.release
+        b.release
+        flattened_p.release()
+      }
     },
     weight.zipBackward { (p, out) =>
-      val flattened_p =
-        ATen.flatten(p.value, 1, p.shape.size - 1)
-      val (a, gradWeight, b) = ATen.native_batch_norm_backward(
-        flattened_p,
-        input_flattened,
-        weight.value.value,
-        runningMean.value,
-        runningVar.value,
-        saveMean,
-        saveInvstd,
-        training,
-        eps,
-        Array(false, true, false)
-      )
-      val grad_reshaped = ATen._unsafe_view(gradWeight, out.shape.toArray)
-      ATen.add_out(out.value, out.value, grad_reshaped, 1d)
-      gradWeight.release
-      grad_reshaped.release
-      a.release
-      b.release
-      flattened_p.release()
+      Scope.root { implicit scope =>
+        val flattened_p =
+          ATen.flatten(p.value, 1, p.shape.size - 1)
+        val (a, gradWeight, b) = ATen.native_batch_norm_backward(
+          flattened_p,
+          input_flattened.castUp.value,
+          weight.value.castUp.value,
+          runningMean.castUp.value,
+          runningVar.castUp.value,
+          saveMean,
+          saveInvstd,
+          training,
+          eps,
+          Array(false, true, false)
+        )
+        val grad_reshaped =
+          ATen._unsafe_view(gradWeight, out.shape.toArray).owned
+        out += grad_reshaped.castToLike(out)
+        gradWeight.release
+        a.release
+        b.release
+        flattened_p.release()
+      }
     },
     bias.zipBackward { (p, out) =>
-      val flattened_p =
-        ATen.flatten(p.value, 1, p.shape.size - 1)
-      val tmp = ub(flattened_p, out.shape).getOrElse(flattened_p)
-      ATen.add_out(out.value, out.value, tmp, 1d)
-      if (tmp != flattened_p) {
-        tmp.release
+      Scope.root { implicit scope =>
+        val flattened_p = p.flatten(1, p.shape.size - 1)
+        out += flattened_p.unbroadcast(out.shape).castToLike(out)
+
       }
-      flattened_p.release
     }
   )
 }
@@ -1937,16 +2180,19 @@ case class BatchNorm2D(
     s"Expected $expectedShape got runningVar shape ${runningVar.shape}"
   )
 
-  val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
-    input.value.value,
-    weight.value.value,
-    bias.value.value,
-    runningMean.value,
-    runningVar.value,
-    training,
-    momentum,
-    eps
-  )
+  val (output, saveMean, saveInvstd) =
+    Scope.leak { implicit sc =>
+      ATen.native_batch_norm(
+        input.value.castUp.value,
+        weight.value.castUp.value,
+        bias.value.castUp.value,
+        runningMean.castUp.value,
+        runningVar.castUp.value,
+        training,
+        momentum,
+        eps
+      )
+    }
   scope.register(saveMean)
   scope.register(saveInvstd)
   override val value: Variable =
@@ -1954,58 +2200,70 @@ case class BatchNorm2D(
 
   override val params: List[(Variable, (STen, STen) => Unit)] = List(
     input.zipBackward { (p, out) =>
-      val (gradInput, a, b) = ATen.native_batch_norm_backward(
-        p.value,
-        input.value.value,
-        weight.value.value,
-        runningMean.value,
-        runningVar.value,
-        saveMean,
-        saveInvstd,
-        training,
-        eps,
-        Array(true, false, false)
-      )
-      val gradInput_reshaped =
-        ATen._unsafe_view(gradInput, out.shape.toArray)
-      ATen.add_out(out.value, out.value, gradInput_reshaped, 1d)
-      gradInput.release
-      a.release
-      b.release
-      gradInput_reshaped.release
+      Scope.root { implicit scope =>
+        val (gradInput, a, b) = ATen.native_batch_norm_backward(
+          p.value,
+          input.value.castUp.value,
+          weight.value.castUp.value,
+          runningMean.castUp.value,
+          runningVar.castUp.value,
+          saveMean,
+          saveInvstd,
+          training,
+          eps,
+          Array(true, false, false)
+        )
+        val gradInput_reshaped =
+          ATen._unsafe_view(gradInput, out.shape.toArray).owned
+        ATen.add_out(
+          out.value,
+          out.value,
+          gradInput_reshaped.castToLike(out).value,
+          1d
+        )
+        gradInput.release
+        a.release
+        b.release
+      }
     },
     weight.zipBackward { (p, out) =>
-      val (a, gradWeight, b) = ATen.native_batch_norm_backward(
-        p.value,
-        input.value.value,
-        weight.value.value,
-        runningMean.value,
-        runningVar.value,
-        saveMean,
-        saveInvstd,
-        training,
-        eps,
-        Array(false, true, false)
-      )
-      val grad_reshaped = ATen._unsafe_view(gradWeight, out.shape.toArray)
-      ATen.add_out(out.value, out.value, grad_reshaped, 1d)
-      gradWeight.release
-      grad_reshaped.release
-      a.release
-      b.release
+      Scope.root { implicit scope =>
+        val (a, gradWeight, b) = ATen.native_batch_norm_backward(
+          p.value,
+          input.value.castUp.value,
+          weight.value.castUp.value,
+          runningMean.castUp.value,
+          runningVar.castUp.value,
+          saveMean,
+          saveInvstd,
+          training,
+          eps,
+          Array(false, true, false)
+        )
+        val grad_reshaped =
+          ATen._unsafe_view(gradWeight, out.shape.toArray).owned
+        out += grad_reshaped.castToLike(out)
+        gradWeight.release
+        a.release
+        b.release
+      }
     },
     bias.zipBackward { (p, out) =>
-      val tmp = ub(p.value, (out.shape ++ (1 to p.shape.size - 2).map(_ => 1L)))
-        .getOrElse(p.value)
-      val tmp_viewed = ATen._unsafe_view(
-        tmp,
-        out.shape.toArray
-      )
-      ATen.add_out(out.value, out.value, tmp_viewed, 1d)
-      if (p.value != tmp) {
-        tmp.release
+      Scope.root { implicit scope =>
+        val tmp =
+          ub(p.value, (out.shape ++ (1 to p.shape.size - 2).map(_ => 1L)))
+            .getOrElse(p.value)
+        val tmp_viewed = ATen
+          ._unsafe_view(
+            tmp,
+            out.shape.toArray
+          )
+          .owned
+        out += tmp_viewed.castToLike(out)
+        if (p.value != tmp) {
+          tmp.release
+        }
       }
-      tmp_viewed.release
     }
   )
 }

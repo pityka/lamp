@@ -7,6 +7,7 @@ import lamp.Sc
 import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
+import lamp.autograd.implicits.defaultGraphConfiguration
 class LogisticSuite extends AnyFunSuite {
 
   def logisticRegression[S: Sc](dim: Int, k: Int, tOpt: STenOptions) =

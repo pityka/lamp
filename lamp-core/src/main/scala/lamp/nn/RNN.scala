@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, Constant, param}
+import lamp.autograd.{Variable, Constant, param, GC, GraphConfiguration}
 import scala.collection.mutable
 import lamp.Sc
 import lamp.STen
@@ -12,7 +12,8 @@ import lamp.STenOptions
 case class RNN(
     weightXh: Constant,
     weightHh: Constant,
-    biasH: Constant
+    biasH: Constant,
+    conf: GraphConfiguration
 ) extends StatefulModule[Variable, Variable, Option[Variable]] {
   val inputSize = weightXh.shape.last
   val hiddenSize = biasH.shape.last
@@ -30,6 +31,7 @@ case class RNN(
 
   def forward[S: Sc](a: (Variable, Option[Variable])) = forward1(a._1, a._2)
   def forward1[S: Sc](x: Variable, state: Option[Variable]) = {
+    implicit def _conf = conf
     val timesteps = x.shape.head
     val batchSize = x.shape(1)
     val outputs = mutable.ArrayBuffer[Variable]()
@@ -61,7 +63,7 @@ object RNN {
   case object WeightHh extends LeafTag
   case object BiasH extends LeafTag
 
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       in: Int,
       hiddenSize: Int,
       tOpt: STenOptions
@@ -88,7 +90,8 @@ object RNN {
           List(1, hiddenSize),
           tOpt
         )
-      )
+      ),
+      conf = implicitly[GraphConfiguration]
     )
 
 }

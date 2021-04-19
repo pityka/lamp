@@ -19,6 +19,8 @@ import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
+import lamp.autograd.implicits.defaultGraphConfiguration
+
 class EndToEndClassificationSuite extends AnyFunSuite {
 
   def parseDataset(file: File) = {

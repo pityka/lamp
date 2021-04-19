@@ -6,6 +6,7 @@ import upickle.default._
 
 import lamp.DoublePrecision
 import lamp.SinglePrecision
+import lamp.HalfPrecision
 import lamp.CPU
 import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
@@ -234,6 +235,7 @@ object Serialization {
       baseFiles,
       model.dataLayout,
       model.precision match {
+        case HalfPrecision   => "half"
         case DoublePrecision => "double"
         case SinglePrecision => "single"
       },

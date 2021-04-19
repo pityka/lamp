@@ -2,6 +2,7 @@ package lamp.nn
 
 import lamp.Sc
 import lamp.STenOptions
+import lamp.autograd.GC
 
 /** Factory for multilayer fully connected feed forward networks
   *
@@ -21,7 +22,7 @@ object MLP {
   case object Gelu extends ActivationFunction
   case object Swish1 extends ActivationFunction
   case object Sigmoid extends ActivationFunction
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       in: Int,
       out: Int,
       hidden: Seq[Int],

@@ -12,6 +12,7 @@ import lamp.CPU
 import lamp.Scope
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
+import lamp.autograd.implicits.defaultGraphConfiguration
 
 class ReadWriteSuite extends AnyFunSuite {
   test("to tensor") {

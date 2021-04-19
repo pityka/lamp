@@ -86,6 +86,7 @@ package object onnx {
             elemType = Scope.leak { implicit scope =>
               v.value.options.scalarTypeByte match {
                 case 4 => Some(DataType.INT64.index)
+                case 5 => Some(DataType.FLOAT16.index)
                 case 6 => Some(DataType.FLOAT.index)
                 case 7 => Some(DataType.DOUBLE.index)
               }

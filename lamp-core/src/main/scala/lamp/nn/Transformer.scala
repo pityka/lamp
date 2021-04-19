@@ -5,7 +5,7 @@ import lamp.Sc
 
 import lamp.STen
 import lamp.autograd.Constant
-import lamp.autograd.{param, const}
+import lamp.autograd.{param, const, GC, GraphConfiguration}
 import lamp.STenOptions
 import lamp.Scope
 import lamp.FloatingPointPrecision
@@ -66,7 +66,7 @@ object TransformerEncoder {
     * @param tOpt tensor options
     * @return a module
     */
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       numBlocks: Int,
       in: Int,
       attentionHiddenPerHeadDim: Int,
@@ -105,7 +105,8 @@ case class TransformerEncoderBlock(
     w2: Constant,
     b2: Constant,
     dropout: Double,
-    train: Boolean
+    train: Boolean,
+    conf: GraphConfiguration
 ) extends GenericModule[(Variable, STen), Variable] {
 
   def state =
@@ -117,7 +118,7 @@ case class TransformerEncoderBlock(
     )
 
   def forward[S: Sc](x: (Variable, STen)): Variable = {
-
+    implicit def _conf = conf
     def mm1(a: Variable, b: Variable) = {
       val shape = a.shape
       a.view(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
@@ -136,7 +137,7 @@ case class TransformerEncoderBlock(
 
 object TransformerEncoderBlock {
 
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       in: Int,
       attentionHiddenPerHeadDim: Int,
       attentionNumHeads: Int,
@@ -167,7 +168,8 @@ object TransformerEncoderBlock {
       w2 = initLinear(mlpHiddenDim, out, tOpt),
       b2 = param(STen.zeros(List(1, out), tOpt)),
       dropout = dropout,
-      train = true
+      train = true,
+      conf = implicitly[GraphConfiguration]
     )
 
   object Weights1 extends LeafTag
@@ -219,7 +221,8 @@ case class MultiheadAttention(
     train: Boolean,
     numHeads: Int,
     padToken: Long,
-    linearized: Boolean
+    linearized: Boolean,
+    conf: GraphConfiguration
 ) extends GenericModule[(Variable, Variable, Variable, STen), Variable] {
 
   override val state = List(
@@ -232,6 +235,7 @@ case class MultiheadAttention(
   override def forward[S: Sc](
       x: (Variable, Variable, Variable, STen)
   ): Variable = {
+    implicit def conf_ = conf
     val (q, k, v, tokens) = x
 
     MultiheadAttention.multiheadAttention(
@@ -254,7 +258,7 @@ case class MultiheadAttention(
 }
 
 object MultiheadAttention {
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       dQ: Int,
       dK: Int,
       dV: Int,
@@ -274,7 +278,8 @@ object MultiheadAttention {
     train = true,
     numHeads = numHeads,
     padToken = padToken,
-    linearized = linearized
+    linearized = linearized,
+    conf = implicitly[GraphConfiguration]
   )
   case object WeightsQ extends LeafTag
   case object WeightsK extends LeafTag
@@ -347,7 +352,7 @@ object MultiheadAttention {
     * @param pad scalar long
     * @return  batch x num queries x value dim
     */
-  def scaledDotProductAttention[S: Sc](
+  def scaledDotProductAttention[S: Sc, G: GC](
       query: Variable,
       keys: Variable,
       values: Variable,
@@ -387,7 +392,7 @@ object MultiheadAttention {
     * @param pad scalar long
     * @return  batch x num queries x value dim
     */
-  def linearizedAttention[S: Sc](
+  def linearizedAttention[S: Sc, G: GC](
       query: Variable,
       keys: Variable,
       values: Variable,
@@ -432,7 +437,7 @@ object MultiheadAttention {
     * @param numHeads number of output heads, must be divisible by hidden
     * @return  batch x num queries x po
     */
-  def multiheadAttention[S: Sc](
+  def multiheadAttention[S: Sc, G: GC](
       query: Variable,
       keys: Variable,
       values: Variable,

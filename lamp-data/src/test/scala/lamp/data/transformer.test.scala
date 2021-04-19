@@ -12,6 +12,7 @@ import lamp.STen
 import scala.io.Codec
 import lamp.TensorHelpers
 import cats.effect.unsafe.implicits.global
+import lamp.autograd.implicits.defaultGraphConfiguration
 
 class TransformerSuite extends AnyFunSuite {
   def test1(id: String)(fun: Boolean => Unit) = {

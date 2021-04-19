@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.{BatchNorm => _, Dropout => _, _}
+import lamp.autograd.{GraphConfiguration, GC, BatchNorm => _, Dropout => _, _}
 import aten.ATen
 import lamp.Sc
 import lamp.STen
@@ -38,7 +38,8 @@ object Passthrough {
   }
 }
 case class GCN[M <: Module](
-    transform: M with Module
+    transform: M with Module,
+    conf: GraphConfiguration
 ) extends GenericModule[
       (Variable, Variable),
       (Variable, Variable)
@@ -50,6 +51,7 @@ case class GCN[M <: Module](
   override def forward[S: Sc](
       x: (Variable, Variable)
   ): (Variable, Variable) = {
+    implicit def _conf = conf
     val (nodeFeatures, edgeList) = x
     val message = GCN.gcnAggregation(nodeFeatures, edgeList)
     val transformedNodes = transform.forward(message)
@@ -63,7 +65,8 @@ case class NGCN[M <: Module](
     transforms: Seq[M with Module],
     weightFc: Constant,
     K: Int,
-    includeZeroOrder: Boolean
+    includeZeroOrder: Boolean,
+    conf: GraphConfiguration
 ) extends GenericModule[
       (Variable, Variable),
       (Variable, Variable)
@@ -76,6 +79,7 @@ case class NGCN[M <: Module](
   override def forward[S: Sc](
       x: (Variable, Variable)
   ): (Variable, Variable) = {
+    implicit def _conf = conf
     val (nodeFeatures, edgeList) = x
     val (degrees, a) = GCN.precomputeSparseAdjacency(
       nodeFeatures.options,
@@ -125,7 +129,7 @@ object NGCN {
 
   }
 
-  def ngcn[S: Sc](
+  def ngcn[S: Sc, G: GC](
       in: Int,
       middle: Int,
       out: Int,
@@ -164,7 +168,8 @@ object NGCN {
         )
       ),
       K,
-      includeZeroOrder
+      includeZeroOrder,
+      implicitly[GraphConfiguration]
     )
   }
 }
@@ -265,7 +270,7 @@ object GCN {
     * @param edgeList N x 2 long tensor the edges in A (asymmetric, no diagonal)
     * @return N x D aggregated features
     */
-  def gcnAggregation[S: Sc](
+  def gcnAggregation[S: Sc, G: GC](
       nodeFeatures: Variable,
       edgeList: Variable
   ): Variable = {
@@ -276,7 +281,7 @@ object GCN {
     )
     gcnAggregation(nodeFeatures, degrees, a)
   }
-  def gcnAggregation[S: Sc](
+  def gcnAggregation[S: Sc, G: GC](
       nodeFeatures: Variable,
       degrees: Variable,
       a: Variable
@@ -296,7 +301,7 @@ object GCN {
 
   }
 
-  def gcn[S: Sc](
+  def gcn[S: Sc, G: GC](
       in: Int,
       out: Int,
       tOpt: STenOptions,
@@ -323,7 +328,8 @@ object GCN {
               )
             )
         )
-      )
+      ),
+      conf = implicitly[GraphConfiguration]
     )
 
 }

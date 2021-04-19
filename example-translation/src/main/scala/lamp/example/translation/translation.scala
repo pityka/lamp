@@ -26,6 +26,7 @@ import lamp.data.Reader
 import lamp.data.IOLoops
 import lamp.STen
 import cats.effect.unsafe.implicits.global
+import lamp.autograd.implicits.defaultGraphConfiguration
 
 case class CliConfig(
     trainData: String = "",
@@ -243,7 +244,8 @@ object Train extends App {
                 (lstmState, (), (), ())
               },
               decoder,
-              vocab('#').toLong
+              vocab('#').toLong,
+              conf = defaultGraphConfiguration
             )(_._1.get._1).unlift
 
           config.checkpointLoad

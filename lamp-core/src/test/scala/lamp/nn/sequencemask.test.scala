@@ -7,6 +7,7 @@ import lamp.autograd._
 import lamp.util.NDArray
 import lamp.Scope
 import lamp.STen
+import lamp.autograd.implicits.defaultGraphConfiguration
 
 class AttentionSuite extends AnyFunSuite {
 

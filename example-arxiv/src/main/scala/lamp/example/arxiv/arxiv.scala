@@ -6,6 +6,7 @@ import lamp.autograd._
 import lamp.nn._
 import lamp.data._
 import cats.effect.unsafe.implicits.global
+import lamp.autograd.implicits.defaultGraphConfiguration
 
 case class CliConfig(
     folder: String = "",

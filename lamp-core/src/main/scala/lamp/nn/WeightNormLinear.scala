@@ -1,7 +1,7 @@
 package lamp.nn
 
 import lamp.Sc
-import lamp.autograd.{Variable, Constant, param}
+import lamp.autograd.{Variable, Constant, param, GraphConfiguration, GC}
 import lamp.scope
 import lamp.STen
 import lamp.STenOptions
@@ -9,7 +9,8 @@ import lamp.STenOptions
 case class WeightNormLinear(
     weightsV: Constant,
     weightsG: Constant,
-    bias: Option[Constant]
+    bias: Option[Constant],
+    conf: GraphConfiguration
 ) extends Module {
 
   override val state = List(
@@ -18,6 +19,7 @@ case class WeightNormLinear(
   ) ++ bias.toList.map(b => (b, WeightNormLinear.Bias))
 
   def forward[S: Sc](x: Variable): Variable = {
+    implicit val _conf = conf
     val weights =
       new lamp.autograd.WeightNorm(scope, weightsV, weightsG, 0).value
     val v = x.mm(weights.t)
@@ -36,7 +38,7 @@ object WeightNormLinear {
   case object WeightsV extends LeafTag
   case object WeightsG extends LeafTag
   case object Bias extends LeafTag
-  def apply[S: Sc](
+  def apply[S: Sc, G: GC](
       in: Int,
       out: Int,
       tOpt: STenOptions,
@@ -52,6 +54,7 @@ object WeightNormLinear {
       bias =
         if (bias)
           Some(param(STen.zeros(List(1, out), tOpt)))
-        else None
+        else None,
+      conf = implicitly[GraphConfiguration]
     )
 }

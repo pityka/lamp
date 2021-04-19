@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.Variable
+import lamp.autograd.{Variable, GC, GraphConfiguration}
 import lamp.Sc
 
 object Attention {
@@ -32,7 +32,7 @@ object Attention {
     * @param key num keys x batch x d
     * @return  batch x d
     */
-  def dotProductAttention[S: Sc](
+  def dotProductAttention[S: Sc, G: GC](
       query: Variable,
       keyvalue: Variable,
       tokens: Variable,
@@ -67,7 +67,7 @@ object Attention {
     output.view(List(batch.toInt, -1))
   }
 
-  def forward[T, M <: StatefulModule[Variable, Variable, T], S: Sc](
+  def forward[T, M <: StatefulModule[Variable, Variable, T], S: Sc, G: GC](
       decoder: M with StatefulModule[Variable, Variable, T],
       x: Variable,
       keyValue: Variable,
@@ -112,9 +112,10 @@ case class AttentionDecoder[T, M <: StatefulModule[
     stateToKey: T => Variable,
     keyValue: Variable,
     tokens: Variable,
-    padToken: Long
+    padToken: Long,
+    conf: GraphConfiguration
 ) extends StatefulModule[Variable, Variable, T] {
-
+  implicit def conf_ = conf
   override def state =
     decoder.state ++ embedding.state
 
