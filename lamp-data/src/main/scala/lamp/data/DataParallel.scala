@@ -10,8 +10,119 @@ import cats.effect.std.Queue
 import cats.effect.syntax.all._
 import cats.syntax.all._
 import lamp.Device
+import java.io.File
 
 object DataParallel {
+
+  def validationOneEpoch[I, M <: GenericModule[I, Variable]](
+      models: Seq[SupervisedModel[I, M]],
+      validationBatches: BatchStream[I],
+      validationCallback: ValidationCallback,
+      logger: Option[Logger],
+      epochCount: Long,
+      minimumCheckpointFile: Option[File],
+      minimumValidationLossSoFar: Option[Double]
+  ): IO[Double] = {
+    val devices = models.map(_.module.state.head._1.value.device).toList
+    val modelsAsEval = models.map(_.asEval)
+
+    def allocatePerModelLossAcc(implicit scope: Scope) =
+      (models)
+        .map(model => STen.scalarDouble(0d, model.module.state.head._1.options))
+        .toList
+
+    def loop(
+        batchCount: Int,
+        totalLossPerModel: List[STen],
+        totalExamples: Long
+    ): IO[(Seq[STen], Long)] = {
+      makeMultipleBatches(
+        devices = devices,
+        makeOne = (device: Device) =>
+          validationBatches
+            .nextBatch(device)
+      )()
+        .use { batches =>
+          IO {
+            batches.map { case batches =>
+              batches
+                .zip(modelsAsEval)
+                .zip(totalLossPerModel)
+                .parTraverse {
+                  case (
+                        ((validationSample, validationTarget), modelAsEval),
+                        totalLoss
+                      ) =>
+                    IO {
+                      val numExamples =
+                        modelAsEval.addTotalLossAndReturnNumExamples(
+                          validationSample,
+                          validationTarget,
+                          totalLoss
+                        )
+                      numExamples
+                    }
+                }
+                .map(_.sum)
+            }
+          }.flatMap {
+            case EndStream         => IO.pure(EndStream)
+            case EmptyBatch        => IO.pure(EmptyBatch)
+            case NonEmptyBatch(io) => io.map(NonEmptyBatch(_))
+          }
+        }
+        .flatMap {
+          case EndStream  => IO.pure((totalLossPerModel, totalExamples))
+          case EmptyBatch => loop(batchCount, totalLossPerModel, totalExamples)
+          case NonEmptyBatch(examples) =>
+            loop(
+              batchCount + 1,
+              totalLossPerModel,
+              totalExamples + examples
+            )
+        }
+
+    }
+
+    Scope.inResource.use { implicit scope =>
+      loop(
+        0,
+        allocatePerModelLossAcc,
+        0L
+      ).flatMap { case (totalLossPerModel, totalExamples) =>
+        val validationLoss =
+          totalLossPerModel.map(_.toMat.raw(0)).sum / totalExamples
+        for {
+          _ <- IO {
+            logger.foreach(
+              _.info(
+                s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
+              )
+            )
+          }
+          _ <- IO {
+            validationCallback(epochCount, validationLoss)
+          }
+
+          _ <-
+            if (
+              minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss)
+            )
+              IO {
+                scribe.info(
+                  s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
+                )
+              }.flatMap(_ =>
+                Writer.writeCheckpoint(
+                  minimumCheckpointFile.get,
+                  models.head.module
+                )
+              )
+            else IO.unit
+        } yield validationLoss
+      }
+    }
+  }
 
   def oneEpoch[I, M <: GenericModule[I, Variable]: Load](
       epochCount: Long,
@@ -55,45 +166,6 @@ object DataParallel {
       case EndStream            => IO.pure(EndStream)
       case EmptyBatch           => IO.pure(EmptyBatch)
       case NonEmptyBatch(batch) => batch.map(NonEmptyBatch(_))
-    }
-
-    def makeMultipleBatches[A](
-        devices: List[Device],
-        makeOne: (Device) => Resource[IO, StreamControl[A]]
-    ): () => Resource[IO, StreamControl[List[A]]] = {
-      def allocate(device: Device) =
-        for {
-          resource <- IO(makeOne(device))
-          started <- resource.allocated
-        } yield started
-
-      def startN = devices.parTraverseN(devices.size)(allocate)
-
-      def unifyReleases(
-          l: List[(StreamControl[A], IO[Unit])]
-      ) = l.map(_._2).sequence.map(_ => ())
-
-      def unifyValues(
-          l: List[(StreamControl[A], IO[Unit])]
-      ) = {
-
-        val elems = l.map(_._1)
-        val end = elems.exists(_ == EndStream)
-        val as = elems.flatMap(_ match {
-          case EndStream            => Nil
-          case EmptyBatch           => Nil
-          case NonEmptyBatch(batch) => List(batch)
-        })
-        if (end) EndStream
-        else if (as.isEmpty) EmptyBatch
-        else NonEmptyBatch(as)
-
-      }
-
-      () =>
-        Resource
-          .make(acquire = startN)(release = unifyReleases)
-          .map(unifyValues)
     }
 
     def synchronousStep(
@@ -243,6 +315,45 @@ object DataParallel {
       }
 
     } yield trainingLoss
+  }
+
+  def makeMultipleBatches[A](
+      devices: List[Device],
+      makeOne: (Device) => Resource[IO, StreamControl[A]]
+  ): () => Resource[IO, StreamControl[List[A]]] = {
+    def allocate(device: Device) =
+      for {
+        resource <- IO(makeOne(device))
+        started <- resource.allocated
+      } yield started
+
+    def startN = devices.parTraverseN(devices.size)(allocate)
+
+    def unifyReleases(
+        l: List[(StreamControl[A], IO[Unit])]
+    ) = l.map(_._2).sequence.map(_ => ())
+
+    def unifyValues(
+        l: List[(StreamControl[A], IO[Unit])]
+    ) = {
+
+      val elems = l.map(_._1)
+      val end = elems.exists(_ == EndStream)
+      val as = elems.flatMap(_ match {
+        case EndStream            => Nil
+        case EmptyBatch           => Nil
+        case NonEmptyBatch(batch) => List(batch)
+      })
+      if (end) EndStream
+      else if (as.isEmpty) EmptyBatch
+      else NonEmptyBatch(as)
+
+    }
+
+    () =>
+      Resource
+        .make(acquire = startN)(release = unifyReleases)
+        .map(unifyValues)
   }
 
 }
