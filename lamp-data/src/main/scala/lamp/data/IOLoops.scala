@@ -239,15 +239,28 @@ object IOLoops {
             if (
               epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
             )
-              validationOneEpoch(
-                model = modelWithOptimizer.model,
-                validationBatches = validationBatchesOverEpoch.get(),
-                validationCallback = validationCallback,
-                logger = logger,
-                epochCount = epoch,
-                minimumCheckpointFile = minimumCheckpointFile,
-                minimumValidationLossSoFar = minValidationLoss
-              ).map(Some(_))
+              if (dataParallelModels.isEmpty)
+                validationOneEpoch(
+                  model = modelWithOptimizer.model,
+                  validationBatches = validationBatchesOverEpoch.get(),
+                  validationCallback = validationCallback,
+                  logger = logger,
+                  epochCount = epoch,
+                  minimumCheckpointFile = minimumCheckpointFile,
+                  minimumValidationLossSoFar = minValidationLoss
+                ).map(Some(_))
+              else
+                DataParallel
+                  .validationOneEpoch(
+                    models = modelWithOptimizer.model +: dataParallelModels,
+                    validationBatches = validationBatchesOverEpoch.get(),
+                    validationCallback = validationCallback,
+                    logger = logger,
+                    epochCount = epoch,
+                    minimumCheckpointFile = minimumCheckpointFile,
+                    minimumValidationLossSoFar = minValidationLoss
+                  )
+                  .map(Some(_))
             else IO.pure(None)
 
           _ <- IO {
