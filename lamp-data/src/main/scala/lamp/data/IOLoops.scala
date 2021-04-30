@@ -2,9 +2,7 @@ package lamp.data
 import lamp.nn._
 import cats.effect._
 import aten.Tensor
-import java.io.File
 import scribe.Logger
-import Writer.writeCheckpoint
 import lamp.autograd.Variable
 import lamp.STen
 import lamp.Scope
@@ -81,8 +79,7 @@ object IOLoops {
       validationBatchesOverEpoch: Option[() => BatchStream[I]] = None,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointFile: Option[File] = None,
-      minimumCheckpointFile: Option[File] = None,
+      checkpointState: Option[State => IO[Unit]] = None,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule =
@@ -94,26 +91,29 @@ object IOLoops {
           cycleLength = 10
         ),
       prefetch: Boolean = false,
-      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil
+      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
+      initState: Option[SimpleThenSWALoopState] = None
   ) = {
     for {
-      warmedup <- epochs(
-        model,
-        optimizerFactory,
-        trainBatchesOverEpoch,
-        validationBatchesOverEpoch,
-        warmupEpochs,
-        trainingCallback,
-        validationCallback,
-        checkpointFile,
-        minimumCheckpointFile,
-        1,
-        logger,
-        returnMinValidationLossModel,
-        learningRateSchedule,
-        prefetch,
-        dataParallelModels
-      )
+      warmedup <-
+        epochs(
+          model,
+          optimizerFactory,
+          trainBatchesOverEpoch,
+          validationBatchesOverEpoch,
+          warmupEpochs,
+          trainingCallback,
+          validationCallback,
+          checkpointState,
+          1,
+          logger,
+          returnMinValidationLossModel,
+          learningRateSchedule,
+          prefetch,
+          dataParallelModels,
+          initState.flatMap(_.simple)
+        )
+
       warmupEpochReturned = warmedup._1
       warmedupModel = warmedup._2
       warmupLearningCurve = warmedup._3
@@ -125,13 +125,13 @@ object IOLoops {
         swaEpochs,
         trainingCallback,
         validationCallback,
-        checkpointFile,
-        minimumCheckpointFile,
+        checkpointState,
         1,
         logger,
         swaLearningRateSchedule,
         prefetch,
-        dataParallelModels
+        dataParallelModels,
+        initState.flatMap(_.swa)
       )
     } yield {
       val swaModel = swaResult._1
@@ -152,16 +152,23 @@ object IOLoops {
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointFile: Option[File] = None,
-      minimumCheckpointFile: Option[File] = None,
+      checkpointState: Option[State => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule = LearningRateSchedule.noop,
       prefetch: Boolean = false,
-      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil
+      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
+      initState: Option[SimpleLoopState] = None
   ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
-    val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
+    val modelWithOptimizer
+        : ModelWithOptimizer[I, M with GenericModule[I, Variable]] =
+      model.asTraining.zipOptimizer(optimizerFactory)
+
+    initState.foreach { state =>
+      modelWithOptimizer.model.module.load(state.model)
+      modelWithOptimizer.optimizer.load(state.optimizer)
+    }
 
     def loop(
         epoch: Int,
@@ -209,6 +216,21 @@ object IOLoops {
         }
 
         for {
+          _ <-
+            if (checkpointState.isDefined)
+              checkpointState.get(
+                SimpleLoopState(
+                  modelWithOptimizer.model.module.state.map(_._1.value),
+                  modelWithOptimizer.optimizer.state,
+                  epoch,
+                  lastValidationLoss,
+                  minValidationLoss,
+                  minValidationLossModel,
+                  learningCurve
+                )
+              )
+            else IO.unit
+
           trainingLoss <-
             if (dataParallelModels.isEmpty)
               oneEpoch(
@@ -231,10 +253,6 @@ object IOLoops {
                 dataParallelModels
               )
 
-          _ <-
-            if (checkpointFile.isDefined)
-              writeCheckpoint(checkpointFile.get, model.module)
-            else IO.unit
           maybeValidationLoss <-
             if (
               epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
@@ -245,9 +263,7 @@ object IOLoops {
                   validationBatches = validationBatchesOverEpoch.get(),
                   validationCallback = validationCallback,
                   logger = logger,
-                  epochCount = epoch,
-                  minimumCheckpointFile = minimumCheckpointFile,
-                  minimumValidationLossSoFar = minValidationLoss
+                  epochCount = epoch
                 ).map(Some(_))
               else
                 DataParallel
@@ -256,9 +272,7 @@ object IOLoops {
                     validationBatches = validationBatchesOverEpoch.get(),
                     validationCallback = validationCallback,
                     logger = logger,
-                    epochCount = epoch,
-                    minimumCheckpointFile = minimumCheckpointFile,
-                    minimumValidationLossSoFar = minValidationLoss
+                    epochCount = epoch
                   )
                   .map(Some(_))
             else IO.pure(None)
@@ -302,7 +316,18 @@ object IOLoops {
       }
     }
 
-    loop(0, None, None, None, Nil)
+    initState match {
+      case None =>
+        loop(0, None, None, None, Nil)
+      case Some(state) =>
+        loop(
+          epoch = state.epoch,
+          lastValidationLoss = state.lastValidationLoss,
+          minValidationLoss = state.minValidationLoss,
+          minValidationLossModel = state.minValidationLossModel,
+          learningCurve = state.learningCurve
+        )
+    }
 
   }
 
@@ -439,9 +464,7 @@ object IOLoops {
       validationBatches: BatchStream[I],
       validationCallback: ValidationCallback,
       logger: Option[Logger],
-      epochCount: Long,
-      minimumCheckpointFile: Option[File],
-      minimumValidationLossSoFar: Option[Double]
+      epochCount: Long
   ): IO[Double] = {
     val device = model.module.state.head._1.value.device
     val modelAsEval = model.asEval
@@ -498,18 +521,6 @@ object IOLoops {
             validationCallback(epochCount, validationLoss)
           }
 
-          _ <-
-            if (
-              minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss)
-            )
-              IO {
-                scribe.info(
-                  s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
-                )
-              }.flatMap(_ =>
-                writeCheckpoint(minimumCheckpointFile.get, model.module)
-              )
-            else IO.unit
         } yield validationLoss
       }
     }

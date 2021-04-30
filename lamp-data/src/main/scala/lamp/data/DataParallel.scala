@@ -10,7 +10,6 @@ import cats.effect.std.Queue
 import cats.effect.syntax.all._
 import cats.syntax.all._
 import lamp.Device
-import java.io.File
 
 object DataParallel {
 
@@ -19,9 +18,7 @@ object DataParallel {
       validationBatches: BatchStream[I],
       validationCallback: ValidationCallback,
       logger: Option[Logger],
-      epochCount: Long,
-      minimumCheckpointFile: Option[File],
-      minimumValidationLossSoFar: Option[Double]
+      epochCount: Long
   ): IO[Double] = {
     val devices = models.map(_.module.state.head._1.value.device).toList
     val modelsAsEval = models.map(_.asEval)
@@ -104,21 +101,6 @@ object DataParallel {
             validationCallback(epochCount, validationLoss)
           }
 
-          _ <-
-            if (
-              minimumCheckpointFile.isDefined && (minimumValidationLossSoFar.isEmpty || minimumValidationLossSoFar.get > validationLoss)
-            )
-              IO {
-                scribe.info(
-                  s"Minimum validation loss $validationLoss reached at $epochCount. Writing checkpoint to $minimumCheckpointFile"
-                )
-              }.flatMap(_ =>
-                Writer.writeCheckpoint(
-                  minimumCheckpointFile.get,
-                  models.head.module
-                )
-              )
-            else IO.unit
         } yield validationLoss
       }
     }

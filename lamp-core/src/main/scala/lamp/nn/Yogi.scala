@@ -4,6 +4,7 @@ import aten.Tensor
 import aten.ATen
 import lamp.STen
 import lamp.Scope
+import lamp.STenOptions
 
 object Yogi {
   def factory(
@@ -42,21 +43,33 @@ case class Yogi(
     clip: Option[Double] = None,
     debias: Boolean = true
 ) extends Optimizer {
-  val mt: List[Tensor] = parameters.toList.map { case (param, _) =>
-    Tensor.zeros_like(param.value)
+  val scope = Scope.free
+  val mt: List[STen] = parameters.toList.map { case (param, _) =>
+    STen.owned(Tensor.zeros_like(param.value))(scope)
   }
-  val vt: List[Tensor] = parameters.toList.map { case (param, _) =>
-    Tensor.zeros_like(param.value)
+  val vt: List[STen] = parameters.toList.map { case (param, _) =>
+    STen.owned(Tensor.zeros_like(param.value))(scope)
   }
 
   var stepCount = 0L
+  val stepCountSTen = STen.scalarDouble(0, STenOptions.d)(scope)
+
+  def state = List(stepCountSTen) ++ mt ++ vt
+
+  def load(tensors: Seq[STen]) = {
+    state.zip(tensors).foreach { case (current, incoming) =>
+      current.copyFrom(incoming)
+    }
+    stepCount = stepCountSTen.toMat.raw(0).toLong
+
+  }
   def release() = {
-    mt.foreach(_.release())
-    vt.foreach(_.release())
+    scope.release()
   }
   def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1
+    stepCountSTen += 1d
     parameters
       .zip(gradients)
       .zip(mt)
@@ -73,13 +86,13 @@ case class Yogi(
           val lr = learningRate(tag)
 
           Scope.root { implicit scope =>
-            mt.mul_(b1)
-            ATen.add_out(mt, mt, gradients.value, (1d - b1))
+            mt.value.mul_(b1)
+            ATen.add_out(mt.value, mt.value, gradients.value, (1d - b1))
             gradients.pow_(2d)
-            val tmp = STen.owned(ATen.sub_0(vt, gradients.value, 1d))
+            val tmp = STen.owned(ATen.sub_0(vt.value, gradients.value, 1d))
             tmp.sign_()
             gradients *= tmp
-            ATen.sub_out(vt, vt, gradients.value, 1d - b2)
+            ATen.sub_out(vt.value, vt.value, gradients.value, 1d - b2)
 
             val debiasTerm =
               if (debias)
@@ -91,7 +104,7 @@ case class Yogi(
 
             val stepWd = scheduleFactor * wd
 
-            val denom = STen.owned(ATen.sqrt(vt))
+            val denom = STen.owned(ATen.sqrt(vt.value))
             if (debias) {
               denom *= 1d / math.sqrt(
                 (1 - math.pow(b2, stepCount.toDouble))
@@ -106,7 +119,7 @@ case class Yogi(
             ATen.addcdiv_out(
               param.value,
               param.value,
-              mt,
+              mt.value,
               denom.value,
               -1 * stepParam
             )

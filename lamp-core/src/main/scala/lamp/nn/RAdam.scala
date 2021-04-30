@@ -3,6 +3,8 @@ package lamp.nn
 import aten.Tensor
 import aten.ATen
 import lamp.STen
+import lamp.Scope
+import lamp.STenOptions
 
 object RAdam {
   def factory(
@@ -36,21 +38,34 @@ case class RAdam(
     eps: Double = 1e-8,
     clip: Option[Double] = None
 ) extends Optimizer {
-  val mt: List[Tensor] = parameters.toList.map { case (param, _) =>
-    Tensor.zeros_like(param.value)
+  val scope = Scope.free
+  val mt: List[STen] = parameters.toList.map { case (param, _) =>
+    STen.owned(Tensor.zeros_like(param.value))(scope)
   }
-  val vt: List[Tensor] = parameters.toList.map { case (param, _) =>
-    Tensor.zeros_like(param.value)
+  val vt: List[STen] = parameters.toList.map { case (param, _) =>
+    STen.owned(Tensor.zeros_like(param.value))(scope)
   }
 
   var stepCount = 0L
+  val stepCountSTen = STen.scalarDouble(0, STenOptions.d)(scope)
+
+  def load(tensors: Seq[STen]) = {
+    state.zip(tensors).foreach { case (current, incoming) =>
+      current.copyFrom(incoming)
+    }
+    stepCount = stepCountSTen.toMat.raw(0).toLong
+  }
   def release() = {
-    mt.foreach(_.release())
-    vt.foreach(_.release())
+    scope.release()
+  }
+
+  def state = {
+    List(stepCountSTen) ++ mt ++ vt
   }
   def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1
+    stepCountSTen += 1d
     parameters
       .zip(gradients)
       .zip(mt)
@@ -66,11 +81,17 @@ case class RAdam(
           val b2 = beta2(tag)
           val lr = learningRate(tag)
 
-          mt.mul_(b1)
-          ATen.add_out(mt, mt, gradients.value, (1d - b1))
+          mt.value.mul_(b1)
+          ATen.add_out(mt.value, mt.value, gradients.value, (1d - b1))
 
-          vt.mul_(b2)
-          ATen.addcmul_out(vt, vt, gradients.value, gradients.value, 1 - b2)
+          vt.value.mul_(b2)
+          ATen.addcmul_out(
+            vt.value,
+            vt.value,
+            gradients.value,
+            gradients.value,
+            1 - b2
+          )
 
           val beta2PowT = math.pow(b2, stepCount.toDouble)
 
@@ -94,13 +115,13 @@ case class RAdam(
             // println("A")
             // println(stepParam)
 
-            val denom = ATen.sqrt(vt)
+            val denom = ATen.sqrt(vt.value)
             denom.add_(eps, 1d)
 
             ATen.addcdiv_out(
               param.value,
               param.value,
-              mt,
+              mt.value,
               denom,
               -1 * stepParam
             )
@@ -110,7 +131,7 @@ case class RAdam(
             // println("B")
             val stepParam =
               scheduleFactor * lr / (1 - math.pow(b1, stepCount.toDouble))
-            ATen.add_out(param.value, param.value, mt, -1 * stepParam)
+            ATen.add_out(param.value, param.value, mt.value, -1 * stepParam)
           }
 
       }

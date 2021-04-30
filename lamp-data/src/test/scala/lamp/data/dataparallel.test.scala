@@ -84,8 +84,6 @@ class DataParallelLoopSuite extends AnyFunSuite {
           epochs = 50,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
-          checkpointFile = None,
-          minimumCheckpointFile = None,
           dataParallelModels = List(model2)
         )
         .unsafeRunSync()

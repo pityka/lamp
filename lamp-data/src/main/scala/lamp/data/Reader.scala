@@ -77,13 +77,15 @@ object Reader {
       i = channel.read(bb)
     }
     bb.flip
+    i
   }
 
-  def readHeaderFromChannel[T: ST](channel: ReadableByteChannel) =
-    dtype[T].flatMap { expectedDataType =>
-      val magicAndVersion = Array.ofDim[Byte](8)
-      readFully(ByteBuffer.wrap(magicAndVersion), channel)
-      val magic = String.valueOf(magicAndVersion.map(_.toChar), 0, 6)
+  def readHeaderFromChannel(channel: ReadableByteChannel) = {
+    val magicAndVersion = Array.ofDim[Byte](8)
+    val count = readFully(ByteBuffer.wrap(magicAndVersion), channel)
+    val magic = String.valueOf(magicAndVersion.map(_.toChar), 0, 6)
+    if (count < 8) Left("EOF")
+    else {
       val major = magicAndVersion(6)
       val minor = magicAndVersion(7)
       if (major != 1 || minor != 0 || magic != "LAMP__")
@@ -99,15 +101,13 @@ object Reader {
         readFully(ByteBuffer.wrap(headerArray), channel)
         val header = new String(headerArray, "UTF-8")
         val descriptor = ujson.read(header).obj
-        val datatype = descriptor(KEY_datatype).str
         val version = descriptor("v").num.toInt
         if (version != 1)
           Left("Data layout not supported")
-        else if (datatype != expectedDataType)
-          Left(s"Expected $expectedDataType got $datatype")
         else Right(descriptor)
       }
     }
+  }
 
   def readTensorDataFromChannel[T: ST](
       channel: ReadableByteChannel,
@@ -145,12 +145,19 @@ object Reader {
     }
   }
 
-  def readTensorFromChannel[T: ST](
+  def readTensorFromChannel(
       channel: ReadableByteChannel,
       device: Device
   ): Either[String, Tensor] = {
-    readHeaderFromChannel[T](channel).flatMap { descriptor =>
-      width[T].flatMap { width =>
+    readHeaderFromChannel(channel).flatMap { descriptor =>
+      val datatype = descriptor(KEY_datatype).str
+      val scalarTagByte = datatype match {
+        case "double" => 7
+        case "float"  => 6
+        case "long"   => 4
+      }
+
+      width(scalarTagByte.toByte).flatMap { width =>
         val shape =
           descriptor
             .get(KEY_shape)
@@ -158,20 +165,44 @@ object Reader {
         shape match {
           case None => Left("No shape")
           case Some(shape) =>
-            readTensorDataFromChannel(channel, shape, width, device)
+            datatype match {
+              case "double" =>
+                readTensorDataFromChannel[Double](channel, shape, width, device)
+              case "float" =>
+                readTensorDataFromChannel[Float](channel, shape, width, device)
+              case "long" =>
+                readTensorDataFromChannel[Long](channel, shape, width, device)
+            }
+
         }
       }
     }
   }
 
   def readTensorsFromChannel(
-      types: Seq[(ScalarTag[_])],
       channel: ReadableByteChannel,
       device: Device
   ): Either[String, Seq[Tensor]] =
-    Reader.sequence(types.map { case st =>
-      readTensorFromChannel(channel, device)(st)
-    })
+    Reader.sequence(
+      Iterator
+        .continually {
+          readTensorFromChannel(channel, device)
+        }
+        .takeWhile(_.isRight)
+        .toList
+    )
+
+  def readTensorsFromFile(
+      file: File,
+      device: Device
+  ): Either[String, Seq[Tensor]] = {
+    val fis = new FileInputStream(file)
+    try {
+      readTensorsFromChannel(fis.getChannel, device)
+    } finally {
+      fis.close
+    }
+  }
 
   class ByteChannel(src: ByteBuffer) extends ReadableByteChannel {
     def read(dst: ByteBuffer) = {
@@ -186,7 +217,7 @@ object Reader {
     def close(): Unit = ()
   }
 
-  def readTensorFromArray[T: ST](
+  def readTensorFromArray(
       array: Array[Byte],
       device: Device
   ): Either[String, Tensor] =
@@ -215,18 +246,11 @@ object Reader {
       device: Device
   ) = {
 
-    val oldTensors = module.state.map(_._1.value)
     channel
       .use { channel =>
         IO {
           Reader
             .readTensorsFromChannel(
-              oldTensors
-                .map(t =>
-                  Scope.leak { implicit scope =>
-                    scalarTypeToScalarTag(t.options.scalarTypeByte)
-                  }
-                ),
               channel,
               device
             )

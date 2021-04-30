@@ -7,10 +7,7 @@ import upickle.default._
 import lamp.DoublePrecision
 import lamp.SinglePrecision
 import lamp.CPU
-import org.saddle.scalar.ScalarTagFloat
-import org.saddle.scalar.ScalarTagDouble
 import java.io.FileInputStream
-import org.saddle.scalar.ScalarTagLong
 import lamp.extratrees.ClassificationTree
 import lamp.extratrees.RegressionTree
 import lamp.STen
@@ -61,21 +58,18 @@ object Serialization {
     implicit val rw: RW[DTO] = macroRW
   }
   def loadModel(path: String)(implicit scope: Scope) = {
-    val json = scala.io.Source.fromFile(path).mkString
+    val src = scala.io.Source.fromFile(path)
+    val json = src.mkString
+    src.close
     val dto = read[DTO](json)
-    def scalarTag(p: String) = p match {
-      case "single" => ScalarTagFloat
-      case "double" => ScalarTagDouble
-      case "long"   => ScalarTagLong
-    }
+
     val selectionModels = lamp.data.Reader.sequence(dto.selectionModels.map {
 
       case ExtratreesDto(trees) =>
         Right(ExtratreesBase(trees))
-      case KnnDto(k, file, dataTypes) =>
+      case KnnDto(k, file, _) =>
         val channel = new FileInputStream(new File(file)).getChannel()
         val tensors = lamp.data.Reader.readTensorsFromChannel(
-          types = dataTypes.map(scalarTag),
           channel = channel,
           device = CPU
         )
@@ -88,10 +82,9 @@ object Serialization {
             STen.owned(v(1))
           )
         )
-      case NNDto(hiddenSize, _, file, dataTypes) =>
+      case NNDto(hiddenSize, _, file, _) =>
         val channel = new FileInputStream(new File(file)).getChannel()
         val tensors = lamp.data.Reader.readTensorsFromChannel(
-          types = dataTypes.map(scalarTag),
           channel = channel,
           device = CPU
         )
@@ -104,19 +97,17 @@ object Serialization {
           .sequence(files.map {
             case ExtratreesDto(trees) =>
               Right(ExtratreesBase(trees))
-            case NNDto(hiddenSize, _, file, dataTypes) =>
+            case NNDto(hiddenSize, _, file, _) =>
               val channel = new FileInputStream(new File(file)).getChannel()
               val tensors = lamp.data.Reader.readTensorsFromChannel(
-                types = dataTypes.map(scalarTag),
                 channel = channel,
                 device = CPU
               )
               channel.close
               tensors.map(t => NNBase(hiddenSize, t.map(STen.owned)))
-            case KnnDto(k, file, dataTypes) =>
+            case KnnDto(k, file, _) =>
               val channel = new FileInputStream(new File(file)).getChannel()
               val tensors = lamp.data.Reader.readTensorsFromChannel(
-                types = dataTypes.map(scalarTag),
                 channel = channel,
                 device = CPU
               )

@@ -87,8 +87,6 @@ class IOLoopSuite extends AnyFunSuite {
           swaEpochs = 20,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
-          checkpointFile = None,
-          minimumCheckpointFile = None,
           returnMinValidationLossModel = List(1, 25, 50)
         )
         .unsafeRunSync()
@@ -161,8 +159,6 @@ class IOLoopSuite extends AnyFunSuite {
           epochs = 50,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
-          checkpointFile = None,
-          minimumCheckpointFile = None,
           prefetch = true
         )
         .unsafeRunSync()
