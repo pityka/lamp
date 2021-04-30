@@ -1,6 +1,6 @@
 package lamp.data
-import org.saddle.scalar._
 import org.saddle._
+import org.saddle.scalar._
 import java.nio.ByteOrder
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
@@ -40,19 +40,21 @@ object Writer {
   val KEY_shape = "shape"
   val KEY_v = "v"
 
-  def createTensorDescriptor[T: ST](
+  def createTensorDescriptor(
       tensor: Tensor
-  ) = dtype[T].map { dtype =>
-    ujson
-      .write(
-        ujson.Obj(
-          KEY_datatype -> dtype,
-          KEY_shape -> ujson.Arr(
-            tensor.sizes.map(l => ujson.Num(l.toDouble)).toIndexedSeq: _*
-          ),
-          KEY_v -> 1
+  ) = {
+    dtype(tensor.scalarType).map { dtype =>
+      ujson
+        .write(
+          ujson.Obj(
+            KEY_datatype -> dtype,
+            KEY_shape -> ujson.Arr(
+              tensor.sizes.map(l => ujson.Num(l.toDouble)).toIndexedSeq: _*
+            ),
+            KEY_v -> 1
+          )
         )
-      )
+    }
   }
 
   def createHeader(
@@ -75,22 +77,18 @@ object Writer {
     }
   }
 
-  private[data] def dtype[T: ST] = implicitly[ST[T]] match {
-    case ScalarTagDouble => Right("double")
-    case ScalarTagInt    => Right("int")
-    case ScalarTagFloat  => Right("float")
-    case ScalarTagLong   => Right("long")
-    case ScalarTagByte   => Right("byte")
-    case other           => Left(s"Type $other not supported.")
+  private[data] def dtype(scalarTagByte: Byte) = scalarTagByte match {
+    case 7     => Right("double")
+    case 6     => Right("float")
+    case 4     => Right("long")
+    case other => Left(s"Type $other not supported.")
   }
 
-  private[data] def width[T: ST] = implicitly[ST[T]] match {
-    case ScalarTagDouble => Right(8)
-    case ScalarTagInt    => Right(4)
-    case ScalarTagFloat  => Right(4)
-    case ScalarTagLong   => Right(8)
-    case ScalarTagByte   => Right(1)
-    case other           => Left(s"Type $other not supported.")
+  private[data] def width(scalarTagByte: Byte) = (scalarTagByte: Byte) match {
+    case 7     => Right(8)
+    case 6     => Right(4)
+    case 4     => Right(8)
+    case other => Left(s"Type $other not supported.")
   }
 
   def put[@specialized(Double, Long, Int, Float, Byte) T: ST](
@@ -174,9 +172,9 @@ object Writer {
       tensor: Tensor,
       channel: WritableByteChannel
   ): Either[String, Unit] = {
-    val header = createHeader(createTensorDescriptor[T](tensor))
+    val header = createHeader(createTensorDescriptor(tensor))
     header.flatMap { header =>
-      width[T].map { width =>
+      width(tensor.scalarTypeByte).map { width =>
         writeFully(ByteBuffer.wrap(header), channel)
 
         val elem = tensor.numel().toInt
@@ -203,7 +201,7 @@ object Writer {
   ): Either[String, Array[Byte]] = {
     val header = createHeader(createTensorDescriptor(tensor))
     header.flatMap { header =>
-      width[T].map { width =>
+      width(tensor.scalarTypeByte).map { width =>
         val elem = tensor.numel.toInt
         val result =
           Array.ofDim[Byte](header.length + width * elem)

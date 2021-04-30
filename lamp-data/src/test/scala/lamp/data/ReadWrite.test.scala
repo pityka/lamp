@@ -5,8 +5,6 @@ import org.saddle._
 import lamp.nn._
 import aten.ATen
 import lamp.util.NDArray
-import org.saddle.scalar.ScalarTagFloat
-import org.saddle.scalar.ScalarTagDouble
 import java.io.File
 import lamp.CPU
 import lamp.Scope
@@ -17,7 +15,7 @@ class ReadWriteSuite extends AnyFunSuite {
   test("to tensor") {
     val t = ATen.ones(Array(3, 3, 3), STenOptions.f.value)
     val t2 = Reader
-      .readTensorFromArray[Float](
+      .readTensorFromArray(
         Writer.writeTensorIntoArray[Float](t).toOption.get,
         CPU
       )
@@ -43,7 +41,6 @@ class ReadWriteSuite extends AnyFunSuite {
     val channelIn = is.getChannel()
     val read = Reader
       .readTensorsFromChannel(
-        List(ScalarTagFloat, ScalarTagDouble),
         channelIn,
         CPU
       )

@@ -69,6 +69,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
 )(implicit tm: TrainingMode[M]) {
   def asEval = copy(module = module.asEval)
   def asTraining = copy(module = module.asTraining)
+
   def addTotalLossAndReturnNumExamples(
       samples: I,
       target: STen,

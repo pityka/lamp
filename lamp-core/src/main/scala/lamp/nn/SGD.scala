@@ -3,6 +3,7 @@ package lamp.nn
 import aten.Tensor
 import aten.ATen
 import lamp.STen
+import lamp.Scope
 object SGDW {
   def factory(
       learningRate: OptimizerHyperparameter,
@@ -22,18 +23,26 @@ case class SGDW(
     momentum: Option[OptimizerHyperparameter] = None,
     clip: Option[Double] = None
 ) extends Optimizer {
-  val velocity: Seq[Option[(Tensor, OptimizerHyperparameter)]] =
+  val scope = Scope.free
+  val velocity: Seq[Option[(STen, OptimizerHyperparameter)]] =
     parameters.toList.map { case (param, _) =>
-      momentum.map { m => (Tensor.zeros_like(param.value), m) }
+      momentum.map { m =>
+        (STen.owned(Tensor.zeros_like(param.value))(scope), m)
+      }
     }
 
-  var stepCount = 0L
+  def state = velocity.flatMap(_.toList).map(_._1)
+
+  def load(tensors: Seq[STen]) = {
+    state.zip(tensors).foreach { case (current, incoming) =>
+      current.copyFrom(incoming)
+    }
+  }
   def release() = {
-    velocity.foreach(_.foreach(_._1.release()))
+    scope.release()
   }
   def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
-    stepCount += 1L
 
     parameters.zip(gradients).zip(velocity).filter(_._1._2.isDefined).foreach {
       case (((param, tag), Some(gradients)), None) =>
@@ -57,11 +66,11 @@ case class SGDW(
       case (((param, tag), Some(gradients)), Some((velocity, momentum))) =>
         val m = momentum(tag)
 
-        velocity.mul_(m)
+        velocity.value.mul_(m)
 
         ATen.add_out(
-          velocity,
-          velocity,
+          velocity.value,
+          velocity.value,
           gradients.value,
           learningRate(tag) * scheduleFactor
         )
@@ -78,7 +87,7 @@ case class SGDW(
         ATen.add_out(
           param.value,
           param.value,
-          velocity,
+          velocity.value,
           -1
         )
       case _ => ???

@@ -9,6 +9,7 @@ import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
+import cats.effect.IO
 
 class MLPSuite extends AnyFunSuite {
   def mlp(dim: Int, k: Int, tOpt: STenOptions)(implicit
@@ -106,7 +107,16 @@ class MLPSuite extends AnyFunSuite {
           validationBatchesOverEpoch = Some(makeValidationBatch),
           warmupEpochs = 10,
           swaEpochs = 10,
-          logger = Some(scribe.Logger("sdf"))
+          logger = Some(scribe.Logger("sdf")),
+          checkpointState = Some(state =>
+            IO {
+              val stateFile =
+                java.io.File.createTempFile("sdfs", "dsfsd").getAbsolutePath()
+              StateIO.writeToFile(stateFile, state)
+              val state2 = StateIO.readFromFile(stateFile, device)
+              assertLoopState(state, state2)
+            }
+          )
         )
         .unsafeRunSync()
       val acc = STen.scalarDouble(0d, testDataTensor.options)
@@ -140,7 +150,94 @@ class MLPSuite extends AnyFunSuite {
     stop.stop()
     TensorLogger.detailAllTensorOptions(println)
     assert(TensorLogger.queryActiveTensorOptions().size <= 3)
+    println("Remaining:")
+    TensorLogger.queryActiveTensors().foreach { td =>
+      println(td.getShape())
+      println(td.getStackTrace().mkString("\n"))
+    }
     assert(TensorLogger.queryActiveTensors().size == 0)
     ()
   }
+
+  def assertLoopState(state: State, state2: State): Unit = state match {
+    case SimpleThenSWALoopState(simple, swa) =>
+      val simple2 = state2.asInstanceOf[SimpleThenSWALoopState].simple
+      val swa2 = state2.asInstanceOf[SimpleThenSWALoopState].swa
+      assert(simple.isDefined == simple2.isDefined)
+      assert(swa.isDefined == swa.isDefined)
+      if (simple.isDefined) assertLoopState(simple.get, simple2.get)
+
+      if (swa.isDefined) assertLoopState(swa.get, swa2.get)
+    case SimpleLoopState(
+          model,
+          optimizer,
+          epoch,
+          lastValidationLoss,
+          minValidationLoss,
+          minValidationLossModel,
+          learningCurve
+        ) =>
+      val st = state2.asInstanceOf[SimpleLoopState]
+      assert(model.map(_.shape) == st.model.map(_.shape))
+      assert(model.zip(st.model).forall { case (a, b) =>
+        a.equalDeep(b)
+      })
+      assert(epoch == st.epoch)
+      assert(learningCurve == st.learningCurve)
+      assert(minValidationLoss == st.minValidationLoss)
+      assert(lastValidationLoss == st.lastValidationLoss)
+      assert(optimizer.map(_.shape) == st.optimizer.map(_.shape))
+      assert(optimizer.zip(st.optimizer).forall { case (a, b) =>
+        a.equalDeep(b)
+      })
+      assert(
+        minValidationLossModel.map(_._1) == st.minValidationLossModel.map(_._1)
+      )
+      assert(
+        minValidationLossModel.map(
+          _._2.map(_.sizes.toList)
+        ) == st.minValidationLossModel.map(_._2.map(_.sizes.toList))
+      )
+      assert(
+        minValidationLossModel.toSeq
+          .flatMap(_._2)
+          .zip(st.minValidationLossModel.toSeq.flatMap(_._2))
+          .forall { case (a, b) => aten.ATen.equal(a, b) }
+      )
+    case SWALoopState(
+          model,
+          optimizer,
+          epoch,
+          lastValidationLoss,
+          minValidationLoss,
+          numberOfAveragedModels,
+          averagedModels,
+          learningCurve
+        ) =>
+      val st = state2.asInstanceOf[SWALoopState]
+      assert(model.map(_.shape) == st.model.map(_.shape))
+      assert(model.zip(st.model).forall { case (a, b) =>
+        a.equalDeep(b)
+      })
+      assert(epoch == st.epoch)
+      assert(learningCurve == st.learningCurve)
+      assert(minValidationLoss == st.minValidationLoss)
+      assert(numberOfAveragedModels == st.numberOfAveragedModels)
+      assert(lastValidationLoss == st.lastValidationLoss)
+      assert(optimizer.map(_.shape) == st.optimizer.map(_.shape))
+      assert(optimizer.zip(st.optimizer).forall { case (a, b) =>
+        a.equalDeep(b)
+      })
+      assert(
+        averagedModels.map(_.map(_.sizes().toList)) == st.averagedModels.map(
+          _.map(_.sizes.toList)
+        )
+      )
+      assert(
+        averagedModels.toSeq.flatten
+          .zip(st.averagedModels.toSeq.flatten)
+          .forall { case (a, b) => aten.ATen.equal(a, b) }
+      )
+  }
+
 }

@@ -8,6 +8,8 @@ trait Optimizer {
       scheduleFactor: Double
   ): Unit
   def release(): Unit
+  def state: Seq[STen]
+  def load(stat: Seq[STen]): Unit
 }
 
 trait OptimizerHyperparameter { def apply(ptag: PTag): Double }

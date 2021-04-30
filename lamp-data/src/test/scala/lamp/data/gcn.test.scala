@@ -362,8 +362,6 @@ class GCNSuite extends AnyFunSuite {
           epochs = 100,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
-          checkpointFile = None,
-          minimumCheckpointFile = None,
           logger = None
         )
         .unsafeRunSync()

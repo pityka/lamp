@@ -3,9 +3,7 @@ package lamp.data
 import lamp.nn._
 import cats.effect._
 import aten.Tensor
-import java.io.File
 import scribe.Logger
-import Writer.writeCheckpoint
 import lamp.autograd.Variable
 import lamp.STen
 import lamp.Scope
@@ -50,16 +48,21 @@ object SWA {
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointFile: Option[File] = None,
-      minimumCheckpointFile: Option[File] = None,
+      checkpointState: Option[State => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       learningRateSchedule: SWALearningRateSchedule =
         SWALearningRateSchedule.constant(1d),
       prefetch: Boolean = false,
-      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil
+      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
+      initState: Option[SWALoopState] = None
   ): IO[(SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
+
+    initState.foreach { state =>
+      modelWithOptimizer.model.module.load(state.model)
+      modelWithOptimizer.optimizer.load(state.optimizer)
+    }
 
     def loop(
         epoch: Int,
@@ -119,6 +122,22 @@ object SWA {
         }
 
         for {
+          _ <-
+            if (checkpointState.isDefined)
+              checkpointState.get(
+                SWALoopState(
+                  modelWithOptimizer.model.module.state.map(_._1.value),
+                  modelWithOptimizer.optimizer.state,
+                  epoch,
+                  lastValidationLoss,
+                  minValidationLoss,
+                  numberOfAveragedModels,
+                  averagedModels,
+                  learningCurve
+                )
+              )
+            else IO.unit
+
           trainingLoss <-
             if (dataParallelModels.isEmpty)
               IOLoops.oneEpoch(
@@ -141,10 +160,6 @@ object SWA {
                 dataParallelModels
               )
 
-          _ <-
-            if (checkpointFile.isDefined)
-              writeCheckpoint(checkpointFile.get, model.module)
-            else IO.unit
           maybeValidationLoss <-
             if (
               epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
@@ -156,9 +171,7 @@ object SWA {
                     validationBatches = validationBatchesOverEpoch.get(),
                     validationCallback = validationCallback,
                     logger = logger,
-                    epochCount = epoch,
-                    minimumCheckpointFile = minimumCheckpointFile,
-                    minimumValidationLossSoFar = minValidationLoss
+                    epochCount = epoch
                   )
                   .map(Some(_))
               else
@@ -168,9 +181,7 @@ object SWA {
                     validationBatches = validationBatchesOverEpoch.get(),
                     validationCallback = validationCallback,
                     logger = logger,
-                    epochCount = epoch,
-                    minimumCheckpointFile = minimumCheckpointFile,
-                    minimumValidationLossSoFar = minValidationLoss
+                    epochCount = epoch
                   )
                   .map(Some(_))
             else IO.pure(None)
@@ -211,7 +222,19 @@ object SWA {
     }
 
     for {
-      trained <- loop(0, None, None, 0, None, Nil)
+      trained <- initState match {
+        case None => loop(0, None, None, 0, None, Nil)
+        case Some(state) =>
+          loop(
+            epoch = state.epoch,
+            lastValidationLoss = state.lastValidationLoss,
+            minValidationLoss = state.minValidationLoss,
+            numberOfAveragedModels = state.numberOfAveragedModels,
+            averagedModels = state.averagedModels,
+            learningCurve = state.learningCurve
+          )
+      }
+
       (model, learningCurve) = trained
       // update batchnorm's state in a side effect
       _ <- IOLoops

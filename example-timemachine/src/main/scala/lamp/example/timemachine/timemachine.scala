@@ -188,9 +188,6 @@ object Train extends App {
             trainBatchesOverEpoch = trainEpochs,
             validationBatchesOverEpoch = Some(testEpochs),
             epochs = config.epochs,
-            checkpointFile = config.checkpointSave.map(s => new File(s)),
-            minimumCheckpointFile =
-              config.checkpointSave.map(s => new File(s + ".min")),
             logger = Some(scribe.Logger("training")),
             validationFrequency = 1
           )
