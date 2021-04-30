@@ -233,11 +233,11 @@ class MLPSuite extends AnyFunSuite {
           _.map(_.sizes.toList)
         )
       )
-      assert(
-        averagedModels.toSeq.flatten
+      if (
+        !averagedModels.toSeq.flatten
           .zip(st.averagedModels.toSeq.flatten)
           .forall { case (a, b) => aten.ATen.equal(a, b) }
-      )
+      ) { throw new RuntimeException("assertion failed") }
   }
 
 }
