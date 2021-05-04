@@ -235,7 +235,8 @@ package object extratrees {
     } else {
       val trees =
         (0 until m).toList
-          .parTraverseN(parallelism)(_ =>
+          .map(_ => org.saddle.spire.random.rng.Cmwc5.fromTime(rng.nextLong()))
+          .parTraverseN(parallelism)(rng =>
             IO {
               buildTreeClassification(
                 data,
@@ -286,7 +287,8 @@ package object extratrees {
     } else {
       val trees =
         (0 until m).toList
-          .parTraverseN(parallelism)(_ =>
+          .map(_ => org.saddle.spire.random.rng.Cmwc5.fromTime(rng.nextLong()))
+          .parTraverseN(parallelism)(rng =>
             IO {
               buildTreeRegression(
                 data,
