@@ -681,6 +681,9 @@ case class STen private (
   def cat[S: Sc](other: STen, dim: Long) =
     owned(ATen.cat(Array(value, other.value), dim))
 
+  def bincount[S: Sc](weights: Option[STen], minLength: Int = 0) =
+    ATen.bincount(value, weights.map(_.value), minLength).owned
+
   def unique[S: Sc](sorted: Boolean, returnInverse: Boolean) = {
     val (a, b) =
       ATen._unique(value, sorted, returnInverse)
@@ -743,9 +746,17 @@ case class STen private (
   def +=(other: Double): Unit =
     value.add_(other, 1d)
 
+  /** In place add. */
+  def +=(other: Long): Unit =
+    value.add_l_(other, 1L)
+
   /** Adds a scalar to all elements. */
   def +[S: Sc](other: Double) =
     owned(ATen.add_1(value, other, 1d))
+
+  /** Adds a scalar to all elements. */
+  def +[S: Sc](other: Long) =
+    owned(ATen.add_1_l(value, other, 1L))
 
   /** Adds an other tensor multipled by a scalar `(a + alpha * b)`. */
   def add[S: Sc](other: STen, alpha: Double) =
@@ -780,6 +791,10 @@ case class STen private (
     owned(ATen.mul_0(value, other.value))
 
   /** Multiplication */
+  def *[S: Sc](other: Long) =
+    owned(ATen.mul_1_l(value, other))
+
+  /** Multiplication */
   def *[S: Sc](other: Tensor) =
     owned(ATen.mul_0(value, other))
 
@@ -794,6 +809,10 @@ case class STen private (
   /** In place multiplication. */
   def *=(other: Double): Unit =
     value.mul_(other)
+
+  /** In place multiplication. */
+  def *=(other: Long): Unit =
+    value.mul_l_(other)
 
   /** Division. */
   def /[S: Sc](other: STen) =
