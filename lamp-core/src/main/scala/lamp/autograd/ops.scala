@@ -998,7 +998,7 @@ case class BinaryCrossEntropyWithLogitsLoss(
     scope: Scope,
     input: Variable,
     target: STen,
-    posWeights: STen,
+    posWeights: Option[STen],
     reduction: Reduction
 ) extends Op {
 
@@ -1007,7 +1007,6 @@ case class BinaryCrossEntropyWithLogitsLoss(
     s"BinaryCrossEntropyWithLogitsLoss input and target have the same shape. Input ${input.sizes}, target ${target.sizes} ."
   )
 
-  val instanceWeights = STen.onesLike(target)(scope)
   val params = List(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
@@ -1017,8 +1016,8 @@ case class BinaryCrossEntropyWithLogitsLoss(
               p.value,
               input.value.value,
               target.value,
-              instanceWeights.value,
-              posWeights.value,
+              None,
+              posWeights.map(_.value),
               reduction.asLong
             )
           )
@@ -1032,8 +1031,8 @@ case class BinaryCrossEntropyWithLogitsLoss(
     ATen.binary_cross_entropy_with_logits(
       input.value.value,
       target.value,
-      instanceWeights.value,
-      posWeights.value,
+      None,
+      posWeights.map(_.value),
       reduction.asLong
     )
 
@@ -1104,7 +1103,7 @@ case class Conv1D(
       val tmp = ATen.conv_transpose1d(
         p.value,
         weight.value.value,
-        zeros,
+        Some(zeros),
         Array(stride),
         Array(padding),
         Array(extraPadding),
@@ -1133,7 +1132,7 @@ case class Conv1D(
       val conv_0 = ATen.conv1d(
         input_viewed,
         p_repeated_viewed,
-        zero,
+        Some(zero),
         Array(dilation),
         Array(padding),
         Array(stride),
@@ -1195,7 +1194,7 @@ case class Conv1D(
           ATen.conv1d(
             input.value.value,
             weight.value.value,
-            bias.value.value,
+            Some(bias.value.value),
             Array(stride),
             Array(padding),
             Array(dilation),
@@ -1262,7 +1261,7 @@ case class Conv2D(
         val tmp = ATen.conv_transpose2d(
           p.value,
           weight.value.value,
-          zeros,
+          Some(zeros),
           Array(stride),
           Array(padding),
           Array(extraPaddingH, extraPaddingW),
@@ -1338,7 +1337,7 @@ case class Conv2D(
           val conv_0 = ATen.conv2d(
             input_viewed,
             p_repeated_viewed,
-            zero,
+            Some(zero),
             Array(dilation),
             Array(padding),
             Array(stride),
@@ -1419,7 +1418,7 @@ case class Conv2D(
           ATen.conv2d(
             input.value.value,
             weight.value.value,
-            bias.value.value,
+            Some(bias.value.value),
             Array(stride),
             Array(padding),
             Array(dilation),
@@ -1579,7 +1578,7 @@ case class Conv2DTransposed(
           ATen.conv_transpose2d(
             input.value.value,
             weight.value.value,
-            bias.value.value,
+            Some(bias.value.value),
             Array(stride, stride),
             Array(padding, padding),
             Array(0, 0),

@@ -120,7 +120,7 @@ object Train extends App {
 
         val generator = Cnn.generator(latentDim, tensorOptions)
 
-        val loss = BCEWithLogits(STen.scalarDouble(1d, tensorOptions))
+        val loss = BCEWithLogits()
 
         val (trainTarget, trainFullbatch) =
           GAN.loadImageFile(

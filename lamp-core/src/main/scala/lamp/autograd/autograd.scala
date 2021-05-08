@@ -320,7 +320,7 @@ sealed trait Variable {
     ).value
   def binaryCrossEntropyWithLogitsLoss[S: Sc](
       target: STen,
-      posWeights: STen,
+      posWeights: Option[STen] = None,
       reduction: Reduction = Mean
   ) =
     new BinaryCrossEntropyWithLogitsLoss(

@@ -49,7 +49,7 @@ object LossFunctions {
   }
 
   case class BCEWithLogits(
-      posWeights: STen,
+      posWeights: Option[STen] = None,
       reduction: Reduction = Mean,
       ignore: Long = -100L
   ) extends LossFunction {
