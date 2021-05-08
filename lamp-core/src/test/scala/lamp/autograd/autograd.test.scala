@@ -909,7 +909,7 @@ class GradientSuite extends AnyFunSuite {
       val L =
         ((data
           .mm(w))
-          .binaryCrossEntropyWithLogitsLoss(y.value, classWeights, Sum))
+          .binaryCrossEntropyWithLogitsLoss(y.value, Some(classWeights), Sum))
       if (doBackprop) {
         L.backprop()
       }
