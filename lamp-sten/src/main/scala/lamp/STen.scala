@@ -790,8 +790,7 @@ case class STen private (
   def *[S: Sc](other: STen) =
     owned(ATen.mul_0(value, other.value))
 
-  /** Multiplication */
-  def *[S: Sc](other: Long) =
+  def multiply[S: Sc](other: Long) =
     owned(ATen.mul_1_l(value, other))
 
   /** Multiplication */
