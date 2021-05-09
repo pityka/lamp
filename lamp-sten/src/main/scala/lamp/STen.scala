@@ -738,6 +738,10 @@ case class STen private (
   def +[S: Sc](other: STen) =
     owned(ATen.add_0(value, other.value, 1d))
 
+  /** Adds to tensors. */
+  def add_l[S: Sc](other: STen) =
+    owned(ATen.add_0_l(value, other.value, 1L))
+
   /** In place add. */
   def +=(other: STen): Unit =
     ATen.add_out(value, value, other.value, 1d)

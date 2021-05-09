@@ -176,8 +176,8 @@ object GCN {
       edgeList: Variable,
       numNodes: Long
   ) = {
-    val edgeFrom = edgeList.select(1, 0)
-    val edgeTo = edgeList.select(1, 1)
+    // val edgeFrom = edgeList.select(1, 0)
+    // val edgeTo = edgeList.select(1, 1)
 
     val tOptDoubleDevice =
       if (valueOpt.isCPU)
@@ -194,18 +194,16 @@ object GCN {
       else STenOptions.l.cudaIndex(valueOpt.deviceIndex.toShort)
 
     val degrees = {
-      val ones = ATen.ones(Array(edgeFrom.shape(0)), tOptDoubleDevice.value)
-      val zeros = ATen.zeros(Array(numNodes), tOptDoubleDevice.value)
-      val result1 = ATen.index_add(zeros, 0, edgeFrom.value.value, ones)
-      val result2 = ATen.index_add(result1, 0, edgeTo.value.value, ones)
-      val result3 = ATen.add_1(result2, 1.0, 1.0)
-      val viewed = ATen._unsafe_view(result3, Array(-1, 1))
-      ones.release
-      zeros.release
-      result1.release
-      result2.release
-      result3.release
-      const(STen.owned(viewed)).pow(-0.5)
+      val counts = edgeList.value
+        .view(-1)
+        .bincount(
+          weights = None,
+          minLength = numNodes.toInt
+        )
+      counts += 1L
+
+      const(counts.pow(-0.5).unsqueeze(1))
+
     }
 
     val a = {
