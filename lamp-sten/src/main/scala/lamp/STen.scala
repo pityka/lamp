@@ -338,6 +338,10 @@ object STen {
 
   def tanh_backward[S: Sc](gradOutput: STen, output: STen) =
     ATen.tanh_backward(gradOutput.value, output.value).owned
+
+  def to_dense_backward[S: Sc](gradOutput: STen, input: STen) =
+    ATen.to_dense_backward(gradOutput.value, input.value).owned
+
   def l1_loss_backward[S: Sc](
       gradOutput: STen,
       self: STen,
@@ -560,7 +564,7 @@ case class STen private (
   def indices[S: Sc] = value.indices.owned
 
   /** Returns values. Only for sparse tensors */
-  def values[S: Sc] = value.indices.owned
+  def values[S: Sc] = value.values.owned
 
   /** Returns true if data type is double */
   def isDouble = Scope.leak { implicit scope => options.isDouble }
@@ -1392,5 +1396,7 @@ case class STen private (
   def matrixRank[S: Sc](hermitian: Boolean) = {
     ATen.linalg_matrix_rank(value, hermitian).owned
   }
+
+  def toDense[S: Sc] = value.to_dense().owned
 
 }

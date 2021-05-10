@@ -100,6 +100,11 @@ object Variable {
   /** Concatenates the given tensor along the given dimension */
   def cat(inputs: Seq[Variable], dim: Long)(implicit scope: Scope) =
     new Concatenate(scope, inputs, dim).value
+
+  def sparseFromValueAndIndex(values: Variable, indices: STen, dim: Seq[Long])(
+      implicit scope: Scope
+  ) =
+    new SparseFromValueAndIndex(scope, values, indices, dim).value
 }
 
 /** A variable whose parent and partial derivatives are empty */
@@ -372,7 +377,7 @@ sealed trait Variable {
     ).value
   def repeatInterleave[S: Sc](repeats: Variable, dim: Int) =
     new RepeatInterleave(extractScope, this, repeats, dim).value
-
+  def toDense[S: Sc] = new ToDense(extractScope, this).value
   def toMat = value.toMat
   def toLongMat = value.toLongMat
 }

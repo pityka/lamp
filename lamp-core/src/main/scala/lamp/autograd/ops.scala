@@ -9,6 +9,7 @@ import lamp.SinglePrecision
 
 import lamp.Scope
 import lamp.STen
+import lamp.STenOptions
 
 case class Transpose(scope: Scope, a: Variable, dim1: Int = 0, dim2: Int = 1)
     extends Op {
@@ -217,6 +218,50 @@ case class CastToPrecision(
         case SinglePrecision => a.value.castToFloat(scope)
       }
     }
+  )(scope)
+}
+case class SparseFromValueAndIndex(
+    scope: Scope,
+    values: Variable,
+    indices: STen,
+    dim: Seq[Long]
+) extends Op {
+
+  val params = List(
+    values.zipBackward { case (p, out) =>
+      Scope.root { implicit scope =>
+        out += p.values
+      }
+    }
+  )
+  val value = Variable(
+    this,
+    STen.sparse_coo(
+      indices = indices,
+      values = values.value,
+      dim = dim,
+      values.value.device.to(
+        STenOptions
+          .fromScalarType(values.value.scalarTypeByte)(scope)
+      )(scope)
+    )(scope)
+  )(scope)
+}
+case class ToDense(
+    scope: Scope,
+    sparse: Variable
+) extends Op {
+
+  val params = List(
+    sparse.zipBackward { case (p, out) =>
+      Scope.root { implicit scope =>
+        out += STen.to_dense_backward(p, sparse.value)
+      }
+    }
+  )
+  val value = Variable(
+    this,
+    sparse.value.toDense(scope)
   )(scope)
 }
 

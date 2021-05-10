@@ -34,6 +34,7 @@ case object SinglePrecision extends FloatingPointPrecision {
 sealed trait Device { self =>
   def to(t: Tensor): Tensor
   def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))
+  def to[S: Sc](t: STenOptions): STenOptions
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions
   def setSeed(seed: Long): Unit
 }
@@ -42,6 +43,7 @@ object Device {
     if (st.isCPU) CPU else CudaDevice(st.deviceIndex)
 }
 case object CPU extends Device {
+  def to[S: Sc](t: STenOptions): STenOptions = t.cpu
   def to(t: Tensor) = {
     t.cpu
   }
@@ -50,6 +52,8 @@ case object CPU extends Device {
     precision.convertOption(STenOptions.d)
 }
 case class CudaDevice(i: Int) extends Device {
+
+  def to[S: Sc](t: STenOptions): STenOptions = t.cudaIndex(i.toShort)
   def setSeed(seed: Long) = Tensor.manual_seed_cuda(seed, i)
   assert(
     i >= 0 && i < Tensor.getNumGPUs,
