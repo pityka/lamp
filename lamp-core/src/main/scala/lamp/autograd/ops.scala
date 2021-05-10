@@ -531,6 +531,16 @@ case class CappedShiftedNegativeExponential(
   val result = ATen.where_0(pred, ones, above)
   val value = Variable(this, STen.owned(result)(scope))(scope)
 }
+case class LogDet(scope: Scope, a: Variable) extends Op {
+
+  val params = List(a.zipBackward { (p, out) =>
+    Scope.root { implicit scope =>
+      val tmp = a.value.inv.t
+      out.addcmulSelf(p, tmp, 1d)
+    }
+  })
+  val value = Variable(this, a.value.det(scope).log(scope))(scope)
+}
 case class Log(scope: Scope, a: Variable) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>

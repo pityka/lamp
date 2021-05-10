@@ -288,6 +288,7 @@ sealed trait Variable {
   def rowSum[S: Sc] = sum(List(1), true)
   def colSum[S: Sc] = sum(List(0), true)
   def exp[S: Sc] = new Exp(extractScope, this).value
+  def logdet[S: Sc] = new LogDet(extractScope, this).value
   def log[S: Sc] = new Log(extractScope, this).value
   def log1p[S: Sc] = new Log1p(extractScope, this).value
   def sin[S: Sc] = new Sin(extractScope, this).value

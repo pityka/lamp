@@ -1,6 +1,7 @@
 package lamp.autograd
 
 import org.saddle._
+import org.saddle.linalg._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.nn.CudaTest
@@ -14,6 +15,7 @@ class GradientSuite extends AnyFunSuite {
     4d, 5d, 6d)
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
   val mat2x2 = Mat(Vec(4d, 1d), Vec(6d, 2d)).T
+  val mat2x2PD = Mat(Vec(4d, 1d), Vec(6d, 2d)).outerM
   val ndx1 = NDArray(Array(1d), List(1))
   val ndx2 = NDArray(Array(1d, 1d), List(2))
   val ndx3 = NDArray(Array(1d, 2d, 3d), List(3))
@@ -613,6 +615,19 @@ class GradientSuite extends AnyFunSuite {
           x1.partialDerivative.map(t => t.toMat)
         )
       }
+  }
+  testGradientAndValue("logdet")(mat2x2PD, 1.3863) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(STen.fromMat(m, cuda))
+      val L = x1.logdet.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
   }
   testGradientAndValue("log")(mat2x3, 6.579251212010101) {
     (m, doBackprop, cuda) =>
