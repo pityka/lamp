@@ -1350,6 +1350,10 @@ case class STen private (
     (ut.owned, s.owned, v.owned)
   }
 
+  def diag[S: Sc](diagonal: Long) = {
+    ATen.diag(value, diagonal).owned
+  }
+
   def slogdet[S: Sc] = {
     val (a, b) = ATen.linalg_slogdet(value)
     (a.owned, b.owned)

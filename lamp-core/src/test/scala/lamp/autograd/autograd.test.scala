@@ -482,6 +482,25 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  testGradientAndValue("diag")(mat3x1, 6d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val values = param(STen.fromMat(m, cuda))
+
+      val d = values.view(List(-1)).diag(0L)
+
+      assert(d.toMat.numCols == 3)
+      assert(d.toMat.numRows == 3)
+
+      val L = d.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        values.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
   testGradientAndValue("sparse to dense")(mat3x1, 6d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val values = param(STen.fromMat(m, cuda))

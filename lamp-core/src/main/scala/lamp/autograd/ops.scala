@@ -264,6 +264,24 @@ case class ToDense(
     sparse.value.toDense(scope)
   )(scope)
 }
+case class Diag(
+    scope: Scope,
+    a: Variable,
+    diagonal: Long
+) extends Op {
+
+  val params = List(
+    a.zipBackward { case (p, out) =>
+      Scope.root { implicit scope =>
+        out += p.diag(diagonal)
+      }
+    }
+  )
+  val value = Variable(
+    this,
+    a.value.diag(diagonal)(scope)
+  )(scope)
+}
 
 case class ScatterAdd(
     scope: Scope,
