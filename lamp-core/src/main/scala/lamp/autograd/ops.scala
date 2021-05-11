@@ -282,6 +282,22 @@ case class Diag(
     a.value.diag(diagonal)(scope)
   )(scope)
 }
+case class Inv(
+    scope: Scope,
+    a: Variable
+) extends Op {
+  val params = List(
+    a.zipBackward { case (p, out) =>
+      Scope.root { implicit scope =>
+        out -= value.value.mm(p).mm(value.value).t
+      }
+    }
+  )
+  val value = Variable(
+    this,
+    a.value.inv(scope)
+  )(scope)
+}
 
 case class ScatterAdd(
     scope: Scope,

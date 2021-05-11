@@ -379,6 +379,7 @@ sealed trait Variable {
     new RepeatInterleave(extractScope, this, repeats, dim).value
   def toDense[S: Sc] = new ToDense(extractScope, this).value
   def diag[S: Sc](diagonal: Long) = new Diag(extractScope, this, diagonal).value
+  def inv[S: Sc] = new Inv(extractScope, this).value
   def toMat = value.toMat
   def toLongMat = value.toLongMat
 }

@@ -14,6 +14,7 @@ class GradientSuite extends AnyFunSuite {
   val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
     4d, 5d, 6d)
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
+  val mat3x3 = Mat(Vec(1d, 2d, 0d), Vec(4d, 5d, 1d), Vec(6d, 7d, 0d)).innerM
   val mat2x2 = Mat(Vec(4d, 1d), Vec(6d, 2d)).T
   val mat2x2PD = Mat(Vec(4d, 1d), Vec(6d, 2d)).outerM
   val ndx1 = NDArray(Array(1d), List(1))
@@ -492,6 +493,38 @@ class GradientSuite extends AnyFunSuite {
       assert(d.toMat.numRows == 3)
 
       val L = d.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        values.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("inv")(mat2x2, -0.5) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val values = param(STen.fromMat(m, cuda))
+
+      val i = values.inv
+      assert(i.toMat.roundTo(4) == m.invert.roundTo(4))
+      val L = i.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        values.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("inv2")(mat3x3, 2d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val values = param(STen.fromMat(m, cuda))
+
+      val i = values.inv
+      assert(i.toMat.roundTo(4) == m.invert.roundTo(4))
+      val L = i.sum
       if (doBackprop) {
         L.backprop()
       }
