@@ -65,8 +65,8 @@ val saddleVersion = "2.2.5"
 val upickleVersion = "1.3.12"
 val scalaTestVersion = "3.2.7"
 val scribeVersion = "3.5.4"
-val catsEffectVersion = "3.0.2"
-val catsCoreVersion = "2.6.1"
+val catsEffectVersion = "3.1.1"
+val catsCoreVersion = "2.6.0"
 
 lazy val sten = project
   .in(file("lamp-sten"))
