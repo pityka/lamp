@@ -10,8 +10,6 @@ import lamp.nn.SupervisedModel
 import lamp.nn.LossFunctions
 import lamp.nn.AdamW
 import lamp.nn.simple
-import cats.effect.IO
-import cats.effect.Resource
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.Charset
 import scala.io.Codec
@@ -109,6 +107,8 @@ class TextGenerationSuite extends AnyFunSuite {
           .mkString
 
       val (vocab, _) = Text.charsToIntegers(trainText)
+      val rvocab = vocab.map(_.swap)
+
       val trainTokenized = Text.charsToIntegers(trainText, vocab)
       val vocabularSize = vocab.size
 
@@ -162,7 +162,7 @@ class TextGenerationSuite extends AnyFunSuite {
         clip = Some(1d)
       )
 
-      val (_, _, learningCurve) = IOLoops
+      val (_, net, learningCurve) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = optimizer,
@@ -172,126 +172,32 @@ class TextGenerationSuite extends AnyFunSuite {
         )
         .unsafeRunSync()
 
-      assert(learningCurve.last._2 < 8d)
-    }
-  }
-  test("text generation") {
-    Scope.root { implicit scope =>
-      val trainText =
-        scala.io.Source
-          .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
-            Codec.apply(asciiSilentCharsetDecoder)
-          )
-          .mkString
-
-      val (vocab, _) = Text.charsToIntegers(trainText)
-      val vocabularSize = vocab.size
-      val rvocab = vocab.map(_.swap)
-
-      val hiddenSize = 1024
-      val lookAhead = 10
-      val device = CPU
-      val precision = SinglePrecision
-      val tensorOptions = device.options(precision)
-
-      val net =
-        statefulSequence(
-          Embedding(
-            classes = vocabularSize,
-            dimensions = 10,
-            tOpt = tensorOptions
-          ).lift,
-          RNN(
-            in = 10,
-            hiddenSize = hiddenSize,
-            tOpt = tensorOptions
-          ),
-          Fun(implicit scope => _.relu).lift,
-          SeqLinear(
-            in = hiddenSize,
-            out = vocabularSize,
-            tOpt = tensorOptions
-          ).lift,
-          Fun(implicit scope => _.logSoftMax(2)).lift
-        )
-
-      val channel = Resource.make(IO {
-        val is = getClass.getResourceAsStream("/checkpoint.test")
-        java.nio.channels.Channels.newChannel(is)
-      })(v => IO { v.close })
-      Reader.loadFromChannel(net, channel, device).unsafeRunSync().toOption.get
       val textVariable = Text
         .sequencePrediction(
           List("time machine").map(t =>
             Text.charsToIntegers(t, vocab).map(_.toLong)
           ),
           device,
-          net,
+          net.module.lift,
           lookAhead
         )
       val text = Text.convertIntegersToText(textVariable, rvocab)
 
       assert(text == Vector(" the the t"))
-    }
-  }
-  test("text generation - beam") {
-    Scope.root { implicit scope =>
-      val trainText =
-        scala.io.Source
-          .fromInputStream(getClass.getResourceAsStream("/35-0.txt"))(
-            Codec.apply(asciiSilentCharsetDecoder)
-          )
-          .mkString
 
-      val (vocab, _) = Text.charsToIntegers(trainText)
-      val vocabularSize = vocab.size
-      val rvocab = vocab.map(_.swap)
-
-      val hiddenSize = 1024
-      val lookAhead = 10
-      val device = CPU
-      val precision = SinglePrecision
-      val tensorOptions = device.options(precision)
-
-      val net =
-        statefulSequence(
-          Embedding(
-            classes = vocabularSize,
-            dimensions = 10,
-            tOpt = tensorOptions
-          ).lift,
-          RNN(
-            in = 10,
-            hiddenSize = hiddenSize,
-            tOpt = tensorOptions
-          ),
-          Fun(implicit scope => _.relu).lift,
-          SeqLinear(
-            in = hiddenSize,
-            out = vocabularSize,
-            tOpt = tensorOptions
-          ).lift,
-          Fun(implicit scope => _.logSoftMax(2)).lift
-        )
-
-      val channel = Resource.make(IO {
-        val is = getClass.getResourceAsStream("/checkpoint.test")
-        java.nio.channels.Channels.newChannel(is)
-      })(v => IO { v.close })
-      Reader.loadFromChannel(net, channel, device).unsafeRunSync().toOption.get
-      val textVariables = Text
+      val textVariables2 = Text
         .sequencePredictionBeam(
           List("time machine")
             .map(t => Text.charsToIntegers(t, vocab).map(_.toLong))
             .head,
           device,
-          net,
+          net.module.lift,
           lookAhead,
           0,
           1
         )
 
-      val text = textVariables.map(v =>
+      val text2 = textVariables2.map(v =>
         (
           Text.convertIntegersToText(v._1, rvocab).mkString,
           v._2
@@ -299,8 +205,11 @@ class TextGenerationSuite extends AnyFunSuite {
       )
 
       assert(
-        text.map(_._1) == List("e theeeeeee", "ed and thee", "ed and and ")
+        text2.map(_._1) == List("e theeeeeee", "ed and thee", "ed and and ")
       )
+
+      assert(learningCurve.last._2 < 8d)
     }
   }
+
 }

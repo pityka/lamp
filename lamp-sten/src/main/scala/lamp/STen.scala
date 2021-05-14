@@ -98,6 +98,30 @@ object STen {
   def fromFloatArray[S: Sc](ar: Array[Float], dim: Seq[Long], device: Device) =
     TensorHelpers.fromFloatArray(ar, dim, device).owned
 
+  /** Create tensor directly from file.
+    * Memory maps a file into host memory.
+    * Data is not passed through the JVM.
+    * Returned tensor is always on the CPU device.
+    *
+    * @param path file path
+    * @param offset byte offset into the file. Must be page aligned (usually multiple of 4096)
+    * @param length byte length of the data
+    * @param scalarTypeByte scalar type (long=4,half=5,float=6,double=7)
+    * @return tensor on CPU
+    */
+  def fromFile[S: Sc](
+      path: String,
+      offset: Long,
+      length: Long,
+      scalarTypeByte: Byte
+  ): STen = {
+    assert(
+      offset % 4096 == 0,
+      s"Offset must be multiple of 4096. Got $offset. Tried to create tensor from $path."
+    )
+    aten.Tensor.from_file(path, offset, length, scalarTypeByte).owned
+  }
+
   /** Wraps a tensor without registering it to any scope.
     *
     * Memory may leak.

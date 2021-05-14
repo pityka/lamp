@@ -1,298 +1,251 @@
 package lamp.data
 
 import cats.effect.IO
-import java.io.File
-import java.io.FileOutputStream
-import lamp.STen.OwnedSyntax
 import lamp.Scope
 import lamp.Device
+import java.io.File
+import java.io.FileOutputStream
+import lamp.STen
+import java.io.FileInputStream
 
 object StateIO {
 
-  def readFromFile(file: String, device: Device)(implicit
+  private def readSimpleLoopStateDescriptor(
+      s: schemas.SimpleLoopState,
+      file: File,
+      device: Device
+  )(implicit scope: Scope) = {
+    val model = Reader.readTensorData(s.model, file, device)
+    val optim = Reader.readTensorData(s.optimizer, file, device)
+    val minValid = s.minValidationLossModel.map { case (a, d) =>
+      implicit val scope = Scope.free
+      (a, Reader.readTensorData(d, file, device).map(_.value))
+    }
+    SimpleLoopState(
+      model,
+      optim,
+      s.epoch,
+      s.lastValidationLoss,
+      s.minValidationLoss,
+      minValid,
+      s.learningCurve
+    )
+  }
+  private def readSWALoopStateDescriptor(
+      s: schemas.SWALoopState,
+      file: File,
+      device: Device
+  )(implicit scope: Scope) = {
+    val model = Reader.readTensorData(s.model, file, device)
+    val optim = Reader.readTensorData(s.optimizer, file, device)
+    val avg = s.averagedModels.map { case d =>
+      implicit val scope = Scope.free
+      Reader.readTensorData(d, file, device).map(_.value)
+    }
+    SWALoopState(
+      model,
+      optim,
+      s.epoch,
+      s.lastValidationLoss,
+      s.minValidationLoss,
+      s.numberOfAveragedModels,
+      avg,
+      s.learningCurve
+    )
+  }
+
+  def readFromFile(file: File, device: Device)(implicit
       scope: Scope
-  ): State = {
-    val descriptor =
-      ujson.read({
-        val src = scala.io.Source.fromFile(file + ".json")
-        val str = src.mkString
-        src.close
-        str
-      })
-    val tpe = descriptor("tpe").str
+  ): LoopState = {
 
-    tpe match {
-      case "simplethenswa" =>
-        val simple =
-          if (new File(file + ".simple.json").canRead)
-            Some(
-              readFromFile(file + ".simple", device)
-                .asInstanceOf[SimpleLoopState]
-            )
-          else None
-        val swa =
-          if (new File(file + ".swa.json").canRead)
-            Some(readFromFile(file + ".swa", device).asInstanceOf[SWALoopState])
-          else None
-        SimpleThenSWALoopState(simple, swa)
-      case "swa" =>
-        val epoch = descriptor("epoch").num.toInt
-        val lastValidationLoss = {
-          descriptor("lastValidationLoss") match {
-            case ujson.Num(x) => Some(x)
-            case ujson.Null   => None
-            case _            => ???
-          }
-        }
-        val learningCurve = descriptor("learningCurve").arr.map { elems =>
-          (
-            elems.arr(0).num.toInt,
-            elems.arr(1).num.toDouble,
-            elems.arr(2) match {
-              case ujson.Null   => None
-              case ujson.Num(x) => Some(x)
-              case _            => ???
-            }
-          )
-        }.toList
-        val minValidationLoss = {
-          descriptor("minValidationLoss") match {
-            case ujson.Num(x) => Some(x)
-            case ujson.Null   => None
-            case _            => ???
-          }
-        }
-        val numberOfAveragedModels =
-          descriptor("numberOfAveragedModels").num.toInt
-
-        val model =
-          Reader
-            .readTensorsFromFile(new File(file + ".model"), device)
-            .toOption
-            .get
-            .map(_.owned)
-        val optimizer =
-          Reader
-            .readTensorsFromFile(new File(file + ".optimizer"), device)
-            .toOption
-            .get
-            .map(_.owned)
-        val averagedModels =
-          Reader
-            .readTensorsFromFile(
-              new File(file + ".averagedModels"),
-              device
-            )
-            .toOption
-            .get
-        SWALoopState(
-          model = model,
-          optimizer = optimizer,
-          epoch = epoch,
-          lastValidationLoss = lastValidationLoss,
-          minValidationLoss = minValidationLoss,
-          numberOfAveragedModels = numberOfAveragedModels,
-          averagedModels =
-            if (averagedModels.isEmpty) None else Some(averagedModels),
-          learningCurve = learningCurve
-        )
-      case "simple" =>
-        val epoch = descriptor("epoch").num.toInt
-        val lastValidationLoss = descriptor("lastValidationLoss") match {
-          case ujson.Num(x) => Some(x)
-          case ujson.Null   => None
-          case _            => ???
-        }
-        val learningCurve = descriptor("learningCurve").arr.map { elems =>
-          (
-            elems.arr(0).num.toInt,
-            elems.arr(1).num.toDouble,
-            elems.arr(2) match {
-              case ujson.Null   => None
-              case ujson.Num(x) => Some(x)
-              case _            => ???
-            }
-          )
-        }.toList
-        val minValidationLoss = descriptor("minValidationLoss") match {
-          case ujson.Num(x) => Some(x)
-          case ujson.Null   => None
-          case _            => ???
-        }
-        val model =
-          Reader
-            .readTensorsFromFile(new File(file + ".model"), device)
-            .toOption
-            .get
-            .map(_.owned)
-        val optimizer =
-          Reader
-            .readTensorsFromFile(new File(file + ".optimizer"), device)
-            .toOption
-            .get
-            .map(_.owned)
-        val minValidationLossModel =
-          Reader
-            .readTensorsFromFile(
-              new File(file + ".minValidationLossModel"),
-              device
-            )
-            .toOption
-            .get
-        SimpleLoopState(
-          model = model,
-          optimizer = optimizer,
-          epoch = epoch,
-          lastValidationLoss = lastValidationLoss,
-          minValidationLoss = minValidationLoss,
-          minValidationLossModel =
-            if (minValidationLossModel.isEmpty) None
-            else Some((0, minValidationLossModel)),
-          learningCurve = learningCurve
-        )
+    val descriptor = {
+      val is = new FileInputStream(file)
+      try {
+        com.github.plokhotnyuk.jsoniter_scala.core
+          .readFromStream[schemas.LoopState](is)
+      } finally {
+        is.close
+      }
     }
+    descriptor match {
+      case s: schemas.SimpleLoopState =>
+        readSimpleLoopStateDescriptor(s, file, device)
+      case s: schemas.SWALoopState =>
+        readSWALoopStateDescriptor(s, file, device)
+      case schemas.SimpleThenSWALoopState(simple, swa) =>
+        SimpleThenSWALoopState(
+          simple.map(readSimpleLoopStateDescriptor(_, file, device)),
+          swa.map(readSWALoopStateDescriptor(_, file, device))
+        )
 
+    }
   }
 
-  def writeToFile(file: String, state: State): Unit = {
+  private def simpleLoopStateDescriptor(
+      s: SimpleLoopState,
+      file: File,
+      bufferSize: Int
+  ) = {
+    val modelLocation = s"${file.getName}.model"
+    val modelChannel = new FileOutputStream(
+      new File(file.getParentFile(), modelLocation),
+      false
+    ).getChannel
+    val optimizerLocation = s"${file.getName}.optimizer"
+    val optimizerChannel = new FileOutputStream(
+      new File(file.getParentFile(), optimizerLocation),
+      false
+    ).getChannel
+    val modelDescriptor = Writer
+      .writeTensorDataAndMakeDescriptor(
+        tensors = s.model,
+        modelLocation,
+        dataChannel = modelChannel,
+        bufferSize = bufferSize
+      )
+      .toOption
+      .get
+    val optimizerDescriptor = Writer
+      .writeTensorDataAndMakeDescriptor(
+        tensors = s.optimizer,
+        optimizerLocation,
+        dataChannel = optimizerChannel,
+        bufferSize = bufferSize
+      )
+      .toOption
+      .get
+    val minValidDescriptor = s.minValidationLossModel.map { case (a, ts) =>
+      val location = s"${file.getName}.minvalidmodel"
+      val channel = new FileOutputStream(
+        new File(file.getParentFile(), location),
+        false
+      ).getChannel
+      val descriptor = Writer
+        .writeTensorDataAndMakeDescriptor(
+          tensors = ts.map(tensor => STen.owned(tensor)(Scope.free)),
+          location,
+          dataChannel = channel,
+          bufferSize = bufferSize
+        )
+        .toOption
+        .get
+      (a, descriptor)
+    }
+
+    schemas.SimpleLoopState(
+      modelDescriptor,
+      optimizerDescriptor,
+      s.epoch,
+      s.lastValidationLoss,
+      s.minValidationLoss,
+      minValidDescriptor,
+      s.learningCurve
+    )
+  }
+  private def swaLoopStateDescriptor(
+      s: SWALoopState,
+      file: File,
+      bufferSize: Int
+  ) = {
+    val modelLocation = s"${file.getName}.model"
+    val modelChannel = new FileOutputStream(
+      new File(file.getParentFile(), modelLocation),
+      false
+    ).getChannel
+    val optimizerLocation = s"${file.getName}.optimizer"
+    val optimizerChannel = new FileOutputStream(
+      new File(file.getParentFile(), optimizerLocation),
+      false
+    ).getChannel
+    val modelDescriptor = Writer
+      .writeTensorDataAndMakeDescriptor(
+        tensors = s.model,
+        modelLocation,
+        dataChannel = modelChannel,
+        bufferSize = bufferSize
+      )
+      .toOption
+      .get
+    val optimizerDescriptor = Writer
+      .writeTensorDataAndMakeDescriptor(
+        tensors = s.optimizer,
+        optimizerLocation,
+        dataChannel = optimizerChannel,
+        bufferSize = bufferSize
+      )
+      .toOption
+      .get
+    val averageDescriptor = s.averagedModels.map { case ts =>
+      val location = s"${file.getName}.averagemodel"
+      val channel = new FileOutputStream(
+        new File(file.getParentFile(), location),
+        false
+      ).getChannel
+      val descriptor = Writer
+        .writeTensorDataAndMakeDescriptor(
+          tensors = ts.map(tensor => STen.owned(tensor)(Scope.free)),
+          location,
+          dataChannel = channel,
+          bufferSize = bufferSize
+        )
+        .toOption
+        .get
+      descriptor
+    }
+
+    schemas.SWALoopState(
+      modelDescriptor,
+      optimizerDescriptor,
+      s.epoch,
+      s.lastValidationLoss,
+      s.minValidationLoss,
+      s.numberOfAveragedModels,
+      averageDescriptor,
+      s.learningCurve
+    )
+  }
+
+  def writeToFile(
+      file: File,
+      state: LoopState,
+      bufferSize: Int = 16384
+  ): Unit = {
+
     state match {
-      case state: SimpleThenSWALoopState =>
-        val descriptor = ujson
-          .write(
-            ujson.Obj(
-              "tpe" -> ujson.Str("simplethenswa")
+      case s: SimpleLoopState =>
+        simpleLoopStateDescriptor(
+          s,
+          file,
+          bufferSize
+        )
+      case s: SWALoopState =>
+        swaLoopStateDescriptor(
+          s,
+          file,
+          bufferSize
+        )
+      case s: SimpleThenSWALoopState =>
+        schemas.SimpleThenSWALoopState(
+          simple = s.simple.map(s =>
+            simpleLoopStateDescriptor(
+              s,
+              new File(file.getAbsolutePath() + ".simple"),
+              bufferSize
+            )
+          ),
+          swa = s.swa.map(s =>
+            swaLoopStateDescriptor(
+              s,
+              new File(file.getAbsolutePath() + ".swa"),
+              bufferSize
             )
           )
-
-        val fis =
-          new FileOutputStream(new File(file + ".json"))
-        fis.write(descriptor.getBytes("UTF-8"))
-        fis.close
-        state.simple.foreach(state => writeToFile(file + ".simple", state))
-        state.swa.foreach(state => writeToFile(file + ".swa", state))
-      case state: SimpleLoopState =>
-        val descriptor = ujson
-          .write(
-            ujson.Obj(
-              "tpe" -> ujson.Str("simple"),
-              "epoch" -> ujson.Num(state.epoch),
-              "lastValidationLoss" ->
-                state.lastValidationLoss.map(ujson.Num).getOrElse(ujson.Null),
-              "minValidationLoss" ->
-                state.minValidationLoss.map(ujson.Num).getOrElse(ujson.Null),
-              "learningCurve" ->
-                state.learningCurve.map { case (a, b, c) =>
-                  List(
-                    ujson.Num(a),
-                    ujson.Num(b),
-                    c.map(ujson.Num).getOrElse(ujson.Null)
-                  )
-
-                }
-            )
-          )
-
-        val fis =
-          new FileOutputStream(new File(file + ".json"))
-        fis.write(descriptor.getBytes("UTF-8"))
-        fis.close
-
-        {
-          val channel = new FileOutputStream(
-            new File(file + ".model")
-          ).getChannel()
-          Writer.writeTensorsIntoChannel(state.model.map(_.value), channel)
-          channel.close()
-        }
-
-        {
-          val channel = new FileOutputStream(
-            new File(file + ".optimizer")
-          ).getChannel()
-          Writer.writeTensorsIntoChannel(
-            state.optimizer.map(_.value),
-            channel
-          )
-          channel.close()
-        }
-
-        {
-          val channel = new FileOutputStream(
-            new File(file + ".minValidationLossModel")
-          ).getChannel()
-          Writer.writeTensorsIntoChannel(
-            state.minValidationLossModel
-              .map(_._2)
-              .toList
-              .flatten,
-            channel
-          )
-          channel.close()
-        }
-      case state: SWALoopState =>
-        val descriptor = ujson
-          .write(
-            ujson.Obj(
-              "tpe" -> ujson.Str("swa"),
-              "epoch" -> ujson.Num(state.epoch),
-              "lastValidationLoss" ->
-                state.lastValidationLoss.map(ujson.Num).getOrElse(ujson.Null),
-              "minValidationLoss" ->
-                state.minValidationLoss.map(ujson.Num).getOrElse(ujson.Null),
-              "numberOfAveragedModels" -> ujson.Num(
-                state.numberOfAveragedModels
-              ),
-              "learningCurve" ->
-                state.learningCurve.map { case (a, b, c) =>
-                  List(
-                    ujson.Num(a),
-                    ujson.Num(b),
-                    ujson.Num(c.getOrElse(Double.NaN))
-                  )
-
-                }
-            )
-          )
-
-        val fis =
-          new FileOutputStream(new File(file + ".json"))
-        fis.write(descriptor.getBytes("UTF-8"))
-        fis.close()
-
-        {
-          val channel = new FileOutputStream(
-            new File(file + ".model")
-          ).getChannel()
-          Writer.writeTensorsIntoChannel(state.model.map(_.value), channel)
-          channel.close()
-        }
-
-        {
-          val channel = new FileOutputStream(
-            new File(file + ".optimizer")
-          ).getChannel()
-          Writer.writeTensorsIntoChannel(
-            state.optimizer.map(_.value),
-            channel
-          )
-          channel.close()
-        }
-
-        {
-          val channel = new FileOutputStream(
-            new File(file + ".averagedModels")
-          ).getChannel()
-          Writer.writeTensorsIntoChannel(
-            state.averagedModels.toList.flatten,
-            channel
-          )
-          channel.close()
-        }
-
+        )
     }
+
   }
 
-  def stateToFile(file: String) = { (state: State) =>
-    IO { writeToFile(file, state) }
+  def stateToFile(file: File) = { (state: LoopState) =>
+    IO { writeToFile(file, state, 16384) }
   }
 }

@@ -2,7 +2,7 @@ package lamp.data
 import aten.Tensor
 import lamp.STen
 
-sealed trait State
+sealed trait LoopState
 
 case class SimpleLoopState(
     model: Seq[STen],
@@ -12,7 +12,7 @@ case class SimpleLoopState(
     minValidationLoss: Option[Double],
     minValidationLossModel: Option[(Int, Seq[Tensor])],
     learningCurve: List[(Int, Double, Option[Double])]
-) extends State
+) extends LoopState
 case class SWALoopState(
     model: Seq[STen],
     optimizer: Seq[STen],
@@ -22,8 +22,8 @@ case class SWALoopState(
     numberOfAveragedModels: Int,
     averagedModels: Option[Seq[Tensor]],
     learningCurve: List[(Int, Double, Option[Double])]
-) extends State
+) extends LoopState
 case class SimpleThenSWALoopState(
     simple: Option[SimpleLoopState],
     swa: Option[SWALoopState]
-) extends State
+) extends LoopState

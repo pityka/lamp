@@ -111,7 +111,7 @@ class MLPSuite extends AnyFunSuite {
           checkpointState = Some(state =>
             IO {
               val stateFile =
-                java.io.File.createTempFile("sdfs", "dsfsd").getAbsolutePath()
+                java.io.File.createTempFile("sdfs", "dsfsd").getAbsoluteFile()
               StateIO.writeToFile(stateFile, state)
               val state2 = StateIO.readFromFile(stateFile, device)
               assertLoopState(state, state2)
@@ -159,7 +159,7 @@ class MLPSuite extends AnyFunSuite {
     ()
   }
 
-  def assertLoopState(state: State, state2: State): Unit = state match {
+  def assertLoopState(state: LoopState, state2: LoopState): Unit = state match {
     case SimpleThenSWALoopState(simple, swa) =>
       val simple2 = state2.asInstanceOf[SimpleThenSWALoopState].simple
       val swa2 = state2.asInstanceOf[SimpleThenSWALoopState].swa
