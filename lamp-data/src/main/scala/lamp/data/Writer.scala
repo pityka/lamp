@@ -1,88 +1,86 @@
 package lamp.data
-import org.saddle._
-import org.saddle.scalar._
 import java.nio.ByteOrder
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
-import aten.Tensor
 import java.io.File
 import cats.effect.IO
 import cats.effect.Resource
 import java.io.FileOutputStream
 import lamp.nn.GenericModule
+import lamp.STen
+import lamp.Scope
+import java.nio.channels.Channels
 
-/** Binary serialization for Tensor with primitive Double, Float, Long
+/** Serializes tensors
   *
-  * The layout of binary format is as follows:
-  * - The first 6 bytes are "LAMP__"
-  * - The next unsigned byte is the major version
-  * - The next unsigned byte is the minor version
-  * - The next 4 bytes form a little endian integer as HEADER_LENGTH
-  * - The next HEADER_LENGTH bytes form an UTF-8 string as the header.
-  * - The header is a valid JSON object with the following fields:
-  *   - v: numeric positive integer is the version of the header structure
-  *   - shape: numeric array
-  *   - datatype : string, either "double", "long", "int", "float", "byte"
-  * - The header is padded with spaces (0x20) such that HEADER_LENGTH+12 is divisible by 16.
-  *   The count of spaces are included in HEADER_LENGTH.
-  * - The next width * shape.reduce(_ * _)  bytes form a little endian primitive array.
+  * This format is similar to the ONNX external tensor serialization format,
+  * but it uses JSON rather then protobuf.
+  *
+  * Format specification
+  * ====================
+  * Sequences of tensors are serialized into a JSON descriptor and a data blob.
+  * The schema of the descriptor is the case class lamp.data.schemas.TensorList.
+  * The location field in this schema holds a path to the data blob.
+  * If this the location a relative POSIX then it is relative to the file path where the descriptor
+  * itself is written.
+  *
+  * The descriptor may be embedded into larger JSON structures.
+  *
+  * The data blob itself is the raw data in little endian byte order. Floating point is IEEE-754.
+  * The descriptor specifies the byte offset and byte length of the tensors inside the data blob.
+  * As such, the data blob contains no framing or other control bytes, but it may contain padding bytes
+  * between tensors.
   */
 object Writer {
-  private def int(i: Int) = {
-    ByteBuffer
-      .allocate(4)
-      .order(ByteOrder.LITTLE_ENDIAN)
-      .putInt(i)
-      .array
-  }
 
-  val KEY_datatype = "datatype"
-  val KEY_shape = "shape"
-  val KEY_v = "v"
-
-  def createTensorDescriptor(
-      tensor: Tensor
+  def writeTensorDataAndMakeDescriptor(
+      tensors: Seq[STen],
+      location: String,
+      dataChannel: WritableByteChannel,
+      bufferSize: Int
   ) = {
-    dtype(tensor.scalarType).map { dtype =>
-      ujson
-        .write(
-          ujson.Obj(
-            KEY_datatype -> dtype,
-            KEY_shape -> ujson.Arr(
-              tensor.sizes.map(l => ujson.Num(l.toDouble)).toIndexedSeq: _*
-            ),
-            KEY_v -> 1
-          )
-        )
+    writeTensorDataIntoChannel(tensors, dataChannel, bufferSize).map {
+      offsets =>
+        val tensorDescriptors =
+          offsets.zip(tensors).map { case ((offset, length), tensor) =>
+            schemas.TensorDescriptor(
+              dims = tensor.shape,
+              dataType = tensor.scalarTypeByte,
+              location = location,
+              byteOffset = offset,
+              byteLength = length
+            )
+          }
+
+        schemas.TensorList(tensorDescriptors)
+
     }
   }
 
-  def createHeader(
-      descriptor: Either[String, String]
-  ): Either[String, Array[Byte]] = {
-    descriptor.map { descriptorJson =>
-      val descriptor = {
-        val json = descriptorJson
-          .getBytes("UTF-8")
-        val jsonLength = json.length
-        val usefulLength = jsonLength + 12
-        val padding = usefulLength / 16 + 16 - usefulLength
-        json ++ Array.fill(padding)(' '.toByte)
-      }
-      val magic = "LAMP__".getBytes("US-ASCII")
-      val version = Array(1.toByte, 0.toByte)
-      val headerLength = int(descriptor.length)
-      val header = magic ++ version ++ headerLength ++ descriptor
-      header
-    }
-  }
+  private def tensorToArray(tensor0: STen, start: Long, end: Long) =
+    Scope.leak { implicit scope =>
+      val section = tensor0.view(-1).slice(0, start, end, 1)
+      val t = if (section.isCPU) section else section.copyToDevice(lamp.CPU)
 
-  private[data] def dtype(scalarTagByte: Byte) = scalarTagByte match {
-    case 7     => Right("double")
-    case 6     => Right("float")
-    case 4     => Right("long")
-    case other => Left(s"Type $other not supported.")
-  }
+      val array = (t.scalarTypeByte match {
+        case 7 =>
+          val arr = Array.ofDim[Double]((end - start).toInt)
+          assert(t.value.copyToDoubleArray(arr))
+          arr
+        case 6 =>
+          val arr = Array.ofDim[Float]((end - start).toInt)
+          assert(t.value.copyToFloatArray(arr))
+
+          arr
+        case 4 =>
+          val arr = Array.ofDim[Long]((end - start).toInt)
+          assert(t.value.copyToLongArray(arr))
+          arr
+      })
+
+      array
+
+    }
 
   private[data] def width(scalarTagByte: Byte) = (scalarTagByte: Byte) match {
     case 7     => Right(8)
@@ -91,160 +89,127 @@ object Writer {
     case other => Left(s"Type $other not supported.")
   }
 
-  def put[@specialized(Double, Long, Int, Float, Byte) T: ST](
-      t: Array[T],
-      bb: ByteBuffer
-  ) = implicitly[ST[T]] match {
-    case ScalarTagDouble =>
-      Right {
-        var i = 0
-        val n = t.length
-        while (i < n) {
-          bb.putDouble(t(i))
-          i += 1
+  /** Returns pair of (data length, total bytes written). Total bytes is data + pad. Pad pads to multiple of 4096. */
+  private def writeTensorIntoChannel(
+      tensor: STen,
+      channel: WritableByteChannel,
+      bufferSize: Int
+  ): Either[String, (Long, Long)] = {
+    width(tensor.scalarTypeByte).map { width =>
+      val elems = tensor.numel
+      val bL = bufferSize.toLong
+      val bb = ByteBuffer
+        .allocate(bufferSize * width)
+        .order(ByteOrder.LITTLE_ENDIAN)
+      1L to (elems / bL + 1) foreach { i =>
+        val start = (i - 1) * bufferSize
+        val end = math.min(elems, i * bufferSize)
+
+        val arr: Array[_] =
+          tensorToArray(tensor, start, end)
+
+        tensor.scalarTypeByte match {
+          case 7 =>
+            bb.asDoubleBuffer().put(arr.asInstanceOf[Array[Double]])
+            bb.position(bb.position + arr.length * 8)
+
+          case 6 =>
+            bb.asFloatBuffer().put(arr.asInstanceOf[Array[Float]])
+            bb.position(bb.position + arr.length * 4)
+
+          case 4 =>
+            bb.asLongBuffer().put(arr.asInstanceOf[Array[Long]])
+            bb.position(bb.position + arr.length * 8)
         }
-      }
-    case ScalarTagInt =>
-      Right {
-        var i = 0
-        val n = t.length
-        while (i < n) {
-          bb.putInt(t(i).asInstanceOf[Int])
-          i += 1
-        }
-      }
-    case ScalarTagFloat =>
-      Right {
-        var i = 0
-        val n = t.length
-        while (i < n) {
-          bb.putFloat(t(i).asInstanceOf[Float])
-          i += 1
-        }
-      }
-    case ScalarTagLong =>
-      Right {
-        var i = 0
-        val n = t.length
-        while (i < n) {
-          bb.putLong(t(i).asInstanceOf[Long])
-          i += 1
-        }
-      }
-    case ScalarTagByte =>
-      Right {
-        var i = 0
-        val n = t.length
-        while (i < n) {
-          bb.put(t(i).asInstanceOf[Byte])
-          i += 1
-        }
-      }
-    case other => Left(s"Type $other not supported.")
-  }
 
-  def tensorToArray[T: ST](tensor0: Tensor, elem: Int) = {
-    val tensor = if (tensor0.isCuda()) tensor0.cpu else tensor0
-
-    val array = (implicitly[ST[T]] match {
-      case ScalarTagDouble =>
-        val arr = Array.ofDim[Double](elem)
-        assert(tensor.copyToDoubleArray(arr))
-        arr
-      case ScalarTagFloat =>
-        val arr = Array.ofDim[Float](elem)
-        assert(tensor.copyToFloatArray(arr))
-        arr
-      case ScalarTagLong =>
-        val arr = Array.ofDim[Long](elem)
-        assert(tensor.copyToLongArray(arr))
-        arr
-    }).asInstanceOf[Array[T]]
-
-    if (tensor != tensor0) {
-      tensor.release()
-    }
-    array
-
-  }
-
-  def writeTensorIntoChannel[T: ST](
-      tensor: Tensor,
-      channel: WritableByteChannel
-  ): Either[String, Unit] = {
-    val header = createHeader(createTensorDescriptor(tensor))
-    header.flatMap { header =>
-      width(tensor.scalarTypeByte).map { width =>
-        writeFully(ByteBuffer.wrap(header), channel)
-
-        val elem = tensor.numel().toInt
-        val arr: Array[T] =
-          tensorToArray[T](tensor, elem)
-        val bb = ByteBuffer
-          .allocate(arr.length * width)
-          .order(ByteOrder.LITTLE_ENDIAN)
-        put(arr, bb)
         writeFully(bb, channel)
       }
+      val dataLength = elems * width.toLong
+      val padLength = 4096 - dataLength % 4096
+      if (padLength > 0) {
+        val bb = ByteBuffer
+          .allocate(padLength.toInt)
+          .position(padLength.toInt)
+          .asInstanceOf[ByteBuffer]
+        writeFully(
+          bb,
+          channel
+        )
+      }
+      (dataLength, dataLength + padLength)
     }
+
   }
 
-  def writeFully(bb: ByteBuffer, channel: WritableByteChannel) = {
-    bb.rewind
+  private def writeFully(bb: ByteBuffer, channel: WritableByteChannel) = {
+    bb.flip
     while (bb.hasRemaining) {
       channel.write(bb)
     }
+    bb.rewind
   }
 
-  def writeTensorIntoArray[T: ST](
-      tensor: Tensor
-  ): Either[String, Array[Byte]] = {
-    val header = createHeader(createTensorDescriptor(tensor))
-    header.flatMap { header =>
-      width(tensor.scalarTypeByte).map { width =>
-        val elem = tensor.numel.toInt
-        val result =
-          Array.ofDim[Byte](header.length + width * elem)
-        System.arraycopy(header, 0, result, 0, header.length)
-        val bb = ByteBuffer.wrap(result).order(ByteOrder.LITTLE_ENDIAN)
-        bb.position(header.length)
+  private def sequence[A, B](s: Seq[Either[A, B]]): Either[A, Seq[B]] =
+    if (s.forall(_.isRight))
+      Right(s.map(_.toOption.get))
+    else s.find(_.isLeft).get.asInstanceOf[Left[A, Seq[B]]]
 
-        val ar: Array[T] =
-          tensorToArray[T](tensor, elem)
-        put(ar, bb)
-        result
-      }
-    }
-  }
-
-  def writeTensorsIntoChannel(
-      tensors: Seq[Tensor],
-      channel: WritableByteChannel
-  ): Either[String, Seq[Unit]] =
-    Reader.sequence(tensors.map { case t =>
-      val st = t.scalarType() match {
-        case 4 => ScalarTagLong
-        case 6 => ScalarTagFloat
-        case 7 => ScalarTagDouble
-      }
-      writeTensorIntoChannel(t, channel)(st)
+  /** Returns list of (offset, length) in bytes
+    */
+  def writeTensorDataIntoChannel(
+      tensors: Seq[STen],
+      channel: WritableByteChannel,
+      bufferSize: Int
+  ): Either[String, Seq[(Long, Long)]] =
+    sequence(tensors.map { case t =>
+      writeTensorIntoChannel(t, channel, bufferSize)
     })
+      .map { lengths =>
+        lengths
+          .map(_._2)
+          .scanLeft(0L)(_ + _)
+          .dropRight(1) zip lengths.map(_._1)
+      }
 
-  def writeCheckpoint[A, B](file: File, model: GenericModule[A, B]) = {
+  def writeTensorsIntoFile(
+      tensors: Seq[STen],
+      file: File,
+      bufferSize: Int = 16384
+  ) = {
+    val dataPath = new File(file.getAbsolutePath + ".data")
     val channel = Resource.make(IO {
-      val fis = new FileOutputStream(file, false)
-      fis.getChannel
-    })(v => IO { v.close })
+      val descriptorChannel = new FileOutputStream(file, false).getChannel
+      val dataChannel = new FileOutputStream(
+        dataPath,
+        false
+      ).getChannel
+      (descriptorChannel, dataChannel)
+    })(v => IO { v._1.close; v._2.close })
     channel
-      .use { channel =>
+      .use { case (descriptorChannel, dataChannel) =>
         IO {
-          Writer.writeTensorsIntoChannel(
-            model.state
-              .map(v => v._1.value.value),
-            channel
-          )
+          Writer
+            .writeTensorDataAndMakeDescriptor(
+              tensors = tensors,
+              dataChannel = dataChannel,
+              bufferSize = bufferSize,
+              location = dataPath.getName
+            )
+            .map { descriptor =>
+              com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(
+                descriptor,
+                Channels.newOutputStream(descriptorChannel)
+              )
+            }
         }
       }
+  }
+  def writeCheckpoint[A, B](
+      file: File,
+      model: GenericModule[A, B],
+      bufferSize: Int = 16384
+  ) = {
+    writeTensorsIntoFile(model.state.map(_._1.value), file, bufferSize)
   }
 
 }

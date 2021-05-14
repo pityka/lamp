@@ -147,8 +147,6 @@ object Train extends App {
               Reader
                 .loadFromFile(net1, new File(load), device)
                 .unsafeRunSync()
-                .toOption
-                .get
             }
 
           scribe.info("Learnable parameters: " + net1.learnableParameters)

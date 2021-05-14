@@ -239,7 +239,7 @@ class TabularResidualModuleSuite extends AnyFunSuite {
 
       val savePath = File.createTempFile("lampsave", "data").getAbsolutePath
       Serialization.saveModel(trained, savePath)
-      val trained2 = Serialization.loadModel(savePath).toOption.get
+      val trained2 = Serialization.loadModel(savePath)
       trained2
         .predict(featuresTest)
         .map { modelOutput =>

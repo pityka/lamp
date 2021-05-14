@@ -79,7 +79,7 @@ object IOLoops {
       validationBatchesOverEpoch: Option[() => BatchStream[I]] = None,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[State => IO[Unit]] = None,
+      checkpointState: Option[LoopState => IO[Unit]] = None,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule =
@@ -152,7 +152,7 @@ object IOLoops {
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[State => IO[Unit]] = None,
+      checkpointState: Option[LoopState => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
