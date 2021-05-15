@@ -11,6 +11,7 @@ import lamp.extratrees.ClassificationTree
 import lamp.extratrees.RegressionTree
 import lamp.Scope
 import lamp.STenOptions
+import cats.effect.unsafe.implicits.global
 
 object Serialization {
 
@@ -135,6 +136,7 @@ object Serialization {
 
         lamp.data.Writer
           .writeTensorsIntoFile(tensors, new File(path))
+          .unsafeRunSync()
         NNDto(
           hiddenSize,
           tensors.size,
@@ -149,6 +151,7 @@ object Serialization {
             (List(tensor1, tensor2) ++ tensors),
             new File(path)
           )
+          .unsafeRunSync()
         KnnDto(
           k,
           path,
@@ -169,6 +172,7 @@ object Serialization {
                 (List(tensor1, tensor2) ++ tensors),
                 new File(path)
               )
+              .unsafeRunSync()
             KnnDto(
               k,
               path,
@@ -180,6 +184,7 @@ object Serialization {
             val path = outPath + ".base.nn." + idx0 + "." + idx1
             lamp.data.Writer
               .writeTensorsIntoFile(tensors, new File(path))
+              .unsafeRunSync()
 
             NNDto(
               hiddenSize,
