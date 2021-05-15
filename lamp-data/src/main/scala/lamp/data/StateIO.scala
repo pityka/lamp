@@ -211,7 +211,7 @@ object StateIO {
       bufferSize: Int = 16384
   ): Unit = {
 
-    state match {
+    val descriptor: schemas.LoopState = state match {
       case s: SimpleLoopState =>
         simpleLoopStateDescriptor(
           s,
@@ -242,6 +242,10 @@ object StateIO {
           )
         )
     }
+    val fos = new java.io.FileOutputStream(file)
+    try {
+      com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(descriptor, fos)
+    } finally { fos.close }
 
   }
 
