@@ -305,7 +305,7 @@ lazy val example_arxiv = project
       "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
-      "com.lihaoyi" %% "requests" % "0.6.7",
+      "com.lihaoyi" %% "requests" % "0.6.9",
       "com.lihaoyi" %% "os-lib" % "0.7.7"
     )
   )
