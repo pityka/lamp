@@ -62,8 +62,8 @@ lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "2.2.5"
-val upickleVersion = "1.3.13"
-val scalaTestVersion = "3.2.7"
+val upickleVersion = "1.3.12"
+val scalaTestVersion = "3.2.9"
 val scribeVersion = "3.5.4"
 val catsEffectVersion = "3.1.1"
 val catsCoreVersion = "2.6.0"
@@ -306,7 +306,7 @@ lazy val example_arxiv = project
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "com.lihaoyi" %% "requests" % "0.6.7",
-      "com.lihaoyi" %% "os-lib" % "0.7.6"
+      "com.lihaoyi" %% "os-lib" % "0.7.7"
     )
   )
   .dependsOn(core, data)
