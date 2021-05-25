@@ -120,6 +120,57 @@ object BatchStream {
       }
 
     }
+  def fromIndicesAndBuckets[A, B](
+      indices: Array[(Array[Int], Int)]
+  )(
+      loadBucket: Int => Resource[IO, B],
+      makeNonEmptyBatch: (
+          B,
+          Array[Int],
+          Device
+      ) => Resource[IO, StreamControl[(A, STen)]]
+  ) =
+    new BatchStream[A] {
+      private val i = new AtomicInteger(0)
+      private val N = indices.length
+      private var loadedBucketIndex = -1
+      private var loadedBucket: Option[B] = None
+      private var releaseBucket: Option[IO[Unit]] = None
+      def nextBatch(device: Device): Resource[IO, StreamControl[(A, STen)]] = {
+        val prev = i.getAndIncrement()
+        if (prev < N) {
+          val (indicesInBucket, bucketIndex) = indices(prev)
+          val b =
+            if (bucketIndex == loadedBucketIndex && loadedBucket.isDefined) {
+              IO.pure((loadedBucket.get, IO.unit))
+            } else
+              for {
+                _ <- releaseBucket.getOrElse(IO.unit)
+                acq <- loadBucket(bucketIndex).allocated
+                b = acq._1
+                release = acq._2
+                _ <- IO {
+                  synchronized {
+                    releaseBucket = Some(release)
+                    loadedBucket = Some(b)
+                    loadedBucketIndex = bucketIndex
+                  }
+                }
+              } yield (b, IO.unit)
+          Resource(b).flatMap { b =>
+            makeNonEmptyBatch(b, indicesInBucket, device)
+          }
+        } else {
+          val cleanup: Resource[IO, Unit] =
+            if (releaseBucket.isEmpty) Resource.pure(())
+            else Resource(IO.pure(((), releaseBucket.get)))
+          cleanup.flatMap(_ =>
+            Resource.pure[IO, StreamControl[(A, STen)]](EndStream)
+          )
+        }
+      }
+
+    }
 
   def scopeInResource =
     Resource.make(IO {

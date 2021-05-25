@@ -808,7 +808,8 @@ object AutoLoop {
               batchStream,
               logger,
               learningRateSchedule.learningRateFactor(epoch.toLong, None),
-              false
+              false,
+              1
             )
             next <- loop(
               epoch + 1, {

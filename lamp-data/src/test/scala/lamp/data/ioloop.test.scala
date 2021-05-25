@@ -94,7 +94,12 @@ class IOLoopSuite extends AnyFunSuite {
       val acc = STen.scalarDouble(0d, x.options)
       val (n, _) =
         trainedModel
-          .addTotalLossAndReturnGradientsAndNumExamples(const(x), target, acc)
+          .addTotalLossAndReturnGradientsAndNumExamples(
+            const(x),
+            target,
+            acc,
+            true
+          )
       val loss = acc.toMat.raw(0) / n
       tensorLogger.cancel()
 
@@ -165,7 +170,12 @@ class IOLoopSuite extends AnyFunSuite {
 
       val acc = STen.scalarDouble(0d, x.options)
       val (n, _) = trainedModel
-        .addTotalLossAndReturnGradientsAndNumExamples(const(x), target, acc)
+        .addTotalLossAndReturnGradientsAndNumExamples(
+          const(x),
+          target,
+          acc,
+          true
+        )
       val loss = acc.toMat.raw(0) / n
       assert(loss < 50)
     }
