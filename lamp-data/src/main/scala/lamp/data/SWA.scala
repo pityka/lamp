@@ -12,35 +12,42 @@ import aten.ATen
 // https://arxiv.org/pdf/1803.05407.pdf
 object SWA {
 
-  trait SWALearningRateSchedule {
+  trait SWALearningRateSchedule[State] {
+    def init: State
     def swaLearningRateSchedule(
+        state: State,
         epoch: Int,
         lastValidationLoss: Option[Double]
-    ): (Double, Boolean)
+    ): (State, Double, Boolean)
   }
 
   object SWALearningRateSchedule {
-    def constant(f: Double) = new SWALearningRateSchedule {
+
+    def constant(f: Double) = new SWALearningRateSchedule[Unit] {
+      def init = ()
       def swaLearningRateSchedule(
+          state: Unit,
           epoch: Int,
           lastValidationLoss: Option[Double]
-      ): (Double, Boolean) = (f, true)
+      ): (Unit, Double, Boolean) = ((), f, true)
     }
     def cyclic(minFactor: Double, maxFactor: Double, cycleLength: Int) =
-      new SWALearningRateSchedule {
+      new SWALearningRateSchedule[Unit] {
+        def init = ()
         def swaLearningRateSchedule(
+            state: Unit,
             epoch: Int,
             lastValidationLoss: Option[Double]
-        ): (Double, Boolean) = {
+        ): (Unit, Double, Boolean) = {
           val t = 1d / cycleLength * ((epoch % cycleLength) + 1)
           val f = (1 - t) * maxFactor + t * minFactor
           val last = if (epoch % cycleLength + 1 == cycleLength) true else false
-          (f, last)
+          ((), f, last)
         }
       }
   }
 
-  def epochs[I, M <: GenericModule[I, Variable]: Load](
+  def epochs[I, M <: GenericModule[I, Variable]: Load, LRState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I],
@@ -49,14 +56,16 @@ object SWA {
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
       checkpointState: Option[LoopState => IO[Unit]] = None,
+      checkpointLrState: Option[LRState => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
-      learningRateSchedule: SWALearningRateSchedule =
+      learningRateSchedule: SWALearningRateSchedule[LRState] =
         SWALearningRateSchedule.constant(1d),
       prefetch: Boolean = false,
       dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
       initState: Option[SWALoopState] = None,
-      accumulateGradientOverNBatches: Int = 1
+      accumulateGradientOverNBatches: Int = 1,
+      learningRateScheduleInitState: Option[LRState] = None
   ): IO[(SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
@@ -71,15 +80,17 @@ object SWA {
         minValidationLoss: Option[Double],
         numberOfAveragedModels: Int,
         averagedModels: Option[Seq[Tensor]],
-        learningCurve: List[(Int, Double, Option[Double])]
+        learningCurve: List[(Int, Double, Option[Double])],
+        lrState: LRState
     ): IO[
       (
           SupervisedModel[I, M],
           List[(Int, Double, Option[Double])]
       )
     ] = {
-      val (learningRateFactor, accumulate) =
+      val (nextLRState, learningRateFactor, accumulate) =
         learningRateSchedule.swaLearningRateSchedule(
+          state = lrState,
           epoch = epoch,
           lastValidationLoss = lastValidationLoss
         )
@@ -136,6 +147,12 @@ object SWA {
                   averagedModels,
                   learningCurve
                 )
+              )
+            else IO.unit
+          _ <-
+            if (checkpointLrState.isDefined)
+              checkpointLrState.get(
+                lrState
               )
             else IO.unit
 
@@ -218,7 +235,8 @@ object SWA {
             averagedModels = nextAveragedModel,
             numberOfAveragedModels = nextNumberOfAveragedModels,
             learningCurve =
-              (epoch, trainingLoss, maybeValidationLoss) :: learningCurve
+              (epoch, trainingLoss, maybeValidationLoss) :: learningCurve,
+            lrState = nextLRState
           )
         } yield next
       }
@@ -226,7 +244,8 @@ object SWA {
 
     for {
       trained <- initState match {
-        case None => loop(0, None, None, 0, None, Nil)
+        case None =>
+          loop(0, None, None, 0, None, Nil, learningRateSchedule.init)
         case Some(state) =>
           loop(
             epoch = state.epoch,
@@ -234,7 +253,9 @@ object SWA {
             minValidationLoss = state.minValidationLoss,
             numberOfAveragedModels = state.numberOfAveragedModels,
             averagedModels = state.averagedModels,
-            learningCurve = state.learningCurve
+            learningCurve = state.learningCurve,
+            lrState =
+              learningRateScheduleInitState.getOrElse(learningRateSchedule.init)
           )
       }
 
