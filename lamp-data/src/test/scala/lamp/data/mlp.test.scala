@@ -124,7 +124,8 @@ class MLPSuite extends AnyFunSuite {
         .addTotalLossAndReturnGradientsAndNumExamples(
           const(testDataTensor),
           testTarget,
-          acc
+          acc,
+          true
         )
       val loss = acc.toMat.raw(0) / numExamples
       assert(loss < 0.8)
