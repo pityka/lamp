@@ -1,13 +1,20 @@
 package lamp.nn
 
-trait LearningRateSchedule {
+trait LearningRateSchedule[State] {
+  def init: State
   def learningRateFactor(
+      state: State,
       epoch: Long,
       lastValidationLoss: Option[Double]
-  ): Double
+  ): (State, Double)
 }
 
 object LearningRateSchedule {
+  case class ReduceLROnPlateauState(
+      min: Double = Double.MaxValue,
+      minLoc: Long = -1L,
+      activeFactor: Double
+  )
   def reduceLROnPlateau(
       startFactor: Double = 1d,
       reduceFactor: Double = 0.5,
@@ -15,43 +22,54 @@ object LearningRateSchedule {
       threshold: Double = 1e-4,
       relativeThresholdMode: Boolean = true,
       stopFactor: Double = 1e-4
-  ) = new LearningRateSchedule {
-    var min = Double.MaxValue
-    var minLoc = -1L
-    var activeFactor = startFactor
-    def learningRateFactor(epoch: Long, lastValidationLoss: Option[Double]) = {
+  ) = new LearningRateSchedule[ReduceLROnPlateauState] {
+
+    def init = ReduceLROnPlateauState(
+      min = Double.MaxValue,
+      minLoc = -1L,
+      activeFactor = startFactor
+    )
+
+    def learningRateFactor(
+        state: ReduceLROnPlateauState,
+        epoch: Long,
+        lastValidationLoss: Option[Double]
+    ) = {
       require(
         lastValidationLoss.isDefined,
         "reduce lr on plateau needs validatoin loss"
       )
       val decrease =
-        if (min == Double.MaxValue) lastValidationLoss.get < min
+        if (state.min == Double.MaxValue) lastValidationLoss.get < state.min
         else if (relativeThresholdMode)
-          lastValidationLoss.get < min * (1d - threshold)
-        else lastValidationLoss.get < (min - threshold)
+          lastValidationLoss.get < state.min * (1d - threshold)
+        else lastValidationLoss.get < (state.min - threshold)
 
       if (decrease) {
-        minLoc = epoch
-        min = lastValidationLoss.get
-        activeFactor
+
+        (
+          state.copy(minLoc = epoch, min = lastValidationLoss.get),
+          state.activeFactor
+        )
       } else {
-        if (epoch - minLoc >= patience) {
-          activeFactor *= reduceFactor
-          if (activeFactor <= stopFactor) { activeFactor = 0d }
-          minLoc = epoch
-          activeFactor
+        if (epoch - state.minLoc >= patience) {
+          var x = state.activeFactor * reduceFactor
+          if (x <= stopFactor) { x = 0d }
+          (state.copy(activeFactor = x, minLoc = epoch), x)
         } else {
-          activeFactor
+          (state, state.activeFactor)
         }
       }
     }
   }
-  def fromEpochCount(f: Long => Double) = new LearningRateSchedule {
+  def fromEpochCount(f: Long => Double) = new LearningRateSchedule[Unit] {
+    def init = ()
     def learningRateFactor(
+        state: Unit,
         epoch: Long,
         lastValidationLoss: Option[Double]
-    ): Double =
-      f(epoch)
+    ): (Unit, Double) =
+      ((), f(epoch))
   }
   def interpolate(
       startY: Double,

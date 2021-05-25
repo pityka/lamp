@@ -70,7 +70,7 @@ object IOLoops {
     loop(batchStream.nextBatch(device), Nil)
   }
 
-  def withSWA[I, M <: GenericModule[I, Variable]: Load](
+  def withSWA[I, M <: GenericModule[I, Variable]: Load, LRState, LRStateSWA](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I],
@@ -80,11 +80,13 @@ object IOLoops {
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
       checkpointState: Option[LoopState => IO[Unit]] = None,
+      checkpointLRState: Option[LRState => IO[Unit]] = None,
+      checkpointSWALRState: Option[LRStateSWA => IO[Unit]] = None,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
-      learningRateSchedule: LearningRateSchedule =
+      learningRateSchedule: LearningRateSchedule[LRState] =
         LearningRateSchedule.decrement(20, 0.5),
-      swaLearningRateSchedule: SWA.SWALearningRateSchedule =
+      swaLearningRateSchedule: SWA.SWALearningRateSchedule[LRStateSWA] =
         SWA.SWALearningRateSchedule.cyclic(
           minFactor = 0.01,
           maxFactor = 1d,
@@ -92,7 +94,10 @@ object IOLoops {
         ),
       prefetch: Boolean = false,
       dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
-      initState: Option[SimpleThenSWALoopState] = None
+      initState: Option[SimpleThenSWALoopState] = None,
+      accumulateGradientOverNBatches: Int = 1,
+      learningRateScheduleInitState: Option[LRState] = None,
+      swaLearningRateScheduleInitState: Option[LRStateSWA] = None
   ) = {
     for {
       warmedup <-
@@ -105,13 +110,16 @@ object IOLoops {
           trainingCallback,
           validationCallback,
           checkpointState,
+          checkpointLRState,
           1,
           logger,
           returnMinValidationLossModel,
           learningRateSchedule,
           prefetch,
           dataParallelModels,
-          initState.flatMap(_.simple)
+          initState.flatMap(_.simple),
+          accumulateGradientOverNBatches,
+          learningRateScheduleInitState
         )
 
       warmupEpochReturned = warmedup._1
@@ -126,12 +134,15 @@ object IOLoops {
         trainingCallback,
         validationCallback,
         checkpointState,
+        checkpointSWALRState,
         1,
         logger,
         swaLearningRateSchedule,
         prefetch,
         dataParallelModels,
-        initState.flatMap(_.swa)
+        initState.flatMap(_.swa),
+        accumulateGradientOverNBatches,
+        swaLearningRateScheduleInitState
       )
     } yield {
       val swaModel = swaResult._1
@@ -144,7 +155,7 @@ object IOLoops {
     }
   }
 
-  def epochs[I, M <: GenericModule[I, Variable]: Load](
+  def epochs[I, M <: GenericModule[I, Variable]: Load, LRState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I],
@@ -153,20 +164,23 @@ object IOLoops {
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
       checkpointState: Option[LoopState => IO[Unit]] = None,
+      checkpointLRState: Option[LRState => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
-      learningRateSchedule: LearningRateSchedule = LearningRateSchedule.noop,
+      learningRateSchedule: LearningRateSchedule[LRState] =
+        LearningRateSchedule.noop,
       prefetch: Boolean = false,
       dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
       initState: Option[SimpleLoopState] = None,
-      accumulateGradientOverNBatches: Int = 1
+      accumulateGradientOverNBatches: Int = 1,
+      learningRateScheduleInitState: Option[LRState] = None
   ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer
         : ModelWithOptimizer[I, M with GenericModule[I, Variable]] =
       model.asTraining.zipOptimizer(optimizerFactory)
 
-    initState.foreach { state =>
+    initState.foreach { case state =>
       modelWithOptimizer.model.module.load(state.model)
       modelWithOptimizer.optimizer.load(state.optimizer)
     }
@@ -176,14 +190,17 @@ object IOLoops {
         lastValidationLoss: Option[Double],
         minValidationLoss: Option[Double],
         minValidationLossModel: Option[(Int, Seq[Tensor])],
-        learningCurve: List[(Int, Double, Option[Double])]
+        learningCurve: List[(Int, Double, Option[Double])],
+        lrState: LRState
     ): IO[
       (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])
     ] = {
-      val learningRateFactor = learningRateSchedule.learningRateFactor(
-        epoch = epoch,
-        lastValidationLoss = lastValidationLoss
-      )
+      val (nextLearningRateScheduleState, learningRateFactor) =
+        learningRateSchedule.learningRateFactor(
+          state = lrState,
+          epoch = epoch,
+          lastValidationLoss = lastValidationLoss
+        )
       if (epoch >= epochs || learningRateFactor <= 0d)
         IO.pure {
           modelWithOptimizer.optimizer.release()
@@ -229,6 +246,12 @@ object IOLoops {
                   minValidationLossModel,
                   learningCurve
                 )
+              )
+            else IO.unit
+          _ <-
+            if (checkpointLRState.isDefined)
+              checkpointLRState.get(
+                lrState
               )
             else IO.unit
 
@@ -313,7 +336,8 @@ object IOLoops {
             minValidationLoss = nextMinValidationLoss,
             minValidationLossModel = nextMinValidationLossModel,
             learningCurve =
-              (epoch, trainingLoss, maybeValidationLoss) :: learningCurve
+              (epoch, trainingLoss, maybeValidationLoss) :: learningCurve,
+            lrState = nextLearningRateScheduleState
           )
         } yield next
       }
@@ -321,14 +345,16 @@ object IOLoops {
 
     initState match {
       case None =>
-        loop(0, None, None, None, Nil)
+        loop(0, None, None, None, Nil, learningRateSchedule.init)
       case Some(state) =>
         loop(
           epoch = state.epoch,
           lastValidationLoss = state.lastValidationLoss,
           minValidationLoss = state.minValidationLoss,
           minValidationLossModel = state.minValidationLossModel,
-          learningCurve = state.learningCurve
+          learningCurve = state.learningCurve,
+          lrState =
+            learningRateScheduleInitState.getOrElse(learningRateSchedule.init)
         )
     }
 
