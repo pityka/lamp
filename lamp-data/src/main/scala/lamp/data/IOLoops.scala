@@ -159,7 +159,8 @@ object IOLoops {
       learningRateSchedule: LearningRateSchedule = LearningRateSchedule.noop,
       prefetch: Boolean = false,
       dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
-      initState: Option[SimpleLoopState] = None
+      initState: Option[SimpleLoopState] = None,
+      accumulateGradientOverNBatches: Int = 1
   ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer
         : ModelWithOptimizer[I, M with GenericModule[I, Variable]] =
@@ -240,7 +241,8 @@ object IOLoops {
                 trainBatchesOverEpoch(),
                 logger,
                 learningRateFactor,
-                prefetch
+                prefetch,
+                accumulateGradientOverNBatches
               )
             else
               DataParallel.oneEpoch(
@@ -250,7 +252,8 @@ object IOLoops {
                 trainBatchesOverEpoch(),
                 logger,
                 learningRateFactor,
-                dataParallelModels
+                dataParallelModels,
+                accumulateGradientOverNBatches
               )
 
           maybeValidationLoss <-
@@ -338,51 +341,80 @@ object IOLoops {
       trainBatches: BatchStream[I],
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
-      prefetch: Boolean
+      prefetch: Boolean,
+      accumulateGradientOverNBatches: Int
   ): IO[Double] = {
 
     val device = model.model.module.state.head._1.value.device
 
     def processBatch(
         elem: StreamControl[(I, STen)],
-        lossAcc: STen
+        lossAcc: STen,
+        batchCount: Long
     ): StreamControl[Long] = elem.map { case (sample, target) =>
-      val (numInstances, gradients) =
-        model.model.addTotalLossAndReturnGradientsAndNumExamples(
-          sample,
-          target,
-          lossAcc
-        )
+      if (accumulateGradientOverNBatches <= 1) {
+        val (numInstances, gradients) =
+          model.model.addTotalLossAndReturnGradientsAndNumExamples(
+            sample,
+            target,
+            lossAcc,
+            zeroGrad = true
+          )
 
-      model.optimizer.step(gradients, learningRateScheduleFactor)
-      numInstances
+        model.optimizer.step(gradients, learningRateScheduleFactor)
+        numInstances
+      } else {
+
+        val (numInstances, gradients) =
+          model.model.addTotalLossAndReturnGradientsAndNumExamples(
+            sample,
+            target,
+            lossAcc,
+            zeroGrad = false
+          )
+
+        if (
+          batchCount > 0 && batchCount % accumulateGradientOverNBatches == 0
+        ) {
+          model.optimizer.step(gradients, learningRateScheduleFactor)
+          model.model.zeroGrad()
+        }
+
+        numInstances
+
+      }
 
     }
 
-    def simpleLoop(lossAcc: STen, numInstancesAcc: Long): IO[Long] = {
+    def simpleLoop(
+        lossAcc: STen,
+        numInstancesAcc: Long,
+        batchCount: Long
+    ): IO[Long] = {
       trainBatches
         .nextBatch(device)
-        .use { batch => IO { processBatch(batch, lossAcc) } }
+        .use { batch => IO { processBatch(batch, lossAcc, batchCount) } }
         .flatMap {
           case EndStream  => IO.pure(numInstancesAcc)
-          case EmptyBatch => simpleLoop(lossAcc, numInstancesAcc)
+          case EmptyBatch => simpleLoop(lossAcc, numInstancesAcc, batchCount)
           case NonEmptyBatch(numInstances) =>
             simpleLoop(
               lossAcc,
-              numInstances + numInstancesAcc
+              numInstances + numInstancesAcc,
+              batchCount + 1L
             )
         }
     }
 
     def prefetch1[A, B](
         fetch: () => Resource[IO, StreamControl[A]],
-        transform: (Int, StreamControl[A]) => IO[StreamControl[B]],
+        transform: (Long, StreamControl[A]) => IO[StreamControl[B]],
         reduce: (B, B) => B,
         zero: B
     ): IO[B] = {
 
       def loop(
-          counter: Int,
+          counter: Long,
           acc: B,
           queue: Queue[IO, (StreamControl[A], IO[Unit])]
       ): IO[B] = {
@@ -418,9 +450,9 @@ object IOLoops {
 
       prefetch1[(I, STen), Long](
         fetch = () => trainBatches.nextBatch(device),
-        transform = (_, batch) =>
+        transform = (batchCounter, batch) =>
           IO {
-            processBatch(batch, lossAcc)
+            processBatch(batch, lossAcc, batchCounter)
           },
         reduce = (b, acc) => (acc + b),
         zero = 0L
@@ -433,7 +465,7 @@ object IOLoops {
       val loopDone =
         if (prefetch)
           prefetchLoop(lossAcc)
-        else simpleLoop(lossAcc, 0L)
+        else simpleLoop(lossAcc, 0L, 0L)
 
       loopDone.map { numInstances =>
         val totalLoss = lossAcc.toMat.raw(0)

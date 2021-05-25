@@ -113,7 +113,8 @@ object DataParallel {
       trainBatches: BatchStream[I],
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
-      models: Seq[SupervisedModel[I, M]]
+      models: Seq[SupervisedModel[I, M]],
+      accumulateGradientOverNBatches: Int
   ) = {
 
     def allocatePerModelLossAcc(implicit scope: Scope) =
@@ -128,7 +129,7 @@ object DataParallel {
           makeOne = (device: Device) => trainBatches.nextBatch(device)
         ),
         transform = (
-            _,
+            batchCounter,
             batches
         ) =>
           sequence(
@@ -136,7 +137,11 @@ object DataParallel {
               .map(batches =>
                 synchronousStep(
                   batches,
-                  perModelLossAcc
+                  perModelLossAcc,
+                  zeroGrad =
+                    batchCounter == 0 || batchCounter % accumulateGradientOverNBatches == 1,
+                  step =
+                    batchCounter > 0 && batchCounter % accumulateGradientOverNBatches == 0
                 )
               )
           ),
@@ -152,7 +157,9 @@ object DataParallel {
 
     def synchronousStep(
         batch: List[(I, STen)],
-        perModelLossAcc: List[STen]
+        perModelLossAcc: List[STen],
+        step: Boolean,
+        zeroGrad: Boolean
     ) = {
       assert(batch.size == perModelLossAcc.size)
       assert(batch.size == (models.size + 1))
@@ -162,22 +169,24 @@ object DataParallel {
           .zip(mainModel.model +: models)
           .zip(perModelLossAcc)
           .parTraverse { case ((batch, model), lossAcc) =>
-            IO { computeGradient(batch, lossAcc, model) }
+            IO { computeGradient(batch, lossAcc, model, zeroGrad) }
           }
-        _ <- IO {
-          averageGradientsIntoMain(
-            gradMain = gradients.head,
-            gradPerModel = gradients.drop(1)
-          )
-          stepOptimizer(gradients.head._2)
-        }
+        _ <-
+          if (step) IO {
+            averageGradientsIntoMain(
+              gradMain = gradients.head,
+              gradPerModel = gradients.drop(1)
+            )
+            stepOptimizer(gradients.head._2)
+          }
+          else IO.unit
       } yield gradients.map(_._1).sum
 
     }
 
     def driveSynchronousLoop[A, B](
         fetch: () => Resource[IO, A],
-        transform: (Int, A) => IO[StreamControl[B]],
+        transform: (Long, A) => IO[StreamControl[B]],
         reduce: (B, B) => B,
         zero: B
     ): IO[B] = {
@@ -189,7 +198,7 @@ object DataParallel {
         } yield started
 
       def loop(
-          counter: Int,
+          counter: Long,
           acc: B,
           queue: Queue[IO, (A, IO[Unit])]
       ): IO[B] = {
@@ -228,12 +237,14 @@ object DataParallel {
     def computeGradient(
         elem: (I, STen),
         lossAcc: STen,
-        model: SupervisedModel[I, M]
+        model: SupervisedModel[I, M],
+        zeroGrad: Boolean
     ): (Long, Seq[Option[STen]]) =
       model.addTotalLossAndReturnGradientsAndNumExamples(
         elem._1,
         elem._2,
-        lossAcc
+        lossAcc,
+        zeroGrad
       )
 
     def averageGradientsIntoMain(
