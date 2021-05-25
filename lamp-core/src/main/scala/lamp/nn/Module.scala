@@ -227,6 +227,12 @@ trait GenericModule[A, B] {
   final def parameters =
     state.filter(v => v._1.needsGrad)
 
+  final def zeroGrad() = {
+    parameters.foreach { case (param, _) =>
+      param.zeroGrad()
+    }
+  }
+
   /** Computes the gradient of loss with respect to the parameters. */
   final def gradients(
       loss: Variable,

@@ -55,7 +55,8 @@ object SWA {
         SWALearningRateSchedule.constant(1d),
       prefetch: Boolean = false,
       dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
-      initState: Option[SWALoopState] = None
+      initState: Option[SWALoopState] = None,
+      accumulateGradientOverNBatches: Int = 1
   ): IO[(SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
@@ -147,7 +148,8 @@ object SWA {
                 trainBatchesOverEpoch(),
                 logger,
                 learningRateFactor,
-                prefetch
+                prefetch,
+                accumulateGradientOverNBatches
               )
             else
               DataParallel.oneEpoch(
@@ -157,7 +159,8 @@ object SWA {
                 trainBatchesOverEpoch(),
                 logger,
                 learningRateFactor,
-                dataParallelModels
+                dataParallelModels,
+                accumulateGradientOverNBatches
               )
 
           maybeValidationLoss <-

@@ -9,7 +9,8 @@ trait LossCalculation[I] {
       target: STen,
       module: M with GenericModule[I, Variable],
       lossFunction: LossFunction,
-      computeGradients: Boolean
+      computeGradients: Boolean,
+      zeroGradBeforeComputingGradients: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]])
 }
 
@@ -20,12 +21,16 @@ class SimpleLossCalculation[I] extends LossCalculation[I] {
       target: STen,
       module: M with GenericModule[I, Variable],
       lossFunction: LossFunction,
-      computeGradients: Boolean
+      computeGradients: Boolean,
+      zeroGradBeforeComputingGradients: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
     val output = module.forward(samples)
     val (loss, numInstances) = lossFunction(output, target)
 
-    val gradients = if (computeGradients) Some(module.gradients(loss)) else None
+    val gradients =
+      if (computeGradients)
+        Some(module.gradients(loss, zeroGradBeforeComputingGradients))
+      else None
     (loss, numInstances, gradients)
   }
 
@@ -38,7 +43,8 @@ case class AdversarialTraining(eps: Double) extends LossCalculation[Variable] {
       target: STen,
       module: M with Module,
       lossFunction: LossFunction,
-      computeGradients: Boolean
+      computeGradients: Boolean,
+      zeroGradBeforeComputingGradients: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
     val samplesWithGrad = samples.withGrad
     val output0 = module.forward(samplesWithGrad)
@@ -56,7 +62,9 @@ case class AdversarialTraining(eps: Double) extends LossCalculation[Variable] {
     val totalLoss = (loss0 + adversarialLoss) * 0.5
 
     val gradients =
-      if (computeGradients) Some(module.gradients(totalLoss)) else None
+      if (computeGradients)
+        Some(module.gradients(totalLoss, zeroGradBeforeComputingGradients))
+      else None
     (totalLoss, numInstances, gradients)
   }
 
@@ -70,6 +78,10 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
   def asEval = copy(module = module.asEval)
   def asTraining = copy(module = module.asTraining)
 
+  def zeroGrad() = {
+    module.zeroGrad()
+  }
+
   def addTotalLossAndReturnNumExamples(
       samples: I,
       target: STen,
@@ -78,7 +90,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
 
     Scope.leak { implicit scope =>
       val (loss, examples, _) =
-        lossCalculation(samples, target, module, lossFunction, false)
+        lossCalculation(samples, target, module, lossFunction, false, false)
       acc += (loss.value * examples.toDouble)
       examples
     }
@@ -87,11 +99,12 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
   def addTotalLossAndReturnGradientsAndNumExamples(
       samples: I,
       target: STen,
-      acc: STen
+      acc: STen,
+      zeroGrad: Boolean
   ): (Long, Seq[Option[STen]]) =
     Scope.leak { implicit scope =>
       val (loss, numInstances, mayGradients) =
-        lossCalculation(samples, target, module, lossFunction, true)
+        lossCalculation(samples, target, module, lossFunction, true, zeroGrad)
       acc += (loss.value * numInstances.toDouble)
 
       (numInstances, mayGradients.get)
