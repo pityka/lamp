@@ -807,7 +807,9 @@ object AutoLoop {
               modelWithOptimizer,
               batchStream,
               logger,
-              learningRateSchedule.learningRateFactor(epoch.toLong, None),
+              learningRateSchedule
+                .learningRateFactor((), epoch.toLong, None)
+                ._2,
               false,
               1
             )
