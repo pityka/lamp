@@ -448,6 +448,27 @@ case class Mult(scope: Scope, a: Variable, b: Variable) extends Op {
   val value = Variable(this, a.value.*(b.value)(scope))(scope)
 
 }
+case class Cross(scope: Scope, a: Variable, b: Variable, dim: Int) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        out -= p * (STen.ones(a.shape).cross(b.value, dim))
+
+      }
+
+    },
+    b.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        out += p * (STen.ones(b.shape).cross(a.value, dim))
+      }
+
+    }
+  )
+
+  val value = Variable(this, a.value.cross(b.value, dim)(scope))(scope)
+
+}
 case class Div(scope: Scope, a: Variable, b: Variable) extends Op {
 
   val params = List(
@@ -810,6 +831,21 @@ case class Gelu(scope: Scope, a: Variable) extends Op {
     }
   )
   val value = Variable(this, a.value.gelu(scope))(scope)
+
+}
+case class Softplus(scope: Scope, a: Variable, beta: Double, threshold: Double)
+    extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp =
+          STen.softplus_backward(p, a.value, beta, threshold, value.value)
+        out += tmp
+      }
+    }
+  )
+  val value = Variable(this, a.value.softplus(beta, threshold)(scope))(scope)
 
 }
 case class Sigmoid(scope: Scope, a: Variable) extends Op {

@@ -270,6 +270,8 @@ sealed trait Variable {
   def *[S: Sc](other: Variable) = new Mult(extractScope, this, other).value
   def *[S: Sc](other: Double) = new ConstMult(extractScope, this, other).value
   def /[S: Sc](other: Variable) = new Div(extractScope, this, other).value
+  def cross[S: Sc](other: Variable, dim: Int) =
+    new Cross(extractScope, this, other, dim).value
   def mm[S: Sc](other: Variable) = new MatMul(extractScope, this, other).value
   def bmm[S: Sc](other: Variable) =
     new BatchedMatMul(extractScope, this, other).value
@@ -296,6 +298,8 @@ sealed trait Variable {
   def logdet[S: Sc] = new LogDet(extractScope, this).value
   def log[S: Sc] = new Log(extractScope, this).value
   def log1p[S: Sc] = new Log1p(extractScope, this).value
+  def softplus[S: Sc](beta: Double, threshold: Double) =
+    new Softplus(extractScope, this, beta, threshold).value
   def sin[S: Sc] = new Sin(extractScope, this).value
   def cos[S: Sc] = new Cos(extractScope, this).value
   def tan[S: Sc] = new Tan(extractScope, this).value
