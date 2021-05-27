@@ -742,6 +742,48 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  testGradientAndValue("softplus")(mat2x3, 21.0000) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(STen.fromMat(m, cuda))
+      val L = x1.softplus(beta = 2d, threshold = 0d).sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("cross left")(mat2x3, 28.0000) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(STen.fromMat(m, cuda))
+      val x2 = const(STen.fromMat(mat2x3_2, cuda))
+      val L = x1.cross(x2, 1).sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("cross right")(mat2x3, -28.0000) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val x1 = param(STen.fromMat(m, cuda))
+        val x2 = const(STen.fromMat(mat2x3_2, cuda))
+        val L = x2.cross(x1, 1).sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          x1.partialDerivative.map(t => t.toMat)
+        )
+      }
+  }
   testGradientAndValue("sin")(mat2x3_2, -0.27259082747648367) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>

@@ -363,6 +363,23 @@ object STen {
   def tanh_backward[S: Sc](gradOutput: STen, output: STen) =
     ATen.tanh_backward(gradOutput.value, output.value).owned
 
+  def softplus_backward[S: Sc](
+      gradOutput: STen,
+      self: STen,
+      beta: Double,
+      threshold: Double,
+      output: STen
+  ) =
+    owned(
+      ATen.softplus_backward(
+        gradOutput.value,
+        self.value,
+        beta,
+        threshold,
+        output.value
+      )
+    )
+
   def to_dense_backward[S: Sc](gradOutput: STen, input: STen) =
     ATen.to_dense_backward(gradOutput.value, input.value).owned
 
@@ -1140,6 +1157,13 @@ case class STen private (
         dim
       )
     )
+  def softplus[S: Sc](beta: Double, threshold: Double) =
+    owned(
+      ATen.softplus(value, beta, threshold)
+    )
+
+  def cross[S: Sc](other: STen, dim: Int) =
+    owned(ATen.cross(value, other.value, dim))
 
   def mean[S: Sc] =
     owned(ATen.mean_0(value))
