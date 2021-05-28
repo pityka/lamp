@@ -16,7 +16,7 @@ inThisBuild(
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.13.6",
-  crossScalaVersions := Seq("2.13.6", "2.12.13"),
+  crossScalaVersions := Seq("2.13.6", "2.12.14"),
   parallelExecution in Test := false,
   scalacOptions ++= Seq(
     "-opt-warnings",
