@@ -107,19 +107,21 @@ object STen {
     * @param offset byte offset into the file. Must be page aligned (usually multiple of 4096)
     * @param length byte length of the data
     * @param scalarTypeByte scalar type (long=4,half=5,float=6,double=7)
+    * @param pin if true the mapped segment will be page locked with mlock(2)
     * @return tensor on CPU
     */
   def fromFile[S: Sc](
       path: String,
       offset: Long,
       length: Long,
-      scalarTypeByte: Byte
+      scalarTypeByte: Byte,
+      pin: Boolean
   ): STen = {
     assert(
       offset % 4096 == 0,
       s"Offset must be multiple of 4096. Got $offset. Tried to create tensor from $path."
     )
-    aten.Tensor.from_file(path, offset, length, scalarTypeByte).owned
+    aten.Tensor.from_file(path, offset, length, scalarTypeByte, pin).owned
   }
 
   /** Wraps a tensor without registering it to any scope.
@@ -541,7 +543,11 @@ case class STen private (
   import STen._
 
   /** Returns the number of elements in the tensor */
-  def numel = value.numel
+  def numel: Long = value.numel
+
+  def elementSize: Long = value.elementSize
+
+  def numBytes = numel * elementSize
 
   /** Converts to a Mat[Double].
     *
