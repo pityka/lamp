@@ -41,7 +41,9 @@ object Reader {
       device: Device
   )(implicit scope: Scope) = Scope { implicit scope =>
     device.to(
-      STen.fromFile(path, offset, length, scalarTypeByte).view(dims: _*)
+      STen
+        .fromFile(path, offset, length, scalarTypeByte, pin = true)
+        .view(dims: _*)
     )
   }
 
