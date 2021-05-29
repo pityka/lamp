@@ -73,7 +73,8 @@ case class AdversarialTraining(eps: Double) extends LossCalculation[Variable] {
 case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     module: M with GenericModule[I, Variable],
     lossFunction: LossFunction,
-    lossCalculation: LossCalculation[I] = new SimpleLossCalculation[I]
+    lossCalculation: LossCalculation[I] = new SimpleLossCalculation[I],
+    printMemoryAllocations: Boolean = false
 )(implicit tm: TrainingMode[M]) {
   def asEval = copy(module = module.asEval)
   def asTraining = copy(module = module.asTraining)
@@ -91,6 +92,9 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     Scope.leak { implicit scope =>
       val (loss, examples, _) =
         lossCalculation(samples, target, module, lossFunction, false, false)
+      if (printMemoryAllocations) {
+        println(loss.graphMemoryAllocationReport)
+      }
       acc += (loss.value * examples.toDouble)
       examples
     }

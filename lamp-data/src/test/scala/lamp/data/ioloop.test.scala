@@ -68,7 +68,8 @@ class IOLoopSuite extends AnyFunSuite {
           10,
           device.options(DoublePrecision)
         ),
-        LossFunctions.NLL(10, classWeights)
+        LossFunctions.NLL(10, classWeights),
+        printMemoryAllocations = true
       )
 
       val (epoch, trainedModel, learningCurve) = IOLoops
@@ -164,7 +165,8 @@ class IOLoopSuite extends AnyFunSuite {
           epochs = 50,
           trainingCallback = TrainingCallback.noop,
           validationCallback = ValidationCallback.noop,
-          prefetch = true
+          prefetch = true,
+          printOptimizerAllocations = true
         )
         .unsafeRunSync()
 
