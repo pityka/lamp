@@ -174,11 +174,24 @@ object IOLoops {
       dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
       initState: Option[SimpleLoopState] = None,
       accumulateGradientOverNBatches: Int = 1,
-      learningRateScheduleInitState: Option[LRState] = None
+      learningRateScheduleInitState: Option[LRState] = None,
+      printOptimizerAllocations: Boolean = false
   ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer
         : ModelWithOptimizer[I, M with GenericModule[I, Variable]] =
       model.asTraining.zipOptimizer(optimizerFactory)
+
+    if (printOptimizerAllocations) {
+      val (c, bts) = {
+        val state = modelWithOptimizer.optimizer.state
+        val c = state.size
+        val b = state.map(_.numBytes).sum
+        (c, b)
+      }
+      println(
+        s"Optimizer allocations: $c(${(bts.toDouble * 1e-9).formatted("%.4f")}GB)"
+      )
+    }
 
     initState.foreach { case state =>
       modelWithOptimizer.model.module.load(state.model)

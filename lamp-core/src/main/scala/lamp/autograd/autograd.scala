@@ -209,6 +209,34 @@ sealed trait Variable {
   /** Returns the Wengert list */
   lazy val wengert = Autograd.topologicalSort(this)
 
+  def graphMemoryAllocationReport = {
+    var parameterTensorCount = 0L
+    var parameterTensorStorage = 0L
+    var constantTensorCount = 0L
+    var constantTensorStorage = 0L
+    var intermediateTensorCount = 0L
+    var intermediateTensorStorage = 0L
+    wengert.filter(_.value.device == this.value.device).foreach {
+      case ConstantWithGrad(value, pd) =>
+        parameterTensorCount += 2
+        parameterTensorStorage += (value.numBytes + pd.numBytes)
+      case ConstantWithoutGrad(value) =>
+        constantTensorCount += 1
+        constantTensorStorage += value.numBytes
+      case VariableNonConstant(_, value, pd) =>
+        intermediateTensorCount += 2
+        intermediateTensorStorage += (value.numBytes + pd.numBytes)
+    }
+    GraphMemoryAllocationReport(
+      parameterTensorCount,
+      parameterTensorStorage,
+      constantTensorCount,
+      constantTensorStorage,
+      intermediateTensorCount,
+      intermediateTensorStorage
+    )
+  }
+
   /** Runs the backpropagation algorithm starting from this value
     *
     * Only meaningful if this is scalar i.e. the number of elements in the value tensor is 1.
@@ -418,4 +446,19 @@ object Autograd {
 
   }
 
+}
+
+case class GraphMemoryAllocationReport(
+    parameterTensorCount: Long,
+    parameterTensorStorage: Long,
+    constantTensorCount: Long,
+    constantTensorStorage: Long,
+    intermediateTensorCount: Long,
+    intermediateTensorStorage: Long
+) {
+  private def gb(l: Long) = (l.toDouble * 1e-9).formatted("%.4f")
+  override def toString =
+    s"#par=$parameterTensorCount(${gb(parameterTensorStorage)}GB);#const=$constantTensorCount(${gb(
+      constantTensorStorage
+    )}GB);#act=$intermediateTensorCount(${gb(intermediateTensorStorage)}GB)"
 }
