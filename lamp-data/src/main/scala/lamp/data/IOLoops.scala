@@ -512,14 +512,19 @@ object IOLoops {
       }
     }
     for {
+      t1 <- IO { System.nanoTime }
       pair <- epochLoop
+      t2 <- IO { System.nanoTime }
       (totalLoss, numInstances) = pair
       trainingLoss = totalLoss / numInstances
+      seconds = (t2 - t1) * 1e-9
+      throughput = numInstances / seconds
 
       _ <- IO {
         logger.foreach(
           _.info(
-            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss"
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${throughput
+              .formatted("%.2f")} instances/sec)"
           )
         )
       }

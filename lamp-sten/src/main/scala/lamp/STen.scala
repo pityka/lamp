@@ -547,7 +547,7 @@ case class STen private (
 
   def elementSize: Long = value.elementSize
 
-  def numBytes = numel * elementSize
+  def numBytes: Long = numel * elementSize
 
   /** Converts to a Mat[Double].
     *
@@ -659,12 +659,16 @@ case class STen private (
     value.to(options.value, true, true).owned
 
   /** Overwrites the contents of this tensor with the contents of an other. Must conform. */
-  def copyFrom(source: Tensor) =
-    value.copyFrom(source)
+  def copyFrom(source: Tensor, nonBlocking: Boolean = true) =
+    value.copyFrom(source, nonBlocking)
+
+  /** Overwrites the contents of this tensor with the contents of an other. Must conform. non blocking is true */
+  def copyFrom(source: STen) =
+    value.copyFrom(source.value, true)
 
   /** Overwrites the contents of this tensor with the contents of an other. Must conform. */
-  def copyFrom(source: STen) =
-    value.copyFrom(source.value)
+  def copyFrom(source: STen, nonBlocking: Boolean) =
+    value.copyFrom(source.value, nonBlocking)
 
   override def toString =
     s"STen(shape=$shape,value=$value)"
