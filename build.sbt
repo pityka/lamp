@@ -76,7 +76,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+87-db525c36",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+94-3d5418a5",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
@@ -258,6 +258,8 @@ lazy val example_cifar100 = project
     )
   )
   .dependsOn(core, data, onnx)
+  .enablePlugins(JavaAppPackaging)
+
 lazy val example_gan = project
   .in(file("example-gan"))
   .settings(commonSettings: _*)

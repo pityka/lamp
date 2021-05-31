@@ -190,8 +190,11 @@ object BatchStream {
           val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
           val xcl = features.index(idxT)
           val tcl = target.index(idxT)
-          val d1 = device.to(xcl)
-          val d2 = device.to(tcl)
+          val (d1, d2) = device.withOtherStreamThenSync(synchronizeBefore=false) {
+            val d1 = device.to(xcl)
+            val d2 = device.to(tcl)
+            (d1, d2)
+          }
           (d1, d2)
         }
         NonEmptyBatch((const(d1), d2)): StreamControl[(Variable, STen)]

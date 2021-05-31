@@ -37,12 +37,19 @@ sealed trait Device { self =>
   def to[S: Sc](t: STenOptions): STenOptions
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions
   def setSeed(seed: Long): Unit
+
+  /** Executes f on a new stream
+    *  f must not switch to other threads
+    * Restores the stream to the default stream
+    */
+  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A
 }
 object Device {
   def fromOptions(st: STenOptions) =
     if (st.isCPU) CPU else CudaDevice(st.deviceIndex)
 }
 case object CPU extends Device {
+  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = f
   def to[S: Sc](t: STenOptions): STenOptions = t.cpu
   def to(t: Tensor) = {
     t.cpu
@@ -50,9 +57,20 @@ case object CPU extends Device {
   def setSeed(seed: Long) = Tensor.manual_seed_cpu(seed)
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
     precision.convertOption(STenOptions.d)
+
 }
 case class CudaDevice(i: Int) extends Device {
 
+  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = {
+    val default = aten.CudaStream.getDefaultCUDAStream(i.toByte)
+    if (synchronizeBefore) { default.synchronize() }
+    val other = aten.CudaStream.getStreamFromPool(false, i.toByte)
+    aten.CudaStream.setCurrentCUDAStream(other)
+    val a = f
+    other.synchronize()
+    aten.CudaStream.setCurrentCUDAStream(default)
+    a
+  }
   def to[S: Sc](t: STenOptions): STenOptions = t.cudaIndex(i.toShort)
   def setSeed(seed: Long) = Tensor.manual_seed_cuda(seed, i)
   assert(

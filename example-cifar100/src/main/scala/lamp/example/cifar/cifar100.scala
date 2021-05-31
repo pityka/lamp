@@ -1,11 +1,7 @@
 package lamp.example.cifar
 
 import java.io.File
-import java.io.FileInputStream
-import java.nio.ByteBuffer
-import org.saddle._
-import lamp.TensorHelpers
-import aten.ATen
+
 import cats.effect.Resource
 import cats.effect.IO
 import lamp.CudaDevice
@@ -32,43 +28,28 @@ object Cifar {
   def loadImageFile(
       file: File,
       numImages: Int,
-      precision: FloatingPointPrecision
+      precision: FloatingPointPrecision,
+      pin: Boolean
   )(implicit scope: Scope) = {
-    val inputStream = new FileInputStream(file)
-    val channel = inputStream.getChannel()
-    val tensors = 0 until numImages map { _ =>
-      val bb = ByteBuffer
-        .allocate(3074)
-      lamp.data.Reader.readFully(bb, channel)
-      bb.get
-      val label2 = bb.get
-
-      val to = ByteBuffer.allocate(3072)
-      while (to.hasRemaining() && bb.hasRemaining()) {
-        to.asInstanceOf[ByteBuffer].put(bb.get)
+    Scope { implicit scope =>
+      val all = STen
+        .fromFile(
+          file.getAbsolutePath(),
+          offset = 0,
+          length = numImages * 3074,
+          scalarTypeByte = 0,
+          pin = pin
+        )
+        .view(numImages.toLong, -1)
+      val label2 = all.select(1, 1).castToLong
+      val images0 = all.slice(1, 2, 3074, 1).view(-1, 3, 32, 32)
+      val images = precision match {
+        case SinglePrecision => images0.castToFloat
+        case DoublePrecision => images0.castToDouble
       }
-      val vec = Vec(to.array).map(b => (b & 0xff).toDouble)
-      val red = Mat(vec.slice(0, 1024).copy).reshape(32, 32)
-      val green = Mat(vec.slice(1024, 2 * 1024).copy).reshape(32, 32)
-      val blue = Mat(vec.slice(2 * 1024, 3 * 1024).copy).reshape(32, 32)
-      val tensor = TensorHelpers.fromMatList(
-        List(red, green, blue),
-        device = CPU,
-        precision = precision
-      )
-      (label2, tensor)
+      println(images)
+      (label2, images)
     }
-    val labels =
-      TensorHelpers.fromLongVec(tensors.map(_._1.toLong).toVec, false)
-    val fullBatch = {
-      val tmp = ATen.cat(tensors.map(_._2).toArray, 0)
-      val f = ATen._unsafe_view(tmp, Array(-1, 3, 32, 32))
-      tmp.release()
-      f
-    }
-
-    tensors.foreach(_._2.release())
-    (STen.owned(labels), STen.owned(fullBatch))
 
   }
 }
@@ -77,7 +58,7 @@ case class CliConfig(
     trainData: String = "",
     testData: String = "",
     labels: String = "",
-    cuda: Boolean = false,
+    gpus: List[Int] = Nil,
     trainBatchSize: Int = 32,
     testBatchSize: Int = 32,
     epochs: Int = 10,
@@ -86,7 +67,8 @@ case class CliConfig(
     network: String = "lenet",
     checkpointSave: Option[String] = None,
     checkpointLoad: Option[String] = None,
-    singlePrecision: Boolean = false
+    singlePrecision: Boolean = false,
+    pinnedAllocator: Boolean = false
 )
 
 object Train extends App {
@@ -108,8 +90,11 @@ object Train extends App {
         .action((x, c) => c.copy(labels = x))
         .text("path to cifar100 fine label file")
         .required(),
-      opt[Unit]("gpu").action((_, c) => c.copy(cuda = true)),
+      opt[String]("gpus").action((v, c) =>
+        c.copy(gpus = v.split(",").toList.filterNot(_.isEmpty).map(_.toInt))
+      ),
       opt[Unit]("single").action((_, c) => c.copy(singlePrecision = true)),
+      opt[Unit]("pinned").action((_, c) => c.copy(pinnedAllocator = true)),
       opt[Int]("batch-train").action((x, c) => c.copy(trainBatchSize = x)),
       opt[Int]("batch-test").action((x, c) => c.copy(testBatchSize = x)),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
@@ -130,7 +115,13 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
       Scope.root { implicit scope =>
-        val device = if (config.cuda) CudaDevice(0) else CPU
+        val devices =
+          if (config.gpus.isEmpty) List(CPU) else config.gpus.map(CudaDevice)
+        val device = devices.head
+        val extraDevices = devices.drop(1)
+        if (config.pinnedAllocator) {
+          aten.Tensor.setPinnedMemoryAllocator()
+        }
         val precision =
           if (config.singlePrecision) SinglePrecision else DoublePrecision
         val tensorOptions = device.options(precision)
@@ -151,7 +142,23 @@ object Train extends App {
 
           }
           scribe.info("Learnable parametes: " + net.learnableParameters)
-          scribe.info("parameters: " + net.parameters.mkString("\n"))
+          SupervisedModel(
+            net,
+            LossFunctions.NLL(numClasses, classWeights),
+            printMemoryAllocations = false
+          )
+        }
+
+        val models = extraDevices.map { device =>
+          val numClasses = 100
+          val classWeights =
+            STen.ones(List(numClasses), device.to(tensorOptions))
+          val net =
+            // if (config.network == "lenet")
+            //   Cnn.lenet(numClasses, dropOut = config.dropout, tensorOptions)
+            Cnn.resnet(numClasses, config.dropout, device.to(tensorOptions))
+
+          scribe.info("Learnable parametes: " + net.learnableParameters)
           SupervisedModel(
             net,
             LossFunctions.NLL(numClasses, classWeights)
@@ -159,9 +166,19 @@ object Train extends App {
         }
 
         val (trainTarget, trainFullbatch) =
-          Cifar.loadImageFile(new File(config.trainData), 50000, precision)
+          Cifar.loadImageFile(
+            new File(config.trainData),
+            50000,
+            precision,
+            config.pinnedAllocator
+          )
         val (testTarget, testFullbatch) =
-          Cifar.loadImageFile(new File(config.testData), 10000, precision)
+          Cifar.loadImageFile(
+            new File(config.testData),
+            10000,
+            precision,
+            config.pinnedAllocator
+          )
         Resource
           .fromAutoCloseable(IO {
             scala.io.Source.fromFile(config.labels)
@@ -202,7 +219,9 @@ object Train extends App {
             trainBatchesOverEpoch = trainEpochs,
             validationBatchesOverEpoch = Some(testEpochs),
             epochs = config.epochs,
-            logger = Some(scribe.Logger("training"))
+            logger = Some(scribe.Logger("training")),
+            dataParallelModels = models,
+            printOptimizerAllocations = false
           )
           .unsafeRunSync()
 

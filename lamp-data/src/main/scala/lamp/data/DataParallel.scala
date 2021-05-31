@@ -106,7 +106,7 @@ object DataParallel {
     }
   }
 
-  def oneEpoch[I, M <: GenericModule[I, Variable]: Load](
+  def oneEpoch[I, M <: GenericModule[I, Variable]](
       epochCount: Long,
       trainingCallback: TrainingCallback,
       mainModel: ModelWithOptimizer[I, M],
@@ -160,11 +160,11 @@ object DataParallel {
         perModelLossAcc: List[STen],
         step: Boolean,
         zeroGrad: Boolean
-    ) = {
+    ): IO[Long] = {
       assert(batch.size == perModelLossAcc.size)
       assert(batch.size == (models.size + 1))
       for {
-        _ <- IO { copyStateFromMain() }
+        _ <- copyStateFromMain()
         gradients <- batch
           .zip(mainModel.model +: models)
           .zip(perModelLossAcc)
@@ -172,13 +172,11 @@ object DataParallel {
             IO { computeGradient(batch, lossAcc, model, zeroGrad) }
           }
         _ <-
-          if (step) IO {
+          if (step)
             averageGradientsIntoMain(
               gradMain = gradients.head,
               gradPerModel = gradients.drop(1)
-            )
-            stepOptimizer(gradients.head._2)
-          }
+            ).flatMap(_ => IO { stepOptimizer(gradients.head._2) })
           else IO.unit
       } yield gradients.map(_._1).sum
 
@@ -226,11 +224,20 @@ object DataParallel {
 
     }
 
-    def copyStateFromMain(): Unit = {
-      val state = mainModel.model.module.state
+    def copyStateFromMain() = {
+      val sources = mainModel.model.module.state.map(_._1.value)
+      val srcDevice = sources.head.device
+      models.parTraverse { m =>
+        IO {
+          srcDevice.withOtherStreamThenSync(true) {
 
-      models.foreach { m =>
-        m.module.load(state.map(_._1.value))
+            val destinations = m.module.state.map(_._1.value)
+            destinations.zip(sources).foreach { case (destination, source) =>
+              destination.copyFrom(source)
+            }
+
+          }
+        }
       }
     }
 
@@ -250,29 +257,47 @@ object DataParallel {
     def averageGradientsIntoMain(
         gradMain: (Long, Seq[Option[STen]]),
         gradPerModel: Seq[(Long, Seq[Option[STen]])]
-    ): Unit = {
-      val totalExamples = gradPerModel.map(_._1).sum
-      (gradMain +: gradPerModel).foreach { case (numExample, grad) =>
-        grad.foreach(_.foreach { gradTensor =>
-          gradTensor.*=(numExample.toDouble)
-        })
-      }
-      gradPerModel.foreach { case (_, grads) =>
-        assert(grads.size == gradMain._2.size)
-        grads.zip(gradMain._2).foreach { case (source, main) =>
-          assert(source.isEmpty == main.isEmpty)
-          source.zip(main).foreach { case (source, main) =>
-            Scope.root { implicit scope =>
-              val sourceOnMainDevice = main.device.to(source)
-              main += sourceOnMainDevice
+    ): IO[Unit] = {
+      val totalExamples = gradPerModel.map(_._1).sum + gradMain._1
+
+      for {
+        _ <-
+          (gradMain +: gradPerModel).parTraverse { case (numExample, grad) =>
+            IO {
+              grad.foreach(_.foreach { gradTensor =>
+                gradTensor.*=(numExample.toDouble)
+              })
             }
           }
 
+        _ <- gradPerModel.parTraverse { case (_, grads) =>
+          assert(grads.size == gradMain._2.size)
+          IO {
+            Scope.root { implicit scope =>
+              val gradientSourcesOnMainDevice =
+                grads.zip(gradMain._2).map { case (source, main) =>
+                  assert(source.isEmpty == main.isEmpty)
+                  source.zip(main).map { case (source, main) =>
+                    val sourceOnMainDevice = main.device.to(source)
+                    (main, sourceOnMainDevice)
+                  }
+                }
+              gradientSourcesOnMainDevice.foreach(_.foreach {
+                case (main, sourceOnMainDevice) =>
+                  main += sourceOnMainDevice
+              })
+
+            }
+
+          }
         }
-      }
-      gradMain._2.foreach(_.foreach { grad =>
-        grad *= (1d / totalExamples.toDouble)
-      })
+
+        _ <- IO {
+          gradMain._2.foreach(_.foreach { grad =>
+            grad *= (1d / totalExamples.toDouble)
+          })
+        }
+      } yield ()
     }
 
     def stepOptimizer(gradients: Seq[Option[STen]]): Unit = {
@@ -292,14 +317,18 @@ object DataParallel {
     }
 
     for {
+      t1 <- IO { System.nanoTime }
       pair <- epochLoop
+      t2 <- IO { System.nanoTime }
       (totalLoss, numInstances) = pair
       trainingLoss = totalLoss / numInstances
-
+      seconds = (t2 - t1) * 1e-9
+      throughput = numInstances / seconds
       _ <- IO {
         logger.foreach(
           _.info(
-            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss"
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${throughput
+              .formatted("%.2f")} instances/sec)"
           )
         )
       }
