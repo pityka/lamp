@@ -20,7 +20,7 @@ class ReadWriteSuite extends AnyFunSuite {
       Writer.writeCheckpoint(file, net).unsafeRunSync()
 
       val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt))
-      Reader.loadFromFile(net2, file, CPU).unsafeRunSync()
+      Reader.loadFromFile(net2, file, CPU, false).unsafeRunSync()
       net2.state.zip(net.state).foreach { case ((loaded, _), (orig, _)) =>
         val ndL = NDArray.tensorToFloatNDArray(loaded.value.value)
         val ndO = NDArray.tensorToFloatNDArray(orig.value.value)
@@ -36,7 +36,7 @@ class ReadWriteSuite extends AnyFunSuite {
       file.delete
       Writer.writeCheckpoint(file, net).unsafeRunSync()
       val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt.toDouble))
-      Reader.loadFromFile(net2, file, CPU).unsafeRunSync()
+      Reader.loadFromFile(net2, file, CPU, false).unsafeRunSync()
       net2.state.zip(net.state).foreach { case ((loaded, _), (orig, _)) =>
         loaded.value.scalarTypeByte match {
           case 6 =>

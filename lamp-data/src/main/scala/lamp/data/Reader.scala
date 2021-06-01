@@ -38,11 +38,12 @@ object Reader {
       length: Long,
       scalarTypeByte: Byte,
       dims: Seq[Long],
-      device: Device
+      device: Device,
+      pin: Boolean
   )(implicit scope: Scope) = Scope { implicit scope =>
     device.to(
       STen
-        .fromFile(path, offset, length, scalarTypeByte, pin = true)
+        .fromFile(path, offset, length, scalarTypeByte, pin = pin)
         .view(dims: _*)
     )
   }
@@ -50,7 +51,8 @@ object Reader {
   def readTensorData(
       descriptor: schemas.TensorList,
       pathOfDescriptor: File,
-      device: Device
+      device: Device,
+      pin: Boolean
   )(implicit scope: Scope): Seq[STen] = {
     descriptor.tensors.map { td =>
       readSingleTensor(
@@ -59,7 +61,8 @@ object Reader {
         td.byteLength,
         td.dataType,
         td.dims,
-        device
+        device,
+        pin
       )
 
     }
@@ -67,16 +70,18 @@ object Reader {
 
   def readTensorsFromFile(
       file: File,
-      device: Device
+      device: Device,
+      pin: Boolean
   )(implicit scope: Scope): Seq[STen] = {
     val d = readTensorListDescriptorFromFile(file)
-    readTensorData(d, file, device)
+    readTensorData(d, file, device, pin)
   }
 
   def loadFromFile[A, B, M <: GenericModule[A, B]: Load](
       module: M with GenericModule[A, B],
       file: File,
-      device: Device
+      device: Device,
+      pin: Boolean
   ): IO[Unit] = {
 
     IO {
@@ -84,7 +89,8 @@ object Reader {
         val tensors = Reader
           .readTensorsFromFile(
             file,
-            device
+            device,
+            pin
           )
         module.load(tensors)
       }

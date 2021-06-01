@@ -137,7 +137,7 @@ object Train extends App {
             case None =>
             case Some(file) =>
               Reader
-                .loadFromFile(net, new File(file), device)
+                .loadFromFile(net, new File(file), device, false)
                 .unsafeRunSync()
 
           }
