@@ -179,7 +179,80 @@ class IOLoopSuite extends AnyFunSuite {
           true
         )
       val loss = acc.toMat.raw(0) / n
-      assert(loss < 50)
+      println(loss)
+      assert(loss < 1)
+    }
+  }
+  test1("mnist tabular mini batch gradient accum") { cuda =>
+    Scope.root { implicit scope =>
+      val device = if (cuda) CudaDevice(0) else CPU
+      val data = org.saddle.csv.CsvParser
+        .parseSourceWithHeader[Double](
+          scala.io.Source
+            .fromInputStream(
+              new java.util.zip.GZIPInputStream(
+                getClass.getResourceAsStream("/mnist_test.csv.gz")
+              )
+            )
+        )
+        .toOption
+        .get
+      val x =
+        STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
+      val target =
+        STen
+          .fromLongMat(
+            Mat(data.firstCol("label").toVec.map(_.toLong)),
+            cuda
+          )
+          .squeeze
+
+      val classWeights = STen.ones(List(10), x.options)
+
+      val model = SupervisedModel(
+        logisticRegression(
+          data.numCols - 1,
+          10,
+          device.options(DoublePrecision)
+        ),
+        LossFunctions.NLL(10, classWeights)
+      )
+
+      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+
+      val (_, trainedModel, _) = IOLoops
+        .epochs(
+          model = model,
+          optimizerFactory = SGDW
+            .factory(
+              learningRate = simple(0.0001),
+              weightDecay = simple(0.001d)
+            ),
+          trainBatchesOverEpoch =
+            () => BatchStream.minibatchesFromFull(200, true, x, target, rng),
+          validationBatchesOverEpoch = Some(() =>
+            BatchStream.minibatchesFromFull(200, true, x, target, rng)
+          ),
+          epochs = 50,
+          trainingCallback = TrainingCallback.noop,
+          validationCallback = ValidationCallback.noop,
+          prefetch = true,
+          printOptimizerAllocations = true,
+          accumulateGradientOverNBatches = 2
+        )
+        .unsafeRunSync()
+
+      val acc = STen.scalarDouble(0d, x.options)
+      val (n, _) = trainedModel
+        .addTotalLossAndReturnGradientsAndNumExamples(
+          const(x),
+          target,
+          acc,
+          true
+        )
+      val loss = acc.toMat.raw(0) / n
+      println(loss)
+      assert(loss < 1)
     }
   }
 }

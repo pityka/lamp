@@ -413,7 +413,7 @@ object IOLoops {
           )
 
         if (
-          batchCount > 0 && batchCount % accumulateGradientOverNBatches == 0
+          (batchCount % accumulateGradientOverNBatches) == (accumulateGradientOverNBatches - 1)
         ) {
           model.optimizer.step(gradients, learningRateScheduleFactor)
           model.model.zeroGrad()

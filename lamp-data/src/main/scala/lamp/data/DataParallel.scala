@@ -140,9 +140,9 @@ object DataParallel {
                   batches,
                   perModelLossAcc,
                   zeroGrad =
-                    batchCounter == 0 || batchCounter % accumulateGradientOverNBatches == 1,
+                    (batchCounter % accumulateGradientOverNBatches) == 0,
                   step =
-                    batchCounter > 0 && batchCounter % accumulateGradientOverNBatches == 0
+                    (batchCounter % accumulateGradientOverNBatches) == (accumulateGradientOverNBatches - 1)
                 )
               )
           ),
