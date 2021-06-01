@@ -145,7 +145,7 @@ object Train extends App {
             .foreach { load =>
               scribe.info(s"Loading parameters from file $load")
               Reader
-                .loadFromFile(net1, new File(load), device)
+                .loadFromFile(net1, new File(load), device, false)
                 .unsafeRunSync()
             }
 

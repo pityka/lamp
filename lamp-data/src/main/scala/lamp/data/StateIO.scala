@@ -15,11 +15,11 @@ object StateIO {
       file: File,
       device: Device
   )(implicit scope: Scope) = {
-    val model = Reader.readTensorData(s.model, file, device)
-    val optim = Reader.readTensorData(s.optimizer, file, device)
+    val model = Reader.readTensorData(s.model, file, device, false)
+    val optim = Reader.readTensorData(s.optimizer, file, device, false)
     val minValid = s.minValidationLossModel.map { case (a, d) =>
       implicit val scope = Scope.free
-      (a, Reader.readTensorData(d, file, device).map(_.value))
+      (a, Reader.readTensorData(d, file, device, false).map(_.value))
     }
     SimpleLoopState(
       model,
@@ -36,11 +36,11 @@ object StateIO {
       file: File,
       device: Device
   )(implicit scope: Scope) = {
-    val model = Reader.readTensorData(s.model, file, device)
-    val optim = Reader.readTensorData(s.optimizer, file, device)
+    val model = Reader.readTensorData(s.model, file, device, false)
+    val optim = Reader.readTensorData(s.optimizer, file, device, false)
     val avg = s.averagedModels.map { case d =>
       implicit val scope = Scope.free
-      Reader.readTensorData(d, file, device).map(_.value)
+      Reader.readTensorData(d, file, device, false).map(_.value)
     }
     SWALoopState(
       model,

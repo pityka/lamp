@@ -69,7 +69,8 @@ object Serialization {
       case KnnDto(k, file, _) =>
         val tensors = lamp.data.Reader.readTensorsFromFile(
           file = new File(file),
-          device = CPU
+          device = CPU,
+          pin = false
         )
         KnnBase(
           k,
@@ -80,7 +81,8 @@ object Serialization {
       case NNDto(hiddenSize, _, file, _) =>
         val tensors = lamp.data.Reader.readTensorsFromFile(
           file = new File(file),
-          device = CPU
+          device = CPU,
+          pin = false
         )
         NNBase(hiddenSize, tensors)
     }
@@ -91,13 +93,15 @@ object Serialization {
         case NNDto(hiddenSize, _, file, _) =>
           val tensors = lamp.data.Reader.readTensorsFromFile(
             file = new File(file),
-            device = CPU
+            device = CPU,
+            pin = false
           )
           NNBase(hiddenSize, tensors)
         case KnnDto(k, file, _) =>
           val t = lamp.data.Reader.readTensorsFromFile(
             file = new File(file),
-            device = CPU
+            device = CPU,
+            pin = false
           )
           KnnBase(
             k,
