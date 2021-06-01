@@ -45,7 +45,8 @@ object DataParallel {
               batches
                 .zip(modelsAsEval)
                 .zip(totalLossPerModel)
-                .parTraverse {
+                .parTraverseN(batches.size) {
+
                   case (
                         ((validationSample, validationTarget), modelAsEval),
                         totalLoss
@@ -227,15 +228,13 @@ object DataParallel {
     def copyStateFromMain() = {
       val sources = mainModel.model.module.state.map(_._1.value)
       val srcDevice = sources.head.device
-      models.parTraverse { m =>
+      models.toList.parTraverseN(models.size) { m =>
         IO {
           srcDevice.withOtherStreamThenSync(true) {
-
             val destinations = m.module.state.map(_._1.value)
             destinations.zip(sources).foreach { case (destination, source) =>
               destination.copyFrom(source)
             }
-
           }
         }
       }
@@ -262,7 +261,9 @@ object DataParallel {
 
       for {
         _ <-
-          (gradMain +: gradPerModel).parTraverse { case (numExample, grad) =>
+          (gradMain +: gradPerModel).toList.parTraverseN(
+            gradPerModel.size + 1
+          ) { case (numExample, grad) =>
             IO {
               grad.foreach(_.foreach { gradTensor =>
                 gradTensor.*=(numExample.toDouble)
@@ -270,26 +271,27 @@ object DataParallel {
             }
           }
 
-        _ <- gradPerModel.parTraverse { case (_, grads) =>
-          assert(grads.size == gradMain._2.size)
-          IO {
-            Scope.root { implicit scope =>
-              val gradientSourcesOnMainDevice =
-                grads.zip(gradMain._2).map { case (source, main) =>
-                  assert(source.isEmpty == main.isEmpty)
-                  source.zip(main).map { case (source, main) =>
-                    val sourceOnMainDevice = main.device.to(source)
-                    (main, sourceOnMainDevice)
+        _ <- gradPerModel.toList.parTraverseN(gradPerModel.size) {
+          case (_, grads) =>
+            assert(grads.size == gradMain._2.size)
+            IO {
+              Scope.root { implicit scope =>
+                val gradientSourcesOnMainDevice =
+                  grads.zip(gradMain._2).map { case (source, main) =>
+                    assert(source.isEmpty == main.isEmpty)
+                    source.zip(main).map { case (source, main) =>
+                      val sourceOnMainDevice = main.device.to(source)
+                      (main, sourceOnMainDevice)
+                    }
                   }
-                }
-              gradientSourcesOnMainDevice.foreach(_.foreach {
-                case (main, sourceOnMainDevice) =>
-                  main += sourceOnMainDevice
-              })
+                gradientSourcesOnMainDevice.foreach(_.foreach {
+                  case (main, sourceOnMainDevice) =>
+                    main += sourceOnMainDevice
+                })
+
+              }
 
             }
-
-          }
         }
 
         _ <- IO {
