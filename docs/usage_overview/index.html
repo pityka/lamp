@@ -254,26 +254,26 @@ The feature matrix is copied into a 2D floating point tensor and the target vect
 <span style="color:#75715e">// precision: SinglePrecision.type = SinglePrecision
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testDataTensor <span style="color:#66d9ef">=</span>
       <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span> precision<span style="color:#f92672">)</span>
-<span style="color:#75715e">// testDataTensor: STen = STen(value = Tensor at 140075397461312; CPUFloatType)
+<span style="color:#75715e">// testDataTensor: STen = STen(value = Tensor at 139773615999328; CPUFloatType)
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> testTarget <span style="color:#66d9ef">=</span> 
       <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
         <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span>testData<span style="color:#f92672">.</span>firstCol<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toVec<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toLong<span style="color:#f92672">)),</span>
         device
       <span style="color:#f92672">).</span>squeeze
-<span style="color:#75715e">// testTarget: STen = STen(value = Tensor at 140075406099040; CPULongType)
+<span style="color:#75715e">// testTarget: STen = STen(value = Tensor at 139773606554496; CPULongType)
 </span><span style="color:#75715e"></span>    
 
     <span style="color:#66d9ef">val</span> trainDataTensor <span style="color:#66d9ef">=</span>
       <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>fromMat<span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>filterIx<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toMat<span style="color:#f92672">,</span> device<span style="color:#f92672">,</span>precision<span style="color:#f92672">)</span>
 <span style="color:#75715e">// trainDataTensor: STen = STen(
-</span><span style="color:#75715e">//   value = Tensor at 140075399116064; CPUFloatType
+</span><span style="color:#75715e">//   value = Tensor at 139773616347328; CPUFloatType
 </span><span style="color:#75715e">// )
 </span><span style="color:#75715e"></span>    <span style="color:#66d9ef">val</span> trainTarget <span style="color:#66d9ef">=</span> 
       <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>fromLongMat<span style="color:#f92672">(</span>
         <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span>trainData<span style="color:#f92672">.</span>firstCol<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;label&#34;</span><span style="color:#f92672">).</span>toVec<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span><span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>toLong<span style="color:#f92672">)),</span>
         device
       <span style="color:#f92672">).</span>squeeze
-<span style="color:#f92672">//</span> trainTarget<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STen</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">STen</span><span style="color:#f92672">(</span>value <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">140075409315616</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPULongType</span><span style="color:#f92672">)</span></code></pre></div>
+<span style="color:#f92672">//</span> trainTarget<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STen</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">STen</span><span style="color:#f92672">(</span>value <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">Tensor</span> at <span style="color:#ae81ff">139773607585376</span><span style="color:#f92672">;</span> <span style="color:#a6e22e">CPULongType</span><span style="color:#f92672">)</span></code></pre></div>
 <h2 id="specify-the-model">Specify the model</h2>
 
 <p>Here we use the predefined modules in <code>lamp.nn</code>.</p>
@@ -289,10 +289,10 @@ We also have to give it an <code>aten.TensorOptions</code> which holds informati
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.nn._
 <span style="color:#66d9ef">val</span> tensorOptions <span style="color:#66d9ef">=</span> device<span style="color:#f92672">.</span>options<span style="color:#f92672">(</span><span style="color:#a6e22e">SinglePrecision</span><span style="color:#f92672">)</span>
 <span style="color:#75715e">// tensorOptions: STenOptions = STenOptions(
-</span><span style="color:#75715e">//   value = TensorOptions at 140075409315648; TensorOptions(dtype=float, device=cpu (default), layout=Strided (default), requires_grad=false (default), pinned_memory=false (default), memory_format=(nullopt))
+</span><span style="color:#75715e">//   value = TensorOptions at 139773607585408; TensorOptions(dtype=float, device=cpu (default), layout=Strided (default), requires_grad=false (default), pinned_memory=false (default), memory_format=(nullopt))
 </span><span style="color:#75715e">// )
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classWeights <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">List</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">)</span>
-<span style="color:#75715e">// classWeights: STen = STen(value = Tensor at 140075399112976; CPUFloatType)
+<span style="color:#75715e">// classWeights: STen = STen(value = Tensor at 139773607581712; CPUFloatType)
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> model <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SupervisedModel</span><span style="color:#f92672">(</span>
   sequence<span style="color:#f92672">(</span>
       <span style="color:#a6e22e">MLP</span><span style="color:#f92672">(</span>in <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">784</span><span style="color:#f92672">,</span> out <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">10</span><span style="color:#f92672">,</span> <span style="color:#a6e22e">List</span><span style="color:#f92672">(</span><span style="color:#ae81ff">64</span><span style="color:#f92672">,</span> <span style="color:#ae81ff">32</span><span style="color:#f92672">),</span> tensorOptions<span style="color:#f92672">,</span> dropout <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">0.2</span><span style="color:#f92672">),</span>
@@ -308,45 +308,45 @@ We also have to give it an <code>aten.TensorOptions</code> which holds informati
 </span><span style="color:#75715e">//           Seq4(
 </span><span style="color:#75715e">//             m1 = Linear(
 </span><span style="color:#75715e">//               weights = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415018128; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415020944; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773607551392; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773607552624; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               bias = None
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             m2 = BatchNorm(
 </span><span style="color:#75715e">//               weight = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415055728; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415040672; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773608085648; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773608067552; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               bias = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415016112; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415042784; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773619808480; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773608070944; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               runningMean = ConstantWithoutGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415041696; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773608069856; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               runningVar = ConstantWithoutGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415043168; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773619808944; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               training = true,
 </span><span style="color:#75715e">//               momentum = 0.1,
 </span><span style="color:#75715e">//               eps = 1.0E-5
 </span><span style="color:#75715e">//             ),
-</span><span style="color:#75715e">//             m3 = Fun(fun = lamp.nn.MLP$$$Lambda$1731/52256270@2e7d71d9),
+</span><span style="color:#75715e">//             m3 = Fun(fun = lamp.nn.MLP$$$Lambda$1731/530940925@2e7d71d9),
 </span><span style="color:#75715e">//             m4 = Dropout(prob = 0.2, training = true)
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           Seq4(
 </span><span style="color:#75715e">//             m1 = Linear(
 </span><span style="color:#75715e">//               weights = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415040704; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415054128; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773608085616; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773608080288; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               bias = None
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             m2 = BatchNorm(
 </span><span style="color:#75715e">//               weight = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415050048; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415054160; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773608076320; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773608081056; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               bias = ConstantWithGrad(
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">...</span></code></pre></div>
@@ -385,7 +385,7 @@ This factory function will then be called in each epoch.</p>
     <span style="color:#f92672">)</span>
 <span style="color:#75715e">// trainedModelIO: IO[(Int, SupervisedModel[Variable, Seq2[Variable, Variable, Variable, Seq2[Variable, Variable, Variable, Sequential[Variable, Seq4[Variable, Variable, Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable], nn.Dropout with GenericModule[Variable, Variable]]] with GenericModule[Variable, Variable], EitherModule[Variable, Variable, Seq4[Variable, Variable, Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable], nn.Dropout with GenericModule[Variable, Variable]], Seq2[Variable, Variable, Variable, Linear with GenericModule[Variable, Variable], nn.BatchNorm with GenericModule[Variable, Variable]]] with GenericModule[Variable, Variable]] with GenericModule[Variable, Variable], Fun with GenericModule[Variable, Variable]]], List[(Int, Double, Option[Double])])] = FlatMap(
 </span><span style="color:#75715e">//   ioe = Pure(value = ()),
-</span><span style="color:#75715e">//   f = lamp.data.IOLoops$$$Lambda$1769/1621020995@486674f6
+</span><span style="color:#75715e">//   f = lamp.data.IOLoops$$$Lambda$1769/1928489314@486674f6
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">)</span></code></pre></div>
 <p>Lamp provides two optimizers: SgdW and AdamW. They can take a learning rate schedule as well.
 For other capabilities of this training loop see the scaladoc of <code>IOLoops.epochs</code>.</p>
@@ -402,45 +402,45 @@ For other capabilities of this training loop see the scaladoc of <code>IOLoops.e
 </span><span style="color:#75715e">//           Seq4(
 </span><span style="color:#75715e">//             m1 = Linear(
 </span><span style="color:#75715e">//               weights = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415018128; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415020944; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773607551392; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773607552624; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               bias = None
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             m2 = BatchNorm(
 </span><span style="color:#75715e">//               weight = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415055728; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415040672; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773608085648; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773608067552; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               bias = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415016112; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415042784; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773619808480; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773608070944; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               runningMean = ConstantWithoutGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415041696; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773608069856; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               runningVar = ConstantWithoutGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415043168; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773619808944; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               training = true,
 </span><span style="color:#75715e">//               momentum = 0.1,
 </span><span style="color:#75715e">//               eps = 1.0E-5
 </span><span style="color:#75715e">//             ),
-</span><span style="color:#75715e">//             m3 = Fun(fun = lamp.nn.MLP$$$Lambda$1731/52256270@2e7d71d9),
+</span><span style="color:#75715e">//             m3 = Fun(fun = lamp.nn.MLP$$$Lambda$1731/530940925@2e7d71d9),
 </span><span style="color:#75715e">//             m4 = Dropout(prob = 0.2, training = true)
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           Seq4(
 </span><span style="color:#75715e">//             m1 = Linear(
 </span><span style="color:#75715e">//               weights = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415040704; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415054128; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773608085616; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773608080288; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               bias = None
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             m2 = BatchNorm(
 </span><span style="color:#75715e">//               weight = ConstantWithGrad(
-</span><span style="color:#75715e">//                 value = STen(value = Tensor at 140075415050048; CPUFloatType),
-</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 140075415054160; CPUFloatType)
+</span><span style="color:#75715e">//                 value = STen(value = Tensor at 139773608076320; CPUFloatType),
+</span><span style="color:#75715e">//                 pd = STen(value = Tensor at 139773608081056; CPUFloatType)
 </span><span style="color:#75715e">//               ),
 </span><span style="color:#75715e">//               bias = ConstantWithGrad(
 </span><span style="color:#75715e">// ...
@@ -453,52 +453,52 @@ For other capabilities of this training loop see the scaladoc of <code>IOLoops.e
 </span><span style="color:#75715e">//         Seq4(
 </span><span style="color:#75715e">//           m1 = Linear(
 </span><span style="color:#75715e">//             weights = ConstantWithGrad(
-</span><span style="color:#75715e">//               value = STen(value = Tensor at 140075415018128; CPUFloatType),
-</span><span style="color:#75715e">//               pd = STen(value = Tensor at 140075415020944; CPUFloatType)
+</span><span style="color:#75715e">//               value = STen(value = Tensor at 139773607551392; CPUFloatType),
+</span><span style="color:#75715e">//               pd = STen(value = Tensor at 139773607552624; CPUFloatType)
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             bias = None
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           m2 = BatchNorm(
 </span><span style="color:#75715e">//             weight = ConstantWithGrad(
-</span><span style="color:#75715e">//               value = STen(value = Tensor at 140075415055728; CPUFloatType),
-</span><span style="color:#75715e">//               pd = STen(value = Tensor at 140075415040672; CPUFloatType)
+</span><span style="color:#75715e">//               value = STen(value = Tensor at 139773608085648; CPUFloatType),
+</span><span style="color:#75715e">//               pd = STen(value = Tensor at 139773608067552; CPUFloatType)
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             bias = ConstantWithGrad(
-</span><span style="color:#75715e">//               value = STen(value = Tensor at 140075415016112; CPUFloatType),
-</span><span style="color:#75715e">//               pd = STen(value = Tensor at 140075415042784; CPUFloatType)
+</span><span style="color:#75715e">//               value = STen(value = Tensor at 139773619808480; CPUFloatType),
+</span><span style="color:#75715e">//               pd = STen(value = Tensor at 139773608070944; CPUFloatType)
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             runningMean = ConstantWithoutGrad(
-</span><span style="color:#75715e">//               value = STen(value = Tensor at 140075415041696; CPUFloatType)
+</span><span style="color:#75715e">//               value = STen(value = Tensor at 139773608069856; CPUFloatType)
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             runningVar = ConstantWithoutGrad(
-</span><span style="color:#75715e">//               value = STen(value = Tensor at 140075415043168; CPUFloatType)
+</span><span style="color:#75715e">//               value = STen(value = Tensor at 139773619808944; CPUFloatType)
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             training = true,
 </span><span style="color:#75715e">//             momentum = 0.1,
 </span><span style="color:#75715e">//             eps = 1.0E-5
 </span><span style="color:#75715e">//           ),
-</span><span style="color:#75715e">//           m3 = Fun(fun = lamp.nn.MLP$$$Lambda$1731/52256270@2e7d71d9),
+</span><span style="color:#75715e">//           m3 = Fun(fun = lamp.nn.MLP$$$Lambda$1731/530940925@2e7d71d9),
 </span><span style="color:#75715e">//           m4 = Dropout(prob = 0.2, training = true)
 </span><span style="color:#75715e">//         ),
 </span><span style="color:#75715e">//         Seq4(
 </span><span style="color:#75715e">//           m1 = Linear(
 </span><span style="color:#75715e">//             weights = ConstantWithGrad(
-</span><span style="color:#75715e">//               value = STen(value = Tensor at 140075415040704; CPUFloatType),
-</span><span style="color:#75715e">//               pd = STen(value = Tensor at 140075415054128; CPUFloatType)
+</span><span style="color:#75715e">//               value = STen(value = Tensor at 139773608085616; CPUFloatType),
+</span><span style="color:#75715e">//               pd = STen(value = Tensor at 139773608080288; CPUFloatType)
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             bias = None
 </span><span style="color:#75715e">//           ),
 </span><span style="color:#75715e">//           m2 = BatchNorm(
 </span><span style="color:#75715e">//             weight = ConstantWithGrad(
-</span><span style="color:#75715e">//               value = STen(value = Tensor at 140075415050048; CPUFloatType),
-</span><span style="color:#75715e">//               pd = STen(value = Tensor at 140075415054160; CPUFloatType)
+</span><span style="color:#75715e">//               value = STen(value = Tensor at 139773608076320; CPUFloatType),
+</span><span style="color:#75715e">//               pd = STen(value = Tensor at 139773608081056; CPUFloatType)
 </span><span style="color:#75715e">//             ),
 </span><span style="color:#75715e">//             bias = ConstantWithGrad(
-</span><span style="color:#75715e">//               value = STen(value = Tensor at 140075415090928; CPUFloatType),
+</span><span style="color:#75715e">//               value = STen(value = Tensor at 139773608080320; CPUFloatType),
 </span><span style="color:#75715e"></span><span style="color:#f92672">//</span> <span style="color:#f92672">...</span></code></pre></div>
 <p>The trained model we can use for prediction:</p>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">val</span> bogusData <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">List</span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span><span style="color:#f92672">,</span><span style="color:#ae81ff">784</span><span style="color:#f92672">),</span>tensorOptions<span style="color:#f92672">)</span>
-<span style="color:#75715e">// bogusData: STen = STen(value = Tensor at 140075405759936; CPUFloatType)
+<span style="color:#75715e">// bogusData: STen = STen(value = Tensor at 139773605068064; CPUFloatType)
 </span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> classProbabilities <span style="color:#66d9ef">=</span> module<span style="color:#f92672">.</span>forward<span style="color:#f92672">(</span>const<span style="color:#f92672">(</span>bogusData<span style="color:#f92672">)).</span>toMat<span style="color:#f92672">.</span>map<span style="color:#f92672">(</span>math<span style="color:#f92672">.</span>exp<span style="color:#f92672">)</span>
 <span style="color:#75715e">// classProbabilities: Mat[Double] = [1 x 10]
 </span><span style="color:#75715e">// 0.1000 0.1000 0.1000 0.1000  ... 0.1000 0.1000 0.1000 0.1000 
