@@ -180,7 +180,7 @@ class IOLoopSuite extends AnyFunSuite {
         )
       val loss = acc.toMat.raw(0) / n
       println(loss)
-      assert(loss < 1)
+      assert(loss < 3)
     }
   }
   test1("mnist tabular mini batch gradient accum") { cuda =>
@@ -252,7 +252,7 @@ class IOLoopSuite extends AnyFunSuite {
         )
       val loss = acc.toMat.raw(0) / n
       println(loss)
-      assert(loss < 1)
+      assert(loss < 3)
     }
   }
 }
