@@ -179,7 +179,6 @@ class IOLoopSuite extends AnyFunSuite {
           true
         )
       val loss = acc.toMat.raw(0) / n
-      println(loss)
       assert(loss < 50)
     }
   }
@@ -251,7 +250,6 @@ class IOLoopSuite extends AnyFunSuite {
           true
         )
       val loss = acc.toMat.raw(0) / n
-      println(loss)
       assert(loss < 50)
     }
   }
