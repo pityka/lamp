@@ -37,22 +37,29 @@ object Writer {
       tensors: Seq[STen],
       location: String,
       dataChannel: WritableByteChannel,
+      initialByteOffset: Long,
       bufferSize: Int
   ) = {
     writeTensorDataIntoChannel(tensors, dataChannel, bufferSize).map {
       offsets =>
         val tensorDescriptors =
-          offsets.zip(tensors).map { case ((offset, length), tensor) =>
+          offsets.zip(tensors).map { case ((offset, length, _), tensor) =>
+            assert(length > 0, s"length is $length")
+            assert(offset >= 0, s"offset is $offset")
             schemas.TensorDescriptor(
               dims = tensor.shape,
               dataType = tensor.scalarTypeByte,
-              location = location,
               byteOffset = offset,
               byteLength = length
             )
           }
 
-        schemas.TensorList(tensorDescriptors)
+        schemas.TensorList(
+          tensorDescriptors,
+          location = location,
+          byteOffset = initialByteOffset,
+          byteLength = offsets.map(_._3).sum
+        )
 
     }
   }
@@ -89,7 +96,7 @@ object Writer {
     case other => Left(s"Type $other not supported.")
   }
 
-  /** Returns pair of (data length, total bytes written). Total bytes is data + pad. Pad pads to multiple of 4096. */
+  /** Returns pair of (data length, total bytes written). Total bytes is data + pad. Pad pads to multiple of 8. */
   private def writeTensorIntoChannel(
       tensor: STen,
       channel: WritableByteChannel,
@@ -125,7 +132,7 @@ object Writer {
         writeFully(bb, channel)
       }
       val dataLength = elems * width.toLong
-      val padLength = 4096 - dataLength % 4096
+      val padLength = (8 - dataLength % 8) % 8
       if (padLength > 0) {
         val bb = ByteBuffer
           .allocate(padLength.toInt)
@@ -160,15 +167,18 @@ object Writer {
       tensors: Seq[STen],
       channel: WritableByteChannel,
       bufferSize: Int
-  ): Either[String, Seq[(Long, Long)]] =
+  ): Either[String, Seq[(Long, Long, Long)]] =
     sequence(tensors.map { case t =>
       writeTensorIntoChannel(t, channel, bufferSize)
     })
       .map { lengths =>
-        lengths
+        (lengths
           .map(_._2)
           .scanLeft(0L)(_ + _)
-          .dropRight(1) zip lengths.map(_._1)
+          .dropRight(1) zip lengths.map(_._1) zip lengths.map(_._2)).map {
+          case ((offset, dataLength), paddedLength) =>
+            (offset, dataLength, paddedLength)
+        }
       }
 
   def writeTensorsIntoFile(
@@ -193,7 +203,8 @@ object Writer {
               tensors = tensors,
               dataChannel = dataChannel,
               bufferSize = bufferSize,
-              location = dataPath.getName
+              location = dataPath.getName,
+              initialByteOffset = 0L
             )
             .map { descriptor =>
               com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(
