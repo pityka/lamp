@@ -270,7 +270,7 @@ object Text {
       timeSteps: Int,
       pad: Long,
       rng: org.saddle.spire.random.Generator
-  ): BatchStream[(Variable, Variable)] = {
+  ): BatchStream[(Variable, Variable), Int] = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) =
       BatchStream.scopeInResource.map { implicit scope =>
         val pairs = idx.map { i =>

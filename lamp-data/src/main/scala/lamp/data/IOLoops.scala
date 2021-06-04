@@ -16,15 +16,16 @@ import cats.effect.std.Queue
   */
 object IOLoops {
 
-  def forwardBatchStream[I, M <: GenericModule[I, Variable]](
-      batchStream: BatchStream[I],
+  def forwardBatchStream[I, M <: GenericModule[I, Variable], S](
+      batchStream: BatchStream[I, S],
       model: M with GenericModule[I, Variable]
   ): IO[Unit] = {
 
     val device = model.state.head._1.value.device
 
     def loop(
-        batch: Resource[IO, StreamControl[(I, STen)]]
+        batch: Resource[IO, StreamControl[(I, STen)]],
+        s0: S
     ): IO[Unit] = {
       batch.use {
         case EndStream  => IO.pure(false)
@@ -32,15 +33,20 @@ object IOLoops {
         case NonEmptyBatch((x, _)) =>
           IO { Scope.root { implicit scope => model.forward(x) }; true }
       } flatMap {
-        case true  => loop(batchStream.nextBatch(device))
+        case true =>
+          batchStream.nextBatch(device, s0).flatMap { case (s1, next) =>
+            loop(next, s1)
+          }
         case false => IO.unit
       }
     }
 
-    loop(batchStream.nextBatch(device))
+    batchStream.nextBatch(device, batchStream.init).flatMap { case (s1, next) =>
+      loop(next, s1)
+    }
   }
-  def runBatchStream[I, M <: GenericModule[I, Variable]](
-      batchStream: BatchStream[I],
+  def runBatchStream[I, M <: GenericModule[I, Variable], S](
+      batchStream: BatchStream[I, S],
       model: M with GenericModule[I, Variable]
   )(implicit scope: Scope) = {
 
@@ -48,7 +54,8 @@ object IOLoops {
 
     def loop(
         batch: Resource[IO, StreamControl[(I, STen)]],
-        acc: List[STen]
+        acc: List[STen],
+        s0: S
     ): IO[List[STen]] = {
       batch.use {
         case EndStream  => IO.pure(Left(acc.reverse))
@@ -61,22 +68,32 @@ object IOLoops {
           }
 
       } flatMap {
-        case Left(acc)  => IO.pure(acc)
-        case Right(acc) => loop(batchStream.nextBatch(device), acc)
+        case Left(acc) => IO.pure(acc)
+        case Right(acc) =>
+          batchStream.nextBatch(device, s0).flatMap { case (s1, next) =>
+            loop(next, acc, s1)
+          }
       }
 
     }
 
-    loop(batchStream.nextBatch(device), Nil)
+    batchStream.nextBatch(device, batchStream.init).flatMap { case (s1, next) =>
+      loop(next, Nil, s1)
+    }
   }
 
-  def withSWA[I, M <: GenericModule[I, Variable]: Load, LRState, LRStateSWA](
+  def withSWA[I, M <: GenericModule[
+    I,
+    Variable
+  ]: Load, LRState, LRStateSWA, BatchStreamState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
-      trainBatchesOverEpoch: () => BatchStream[I],
+      trainBatchesOverEpoch: () => BatchStream[I, BatchStreamState],
       warmupEpochs: Int,
       swaEpochs: Int,
-      validationBatchesOverEpoch: Option[() => BatchStream[I]] = None,
+      validationBatchesOverEpoch: Option[
+        () => BatchStream[I, BatchStreamState]
+      ] = None,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
       checkpointState: Option[LoopState => IO[Unit]] = None,
@@ -155,11 +172,16 @@ object IOLoops {
     }
   }
 
-  def epochs[I, M <: GenericModule[I, Variable]: Load, LRState](
+  def epochs[I, M <: GenericModule[
+    I,
+    Variable
+  ]: Load, LRState, BatchStreamState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
-      trainBatchesOverEpoch: () => BatchStream[I],
-      validationBatchesOverEpoch: Option[() => BatchStream[I]],
+      trainBatchesOverEpoch: () => BatchStream[I, BatchStreamState],
+      validationBatchesOverEpoch: Option[
+        () => BatchStream[I, BatchStreamState]
+      ],
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
@@ -373,11 +395,11 @@ object IOLoops {
 
   }
 
-  def oneEpoch[I, M <: GenericModule[I, Variable]](
+  def oneEpoch[I, M <: GenericModule[I, Variable], S](
       epochCount: Long,
       trainingCallback: TrainingCallback,
       model: ModelWithOptimizer[I, M],
-      trainBatches: BatchStream[I],
+      trainBatches: BatchStream[I, S],
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
       prefetch: Boolean,
@@ -428,57 +450,72 @@ object IOLoops {
     def simpleLoop(
         lossAcc: STen,
         numInstancesAcc: Long,
-        batchCount: Long
+        batchCount: Long,
+        state0: S
     ): IO[Long] = {
       trainBatches
-        .nextBatch(device)
-        .use { batch => IO { processBatch(batch, lossAcc, batchCount) } }
+        .nextBatch(device, state0)
+        .flatMap { case (state1, resource) =>
+          resource
+            .use { batch =>
+              IO { (state1, processBatch(batch, lossAcc, batchCount)) }
+            }
+
+        }
         .flatMap {
-          case EndStream  => IO.pure(numInstancesAcc)
-          case EmptyBatch => simpleLoop(lossAcc, numInstancesAcc, batchCount)
-          case NonEmptyBatch(numInstances) =>
+          case (_, EndStream) => IO.pure(numInstancesAcc)
+          case (s1, EmptyBatch) =>
+            simpleLoop(lossAcc, numInstancesAcc, batchCount, s1)
+          case (s1, NonEmptyBatch(numInstances)) =>
             simpleLoop(
               lossAcc,
               numInstances + numInstancesAcc,
-              batchCount + 1L
+              batchCount + 1L,
+              s1
             )
         }
+
     }
 
     def prefetch1[A, B](
-        fetch: () => Resource[IO, StreamControl[A]],
+        fetch: S => IO[(S, Resource[IO, StreamControl[A]])],
         transform: (Long, StreamControl[A]) => IO[StreamControl[B]],
         reduce: (B, B) => B,
-        zero: B
+        zero: B,
+        zeroS: S
     ): IO[B] = {
 
       def loop(
           counter: Long,
           acc: B,
-          queue: Queue[IO, (StreamControl[A], IO[Unit])]
+          queue: Queue[IO, (StreamControl[A], IO[Unit])],
+          s0: S
       ): IO[B] = {
         for {
           fetched <- queue.take
           a = fetched._1
           release = fetched._2
-          _ <- IO { fetch() }
-            .flatMap(resource => resource.allocated.flatMap(queue.offer))
-            .start
+          pair <- fetch(s0)
+          s1 = pair._1
+          resource = pair._2
+          _ <- resource.allocated.flatMap(queue.offer).start
           done <- transform(counter, a)
           _ <- release
           loopDone <- done match {
             case EndStream  => IO.pure(acc)
-            case EmptyBatch => loop(counter, acc, queue)
+            case EmptyBatch => loop(counter, acc, queue, s1)
             case NonEmptyBatch(b) =>
-              loop(counter + 1, reduce(b, acc), queue)
+              loop(counter + 1, reduce(b, acc), queue, s1)
           }
         } yield loopDone
       }
 
       for {
         q <- Queue.bounded[IO, (StreamControl[A], IO[Unit])](1)
-        _ <- IO { fetch() }.flatMap(_.allocated.flatMap(q.offer)).start
-        l <- loop(0, zero, q)
+        pair <- fetch(zeroS)
+        s1 = pair._1
+        _ <- pair._2.allocated.flatMap(q.offer).start
+        l <- loop(0, zero, q, s1)
       } yield l
 
     }
@@ -488,13 +525,14 @@ object IOLoops {
     ) = {
 
       prefetch1[(I, STen), Long](
-        fetch = () => trainBatches.nextBatch(device),
+        fetch = (s) => trainBatches.nextBatch(device, s),
         transform = (batchCounter, batch) =>
           IO {
             processBatch(batch, lossAcc, batchCounter)
           },
         reduce = (b, acc) => (acc + b),
-        zero = 0L
+        zero = 0L,
+        zeroS = trainBatches.init
       )
     }
 
@@ -504,7 +542,7 @@ object IOLoops {
       val loopDone =
         if (prefetch)
           prefetchLoop(lossAcc)
-        else simpleLoop(lossAcc, 0L, 0L)
+        else simpleLoop(lossAcc, 0L, 0L, trainBatches.init)
 
       loopDone.map { numInstances =>
         val totalLoss = lossAcc.toMat.raw(0)
@@ -535,9 +573,9 @@ object IOLoops {
     } yield trainingLoss
 
   }
-  def validationOneEpoch[I, M <: GenericModule[I, Variable]](
+  def validationOneEpoch[I, M <: GenericModule[I, Variable], S](
       model: SupervisedModel[I, M],
-      validationBatches: BatchStream[I],
+      validationBatches: BatchStream[I, S],
       validationCallback: ValidationCallback,
       logger: Option[Logger],
       epochCount: Long
@@ -548,31 +586,39 @@ object IOLoops {
     def loop(
         batchCount: Int,
         totalLoss: STen,
-        totalExamples: Long
+        totalExamples: Long,
+        s0: S
     ): IO[(STen, Long)] = {
       validationBatches
-        .nextBatch(device)
-        .use { elem =>
-          IO {
-            elem.map { case (validationSample, validationTarget) =>
-              val numExamples =
-                modelAsEval.addTotalLossAndReturnNumExamples(
-                  validationSample,
-                  validationTarget,
-                  totalLoss
-                )
-              numExamples
+        .nextBatch(device, s0)
+        .flatMap { case (s1, resource) =>
+          resource.use { elem =>
+            IO {
+              (
+                s1,
+                elem.map { case (validationSample, validationTarget) =>
+                  val numExamples =
+                    modelAsEval.addTotalLossAndReturnNumExamples(
+                      validationSample,
+                      validationTarget,
+                      totalLoss
+                    )
+                  numExamples
+                }
+              )
             }
           }
         }
         .flatMap {
-          case EndStream  => IO.pure((totalLoss, totalExamples))
-          case EmptyBatch => loop(batchCount, totalLoss, totalExamples)
-          case NonEmptyBatch(examples) =>
+          case (_, EndStream) => IO.pure((totalLoss, totalExamples))
+          case (s1, EmptyBatch) =>
+            loop(batchCount, totalLoss, totalExamples, s1)
+          case (s1, NonEmptyBatch(examples)) =>
             loop(
               batchCount + 1,
               totalLoss,
-              totalExamples + examples
+              totalExamples + examples,
+              s1
             )
         }
 
@@ -582,7 +628,8 @@ object IOLoops {
       loop(
         0,
         STen.scalarDouble(0d, model.module.state.head._1.options),
-        0L
+        0L,
+        validationBatches.init
       ).flatMap { case (totalLoss, totalExamples) =>
         val validationLoss = totalLoss.toMat.raw(0) / totalExamples
         for {

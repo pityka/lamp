@@ -8,8 +8,7 @@ import lamp.autograd.Variable
 import lamp.Scope
 import lamp.STen
 import lamp.Movable
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicBoolean
+import cats.effect.std.CountDownLatch
 
 sealed trait StreamControl[+I] {
   def map[B](f: I => B): StreamControl[B]
@@ -41,48 +40,66 @@ case class NonEmptyBatch[I](batch: I) extends StreamControl[I] {
   def unsafeGet = batch
 }
 
-trait BatchStream[+I] { self =>
+trait BatchStream[+I, S] { self =>
 
-  /** May be called from multiple threads. */
-  def nextBatch(device: Device): Resource[IO, StreamControl[(I, STen)]]
+  def init: S
+
+  /** May be called from different threads, but always in serial
+    * State should be carried over in the state parameter and return type
+    */
+  def nextBatch(
+      device: Device,
+      state: S
+  ): IO[(S, Resource[IO, StreamControl[(I, STen)]])]
 
   def map[I2](f: (I, STen) => Resource[IO, StreamControl[(I2, STen)]]) =
-    new BatchStream[I2] {
-      def nextBatch(device: Device): Resource[IO, StreamControl[(I2, STen)]] =
+    new BatchStream[I2, S] {
+      def init = self.init
+      def nextBatch(
+          device: Device,
+          state: S
+      ): IO[(S, Resource[IO, StreamControl[(I2, STen)]])] =
         self
-          .nextBatch(device)
-          .flatMap(maybe =>
-            maybe match {
-              case EndStream =>
-                Resource.pure[IO, StreamControl[(I2, STen)]](EndStream)
-              case EmptyBatch =>
-                Resource.pure[IO, StreamControl[(I2, STen)]](EmptyBatch)
-              case NonEmptyBatch(pair) =>
-                f.tupled(pair)
-            }
-          )
+          .nextBatch(device, state)
+          .map { case (state1, resource) =>
+            (
+              state1,
+              resource.flatMap(maybe =>
+                maybe match {
+                  case EndStream =>
+                    Resource.pure[IO, StreamControl[(I2, STen)]](EndStream)
+                  case EmptyBatch =>
+                    Resource.pure[IO, StreamControl[(I2, STen)]](EmptyBatch)
+                  case NonEmptyBatch(pair) =>
+                    f.tupled(pair)
+                }
+              )
+            )
+          }
     }
 
-  def foldLeft[B](zero: B, device: Device)(
+  def foldLeft[B](zero: B, device: Device, stateZero: S)(
       f: (B, (I, STen)) => IO[B]
   ): IO[B] = {
-    def loop(b: B): IO[B] = {
-      nextBatch(device).allocated.flatMap {
-        case (EndStream, release)  => release *> IO.pure(b)
-        case (EmptyBatch, release) => release *> loop(b)
-        case (NonEmptyBatch(batch), release) =>
-          f(b, batch).attempt.flatMap { v =>
-            release.flatMap { _ =>
-              v match {
-                case Left(e)  => IO.raiseError(e)
-                case Right(b) => loop(b)
+    def loop(b: B, init: S): IO[B] = {
+      nextBatch(device, init).flatMap { case (state1, resource) =>
+        resource.allocated.flatMap {
+          case (EndStream, release)  => release *> IO.pure(b)
+          case (EmptyBatch, release) => release *> loop(b, state1)
+          case (NonEmptyBatch(batch), release) =>
+            f(b, batch).attempt.flatMap { v =>
+              release.flatMap { _ =>
+                v match {
+                  case Left(e)  => IO.raiseError(e)
+                  case Right(b) => loop(b, state1)
+                }
               }
             }
-          }
+        }
       }
     }
 
-    loop(zero)
+    loop(zero, stateZero)
 
   }
 }
@@ -90,13 +107,16 @@ trait BatchStream[+I] { self =>
 object BatchStream {
 
   def single[A](resource: Resource[IO, StreamControl[(A, STen)]]) =
-    new BatchStream[A] {
-      private val pulled = new AtomicBoolean(false)
-      def nextBatch(device: Device): Resource[IO, StreamControl[(A, STen)]] = {
-        val old = pulled.getAndSet(true)
-        if (!old)
-          resource
-        else Resource.pure[IO, StreamControl[(A, STen)]](EndStream)
+    new BatchStream[A, Boolean] {
+      def init = false
+
+      def nextBatch(
+          device: Device,
+          pulled: Boolean
+      ) = IO {
+        if (!pulled)
+          (true, resource)
+        else (true, Resource.pure[IO, StreamControl[(A, STen)]](EndStream))
       }
 
     }
@@ -109,65 +129,14 @@ object BatchStream {
           Device
       ) => Resource[IO, StreamControl[(A, STen)]]
   ) =
-    new BatchStream[A] {
-      private val i = new AtomicInteger(0)
+    new BatchStream[A, Int] {
+      def init = 0
       private val N = indices.length
-      def nextBatch(device: Device): Resource[IO, StreamControl[(A, STen)]] = {
-        val old = i.getAndIncrement()
-        if (old < N)
-          makeNonEmptyBatch(indices(old), device)
-        else Resource.pure[IO, StreamControl[(A, STen)]](EndStream)
-      }
-
-    }
-  def fromIndicesAndBuckets[A, B](
-      indices: Array[(Array[Int], Int)]
-  )(
-      loadBucket: Int => Resource[IO, B],
-      makeNonEmptyBatch: (
-          B,
-          Array[Int],
-          Device
-      ) => Resource[IO, StreamControl[(A, STen)]]
-  ) =
-    new BatchStream[A] {
-      private val i = new AtomicInteger(0)
-      private val N = indices.length
-      private var loadedBucketIndex = -1
-      private var loadedBucket: Option[B] = None
-      private var releaseBucket: Option[IO[Unit]] = None
-      def nextBatch(device: Device): Resource[IO, StreamControl[(A, STen)]] = {
-        val prev = i.getAndIncrement()
-        if (prev < N) {
-          val (indicesInBucket, bucketIndex) = indices(prev)
-          val b =
-            if (bucketIndex == loadedBucketIndex && loadedBucket.isDefined) {
-              IO.pure((loadedBucket.get, IO.unit))
-            } else
-              for {
-                _ <- releaseBucket.getOrElse(IO.unit)
-                acq <- loadBucket(bucketIndex).allocated
-                b = acq._1
-                release = acq._2
-                _ <- IO {
-                  synchronized {
-                    releaseBucket = Some(release)
-                    loadedBucket = Some(b)
-                    loadedBucketIndex = bucketIndex
-                  }
-                }
-              } yield (b, IO.unit)
-          Resource(b).flatMap { b =>
-            makeNonEmptyBatch(b, indicesInBucket, device)
-          }
-        } else {
-          val cleanup: Resource[IO, Unit] =
-            if (releaseBucket.isEmpty) Resource.pure(())
-            else Resource(IO.pure(((), releaseBucket.get)))
-          cleanup.flatMap(_ =>
-            Resource.pure[IO, StreamControl[(A, STen)]](EndStream)
-          )
-        }
+      def nextBatch(device: Device, counter: Int) = IO {
+        if (counter < N)
+          (counter + 1, makeNonEmptyBatch(indices(counter), device))
+        else
+          (counter + 1, Resource.pure[IO, StreamControl[(A, STen)]](EndStream))
       }
 
     }
@@ -190,11 +159,12 @@ object BatchStream {
           val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
           val xcl = features.index(idxT)
           val tcl = target.index(idxT)
-          val (d1, d2) = device.withOtherStreamThenSync(synchronizeBefore=false) {
-            val d1 = device.to(xcl)
-            val d2 = device.to(tcl)
-            (d1, d2)
-          }
+          val (d1, d2) =
+            device.withOtherStreamThenSync(synchronizeBefore = false) {
+              val d1 = device.to(xcl)
+              val d2 = device.to(tcl)
+              (d1, d2)
+            }
           (d1, d2)
         }
         NonEmptyBatch((const(d1), d2)): StreamControl[(Variable, STen)]
@@ -224,4 +194,219 @@ object BatchStream {
     }
     BatchStream.single(resource)
   }
+
+  object StagedLoader {
+
+    def updateBuckets[A, B](
+        buckets: Vector[BucketState[A, B]],
+        idx: Int,
+        open1: Option[Opened[A, B]],
+        open2: Option[Opened[A, B]]
+    ) = {
+      val s1 =
+        if (open1.isDefined) buckets.updated(idx, open1.get) else buckets
+      val s2 =
+        if (open2.isDefined) s1.updated(idx + 1, open2.get) else s1
+      s2
+    }
+
+    sealed trait BucketState[+A, +B]
+    case object Closed extends BucketState[Nothing, Nothing]
+    case class NotYetOpen[A, B](
+        indices: BucketIndices,
+        fn: Array[Int] => Resource[IO, B]
+    ) extends BucketState[A, B] {
+      def open(): IO[Opened[A, B]] =
+        for {
+          d <- Deferred[IO, OpenedBucketState[B]]
+          refCompleted <- Ref[IO].of(false)
+          latch <- CountDownLatch[IO](indices.bucketSpecificIndices.length)
+
+          _ <- fn(
+            indices.instancesWithOriginalIndices.toArray
+          ).allocated.flatMap { case (b, release) =>
+            (latch.await >> (release *> refCompleted.set(true))).start *>
+              d.complete(OpenedBucketState(indices, b))
+
+          }.start
+        } yield Opened(d, latch, refCompleted)
+    }
+
+    case class Opened[A, B](
+        deferred: Deferred[IO, OpenedBucketState[B]],
+        latch: CountDownLatch[IO],
+        isClosed: Ref[IO, Boolean]
+    ) extends BucketState[A, B] {
+      def nextBatch(
+          batchIdxWithinBucket: Int,
+          device: Device,
+          loadBatch: (
+              B,
+              Array[Int],
+              Device
+          ) => Resource[IO, StreamControl[(A, STen)]]
+      ): IO[Resource[IO, StreamControl[(A, STen)]]] = {
+        isClosed.get.flatMap { isClosed =>
+          if (isClosed) IO.raiseError(new RuntimeException("closed?"))
+          else
+            deferred.get.map { openBucketState =>
+              val indices = openBucketState.indices.bucketSpecificIndices(
+                batchIdxWithinBucket
+              )
+              val b = openBucketState.b
+
+              Resource
+                .make(IO.unit)(_ => latch.release)
+                .flatMap { _ =>
+                  loadBatch(b, indices.toArray, device)
+                }
+
+            }
+        }
+      }
+    }
+
+    case class OpenedBucketState[B](
+        indices: BucketIndices,
+        b: B
+    )
+
+    case class State[A, B](
+        bucketSize: Int,
+        buckets: Vector[BucketState[A, B]],
+        batchIdx: Int
+    ) {
+      def batchIdxToBucketIdx(bIdx: Int): (Int, Int) = {
+        val bucketIdx = bIdx / bucketSize
+        val idxInBucket = bIdx % bucketSize
+        (bucketIdx, idxInBucket)
+      }
+      def nextBatch(
+          device: Device,
+          loadBatch: (
+              B,
+              Array[Int],
+              Device
+          ) => Resource[IO, StreamControl[(A, STen)]]
+      ): IO[(State[A, B], Resource[IO, StreamControl[(A, STen)]])] = {
+        val (bucketIdx, batchIdxWithinBucket) = batchIdxToBucketIdx(batchIdx)
+        if (bucketIdx >= buckets.size) IO.pure((this, Resource.pure(EndStream)))
+        else {
+          val bucketState = buckets(bucketIdx)
+
+          val openNextBucket =
+            if (bucketIdx == buckets.size - 1) IO.pure(None)
+            else {
+              val nextBucketIdx = bucketIdx + 1
+              buckets(nextBucketIdx) match {
+                case Closed =>
+                  IO.raiseError(new RuntimeException("next bucket closed (?)"))
+                case Opened(_, _, _) => IO.pure(None)
+                case s @ NotYetOpen(_, _) =>
+                  s.open().map(Some(_))
+
+              }
+            }
+
+          openNextBucket.flatMap { nextBucketOpen =>
+            bucketState match {
+              case Closed =>
+                IO.raiseError(new RuntimeException("bucket closed"))
+              case s @ NotYetOpen(_, _) =>
+                s.open()
+                  .flatMap { opened =>
+                    val nextState = copy(
+                      batchIdx = batchIdx + 1,
+                      buckets = updateBuckets[A, B](
+                        buckets,
+                        bucketIdx,
+                        Some(opened),
+                        nextBucketOpen
+                      )
+                    )
+                    opened
+                      .nextBatch(batchIdxWithinBucket, device, loadBatch)
+                      .map((nextState, _))
+                  }
+              case s @ Opened(_, _, _) =>
+                val nextState = copy(
+                  batchIdx = batchIdx + 1,
+                  buckets =
+                    updateBuckets(buckets, bucketIdx, None, nextBucketOpen)
+                )
+                s.nextBatch(batchIdxWithinBucket, device, loadBatch)
+                  .map((nextState, _))
+
+            }
+          }
+        }
+
+      }
+    }
+
+    case class BucketIndices(
+        instancesWithOriginalIndices: Vec[Int],
+        bucketSpecificIndices: Vec[Vec[Int]]
+    )
+
+    def init[A, B](
+        bucketSize: Int,
+        bucketIndices: Vector[BucketIndices],
+        loadInstancesToStaging: Array[Int] => Resource[IO, B]
+    ) =
+      State[A, B](
+        bucketSize = bucketSize,
+        buckets = bucketIndices.toSeq.toVector
+          .map(NotYetOpen[A, B](_, loadInstancesToStaging)),
+        batchIdx = 0
+      )
+
+  }
+
+  def stagedFromIndices[A, B](
+      indices: Array[Array[Int]],
+      bucketSize: Int
+  )(
+      loadInstancesToStaging: Array[Int] => Resource[IO, B],
+      makeNonEmptyBatch: (
+          B,
+          Array[Int],
+          Device
+      ) => Resource[IO, StreamControl[(A, STen)]]
+  ) =
+    new BatchStream[A, StagedLoader.State[A, B]] {
+
+      val bucketIndices: Vec[StagedLoader.BucketIndices] =
+        indices.grouped(bucketSize).toSeq.toVec.map { originalIndices =>
+          val instancesWithOriginalIndices =
+            originalIndices.flatten.distinct.sorted.toVec
+
+          StagedLoader.BucketIndices(
+            instancesWithOriginalIndices = instancesWithOriginalIndices,
+            bucketSpecificIndices = originalIndices.map { minibatch =>
+              minibatch
+                .map(i => instancesWithOriginalIndices.findOne(_ == i))
+                .toVec
+            }.toVec
+          )
+
+        }
+
+      override def init =
+        StagedLoader.init[A, B](
+          bucketSize,
+          bucketIndices.toSeq.toVector,
+          loadInstancesToStaging
+        )
+
+      override def nextBatch(
+          device: Device,
+          state: StagedLoader.State[A, B]
+      ): IO[
+        (StagedLoader.State[A, B], Resource[IO, StreamControl[(A, STen)]])
+      ] = {
+        state.nextBatch(device, makeNonEmptyBatch)
+      }
+
+    }
 }

@@ -18,7 +18,7 @@ object GraphBatchStream {
       graphNodesAndEdges: Vec[(STen, STen)],
       targetPerGraph: STen,
       rng: Option[org.saddle.spire.random.Generator]
-  ): BatchStream[(Variable, Variable, Variable)] = {
+  ): BatchStream[(Variable, Variable, Variable), Int] = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       Scope.inResource.map { implicit scope =>
         val selectedGraphs = graphNodesAndEdges.take(idx).toSeq
@@ -135,7 +135,7 @@ object GraphBatchStream {
       nodes: STen,
       edges: STen,
       targetPerNode: STen
-  ): BatchStream[(Variable, Variable)] =
+  ): BatchStream[(Variable, Variable), Boolean] =
     BatchStream.single(Scope.inResource.map { _ =>
       val nodesV = const(nodes)
       val edgesV = const(edges)
