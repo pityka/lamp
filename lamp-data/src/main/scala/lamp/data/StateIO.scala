@@ -101,7 +101,8 @@ object StateIO {
         tensors = s.model,
         modelLocation,
         dataChannel = modelChannel,
-        bufferSize = bufferSize
+        bufferSize = bufferSize,
+        initialByteOffset = 0
       )
       .toOption
       .get
@@ -110,7 +111,8 @@ object StateIO {
         tensors = s.optimizer,
         optimizerLocation,
         dataChannel = optimizerChannel,
-        bufferSize = bufferSize
+        bufferSize = bufferSize,
+        initialByteOffset = 0
       )
       .toOption
       .get
@@ -125,7 +127,8 @@ object StateIO {
           tensors = ts.map(tensor => STen.owned(tensor)(Scope.free)),
           location,
           dataChannel = channel,
-          bufferSize = bufferSize
+          bufferSize = bufferSize,
+          initialByteOffset = 0
         )
         .toOption
         .get
@@ -162,7 +165,8 @@ object StateIO {
         tensors = s.model,
         modelLocation,
         dataChannel = modelChannel,
-        bufferSize = bufferSize
+        bufferSize = bufferSize,
+        initialByteOffset = 0
       )
       .toOption
       .get
@@ -171,7 +175,8 @@ object StateIO {
         tensors = s.optimizer,
         optimizerLocation,
         dataChannel = optimizerChannel,
-        bufferSize = bufferSize
+        bufferSize = bufferSize,
+        initialByteOffset = 0
       )
       .toOption
       .get
@@ -186,7 +191,8 @@ object StateIO {
           tensors = ts.map(tensor => STen.owned(tensor)(Scope.free)),
           location,
           dataChannel = channel,
-          bufferSize = bufferSize
+          bufferSize = bufferSize,
+          initialByteOffset = 0
         )
         .toOption
         .get
