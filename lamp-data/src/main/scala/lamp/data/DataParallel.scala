@@ -13,9 +13,9 @@ import lamp.Device
 
 object DataParallel {
 
-  def validationOneEpoch[I, M <: GenericModule[I, Variable]](
+  def validationOneEpoch[I, M <: GenericModule[I, Variable], S](
       models: Seq[SupervisedModel[I, M]],
-      validationBatches: BatchStream[I],
+      validationBatches: BatchStream[I, S],
       validationCallback: ValidationCallback,
       logger: Option[Logger],
       epochCount: Long
@@ -31,52 +31,66 @@ object DataParallel {
     def loop(
         batchCount: Int,
         totalLossPerModel: List[STen],
-        totalExamples: Long
+        totalExamples: Long,
+        s0: S
     ): IO[(Seq[STen], Long)] = {
       makeMultipleBatches(
         devices = devices,
-        makeOne = (device: Device) =>
+        makeOne = (device: Device, state: S) =>
           validationBatches
-            .nextBatch(device)
-      )()
-        .use { batches =>
-          IO {
-            batches.map { case batches =>
-              batches
-                .zip(modelsAsEval)
-                .zip(totalLossPerModel)
-                .parTraverseN(batches.size) {
+            .nextBatch(device, state)
+      )(s0)
+        .flatMap { case (s1, resource) =>
+          resource
+            .use { batches =>
+              IO {
+                (
+                  s1,
+                  batches.map { case batches =>
+                    batches
+                      .zip(modelsAsEval)
+                      .zip(totalLossPerModel)
+                      .parTraverseN(batches.size) {
 
-                  case (
-                        ((validationSample, validationTarget), modelAsEval),
-                        totalLoss
-                      ) =>
-                    IO {
-                      val numExamples =
-                        modelAsEval.addTotalLossAndReturnNumExamples(
-                          validationSample,
-                          validationTarget,
-                          totalLoss
-                        )
-                      numExamples
-                    }
-                }
-                .map(_.sum)
+                        case (
+                              (
+                                (validationSample, validationTarget),
+                                modelAsEval
+                              ),
+                              totalLoss
+                            ) =>
+                          IO {
+                            val numExamples =
+                              modelAsEval.addTotalLossAndReturnNumExamples(
+                                validationSample,
+                                validationTarget,
+                                totalLoss
+                              )
+                            numExamples
+                          }
+                      }
+                      .map(_.sum)
+                  }
+                )
+              }
             }
-          }.flatMap {
-            case EndStream         => IO.pure(EndStream)
-            case EmptyBatch        => IO.pure(EmptyBatch)
-            case NonEmptyBatch(io) => io.map(NonEmptyBatch(_))
-          }
+            .flatMap {
+              case (s1, EndStream)  => IO.pure((s1, EndStream))
+              case (s1, EmptyBatch) => IO.pure((s1, EmptyBatch))
+              case (s1, NonEmptyBatch(io)) =>
+                io.map(v => (s1, NonEmptyBatch(v)))
+            }
         }
         .flatMap {
-          case EndStream  => IO.pure((totalLossPerModel, totalExamples))
-          case EmptyBatch => loop(batchCount, totalLossPerModel, totalExamples)
-          case NonEmptyBatch(examples) =>
+          case (_, EndStream) => IO.pure((totalLossPerModel, totalExamples))
+          case (s1, EmptyBatch) =>
+            loop(batchCount, totalLossPerModel, totalExamples, s1)
+          case (s1, NonEmptyBatch(examples)) =>
             loop(
               batchCount + 1,
               totalLossPerModel,
-              totalExamples + examples
+              totalExamples + examples,
+              s1
             )
         }
 
@@ -86,7 +100,8 @@ object DataParallel {
       loop(
         0,
         allocatePerModelLossAcc,
-        0L
+        0L,
+        validationBatches.init
       ).flatMap { case (totalLossPerModel, totalExamples) =>
         val validationLoss =
           totalLossPerModel.map(_.toMat.raw(0)).sum / totalExamples
@@ -107,11 +122,11 @@ object DataParallel {
     }
   }
 
-  def oneEpoch[I, M <: GenericModule[I, Variable]](
+  def oneEpoch[I, M <: GenericModule[I, Variable], S](
       epochCount: Long,
       trainingCallback: TrainingCallback,
       mainModel: ModelWithOptimizer[I, M],
-      trainBatches: BatchStream[I],
+      trainBatches: BatchStream[I, S],
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
       models: Seq[SupervisedModel[I, M]],
@@ -127,7 +142,8 @@ object DataParallel {
       driveSynchronousLoop[StreamControl[List[(I, STen)]], Long](
         fetch = makeMultipleBatches(
           devices = perModelLossAcc.map(_.device),
-          makeOne = (device: Device) => trainBatches.nextBatch(device)
+          makeOne =
+            (device: Device, s0: S) => trainBatches.nextBatch(device, s0)
         ),
         transform = (
             batchCounter,
@@ -147,7 +163,8 @@ object DataParallel {
               )
           ),
         reduce = (b, acc) => (acc + b),
-        zero = 0L
+        zero = 0L,
+        zeroS = trainBatches.init
       )
 
     def sequence[A](a: StreamControl[IO[A]]): IO[StreamControl[A]] = a match {
@@ -184,43 +201,46 @@ object DataParallel {
     }
 
     def driveSynchronousLoop[A, B](
-        fetch: () => Resource[IO, A],
+        fetch: S => IO[(S, Resource[IO, A])],
         transform: (Long, A) => IO[StreamControl[B]],
         reduce: (B, B) => B,
-        zero: B
+        zero: B,
+        zeroS: S
     ): IO[B] = {
 
-      def startFetch(q: Queue[IO, (A, IO[Unit])]) =
+      def startFetch(q: Queue[IO, (A, IO[Unit])], s0: S) =
         for {
-          resource <- IO(fetch())
-          started <- resource.allocated.flatMap(q.offer).start
-        } yield started
+          resource <- fetch(s0)
+          started <- resource._2.allocated.flatMap(q.offer).start
+        } yield (resource._1, started)
 
       def loop(
           counter: Long,
           acc: B,
-          queue: Queue[IO, (A, IO[Unit])]
+          queue: Queue[IO, (A, IO[Unit])],
+          s0: S
       ): IO[B] = {
         for {
           fetched <- queue.take
           a = fetched._1
           release = fetched._2
-          _ <- startFetch(queue)
+          started <- startFetch(queue, s0)
+          s1 = started._1
           done <- transform(counter, a)
           _ <- release
           loopDone <- done match {
             case EndStream  => IO.pure(acc)
-            case EmptyBatch => loop(counter, acc, queue)
+            case EmptyBatch => loop(counter, acc, queue, s1)
             case NonEmptyBatch(b) =>
-              loop(counter + 1, reduce(b, acc), queue)
+              loop(counter + 1, reduce(b, acc), queue, s1)
           }
         } yield loopDone
       }
 
       for {
         q <- Queue.bounded[IO, (A, IO[Unit])](1)
-        _ <- startFetch(q)
-        l <- loop(0, zero, q)
+        started <- startFetch(q, zeroS)
+        l <- loop(0, zero, q, started._1)
       } yield l
 
     }
@@ -341,17 +361,31 @@ object DataParallel {
     } yield trainingLoss
   }
 
-  def makeMultipleBatches[A](
+  def makeMultipleBatches[A, S](
       devices: List[Device],
-      makeOne: (Device) => Resource[IO, StreamControl[A]]
-  ): () => Resource[IO, StreamControl[List[A]]] = {
-    def allocate(device: Device) =
-      for {
-        resource <- IO(makeOne(device))
-        started <- resource.allocated
-      } yield started
+      makeOne: (Device, S) => IO[(S, Resource[IO, StreamControl[A]])]
+  ): S => IO[
+    (S, Resource[IO, StreamControl[List[A]]])
+  ] = {
 
-    def startN = devices.parTraverseN(devices.size)(allocate)
+    def fold(
+        s0: S,
+        remaining: List[Device],
+        acc: List[Resource[IO, StreamControl[A]]]
+    ): IO[(S, List[Resource[IO, StreamControl[A]]])] = remaining match {
+      case Nil => IO.pure((s0, acc.reverse))
+      case d :: ds =>
+        makeOne(d, s0).flatMap { case (s1, resource) =>
+          fold(s1, ds, resource :: acc)
+        }
+    }
+
+    def startN(s0: S) =
+      fold(s0, devices, Nil)
+        .map { case (s1, resources) =>
+          val started = resources.parTraverseN(devices.size)(_.allocated)
+          (s1, started)
+        }
 
     def unifyReleases(
         l: List[(StreamControl[A], IO[Unit])]
@@ -360,7 +394,6 @@ object DataParallel {
     def unifyValues(
         l: List[(StreamControl[A], IO[Unit])]
     ) = {
-
       val elems = l.map(_._1)
       val end = elems.exists(_ == EndStream)
       val as = elems.flatMap(_ match {
@@ -374,10 +407,15 @@ object DataParallel {
 
     }
 
-    () =>
-      Resource
-        .make(acquire = startN)(release = unifyReleases)
-        .map(unifyValues)
+    s0 =>
+      startN(s0).map { case (s1, acquires) =>
+        (
+          s1,
+          Resource
+            .make(acquire = acquires)(release = unifyReleases)
+            .map(unifyValues)
+        )
+      }
   }
 
 }

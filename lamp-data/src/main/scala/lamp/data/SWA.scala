@@ -47,11 +47,16 @@ object SWA {
       }
   }
 
-  def epochs[I, M <: GenericModule[I, Variable]: Load, LRState](
+  def epochs[I, M <: GenericModule[
+    I,
+    Variable
+  ]: Load, LRState, BatchStreamState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
-      trainBatchesOverEpoch: () => BatchStream[I],
-      validationBatchesOverEpoch: Option[() => BatchStream[I]],
+      trainBatchesOverEpoch: () => BatchStream[I, BatchStreamState],
+      validationBatchesOverEpoch: Option[
+        () => BatchStream[I, BatchStreamState]
+      ],
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,

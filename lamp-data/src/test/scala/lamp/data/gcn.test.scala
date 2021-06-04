@@ -420,8 +420,8 @@ class GCNSuite extends AnyFunSuite {
       val targets = STen.fromVec(Vec(0d, 1d), device, precision)
       val (batch, _) = GraphBatchStream
         .smallGraphMode(2, graphs.toVec, targets, Some(rng))
-        .nextBatch(device)
-        .allocated
+        .nextBatch(device, 0)
+        .flatMap(_._2.allocated)
         .unsafeRunSync()
       val ((batchNodes, batchEdges, batchGraphIndices), batchTarget) =
         batch.unsafeGet

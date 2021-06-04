@@ -226,40 +226,43 @@ object Train extends App {
           .unsafeRunSync()
 
         testEpochs()
-          .nextBatch(device)
-          .use {
-            case NonEmptyBatch(batch) =>
-              IO {
-                val output = trained.module.forward(batch._1)
-                val file = new java.io.File("cifar10.lamp.example.onnx")
-                lamp.onnx.serializeToFile(
-                  file,
-                  output,
-                  domain = "lamp.example.cifar"
-                ) {
-                  case x if x == output =>
-                    VariableInfo(
-                      variable = output,
-                      name = "output",
-                      input = false,
-                      docString = "log probabilities"
+          .nextBatch(device, 0)
+          .flatMap(
+            _._2
+              .use {
+                case NonEmptyBatch(batch) =>
+                  IO {
+                    val output = trained.module.forward(batch._1)
+                    val file = new java.io.File("cifar10.lamp.example.onnx")
+                    lamp.onnx.serializeToFile(
+                      file,
+                      output,
+                      domain = "lamp.example.cifar"
+                    ) {
+                      case x if x == output =>
+                        VariableInfo(
+                          variable = output,
+                          name = "output",
+                          input = false,
+                          docString = "log probabilities"
+                        )
+                      case x if x == batch._1 =>
+                        VariableInfo(
+                          variable = batch._1,
+                          name = "input",
+                          input = true,
+                          docString = "Nx3xHxW"
+                        )
+                    }
+                    println(
+                      "Model exported to ONNX into file" + file.getAbsolutePath
                     )
-                  case x if x == batch._1 =>
-                    VariableInfo(
-                      variable = batch._1,
-                      name = "input",
-                      input = true,
-                      docString = "Nx3xHxW"
-                    )
-                }
-                println(
-                  "Model exported to ONNX into file" + file.getAbsolutePath
-                )
-              }
-            case EndStream | EmptyBatch =>
-              IO { println("First batch is empty or stream ended") }
+                  }
+                case EndStream | EmptyBatch =>
+                  IO { println("First batch is empty or stream ended") }
 
-          }
+              }
+          )
           .unsafeRunSync()
 
         ()
