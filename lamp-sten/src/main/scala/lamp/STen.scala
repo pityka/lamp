@@ -124,55 +124,6 @@ object STen {
     aten.Tensor.from_file(path, offset, length, scalarTypeByte, pin).owned
   }
 
-  /** Create tensors directly from file.
-    * Memory maps a file into host memory.
-    * Data is not passed through the JVM.
-    * Returned tensor is always on the CPU device.
-    *
-    * @param path file path
-    * @param offset byte offset into the file. Must be page aligned (usually multiple of 4096)
-    * @param length byte length of the data (all tensors in total)
-    * @param pin if true the mapped segment will be page locked with mlock(2)
-    * @param tensors list of tensors with (scalarType, byte offset, byte length), byte offset must be aligned to 8
-    * @return tensor on CPU
-    */
-  def tensorsFromFile[S: Sc](
-      path: String,
-      offset: Long,
-      length: Long,
-      pin: Boolean,
-      tensors: List[(Byte, Long, Long)]
-  ): Vector[STen] = {
-    if (tensors.isEmpty) Vector.empty
-    else {
-      assert(
-        offset % 4096 == 0,
-        s"Offset must be multiple of 4096. Got $offset. Tried to create tensor from $path."
-      )
-      assert(
-        tensors.map(_._2).forall(_ % 8 == 0),
-        "Some tensor offsets within the list is not aligned to 8"
-      )
-      assert(
-        tensors.forall(v => v._2 + v._3 <= length),
-        "Some tensor offset +length is out of bounds"
-      )
-      assert(length > 0, s"Length is $length")
-      aten.Tensor
-        .tensors_from_file(
-          path,
-          offset,
-          length,
-          pin,
-          tensors.map(_._1).toArray,
-          tensors.map(_._2).toArray,
-          tensors.map(_._3).toArray
-        )
-        .toVector
-        .map(_.owned)
-    }
-  }
-
   /** Wraps a tensor without registering it to any scope.
     *
     * Memory may leak.

@@ -5,6 +5,7 @@ import com.github.plokhotnyuk.jsoniter_scala.core._
 case class TensorDescriptor(
     dims: Seq[Long],
     dataType: Byte,
+    location: String,
     byteOffset: Long,
     byteLength: Long
 )
@@ -14,17 +15,8 @@ object TensorDescriptor {
 }
 
 case class TensorList(
-    tensors: Seq[TensorDescriptor],
-    location: String,
-    byteOffset: Long,
-    byteLength: Long
-) {
-  assert(
-    tensors.forall(t => t.byteOffset + t.byteLength <= byteLength),
-    s"Some tensor offset+length is out of bound ${tensors
-      .map(v => (v.byteOffset, v.byteLength))} total: $byteLength"
-  )
-}
+    tensors: Seq[TensorDescriptor]
+)
 
 object TensorList {
   implicit val codec: JsonValueCodec[TensorList] = JsonCodecMaker.make
