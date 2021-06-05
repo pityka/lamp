@@ -21,6 +21,7 @@ class BatchStreamSuite extends AnyFunSuite {
     @volatile var batchLoads = 0
     @volatile var batchUses = 0
     @volatile var batchReleases = 0
+    @volatile var total = 0
 
     def simpleLoop[S](
         batchStream: BatchStream[Vec[Int], S],
@@ -34,7 +35,10 @@ class BatchStreamSuite extends AnyFunSuite {
               IO {
                 (
                   state1,
-                  batch.map(_ => batchUses += 1)
+                  batch.map { v =>
+                    batchUses += 1
+                    total += v._1.length
+                  }
                 )
               }
             }
@@ -54,8 +58,8 @@ class BatchStreamSuite extends AnyFunSuite {
     }
 
     val stream = BatchStream.stagedFromIndices[Vec[Int], Vec[Int]](
-      indices = array.range(0, 22).grouped(3).toArray,
-      bucketSize = 2
+      indices = array.range(0, 23).grouped(3).toArray,
+      bucketSize = 3
     )(
       loadInstancesToStaging = (ar: Array[Int]) =>
         Resource.make(IO {
@@ -88,11 +92,12 @@ class BatchStreamSuite extends AnyFunSuite {
 
     simpleLoop(stream, stream.init).unsafeRunSync()
 
-    assert(bucketLoad == 4)
-    assert(bucketReleases == -4)
+    assert(bucketLoad == 3)
+    assert(bucketReleases == -3)
     assert(batchReleases == -8)
     assert(batchLoads == 8)
     assert(batchUses == 8)
+    assert(total == 23)
 
   }
 }

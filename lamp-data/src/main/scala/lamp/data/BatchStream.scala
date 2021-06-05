@@ -250,16 +250,21 @@ object BatchStream {
           if (isClosed) IO.raiseError(new RuntimeException("closed?"))
           else
             deferred.get.map { openBucketState =>
-              val indices = openBucketState.indices.bucketSpecificIndices(
-                batchIdxWithinBucket
-              )
-              val b = openBucketState.b
+              if (
+                batchIdxWithinBucket >= openBucketState.indices.bucketSpecificIndices.length
+              ) Resource.pure(EndStream)
+              else {
+                val indices = openBucketState.indices.bucketSpecificIndices(
+                  batchIdxWithinBucket
+                )
+                val b = openBucketState.b
 
-              Resource
-                .make(IO.unit)(_ => latch.release)
-                .flatMap { _ =>
-                  loadBatch(b, indices.toArray, device)
-                }
+                Resource
+                  .make(IO.unit)(_ => latch.release)
+                  .flatMap { _ =>
+                    loadBatch(b, indices.toArray, device)
+                  }
+              }
 
             }
         }
