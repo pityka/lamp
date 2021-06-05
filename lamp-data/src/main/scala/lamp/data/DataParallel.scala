@@ -43,42 +43,37 @@ object DataParallel {
         .flatMap { case (s1, resource) =>
           resource
             .use { batches =>
-              IO {
-                (
-                  s1,
-                  batches.map { case batches =>
-                    batches
-                      .zip(modelsAsEval)
-                      .zip(totalLossPerModel)
-                      .parTraverseN(batches.size) {
+              batches
+                .map { case batches =>
+                  batches
+                    .zip(modelsAsEval)
+                    .zip(totalLossPerModel)
+                    .parTraverseN(batches.size) {
 
-                        case (
-                              (
-                                (validationSample, validationTarget),
-                                modelAsEval
-                              ),
+                      case (
+                            (
+                              (validationSample, validationTarget),
+                              modelAsEval
+                            ),
+                            totalLoss
+                          ) =>
+                        IO {
+                          val numExamples =
+                            modelAsEval.addTotalLossAndReturnNumExamples(
+                              validationSample,
+                              validationTarget,
                               totalLoss
-                            ) =>
-                          IO {
-                            val numExamples =
-                              modelAsEval.addTotalLossAndReturnNumExamples(
-                                validationSample,
-                                validationTarget,
-                                totalLoss
-                              )
-                            numExamples
-                          }
-                      }
-                      .map(_.sum)
-                  }
-                )
+                            )
+                          numExamples
+                        }
+                    }
+                    .map(_.sum)
+                } match {
+                case EndStream  => IO.pure((s1, EndStream))
+                case EmptyBatch => IO.pure((s1, EmptyBatch))
+                case NonEmptyBatch(io) =>
+                  io.map(v => (s1, NonEmptyBatch(v)))
               }
-            }
-            .flatMap {
-              case (s1, EndStream)  => IO.pure((s1, EndStream))
-              case (s1, EmptyBatch) => IO.pure((s1, EmptyBatch))
-              case (s1, NonEmptyBatch(io)) =>
-                io.map(v => (s1, NonEmptyBatch(v)))
             }
         }
         .flatMap {
