@@ -10,8 +10,11 @@ import _root_.lamp.STen
 // import _root_.lamp.STenOptions
 import _root_.lamp.CPU
 import cats.effect.unsafe.implicits.global
+import cats.effect.syntax.all._
 import _root_.lamp.STenOptions
 import _root_.lamp.Scope
+import lamp.data.BatchStream.StagedLoader.NotYetOpen
+import lamp.data.BatchStream.StagedLoader.Opened
 
 class BatchStreamSuite extends AnyFunSuite {
   test("staged loader") {
@@ -26,7 +29,7 @@ class BatchStreamSuite extends AnyFunSuite {
     def simpleLoop[S](
         batchStream: BatchStream[Vec[Int], S],
         state0: S
-    ): IO[Long] = {
+    ): IO[S] = {
       batchStream
         .nextBatch(CPU, state0)
         .flatMap { case (state1, resource) =>
@@ -45,7 +48,8 @@ class BatchStreamSuite extends AnyFunSuite {
 
         }
         .flatMap {
-          case (_, EndStream) => IO.pure(0)
+          case (s1, EndStream) =>
+            IO.pure(s1)
           case (s1, EmptyBatch) =>
             simpleLoop(batchStream, s1)
           case (s1, NonEmptyBatch(_)) =>
@@ -67,6 +71,7 @@ class BatchStreamSuite extends AnyFunSuite {
           ar.toVec
         })(_ =>
           IO {
+
             bucketReleases -= 1
           }
         ),
@@ -90,7 +95,17 @@ class BatchStreamSuite extends AnyFunSuite {
         )
     )
 
-    simpleLoop(stream, stream.init).unsafeRunSync()
+    val lastState = simpleLoop(stream, stream.init).unsafeRunSync()
+    import scala.concurrent.duration._
+
+    lastState.buckets
+      .parTraverseN(1) {
+        case NotYetOpen(_, _) =>
+          IO.raiseError(new RuntimeException("Expected open or close"))
+        case Opened(_, latch, _) => latch.await
+      }
+      .unsafeRunTimed(5 seconds)
+    Thread.sleep(500)
 
     assert(bucketLoad == 3)
     assert(bucketReleases == -3)
