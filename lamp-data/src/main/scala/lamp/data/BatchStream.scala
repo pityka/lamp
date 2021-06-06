@@ -211,7 +211,7 @@ object BatchStream {
     }
 
     sealed trait BucketState[+A, +B]
-    case object Closed extends BucketState[Nothing, Nothing]
+    // case object Closed extends BucketState[Nothing, Nothing]
     case class NotYetOpen[A, B](
         indices: BucketIndices,
         fn: Array[Int] => Resource[IO, B]
@@ -246,27 +246,35 @@ object BatchStream {
               Device
           ) => Resource[IO, StreamControl[(A, STen)]]
       ): IO[Resource[IO, StreamControl[(A, STen)]]] = {
-        isClosed.get.flatMap { isClosed =>
-          if (isClosed) IO.raiseError(new RuntimeException("closed?"))
-          else
-            deferred.get.map { openBucketState =>
-              if (
-                batchIdxWithinBucket >= openBucketState.indices.bucketSpecificIndices.length
-              ) Resource.pure(EndStream)
-              else {
-                val indices = openBucketState.indices.bucketSpecificIndices(
-                  batchIdxWithinBucket
+
+        deferred.get.flatMap { openBucketState =>
+          if (
+            batchIdxWithinBucket >= openBucketState.indices.bucketSpecificIndices.length
+          ) IO.pure(Resource.pure(EndStream))
+          else {
+            isClosed.get.flatMap { isClosed =>
+              if (isClosed)
+                IO.raiseError(
+                  new RuntimeException(
+                    "closed? " + batchIdxWithinBucket
+                  )
                 )
-                val b = openBucketState.b
+              else {
+                IO {
+                  val indices = openBucketState.indices.bucketSpecificIndices(
+                    batchIdxWithinBucket
+                  )
+                  val b = openBucketState.b
 
-                Resource
-                  .make(IO.unit)(_ => latch.release)
-                  .flatMap { _ =>
-                    loadBatch(b, indices.toArray, device)
-                  }
+                  Resource
+                    .make(IO.unit)(_ => latch.release)
+                    .flatMap { _ =>
+                      loadBatch(b, indices.toArray, device)
+                    }
+                }
               }
-
             }
+          }
         }
       }
     }
@@ -304,8 +312,6 @@ object BatchStream {
             else {
               val nextBucketIdx = bucketIdx + 1
               buckets(nextBucketIdx) match {
-                case Closed =>
-                  IO.raiseError(new RuntimeException("next bucket closed (?)"))
                 case Opened(_, _, _) => IO.pure(None)
                 case s @ NotYetOpen(_, _) =>
                   s.open().map(Some(_))
@@ -315,14 +321,12 @@ object BatchStream {
 
           openNextBucket.flatMap { nextBucketOpen =>
             bucketState match {
-              case Closed =>
-                IO.raiseError(new RuntimeException("bucket closed"))
               case s @ NotYetOpen(_, _) =>
                 s.open()
                   .flatMap { opened =>
                     val nextState = copy(
                       batchIdx = batchIdx + 1,
-                      buckets = updateBuckets[A, B](
+                      buckets = updateBuckets(
                         buckets,
                         bucketIdx,
                         Some(opened),
@@ -330,7 +334,11 @@ object BatchStream {
                       )
                     )
                     opened
-                      .nextBatch(batchIdxWithinBucket, device, loadBatch)
+                      .nextBatch(
+                        batchIdxWithinBucket,
+                        device,
+                        loadBatch
+                      )
                       .map((nextState, _))
                   }
               case s @ Opened(_, _, _) =>
@@ -339,8 +347,11 @@ object BatchStream {
                   buckets =
                     updateBuckets(buckets, bucketIdx, None, nextBucketOpen)
                 )
-                s.nextBatch(batchIdxWithinBucket, device, loadBatch)
-                  .map((nextState, _))
+                s.nextBatch(
+                  batchIdxWithinBucket,
+                  device,
+                  loadBatch
+                ).map((nextState, _))
 
             }
           }
