@@ -16,11 +16,11 @@ class ScopeSuite extends AnyFunSuite {
     val stop = TensorLogger.start()(println _, (_, _) => true, 5000, 10000, 0)
     Scope.inResource
       .flatMap { implicit scope =>
-        (0 until 1000).toList.parTraverseN(8)(_ =>
-          Resource.make(IO {
-            STen.zeros(List(30, 30))
-          })(_ => IO.unit)
-        )
+        Resource.make(
+          (0 until 1000).toList.parTraverseN(8)(_ =>
+            IO { STen.zeros(List(30, 30)) }
+          )
+        )(_ => IO.unit)
       }
       .use { tensors =>
         IO {
