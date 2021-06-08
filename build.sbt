@@ -10,7 +10,8 @@ inThisBuild(
         "bartha.pityu@gmail.com",
         url("https://github.com/pityka/lamp")
       )
-    )
+    ),
+    parallelExecution := false
   )
 )
 
