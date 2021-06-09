@@ -12,7 +12,7 @@ import cats.effect.syntax.all._
 import _root_.lamp.Scope
 
 class ScopeSuite extends AnyFunSuite {
-  test("parallel alloc") {
+  ignore("parallel alloc") {
     val stop = TensorLogger.start()(println _, (_, _) => true, 5000, 10000, 0)
     Scope.inResource
       .flatMap { implicit scope =>
