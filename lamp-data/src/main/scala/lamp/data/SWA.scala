@@ -60,7 +60,7 @@ object SWA {
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[LoopState => IO[Unit]] = None,
+      checkpointState: Option[SWALoopState => IO[Unit]] = None,
       checkpointLrState: Option[LRState => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,

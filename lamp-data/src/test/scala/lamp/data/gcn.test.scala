@@ -348,7 +348,7 @@ class GCNSuite extends AnyFunSuite {
           targetPerNode = labelsT
         )
 
-      val (_, trainedModel, _, _) = IOLoops
+      val (_, trainedModel, _, _, _) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = AdamW

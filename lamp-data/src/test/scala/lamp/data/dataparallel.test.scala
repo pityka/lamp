@@ -68,7 +68,7 @@ class DataParallelLoopSuite extends AnyFunSuite {
 
       val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(2342L)
 
-      val (_, trainedModel, _, _) = IOLoops
+      val (_, trainedModel, _, _, _) = IOLoops
         .epochs(
           model = model1,
           optimizerFactory = SGDW

@@ -74,7 +74,7 @@ object StateIO {
         readSWALoopStateDescriptor(s, file, device)
       case schemas.SimpleThenSWALoopState(simple, swa) =>
         SimpleThenSWALoopState(
-          simple.map(readSimpleLoopStateDescriptor(_, file, device)),
+          readSimpleLoopStateDescriptor(simple, file, device),
           swa.map(readSWALoopStateDescriptor(_, file, device))
         )
 
@@ -232,12 +232,10 @@ object StateIO {
         )
       case s: SimpleThenSWALoopState =>
         schemas.SimpleThenSWALoopState(
-          simple = s.simple.map(s =>
-            simpleLoopStateDescriptor(
-              s,
-              new File(file.getAbsolutePath() + ".simple"),
-              bufferSize
-            )
+          simple = simpleLoopStateDescriptor(
+            s.simple,
+            new File(file.getAbsolutePath() + ".simple"),
+            bufferSize
           ),
           swa = s.swa.map(s =>
             swaLoopStateDescriptor(

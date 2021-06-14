@@ -164,9 +164,9 @@ class MLPSuite extends AnyFunSuite {
     case SimpleThenSWALoopState(simple, swa) =>
       val simple2 = state2.asInstanceOf[SimpleThenSWALoopState].simple
       val swa2 = state2.asInstanceOf[SimpleThenSWALoopState].swa
-      assert(simple.isDefined == simple2.isDefined)
+
       assert(swa.isDefined == swa.isDefined)
-      if (simple.isDefined) assertLoopState(simple.get, simple2.get)
+      assertLoopState(simple, simple2)
 
       if (swa.isDefined) assertLoopState(swa.get, swa2.get)
     case SimpleLoopState(

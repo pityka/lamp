@@ -149,7 +149,7 @@ class IOLoopSuite extends AnyFunSuite {
 
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
 
-      val (_, trainedModel, _, _) = IOLoops
+      val (_, trainedModel, _, _, _) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = SGDW
@@ -219,7 +219,7 @@ class IOLoopSuite extends AnyFunSuite {
 
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
 
-      val (_, trainedModel, _, _) = IOLoops
+      val (_, trainedModel, _, _, _) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = SGDW

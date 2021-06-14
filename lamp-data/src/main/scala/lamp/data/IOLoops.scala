@@ -97,7 +97,7 @@ object IOLoops {
       ] = None,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[LoopState => IO[Unit]] = None,
+      checkpointState: Option[SimpleThenSWALoopState => IO[Unit]] = None,
       checkpointLRState: Option[LRState => IO[Unit]] = None,
       checkpointSWALRState: Option[LRStateSWA => IO[Unit]] = None,
       logger: Option[Logger] = None,
@@ -127,7 +127,9 @@ object IOLoops {
           warmupEpochs,
           trainingCallback,
           validationCallback,
-          checkpointState,
+          checkpointState.map(fun =>
+            (s: SimpleLoopState) => fun(SimpleThenSWALoopState(s, None))
+          ),
           checkpointLRState,
           1,
           logger,
@@ -135,7 +137,7 @@ object IOLoops {
           learningRateSchedule,
           prefetch,
           dataParallelModels,
-          initState.flatMap(_.simple),
+          initState.map(_.simple),
           accumulateGradientOverNBatches,
           learningRateScheduleInitState
         )
@@ -144,6 +146,7 @@ object IOLoops {
       warmedupModel = warmedup._2
       warmupLearningCurve = warmedup._3
       warmupLRState = warmedup._4
+      warmupLoopState = warmedup._5
       swaResult <- SWA.epochs(
         warmedupModel,
         optimizerFactory,
@@ -152,7 +155,10 @@ object IOLoops {
         swaEpochs,
         trainingCallback,
         validationCallback,
-        checkpointState,
+        checkpointState.map(fun =>
+          (s: SWALoopState) =>
+            fun(SimpleThenSWALoopState(warmupLoopState, Some(s)))
+        ),
         checkpointSWALRState,
         1,
         logger,
@@ -192,7 +198,7 @@ object IOLoops {
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[LoopState => IO[Unit]] = None,
+      checkpointState: Option[SimpleLoopState => IO[Unit]] = None,
       checkpointLRState: Option[LRState => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
@@ -206,7 +212,13 @@ object IOLoops {
       learningRateScheduleInitState: Option[LRState] = None,
       printOptimizerAllocations: Boolean = false
   ): IO[
-    (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])], LRState)
+    (
+        Int,
+        SupervisedModel[I, M],
+        List[(Int, Double, Option[Double])],
+        LRState,
+        SimpleLoopState
+    )
   ] = {
     val modelWithOptimizer
         : ModelWithOptimizer[I, M with GenericModule[I, Variable]] =
@@ -237,7 +249,13 @@ object IOLoops {
         learningCurve: List[(Int, Double, Option[Double])],
         lrState: LRState
     ): IO[
-      (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])], LRState)
+      (
+          Int,
+          SupervisedModel[I, M],
+          List[(Int, Double, Option[Double])],
+          LRState,
+          SimpleLoopState
+      )
     ] = {
       val (nextLearningRateScheduleState, learningRateFactor) =
         learningRateSchedule.learningRateFactor(
@@ -248,13 +266,23 @@ object IOLoops {
       if (epoch >= epochs || learningRateFactor <= 0d)
         IO.pure {
           modelWithOptimizer.optimizer.release()
+          val doneLoopState = SimpleLoopState(
+            modelWithOptimizer.model.module.state.map(_._1.value),
+            Nil,
+            epoch,
+            lastValidationLoss,
+            minValidationLoss,
+            minValidationLossModel,
+            learningCurve
+          )
           minValidationLossModel match {
             case None =>
               (
                 epoch - 1,
                 modelWithOptimizer.model,
                 learningCurve.reverse,
-                nextLearningRateScheduleState
+                nextLearningRateScheduleState,
+                doneLoopState
               )
             case Some((epochOfMinValidation, state)) =>
               Scope.root { implicit scope =>
@@ -265,7 +293,8 @@ object IOLoops {
                 epochOfMinValidation,
                 modelWithOptimizer.model,
                 learningCurve.reverse,
-                nextLearningRateScheduleState
+                nextLearningRateScheduleState,
+                doneLoopState
               )
           }
         }
