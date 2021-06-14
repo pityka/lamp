@@ -95,6 +95,9 @@ class MLPSuite extends AnyFunSuite {
           rng
         )
 
+      val stateFile =
+        java.io.File.createTempFile("sdfs", "dsfsd").getAbsoluteFile()
+
       val (_, trainedModel, _) = IOLoops
         .withSWA(
           model = model,
@@ -108,10 +111,9 @@ class MLPSuite extends AnyFunSuite {
           warmupEpochs = 10,
           swaEpochs = 10,
           logger = Some(scribe.Logger("sdf")),
-          checkpointState = Some(state =>
+          checkpointState = Some((state: LoopState, _: Either[_, _]) =>
             IO {
-              val stateFile =
-                java.io.File.createTempFile("sdfs", "dsfsd").getAbsoluteFile()
+
               StateIO.writeToFile(stateFile, state)
               val state2 = StateIO.readFromFile(stateFile, device)
               assertLoopState(state, state2)
@@ -119,6 +121,37 @@ class MLPSuite extends AnyFunSuite {
           )
         )
         .unsafeRunSync()
+
+      val state3 = StateIO
+        .readFromFile(stateFile, device)
+        .asInstanceOf[SimpleThenSWALoopState]
+
+      println("run from checkpoint")
+      IOLoops
+        .withSWA(
+          model = model,
+          optimizerFactory = SGDW
+            .factory(
+              learningRate = simple(0.01),
+              weightDecay = simple(0.001d)
+            ),
+          trainBatchesOverEpoch = makeTrainingBatch,
+          validationBatchesOverEpoch = Some(makeValidationBatch),
+          warmupEpochs = 10,
+          swaEpochs = 10,
+          logger = Some(scribe.Logger("sdf")),
+          checkpointState = Some((state: LoopState, _: Either[_, _]) =>
+            IO {
+
+              StateIO.writeToFile(stateFile, state)
+              val state2 = StateIO.readFromFile(stateFile, device)
+              assertLoopState(state, state2)
+            }
+          ),
+          initState = Some(state3)
+        )
+        .unsafeRunSync()
+
       val acc = STen.scalarDouble(0d, testDataTensor.options)
       val (numExamples, _) = trainedModel
         .addTotalLossAndReturnGradientsAndNumExamples(
@@ -164,9 +197,9 @@ class MLPSuite extends AnyFunSuite {
     case SimpleThenSWALoopState(simple, swa) =>
       val simple2 = state2.asInstanceOf[SimpleThenSWALoopState].simple
       val swa2 = state2.asInstanceOf[SimpleThenSWALoopState].swa
-      assert(simple.isDefined == simple2.isDefined)
+
       assert(swa.isDefined == swa.isDefined)
-      if (simple.isDefined) assertLoopState(simple.get, simple2.get)
+      assertLoopState(simple, simple2)
 
       if (swa.isDefined) assertLoopState(swa.get, swa2.get)
     case SimpleLoopState(

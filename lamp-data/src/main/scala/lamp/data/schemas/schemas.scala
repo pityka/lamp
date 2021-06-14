@@ -52,7 +52,7 @@ case class SWALoopState(
     learningCurve: List[(Int, Double, Option[Double])]
 ) extends LoopState
 case class SimpleThenSWALoopState(
-    simple: Option[SimpleLoopState],
+    simple: SimpleLoopState,
     swa: Option[SWALoopState]
 ) extends LoopState
 
