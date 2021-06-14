@@ -290,7 +290,7 @@ object IOLoops {
             epoch,
             lastValidationLoss,
             minValidationLoss,
-            minValidationLossModel,
+            None,
             learningCurve
           )
           minValidationLossModel match {
