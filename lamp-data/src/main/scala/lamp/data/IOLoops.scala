@@ -97,9 +97,9 @@ object IOLoops {
       ] = None,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[SimpleThenSWALoopState => IO[Unit]] = None,
-      checkpointLRState: Option[LRState => IO[Unit]] = None,
-      checkpointSWALRState: Option[LRStateSWA => IO[Unit]] = None,
+      checkpointState: Option[
+        (SimpleThenSWALoopState, Either[LRState, LRStateSWA]) => IO[Unit]
+      ] = None,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule[LRState] =
@@ -119,29 +119,45 @@ object IOLoops {
   ) = {
     for {
       warmedup <-
-        epochs(
-          model,
-          optimizerFactory,
-          trainBatchesOverEpoch,
-          validationBatchesOverEpoch,
-          warmupEpochs,
-          trainingCallback,
-          validationCallback,
-          checkpointState.map(fun =>
-            (s: SimpleLoopState) => fun(SimpleThenSWALoopState(s, None))
-          ),
-          checkpointLRState,
-          1,
-          logger,
-          returnMinValidationLossModel,
-          learningRateSchedule,
-          prefetch,
-          dataParallelModels,
-          initState.map(_.simple),
-          accumulateGradientOverNBatches,
-          learningRateScheduleInitState
-        )
+        initState match {
+          case Some(SimpleThenSWALoopState(simple, Some(_))) =>
+            IO.pure(
+              (
+                simple.epoch,
+                model,
+                simple.learningCurve,
+                learningRateScheduleInitState.getOrElse(
+                  learningRateSchedule.init
+                ),
+                simple
+              )
+            )
 
+          case _ =>
+            epochs(
+              model,
+              optimizerFactory,
+              trainBatchesOverEpoch,
+              validationBatchesOverEpoch,
+              warmupEpochs,
+              trainingCallback,
+              validationCallback,
+              checkpointState.map(fun =>
+                (s: SimpleLoopState, lr: LRState) =>
+                  fun(SimpleThenSWALoopState(s, None), Left(lr))
+              ),
+              // checkpointLRState,
+              1,
+              logger,
+              returnMinValidationLossModel,
+              learningRateSchedule,
+              prefetch,
+              dataParallelModels,
+              initState.map(_.simple),
+              accumulateGradientOverNBatches,
+              learningRateScheduleInitState
+            )
+        }
       warmupEpochReturned = warmedup._1
       warmedupModel = warmedup._2
       warmupLearningCurve = warmedup._3
@@ -156,10 +172,13 @@ object IOLoops {
         trainingCallback,
         validationCallback,
         checkpointState.map(fun =>
-          (s: SWALoopState) =>
-            fun(SimpleThenSWALoopState(warmupLoopState, Some(s)))
+          (s: SWALoopState, lrState: LRStateSWA) =>
+            fun(
+              SimpleThenSWALoopState(warmupLoopState, Some(s)),
+              Right(lrState)
+            )
         ),
-        checkpointSWALRState,
+        // checkpointSWALRState,
         1,
         logger,
         swaLearningRateSchedule,
@@ -198,8 +217,7 @@ object IOLoops {
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[SimpleLoopState => IO[Unit]] = None,
-      checkpointLRState: Option[LRState => IO[Unit]] = None,
+      checkpointState: Option[(SimpleLoopState, LRState) => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
@@ -267,7 +285,7 @@ object IOLoops {
         IO.pure {
           modelWithOptimizer.optimizer.release()
           val doneLoopState = SimpleLoopState(
-            modelWithOptimizer.model.module.state.map(_._1.value),
+            Nil,
             Nil,
             epoch,
             lastValidationLoss,
@@ -324,12 +342,7 @@ object IOLoops {
                   minValidationLoss,
                   minValidationLossModel,
                   learningCurve
-                )
-              )
-            else IO.unit
-          _ <-
-            if (checkpointLRState.isDefined)
-              checkpointLRState.get(
+                ),
                 lrState
               )
             else IO.unit

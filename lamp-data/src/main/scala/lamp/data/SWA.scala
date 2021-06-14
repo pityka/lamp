@@ -60,8 +60,8 @@ object SWA {
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[SWALoopState => IO[Unit]] = None,
-      checkpointLrState: Option[LRState => IO[Unit]] = None,
+      checkpointState: Option[(SWALoopState, LRState) => IO[Unit]] = None,
+      // checkpointLrState: Option[LRState => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       learningRateSchedule: SWALearningRateSchedule[LRState] =
@@ -151,12 +151,7 @@ object SWA {
                   numberOfAveragedModels,
                   averagedModels,
                   learningCurve
-                )
-              )
-            else IO.unit
-          _ <-
-            if (checkpointLrState.isDefined)
-              checkpointLrState.get(
+                ),
                 lrState
               )
             else IO.unit
