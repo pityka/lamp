@@ -84,7 +84,7 @@ class TextGenerationSuite extends AnyFunSuite {
         clip = Some(1d)
       )
 
-      val (_, _, learningCurve) = IOLoops
+      val (_, _, learningCurve, _) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = optimizer,
@@ -162,7 +162,7 @@ class TextGenerationSuite extends AnyFunSuite {
         clip = Some(1d)
       )
 
-      val (_, net, learningCurve) = IOLoops
+      val (_, net, learningCurve, _) = IOLoops
         .epochs(
           model = model,
           optimizerFactory = optimizer,

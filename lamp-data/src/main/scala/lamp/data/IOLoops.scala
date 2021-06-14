@@ -81,11 +81,12 @@ object IOLoops {
       loop(next, Nil, s1)
     }
   }
+  import scala.reflect.runtime.universe._
 
   def withSWA[I, M <: GenericModule[
     I,
     Variable
-  ]: Load, LRState, LRStateSWA, BatchStreamState](
+  ]: Load, LRState: TypeTag, LRStateSWA: TypeTag, BatchStreamState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I, BatchStreamState],
@@ -142,6 +143,7 @@ object IOLoops {
       warmupEpochReturned = warmedup._1
       warmedupModel = warmedup._2
       warmupLearningCurve = warmedup._3
+      warmupLRState = warmedup._4
       swaResult <- SWA.epochs(
         warmedupModel,
         optimizerFactory,
@@ -159,7 +161,12 @@ object IOLoops {
         dataParallelModels,
         initState.flatMap(_.swa),
         accumulateGradientOverNBatches,
-        swaLearningRateScheduleInitState
+        swaLearningRateScheduleInitState match {
+          case Some(x) => Some(x)
+          case None if typeTag[LRState] == typeTag[LRStateSWA] =>
+            Some(warmupLRState.asInstanceOf[LRStateSWA])
+          case _ => None
+        }
       )
     } yield {
       val swaModel = swaResult._1
@@ -198,7 +205,9 @@ object IOLoops {
       accumulateGradientOverNBatches: Int = 1,
       learningRateScheduleInitState: Option[LRState] = None,
       printOptimizerAllocations: Boolean = false
-  ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
+  ): IO[
+    (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])], LRState)
+  ] = {
     val modelWithOptimizer
         : ModelWithOptimizer[I, M with GenericModule[I, Variable]] =
       model.asTraining.zipOptimizer(optimizerFactory)
@@ -228,7 +237,7 @@ object IOLoops {
         learningCurve: List[(Int, Double, Option[Double])],
         lrState: LRState
     ): IO[
-      (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])
+      (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])], LRState)
     ] = {
       val (nextLearningRateScheduleState, learningRateFactor) =
         learningRateSchedule.learningRateFactor(
@@ -241,7 +250,12 @@ object IOLoops {
           modelWithOptimizer.optimizer.release()
           minValidationLossModel match {
             case None =>
-              (epoch - 1, modelWithOptimizer.model, learningCurve.reverse)
+              (
+                epoch - 1,
+                modelWithOptimizer.model,
+                learningCurve.reverse,
+                nextLearningRateScheduleState
+              )
             case Some((epochOfMinValidation, state)) =>
               Scope.root { implicit scope =>
                 val stateOnDevice = state.map { t => STen.owned(t) }
@@ -250,7 +264,8 @@ object IOLoops {
               (
                 epochOfMinValidation,
                 modelWithOptimizer.model,
-                learningCurve.reverse
+                learningCurve.reverse,
+                nextLearningRateScheduleState
               )
           }
         }
