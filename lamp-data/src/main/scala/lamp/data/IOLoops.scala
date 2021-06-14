@@ -81,11 +81,12 @@ object IOLoops {
       loop(next, Nil, s1)
     }
   }
+  import scala.reflect.runtime.universe._
 
   def withSWA[I, M <: GenericModule[
     I,
     Variable
-  ]: Load, LRState, LRStateSWA, BatchStreamState](
+  ]: Load, LRState: TypeTag, LRStateSWA: TypeTag, BatchStreamState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: () => BatchStream[I, BatchStreamState],
@@ -96,9 +97,9 @@ object IOLoops {
       ] = None,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[LoopState => IO[Unit]] = None,
-      checkpointLRState: Option[LRState => IO[Unit]] = None,
-      checkpointSWALRState: Option[LRStateSWA => IO[Unit]] = None,
+      checkpointState: Option[
+        (SimpleThenSWALoopState, Either[LRState, LRStateSWA]) => IO[Unit]
+      ] = None,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule[LRState] =
@@ -118,30 +119,50 @@ object IOLoops {
   ) = {
     for {
       warmedup <-
-        epochs(
-          model,
-          optimizerFactory,
-          trainBatchesOverEpoch,
-          validationBatchesOverEpoch,
-          warmupEpochs,
-          trainingCallback,
-          validationCallback,
-          checkpointState,
-          checkpointLRState,
-          1,
-          logger,
-          returnMinValidationLossModel,
-          learningRateSchedule,
-          prefetch,
-          dataParallelModels,
-          initState.flatMap(_.simple),
-          accumulateGradientOverNBatches,
-          learningRateScheduleInitState
-        )
+        initState match {
+          case Some(SimpleThenSWALoopState(simple, Some(_))) =>
+            IO.pure(
+              (
+                simple.epoch,
+                model,
+                simple.learningCurve,
+                learningRateScheduleInitState.getOrElse(
+                  learningRateSchedule.init
+                ),
+                simple
+              )
+            )
 
+          case _ =>
+            epochs(
+              model,
+              optimizerFactory,
+              trainBatchesOverEpoch,
+              validationBatchesOverEpoch,
+              warmupEpochs,
+              trainingCallback,
+              validationCallback,
+              checkpointState.map(fun =>
+                (s: SimpleLoopState, lr: LRState) =>
+                  fun(SimpleThenSWALoopState(s, None), Left(lr))
+              ),
+              // checkpointLRState,
+              1,
+              logger,
+              returnMinValidationLossModel,
+              learningRateSchedule,
+              prefetch,
+              dataParallelModels,
+              initState.map(_.simple),
+              accumulateGradientOverNBatches,
+              learningRateScheduleInitState
+            )
+        }
       warmupEpochReturned = warmedup._1
       warmedupModel = warmedup._2
       warmupLearningCurve = warmedup._3
+      warmupLRState = warmedup._4
+      warmupLoopState = warmedup._5
       swaResult <- SWA.epochs(
         warmedupModel,
         optimizerFactory,
@@ -150,8 +171,14 @@ object IOLoops {
         swaEpochs,
         trainingCallback,
         validationCallback,
-        checkpointState,
-        checkpointSWALRState,
+        checkpointState.map(fun =>
+          (s: SWALoopState, lrState: LRStateSWA) =>
+            fun(
+              SimpleThenSWALoopState(warmupLoopState, Some(s)),
+              Right(lrState)
+            )
+        ),
+        // checkpointSWALRState,
         1,
         logger,
         swaLearningRateSchedule,
@@ -159,7 +186,12 @@ object IOLoops {
         dataParallelModels,
         initState.flatMap(_.swa),
         accumulateGradientOverNBatches,
-        swaLearningRateScheduleInitState
+        swaLearningRateScheduleInitState match {
+          case Some(x) => Some(x)
+          case None if typeTag[LRState] == typeTag[LRStateSWA] =>
+            Some(warmupLRState.asInstanceOf[LRStateSWA])
+          case _ => None
+        }
       )
     } yield {
       val swaModel = swaResult._1
@@ -185,8 +217,7 @@ object IOLoops {
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
-      checkpointState: Option[LoopState => IO[Unit]] = None,
-      checkpointLRState: Option[LRState => IO[Unit]] = None,
+      checkpointState: Option[(SimpleLoopState, LRState) => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
       returnMinValidationLossModel: Seq[Int] = Nil,
@@ -198,7 +229,15 @@ object IOLoops {
       accumulateGradientOverNBatches: Int = 1,
       learningRateScheduleInitState: Option[LRState] = None,
       printOptimizerAllocations: Boolean = false
-  ): IO[(Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
+  ): IO[
+    (
+        Int,
+        SupervisedModel[I, M],
+        List[(Int, Double, Option[Double])],
+        LRState,
+        SimpleLoopState
+    )
+  ] = {
     val modelWithOptimizer
         : ModelWithOptimizer[I, M with GenericModule[I, Variable]] =
       model.asTraining.zipOptimizer(optimizerFactory)
@@ -228,7 +267,13 @@ object IOLoops {
         learningCurve: List[(Int, Double, Option[Double])],
         lrState: LRState
     ): IO[
-      (Int, SupervisedModel[I, M], List[(Int, Double, Option[Double])])
+      (
+          Int,
+          SupervisedModel[I, M],
+          List[(Int, Double, Option[Double])],
+          LRState,
+          SimpleLoopState
+      )
     ] = {
       val (nextLearningRateScheduleState, learningRateFactor) =
         learningRateSchedule.learningRateFactor(
@@ -239,9 +284,24 @@ object IOLoops {
       if (epoch >= epochs || learningRateFactor <= 0d)
         IO.pure {
           modelWithOptimizer.optimizer.release()
+          val doneLoopState = SimpleLoopState(
+            Nil,
+            Nil,
+            epoch,
+            lastValidationLoss,
+            minValidationLoss,
+            None,
+            learningCurve
+          )
           minValidationLossModel match {
             case None =>
-              (epoch - 1, modelWithOptimizer.model, learningCurve.reverse)
+              (
+                epoch - 1,
+                modelWithOptimizer.model,
+                learningCurve.reverse,
+                nextLearningRateScheduleState,
+                doneLoopState
+              )
             case Some((epochOfMinValidation, state)) =>
               Scope.root { implicit scope =>
                 val stateOnDevice = state.map { t => STen.owned(t) }
@@ -250,7 +310,9 @@ object IOLoops {
               (
                 epochOfMinValidation,
                 modelWithOptimizer.model,
-                learningCurve.reverse
+                learningCurve.reverse,
+                nextLearningRateScheduleState,
+                doneLoopState
               )
           }
         }
@@ -280,12 +342,7 @@ object IOLoops {
                   minValidationLoss,
                   minValidationLossModel,
                   learningCurve
-                )
-              )
-            else IO.unit
-          _ <-
-            if (checkpointLRState.isDefined)
-              checkpointLRState.get(
+                ),
                 lrState
               )
             else IO.unit

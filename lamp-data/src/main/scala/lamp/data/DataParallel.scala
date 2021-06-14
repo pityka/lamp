@@ -206,7 +206,16 @@ object DataParallel {
       def startFetch(q: Queue[IO, (A, IO[Unit])], s0: S) =
         for {
           resource <- fetch(s0)
-          started <- resource._2.allocated.flatMap(q.offer).start
+          started <- resource._2.allocated
+            .attemptTap {
+              case Left(exc) =>
+                IO {
+                  scribe.error("Error during load", exc)
+                }
+              case _ => IO.unit
+            }
+            .flatMap(q.offer)
+            .start
         } yield (resource._1, started)
 
       def loop(
