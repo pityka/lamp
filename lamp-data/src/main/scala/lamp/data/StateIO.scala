@@ -256,6 +256,6 @@ object StateIO {
   }
 
   def stateToFile(file: File) = { (state: LoopState) =>
-    IO { writeToFile(file, state, 16384) }
+    IO.blocking { writeToFile(file, state, 16384) }
   }
 }
