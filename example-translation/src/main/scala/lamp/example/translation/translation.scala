@@ -288,7 +288,7 @@ object Train extends App {
           clip = Some(1d)
         )
 
-        val (_, trainedModel, _) = IOLoops
+        val (_, trainedModel, _, _, _) = IOLoops
           .epochs(
             model = model,
             optimizerFactory = optimizer,
