@@ -198,7 +198,7 @@ The `IOLoop.epochs` method returns an `IO` which will run into the trained model
 
 ```scala mdoc
 import cats.effect.unsafe.implicits.global
-val (epochOfModel, trainedModel, learningCurve) = trainedModelIO.unsafeRunSync()
+val (epochOfModel, trainedModel, learningCurve, _, _) = trainedModelIO.unsafeRunSync()
 val module = trainedModel.module
 ```
 
