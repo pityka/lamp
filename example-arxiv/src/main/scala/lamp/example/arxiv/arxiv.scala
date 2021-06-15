@@ -134,7 +134,7 @@ object Train extends App {
               targetPerNode = validL
             )
 
-          val (_, trainedModel, _) = IOLoops
+          val (_, trainedModel, _, _, _) = IOLoops
             .epochs(
               model = model,
               optimizerFactory = AdamW

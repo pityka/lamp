@@ -212,7 +212,7 @@ object Train extends App {
           learningRate = simple(config.learningRate)
         )
 
-        val (_, trained, _) = IOLoops
+        val (_, trained, _, _, _) = IOLoops
           .epochs(
             model = model,
             optimizerFactory = optimizer,
