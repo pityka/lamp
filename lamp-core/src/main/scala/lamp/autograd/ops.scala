@@ -453,14 +453,14 @@ case class Cross(scope: Scope, a: Variable, b: Variable, dim: Int) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        out -= p * (STen.ones(a.shape).cross(b.value, dim))
+        out -= p * (STen.ones(a.shape, p.options).cross(b.value, dim))
 
       }
 
     },
     b.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        out += p * (STen.ones(b.shape).cross(a.value, dim))
+        out += p * (STen.ones(b.shape, p.options).cross(a.value, dim))
       }
 
     }
