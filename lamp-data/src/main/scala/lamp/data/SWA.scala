@@ -245,7 +245,15 @@ object SWA {
     for {
       trained <- initState match {
         case None =>
-          loop(0, None, None, 0, None, Nil, learningRateSchedule.init)
+          loop(
+            0,
+            None,
+            None,
+            0,
+            None,
+            Nil,
+            learningRateScheduleInitState.getOrElse(learningRateSchedule.init)
+          )
         case Some(state) =>
           loop(
             epoch = state.epoch,
