@@ -289,7 +289,11 @@ case class Inv(
   val params = List(
     a.zipBackward { case (p, out) =>
       Scope.root { implicit scope =>
-        out -= value.value.mm(p).mm(value.value).t
+        if (value.shape.size == 3) {
+          out -= value.value.bmm(p).bmm(value.value).transpose(1, 2)
+        } else {
+          out -= value.value.mm(p).mm(value.value).t
+        }
       }
     }
   )
