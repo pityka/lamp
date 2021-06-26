@@ -10,6 +10,15 @@ import org.scalatest.compatible.Assertion
 class STenSuite extends AnyFunSuite {
   implicit def AssertionIsMovable = Movable.empty[Assertion]
 
+  test("atan2") {
+    Scope.root { implicit scope =>
+      val one = STen.ones(List(1))
+      val minusOne = STen.ones(List(1)) * (-1)
+      assert(STen.atan2(one, minusOne).toMat.raw(0) == 0.75 * math.Pi)
+      assert(STen.atan2(minusOne, one).toMat.raw(0) == -0.25 * math.Pi)
+    }
+  }
+
   test("unique 1") {
     Scope.root { implicit scope =>
       val t =

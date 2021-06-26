@@ -311,6 +311,8 @@ object STen {
       )
     )
 
+  def atan2[S: Sc](y: STen, x: STen) = owned(ATen.atan2(y.value, x.value))
+
   def indexSelectOut(out: STen, self: STen, dim: Int, index: STen) =
     ATen.index_select_out(out.value, self.value, dim, index.value)
   def catOut(out: STen, tensors: Seq[STen], dim: Int) =
