@@ -302,6 +302,44 @@ case class Inv(
     a.value.inv(scope)
   )(scope)
 }
+case class PInv(
+    scope: Scope,
+    a: Variable,
+    rcond: Double
+) extends Op {
+  val params = List(
+    a.zipBackward { case (p, out) =>
+      Scope.root { implicit scope =>
+        // https://math.stackexchange.com/questions/2179160/derivative-of-pseudoinverse-with-respect-to-original-matrix
+        if (value.shape.size == 3) {
+          val v = value.value
+          val vt = v.transpose(1, 2)
+          val pt = p.transpose(1, 2)
+          val i = STen.eye(a.shape(1).toInt, v.options).unsqueeze(0)
+
+          out += v.bmm(vt).bmm(pt).bmm(i - a.value.bmm(v)) + (i - v
+            .bmm(a.value))
+            .bmm(pt)
+            .bmm(vt.bmm(v)) - v.bmm(p.bmm(v))
+        } else {
+          val v = value.value
+          val vt = v.t
+          val pt = p.t
+          val i = STen.eye(a.shape(0).toInt, v.options)
+
+          out += v.mm(vt).mm(pt).mm(i - a.value.mm(v)) + (i - v
+            .mm(a.value))
+            .mm(pt)
+            .mm(vt.mm(v)) - v.mm(p.mm(v))
+        }
+      }
+    }
+  )
+  val value = Variable(
+    this,
+    a.value.pinverse(rcond)(scope)
+  )(scope)
+}
 
 case class ScatterAdd(
     scope: Scope,

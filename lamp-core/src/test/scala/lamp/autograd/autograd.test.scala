@@ -30,9 +30,13 @@ class GradientSuite extends AnyFunSuite {
   val nd3x2x3 = NDArray(ar18, List(3, 2, 3))
   val nd3x3x2 = NDArray(ar18, List(3, 3, 2))
   val nd2x3x3 = NDArray(
-    Array(1d, 2d, 0d, 4d, 5d, 1d, 6d, 7d, 0d, 1d, 2d, 0d, 4d, 5d, 1d, 6d, 7d,
+    Array(10d, 2d, 0d, 4d, 5d, 1d, 6d, 7d, 0d, 1d, 2d, 0d, 4d, 5d, 1d, 6d, 7d,
       0d),
     List(2, 3, 3)
+  )
+  val nd1x3x3 = NDArray(
+    Array(1d, 2d, 0d, 4d, 5d, 1d, 6d, 7d, 0d),
+    List(1, 3, 3)
   )
   val nd1x2x3x3 =
     NDArray((0 until 18).toArray.map(_.toDouble), List(1, 2, 3, 3))
@@ -539,7 +543,38 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
-  testGradientAndValueND("inv batch")(nd2x3x3, 0d) { (m, doBackprop, cuda) =>
+  testGradientAndValue("pinv")(mat3x3, 2d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val values = param(STen.fromMat(m, cuda))
+
+      val i = values.pinv()
+      val L = i.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        values.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("pinv batch ")(mat3x3, 2d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val t1 = STen.fromMat(m, cuda)
+      val values = param(STen.stack(List(t1, t1), 0))
+
+      val i = values.pinv().select(0, 0)
+      val L = i.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        values.partialDerivative.map(t => t.select(0, 0).toMat)
+      )
+    }
+  }
+  testGradientAndValueND("inv batch")(nd1x3x3, 0d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val values = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
@@ -554,6 +589,7 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+
   testGradientAndValue("sparse to dense")(mat3x1, 6d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val values = param(STen.fromMat(m, cuda))

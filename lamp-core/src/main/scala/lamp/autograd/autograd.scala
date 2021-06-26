@@ -412,6 +412,8 @@ sealed trait Variable {
   def toDense[S: Sc] = new ToDense(extractScope, this).value
   def diag[S: Sc](diagonal: Long) = new Diag(extractScope, this, diagonal).value
   def inv[S: Sc] = new Inv(extractScope, this).value
+  def pinv[S: Sc](rcond: Double = 1e-5) =
+    new PInv(extractScope, this, rcond).value
   def toMat = value.toMat
   def toLongMat = value.toLongMat
 }
