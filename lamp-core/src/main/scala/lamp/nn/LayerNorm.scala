@@ -18,7 +18,7 @@ case class LayerNorm(
   )
 
   override def forward[S: Sc](x: Variable): Variable =
-    x.normalize(normalizedDim) * scale + bias
+    x.normalize(normalizedDim, eps) * scale + bias
 
 }
 

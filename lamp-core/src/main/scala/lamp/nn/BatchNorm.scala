@@ -13,7 +13,10 @@ case class BatchNorm(
     runningVar: Constant,
     training: Boolean,
     momentum: Double,
-    eps: Double
+    eps: Double,
+    forceTrain: Boolean,
+    forceEval: Boolean,
+    evalIfBatchSizeIsOne: Boolean
 ) extends Module {
 
   override val state = List(
@@ -23,7 +26,12 @@ case class BatchNorm(
     runningVar -> BatchNorm.RunningVar
   )
 
-  override def forward[S: Sc](x: Variable): Variable =
+  override def forward[S: Sc](x: Variable): Variable = {
+    val tr =
+      if (forceTrain) true
+      else if (forceEval) false
+      else if (evalIfBatchSizeIsOne && x.shape(0) == 1) false
+      else training
     new BN(
       scope,
       x,
@@ -31,10 +39,11 @@ case class BatchNorm(
       bias,
       runningMean.value,
       runningVar.value,
-      training,
+      tr,
       momentum,
       eps
     ).value
+  }
 
 }
 
@@ -61,7 +70,10 @@ object BatchNorm {
       tOpt: STenOptions,
       training: Boolean = true,
       momentum: Double = 0.1,
-      eps: Double = 1e-5
+      eps: Double = 1e-5,
+      forceTrain: Boolean = false,
+      forceEval: Boolean = false,
+      evalIfBatchSizeIsOne: Boolean = false
   ): BatchNorm = BatchNorm(
     weight = param(STen.normal(0.0, 0.01, List(features.toLong), tOpt)),
     bias = param(STen.zeros(List(features.toLong), tOpt)),
@@ -69,6 +81,9 @@ object BatchNorm {
     runningVar = const(STen.zeros(List(features.toLong), tOpt)),
     training = training,
     momentum = momentum,
-    eps = eps
+    eps = eps,
+    forceTrain = forceTrain,
+    forceEval = forceEval,
+    evalIfBatchSizeIsOne = evalIfBatchSizeIsOne
   )
 }

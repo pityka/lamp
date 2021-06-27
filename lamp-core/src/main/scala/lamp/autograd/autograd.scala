@@ -387,8 +387,8 @@ sealed trait Variable {
     new Mean(extractScope, this, dim, keepDim).value
   def variance[S: Sc](dim: List[Int]) =
     new Variance(extractScope, this, dim).value
-  def normalize[S: Sc](dim: List[Int]) = {
-    (this - this.mean(dim)) / ((this.variance(dim) + 1e-6).pow(0.5))
+  def normalize[S: Sc](dim: List[Int], eps: Double) = {
+    (this - this.mean(dim)) / ((this.variance(dim) + eps).pow(0.5))
   }
   def view[S: Sc](shape: List[Long]) =
     new View(extractScope, this, shape.toArray).value
