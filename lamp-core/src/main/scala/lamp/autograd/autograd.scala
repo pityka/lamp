@@ -414,6 +414,8 @@ sealed trait Variable {
   def inv[S: Sc] = new Inv(extractScope, this).value
   def pinv[S: Sc](rcond: Double = 1e-5) =
     new PInv(extractScope, this, rcond).value
+  def cholesky[S: Sc](upper: Boolean = false) =
+    new Cholesky(extractScope, this, upper).value
   def toMat = value.toMat
   def toLongMat = value.toLongMat
 }

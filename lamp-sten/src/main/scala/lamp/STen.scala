@@ -171,6 +171,7 @@ object STen {
         .toVector
         .map(_.owned)
     }
+
   }
 
   /** Wraps a tensor without registering it to any scope.
@@ -312,6 +313,19 @@ object STen {
     )
 
   def atan2[S: Sc](y: STen, x: STen) = owned(ATen.atan2(y.value, x.value))
+
+  def triangularSolve[S: Sc](
+      b: STen,
+      A: STen,
+      upper: Boolean,
+      transpose: Boolean,
+      uniTriangular: Boolean
+  ) = {
+    val (solution, clonedA) =
+      ATen.triangular_solve(b.value, A.value, upper, transpose, uniTriangular)
+    clonedA.release
+    STen.owned(solution)
+  }
 
   def indexSelectOut(out: STen, self: STen, dim: Int, index: STen) =
     ATen.index_select_out(out.value, self.value, dim, index.value)
@@ -529,6 +543,7 @@ object STenOptions {
     scope(value)
     STenOptions(value)
   }
+
 }
 
 /** Memory managed, off-heap N-dimensional array.
@@ -1511,5 +1526,10 @@ case class STen private (
   }
 
   def toDense[S: Sc] = value.to_dense().owned
+
+  def tril_(diagonal: Int = 0) = ATen.tril_out(value, value, diagonal.toLong)
+  def tril[S: Sc](diagonal: Int = 0) = ATen.tril(value, diagonal.toLong).owned
+  def diagonalView[S: Sc](offset: Int = 0, dim1: Int = 0, dim2: Int = 1) =
+    ATen.diagonal(value, offset, dim1, dim2).owned
 
 }

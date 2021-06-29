@@ -2208,3 +2208,57 @@ case class Embedding(scope: Scope, input: Variable, weight: Variable)
         throw e
     }
 }
+
+case class Cholesky(
+    scope: Scope,
+    input: Variable,
+    upper: Boolean
+) extends Op {
+
+  val params = List(
+    input.zipBackward { case (p, out) =>
+      Scope.root { implicit scope =>
+        // Ref: Pytorch FunctionsManual.cpp
+        // https://arxiv.org/pdf/1602.07527.pdf
+        val batch = input.shape.size == 3
+        val size = input.shape(input.shape.size - 2)
+        val l =
+          if (!upper) value.value
+          else value.value.transpose(-1, -2)
+
+        val g =
+          if (!upper) p
+          else p.transpose(-1, -2)
+
+        val lInv =
+          STen
+            .triangularSolve(
+              STen.eye(size.toInt, l.options),
+              l,
+              false,
+              false,
+              false
+            )
+        val phi =
+          if (batch) l.transpose(-1, -2).bmm(g)
+          else l.transpose(-1, -2).mm(g)
+        phi.tril_()
+        phi.diagonalView(0, -2, -1) *= 0.5
+
+        val tmp =
+          if (batch)
+            lInv.transpose(-1, -2).bmm(phi).bmm(lInv)
+          else lInv.transpose(-1, -2).mm(phi).mm(lInv)
+
+        val tmp2 = tmp + tmp.transpose(-1, -2)
+        tmp2 *= 0.5
+        out += tmp2
+
+      }
+    }
+  )
+  val value = Variable(
+    this,
+    input.value.cholesky(upper)(scope)
+  )(scope)
+}

@@ -771,6 +771,20 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  // would never pass, see comment in pytorch's FunctionsManual.cpp
+  // testGradientAndValue("cholesky")(mat2x2PD, 9.7073) { (m, doBackprop, cuda) =>
+  //   Scope.leak { implicit scope =>
+  //     val x1 = param(STen.fromMat(m, cuda))
+  //     val L = x1.cholesky().sum
+  //     if (doBackprop) {
+  //       L.backprop()
+  //     }
+  //     (
+  //       L.value.toMat.raw(0),
+  //       x1.partialDerivative.map(t => t.toMat)
+  //     )
+  //   }
+  // }
   testGradientAndValue("log")(mat2x3, 6.579251212010101) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
