@@ -100,6 +100,19 @@ class STenSuite extends AnyFunSuite {
       )
     }
   }
+  test("cholesky ") {
+    Scope.root { implicit scope =>
+      val t1 = STen.rand(List(3, 3), STenOptions.d)
+      val pd = t1.mm(t1.t)
+      val u = pd.cholesky(false)
+      val b = STen.rand(List(3, 2), STenOptions.d)
+      val r1 = b.choleskySolve(u, false)
+      val r2 = pd.inv.mm(b)
+      val diff = r1.toMat.toVec - r2.toMat.toVec
+      assert(diff.map(_.abs).mean < 1e-4)
+
+    }
+  }
   test("argmax") {
     Scope.root { implicit scope =>
       val t1 = STen.eye(3, STenOptions.d)

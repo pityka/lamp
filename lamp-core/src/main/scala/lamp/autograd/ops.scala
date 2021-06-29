@@ -2262,3 +2262,55 @@ case class Cholesky(
     input.value.cholesky(upper)(scope)
   )(scope)
 }
+case class CholeskySolve(
+    scope: Scope,
+    b: Variable,
+    factor: Variable,
+    upper: Boolean
+) extends Op {
+
+  val params = List(
+    b.zipBackward { case (p, out) =>
+      Scope.root { implicit scope =>
+        val gB = p.choleskySolve(factor.value, upper)
+
+        out += gB
+
+      }
+    },
+    factor.zipBackward { case (p, out) =>
+      Scope.root { implicit scope =>
+        val gB = p.choleskySolve(factor.value, upper)
+        val batched = b.shape.size == 3
+        val tmp =
+          if (batched) gB.bmm(value.value.transpose(-2, -1))
+          else gB.mm(value.value.transpose(-2, -1))
+
+        val tmp2 = tmp + tmp.transpose(-2, -1)
+
+        val tmp4 = if (upper) {
+          if (batched) factor.value.bmm(tmp2)
+          else factor.value.mm(tmp2)
+        } else {
+          if (batched) tmp2.bmm(factor.value)
+          else tmp2.mm(factor.value)
+        }
+
+        // symmetrize it
+        tmp4.tril_()
+        tmp4.diagonalView(0, -2, -1) *= 0.5
+
+        val symmetrized = tmp4 + tmp4.transpose(-2, -1)
+
+        out -= symmetrized
+
+      }
+    }
+  )
+  val value = Variable(
+    this,
+    b.value.choleskySolve(factor.value, upper)(
+      scope
+    )
+  )(scope)
+}

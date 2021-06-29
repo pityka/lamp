@@ -1314,8 +1314,8 @@ case class STen private (
     owned(ATen.cholesky(value, upper))
   def choleskyInverse[S: Sc](upper: Boolean) =
     owned(ATen.cholesky_inverse(value, upper))
-  def choleskyInverse[S: Sc](input2: STen, upper: Boolean) =
-    owned(ATen.cholesky_solve(value, input2.value, upper))
+  def choleskySolve[S: Sc](choleskyFactor: STen, upper: Boolean) =
+    owned(ATen.cholesky_solve(value, choleskyFactor.value, upper))
 
   /** Return a boolean tensor indicating element-wise equality. Maps to Aten.equal */
   def equalDeep(input2: STen) =

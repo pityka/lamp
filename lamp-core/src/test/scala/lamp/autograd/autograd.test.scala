@@ -17,6 +17,9 @@ class GradientSuite extends AnyFunSuite {
   val mat3x3 = Mat(Vec(1d, 2d, 0d), Vec(4d, 5d, 1d), Vec(6d, 7d, 0d)).innerM
   val mat2x2 = Mat(Vec(4d, 1d), Vec(6d, 2d)).T
   val mat2x2PD = Mat(Vec(4d, 1d), Vec(6d, 2d)).outerM
+  val mat2x2PDCholeskyFactor = mat2x2PD.choleskyLower.get
+  mat2x2PDCholeskyFactor.update(0, 1, 0d)
+
   val ndx1 = NDArray(Array(1d), List(1))
   val ndx2 = NDArray(Array(1d, 1d), List(2))
   val ndx3 = NDArray(Array(1d, 2d, 3d), List(3))
@@ -771,7 +774,7 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
-  // would never pass, see comment in pytorch's FunctionsManual.cpp
+  // won't pass because the grad is symmetrized
   // testGradientAndValue("cholesky")(mat2x2PD, 9.7073) { (m, doBackprop, cuda) =>
   //   Scope.leak { implicit scope =>
   //     val x1 = param(STen.fromMat(m, cuda))
@@ -784,6 +787,37 @@ class GradientSuite extends AnyFunSuite {
   //       x1.partialDerivative.map(t => t.toMat)
   //     )
   //   }
+  // }
+  testGradientAndValue("cholesky solve, b")(mat2x2, 58.2500) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val l = param(STen.fromMat(mat2x2PD).cholesky(false))
+        val x1 = param(STen.fromMat(m, cuda))
+        val L = x1.choleskySolve(l, false).sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          x1.partialDerivative.map(t => t.toMat)
+        )
+      }
+  }
+  // won't pass because the grad is symmetrized
+  // testGradientAndValue("cholesky solve, f")(mat2x2PDCholeskyFactor, 6.25d) {
+  //   (m, doBackprop, cuda) =>
+  //     Scope.leak { implicit scope =>
+  //       val x1 = param(STen.fromMat(m, cuda))
+  //       val b = param(STen.eye(2))
+  //       val L = b.choleskySolve(x1, false).sum
+  //       if (doBackprop) {
+  //         L.backprop()
+  //       }
+  //       (
+  //         L.value.toMat.raw(0),
+  //         x1.partialDerivative.map(t => t.toMat)
+  //       )
+  //     }
   // }
   testGradientAndValue("log")(mat2x3, 6.579251212010101) {
     (m, doBackprop, cuda) =>

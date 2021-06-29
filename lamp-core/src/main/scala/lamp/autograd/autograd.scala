@@ -416,6 +416,13 @@ sealed trait Variable {
     new PInv(extractScope, this, rcond).value
   def cholesky[S: Sc](upper: Boolean = false) =
     new Cholesky(extractScope, this, upper).value
+  def choleskySolve[S: Sc](factor: Variable, upper: Boolean = false) =
+    new CholeskySolve(
+      extractScope,
+      b = this,
+      factor = factor,
+      upper = upper
+    ).value
   def toMat = value.toMat
   def toLongMat = value.toLongMat
 }
