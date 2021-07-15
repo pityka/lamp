@@ -393,6 +393,28 @@ case class IndexAdd(
     Variable(this, result)(scope)
   }
 }
+case class IndexAddToTarget(
+    scope: Scope,
+    target: Variable,
+    src: Variable,
+    index: Variable,
+    dim: Int
+) extends Op {
+
+  val params = List(
+    src.zipBackward { (p, out) =>
+      Scope.root { implicit scope => out += p.indexSelect(dim, index.value) }
+    },
+    target.zipBackward { (p, out) =>
+      out += p
+    }
+  )
+  val value =
+    Variable(this, target.value.indexAdd(dim, index.value, src.value)(scope))(
+      scope
+    )
+
+}
 case class RepeatInterleave(
     scope: Scope,
     self: Variable,

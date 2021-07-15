@@ -315,6 +315,11 @@ sealed trait Variable {
     new ScatterAdd(extractScope, this, index, dim, maxIndex).value
   def indexAdd[S: Sc](index: Variable, dim: Int, maxIndex: Long) =
     new IndexAdd(extractScope, this, index, dim, maxIndex).value
+  def indexAddFromSource[S: Sc](index: Variable, dim: Int, source: Variable) =
+    new IndexAddToTarget(extractScope, this, source, index, dim).value
+  def indexFill[S: Sc](index: Variable, dim: Int, fillValue: Double) =
+    new IndexFill(extractScope, this, dim, index, fillValue).value
+
   def sum[S: Sc] = new Sum(extractScope, this, Nil, false).value
   def sum[S: Sc](dim: List[Int], keepDim: Boolean) =
     new Sum(extractScope, this, dim, keepDim).value

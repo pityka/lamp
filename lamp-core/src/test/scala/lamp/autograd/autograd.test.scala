@@ -51,6 +51,7 @@ class GradientSuite extends AnyFunSuite {
   val mat1x1 = Mat(Vec(1d))
   val mat3x2 = mat2x3.T
   val mat3x1 = Mat(Vec(1d, 2d, 3d))
+  val mat1x3 = Mat(Vec(1d, 2d, 3d)).T
   val mat3x1_2 = Mat(Vec(2d, 3d, 4d))
   def t2x3 = STen.fromMat(mat2x3)(Scope.free)
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
@@ -1422,6 +1423,70 @@ class GradientSuite extends AnyFunSuite {
         input.partialDerivative.map(t => t.toMat)
       )
     }
+  }
+  testGradientAndValue("index add by target")(mat2x3, 27d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.fromMat(m, cuda))
+        val src = param(STen.fromMat(mat3x1.T, cuda))
+        val index =
+          param(
+            STen.owned(
+              NDArray.tensorFromLongNDArray(
+                NDArray(
+                  Array(0L),
+                  List(1)
+                ),
+                cuda
+              )
+            )
+          )
+        val output = input.indexAddFromSource(index, 0, src)
+        assert(
+          output.toMat.roundTo(4) == Mat(Vec(2d, 5d, 8d), Vec(2d, 4d, 6d)).T
+        )
+        val L = output.sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          input.partialDerivative.map(t => t.toMat)
+        )
+      }
+  }
+  testGradientAndValue("index add by src")(mat1x3, 27d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.fromMat(mat2x3, cuda))
+        val src = param(STen.fromMat(m, cuda))
+        val index =
+          param(
+            STen.owned(
+              NDArray.tensorFromLongNDArray(
+                NDArray(
+                  Array(0L),
+                  List(1)
+                ),
+                cuda
+              )
+            )
+          )
+        val output = input.indexAddFromSource(index, 0, src)
+        assert(
+          output.toMat.roundTo(4) == Mat(Vec(2d, 5d, 8d), Vec(2d, 4d, 6d)).T
+        )
+        val L = output.sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          src.partialDerivative.map(t => t.toMat)
+        )
+      }
   }
   testGradientAndValue("repeat interleave")(mat2x3, 54d) {
     (m, doBackprop, cuda) =>
