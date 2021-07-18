@@ -170,6 +170,38 @@ case class IndexSelect(
   val value =
     Variable(this, input.value.indexSelect(dim, index.value)(scope))(scope)
 }
+case class Where(
+    scope: Scope,
+    condition: STen,
+    trueBranch: Variable,
+    falseBranch: Variable
+) extends Op {
+
+  val params = List(
+    trueBranch.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val ones = STen.onesLike(trueBranch.value)
+        val zeros = STen.zerosLike(falseBranch.value)
+        val tmp = STen.where(condition, ones, zeros)
+        out.addcmulSelf(p, tmp, 1.0)
+      }
+    },
+    falseBranch.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val zeros = STen.zerosLike(trueBranch.value)
+        val ones = STen.onesLike(falseBranch.value)
+        val tmp = STen.where(condition, zeros, ones)
+        out.addcmulSelf(p, tmp, 1.0)
+      }
+
+    }
+  )
+  val value =
+    Variable(
+      this,
+      STen.where(condition, trueBranch.value, falseBranch.value)(scope)
+    )(scope)
+}
 case class ArgMax(scope: Scope, a: Variable, dim: Long, keepDim: Boolean)
     extends Op {
 

@@ -101,6 +101,11 @@ object Variable {
   def cat(inputs: Seq[Variable], dim: Long)(implicit scope: Scope) =
     new Concatenate(scope, inputs, dim).value
 
+  def where(condition: STen, trueBranch: Variable, falseBranch: Variable)(
+      implicit scope: Scope
+  ) =
+    new Where(scope, condition, trueBranch, falseBranch).value
+
   def sparseFromValueAndIndex(values: Variable, indices: STen, dim: Seq[Long])(
       implicit scope: Scope
   ) =

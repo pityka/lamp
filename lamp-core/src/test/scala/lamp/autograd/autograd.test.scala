@@ -1039,6 +1039,36 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  testGradientAndValue("where true branch")(mat2x3_2, 21d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val x1 = param(STen.fromMat(m, cuda))
+        val x2 = param(STen.fromMat(mat2x3, cuda))
+        val L = Variable.where(STen.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          x1.partialDerivative.map(t => t.toMat)
+        )
+      }
+  }
+  testGradientAndValue("where false branch")(mat2x3, 21d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val x1 = param(STen.fromMat(mat2x3_2, cuda))
+        val x2 = param(STen.fromMat(m, cuda))
+        val L = Variable.where(STen.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          x2.partialDerivative.map(t => t.toMat)
+        )
+      }
+  }
   testGradientAndValue("softmax")(mat2x3_2, -22.441910257332836) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
