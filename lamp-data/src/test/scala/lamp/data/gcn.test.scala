@@ -208,7 +208,7 @@ class GCNSuite extends AnyFunSuite {
             targetPerNode = labelsT
           )
 
-        val (_, trainedModel, _,_) = IOLoops
+        val (_, trainedModel, _, _) = IOLoops
           .withSWA(
             model = model,
             optimizerFactory = RAdam
