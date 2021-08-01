@@ -98,7 +98,7 @@ class MLPSuite extends AnyFunSuite {
       val stateFile =
         java.io.File.createTempFile("sdfs", "dsfsd").getAbsoluteFile()
 
-      val (_, trainedModel, _) = IOLoops
+      val (_, trainedModel, _, _) = IOLoops
         .withSWA(
           model = model,
           optimizerFactory = SGDW

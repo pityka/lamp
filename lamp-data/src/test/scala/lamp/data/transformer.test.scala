@@ -112,7 +112,7 @@ class TransformerSuite extends AnyFunSuite {
           LossFunctions.NLL(2, classWeights)
         )
 
-        val (_, trainedModel, _) = IOLoops
+        val (_, trainedModel, _, _) = IOLoops
           .withSWA(
             model = model,
             optimizerFactory = RAdam

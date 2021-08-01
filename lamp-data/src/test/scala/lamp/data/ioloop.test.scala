@@ -72,7 +72,7 @@ class IOLoopSuite extends AnyFunSuite {
         printMemoryAllocations = true
       )
 
-      val (epoch, trainedModel, learningCurve) = IOLoops
+      val (epoch, trainedModel, learningCurve, _) = IOLoops
         .withSWA(
           model = model,
           optimizerFactory = SGDW
