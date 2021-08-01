@@ -488,7 +488,7 @@ object MultiheadAttention {
     val q1t: Variable = transposeIn(q1, numHeads)
     // (batch * numHeads) x num k-v x hidden/numHeads
     val k1t: Variable = transposeIn(k1, numHeads)
-    // (batch * numHeads) x num k-v x hiddenhnumHeads
+    // (batch * numHeads) x num k-v x hidden/numHeads
     val v1t: Variable = transposeIn(v1, numHeads)
 
     // (batch * numHeads) x num queries
