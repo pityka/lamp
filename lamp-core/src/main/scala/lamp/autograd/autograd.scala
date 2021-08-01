@@ -330,6 +330,8 @@ sealed trait Variable {
     new Sum(extractScope, this, dim, keepDim).value
   def expandAs[S: Sc](other: STen) =
     new ExpandAs(extractScope, this, other).value
+  def expand[S: Sc](shape: List[Long]) =
+    new Expand(extractScope, this, shape).value
   def rowSum[S: Sc] = sum(List(1), true)
   def colSum[S: Sc] = sum(List(0), true)
   def exp[S: Sc] = new Exp(extractScope, this).value

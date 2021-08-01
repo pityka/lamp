@@ -603,6 +603,14 @@ case class ExpandAs(scope: Scope, a: Variable, as: STen) extends Op {
   val value =
     Variable(this, a.value.expandAs(as)(scope))(scope)
 }
+case class Expand(scope: Scope, a: Variable, shape: List[Long]) extends Op {
+
+  val params = List(a.zipBackward { (p, out) =>
+    Scope.root { implicit scope => out += p.unbroadcast(a.shape) }
+  })
+  val value =
+    Variable(this, a.value.expand(shape)(scope))(scope)
+}
 
 // http://cs231n.stanford.edu/handouts/derivatives.pdf
 case class MatMul(scope: Scope, a: Variable, b: Variable) extends Op {

@@ -1201,6 +1201,11 @@ case class STen private (
 
   def expandAs[S: Sc](other: STen) =
     owned(value.expand_as(other.value))
+  def expand(shape: List[Long])(implicit scope: Scope) =
+    Scope { implicit scope =>
+      val tmp = STen.zeros(shape)
+      owned(value.expand_as(tmp.value))
+    }
 
   /** Returns a tensor with a new shape.
     *
