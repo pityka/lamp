@@ -1,7 +1,7 @@
 package lamp.nn
 
 import lamp.autograd.{Variable, Constant, param}
-import lamp.Sc
+import lamp.{Sc, Scope}
 import lamp.STen
 import lamp.STenOptions
 
@@ -9,7 +9,7 @@ case class LayerNorm(
     scale: Constant,
     bias: Constant,
     eps: Double,
-    normalizedDim: List[Int]
+    normalizedShape: List[Long]
 ) extends Module {
 
   override val state = List(
@@ -18,7 +18,14 @@ case class LayerNorm(
   )
 
   override def forward[S: Sc](x: Variable): Variable =
-    x.normalize(normalizedDim, eps) * scale + bias
+    (new lamp.autograd.LayerNormOp(
+      implicitly[Scope],
+      x,
+      scale,
+      bias,
+      normalizedShape,
+      eps
+    )).value
 
 }
 
@@ -34,13 +41,13 @@ object LayerNorm {
   case object Scale extends LeafTag
   case object Bias extends LeafTag
   def apply[S: Sc](
-      normalizedDimensions: List[Int],
+      normalizedShape: List[Long],
       tOpt: STenOptions,
       eps: Double = 1e-5
   ): LayerNorm = LayerNorm(
-    scale = param(STen.ones(List(1), tOpt)),
-    bias = param(STen.zeros(List(1), tOpt)),
+    scale = param(STen.ones(normalizedShape, tOpt)),
+    bias = param(STen.zeros(normalizedShape, tOpt)),
     eps = eps,
-    normalizedDim = normalizedDimensions
+    normalizedShape = normalizedShape
   )
 }

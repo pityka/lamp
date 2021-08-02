@@ -1110,10 +1110,10 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
-  testGradientAndValue("mean")(mat2x3_2, 5.5d) { (m, doBackprop, cuda) =>
+  testGradientAndValue("mean")(mat2x3_2, 1.8333d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val x1 = param(STen.fromMat(m, cuda))
-      val L = x1.mean(List(0)).sum
+      val L = x1.mean(List(0, 1))
       if (doBackprop) {
         L.backprop()
       }
@@ -2042,6 +2042,94 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+        )
+      }
+  }
+
+  testGradientAndValue("layer norm 1d - wrt to input")(mat2x3, 0.8165) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.fromMat(m, cuda))
+        val weight = param(STen.fromVec(Vec(1d, 2d, 3d), cuda))
+
+        val bias = param(STen.fromVec(vec.zeros(3), cuda))
+
+        val output =
+          new LayerNormOp(
+            scope,
+            input,
+            weight,
+            bias,
+            List(3L),
+            eps = 1e-5
+          ).value.mean(List(0, 1))
+
+        val L = output
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          input.partialDerivative.map(t => t.toMat)
+        )
+      }
+  }
+  testGradientAndValueND("layer norm 1d - wrt to weight")(ndx3, 0.8165) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.fromMat(mat2x3, cuda))
+        val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+
+        val bias = param(STen.fromVec(vec.zeros(3), cuda))
+
+        val output =
+          new LayerNormOp(
+            scope,
+            input,
+            weight,
+            bias,
+            List(3L),
+            eps = 1e-5
+          ).value
+
+        val L = output.mean(List(0, 1))
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+        )
+      }
+  }
+  testGradientAndValueND("layer norm 1d - wrt to bias")(ndx3, 2d) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val input =
+          param(STen.fromMat(mat2x3, cuda))
+        val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+
+        val weight = param(STen.fromVec(vec.zeros(3), cuda))
+
+        val output =
+          new LayerNormOp(
+            scope,
+            input,
+            weight,
+            bias,
+            List(3L),
+            eps = 1e-5
+          ).value
+
+        val L = output.mean(List(0, 1))
         if (doBackprop) {
           L.backprop()
         }

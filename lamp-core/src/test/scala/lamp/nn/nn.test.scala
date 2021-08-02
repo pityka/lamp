@@ -248,7 +248,7 @@ class NNSuite extends AnyFunSuite {
             )
             bToVar(module.forward(inputToA(d))).sum.value.toMat.raw(0)
           }
-          val eps = 1e-8
+          val eps = 1e-3
           val r = NDArray.zeros(paramT.shape.map(_.toInt)).mapWithIndex {
             case (_, idx) =>
               val epsM = NDArray.zeros(paramT.shape.map(_.toInt))
@@ -269,7 +269,10 @@ class NNSuite extends AnyFunSuite {
         }
         assert(gradAuto.size == gradNum.size)
         gradAuto.zip(gradNum).foreach { case (a, b) =>
-          assert(a.toVec.roundTo(10) == b.toVec.roundTo(10))
+          assert(
+            a.toVec.roundTo(6) == b.toVec.roundTo(6),
+            s"${a.toVec.toSeq} ${b.toVec.toSeq}"
+          )
         }
         assert(Vec(value).roundTo(4) == Vec(expectedValue).roundTo(4))
         ()
@@ -730,8 +733,8 @@ class NNSuite extends AnyFunSuite {
               padToken = padToken,
               linearized = false
             ),
-            layerNorm1 = LayerNorm(List(2), tOpt),
-            layerNorm2 = LayerNorm(List(2), tOpt),
+            layerNorm1 = lamp.nn.LayerNorm(normalizedShape = List(2L), tOpt),
+            layerNorm2 = lamp.nn.LayerNorm(List(2L), tOpt),
             w1 = param(STen.ones(List(in, mlpHiddenDim), tOpt) * 2),
             b1 = param(STen.ones(List(1, mlpHiddenDim), tOpt) * 2),
             w2 = param(STen.ones(List(mlpHiddenDim, in), tOpt) * 2),

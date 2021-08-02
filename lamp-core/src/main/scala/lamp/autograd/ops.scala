@@ -972,7 +972,12 @@ case class Mean(scope: Scope, a: Variable, dim: List[Int], keepDim: Boolean)
 
   val params = List(
     a.zipBackward { (p, out) =>
-      STen.addOut(out, out, p, 1d / dim.map(l => a.sizes.apply(l.toInt)).sum)
+      STen.addOut(
+        out,
+        out,
+        p,
+        1d / dim.map(l => a.sizes.apply(l.toInt)).foldLeft(1L)(_ * _)
+      )
 
     }
   )
@@ -2116,6 +2121,82 @@ case class BatchNorm(
         tmp.release
       }
       flattened_p.release
+    }
+  )
+}
+case class LayerNormOp(
+    scope: Scope,
+    input: Variable,
+    weight: Variable,
+    bias: Variable,
+    normalizedShape: List[Long],
+    eps: Double
+) extends Op {
+
+// static inline std::tuple<Tensor,Tensor,Tensor> native_layer_norm_backward(const Tensor & grad_out, const Tensor & input, IntArrayRef normalized_shape, const Tensor & mean, const Tensor & rstd, const c10::optional<Tensor> & weight, const c10::optional<Tensor> & bias, std::array<bool,3> output_mask);
+
+  val (output, mean, rstd) = ATen.native_layer_norm(
+    input.value.value,
+    normalizedShape.toArray,
+    weight.value.value,
+    bias.value.value,
+    eps
+  )
+
+  scope.register(mean)
+  scope.register(rstd)
+
+  override val value: Variable =
+    Variable(this, STen.owned(output)(scope))(scope)
+
+  override val params = List(
+    input.zipBackward { (p, out) =>
+      val (gradInput, a, b) = ATen.native_layer_norm_backward(
+        p.value,
+        input.value.value,
+        normalizedShape.toArray,
+        mean,
+        rstd,
+        weight.value.value,
+        bias.value.value,
+        Array(true, false, false)
+      )
+      ATen.add_out(out.value, out.value, gradInput, 1d)
+      gradInput.release
+      a.release
+      b.release
+    },
+    weight.zipBackward { (p, out) =>
+      val (a, gradWeight, b) = ATen.native_layer_norm_backward(
+        p.value,
+        input.value.value,
+        normalizedShape.toArray,
+        mean,
+        rstd,
+        weight.value.value,
+        bias.value.value,
+        Array(false, true, false)
+      )
+      ATen.add_out(out.value, out.value, gradWeight, 1d)
+      gradWeight.release
+      a.release
+      b.release
+    },
+    bias.zipBackward { (p, out) =>
+      val (a, b, gradBias) = ATen.native_layer_norm_backward(
+        p.value,
+        input.value.value,
+        normalizedShape.toArray,
+        mean,
+        rstd,
+        weight.value.value,
+        bias.value.value,
+        Array(false, false, true)
+      )
+      ATen.add_out(out.value, out.value, gradBias, 1d)
+      gradBias.release
+      a.release
+      b.release
     }
   )
 }

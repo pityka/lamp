@@ -160,8 +160,8 @@ object TransformerEncoderBlock {
         tOpt = tOpt,
         linearized = linearized
       ),
-      layerNorm1 = LayerNorm(List(2), tOpt),
-      layerNorm2 = LayerNorm(List(2), tOpt),
+      layerNorm1 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
+      layerNorm2 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       w1 = initLinear(in, mlpHiddenDim, tOpt),
       b1 = param(STen.zeros(List(1, mlpHiddenDim), tOpt)),
       w2 = initLinear(mlpHiddenDim, out, tOpt),
