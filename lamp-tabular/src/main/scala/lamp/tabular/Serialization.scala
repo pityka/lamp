@@ -6,6 +6,7 @@ import upickle.default._
 
 import lamp.DoublePrecision
 import lamp.SinglePrecision
+import lamp.HalfPrecision
 import lamp.CPU
 import lamp.extratrees.ClassificationTree
 import lamp.extratrees.RegressionTree
@@ -206,6 +207,7 @@ object Serialization {
       baseFiles,
       model.dataLayout,
       model.precision match {
+        case HalfPrecision   => "half"
         case DoublePrecision => "double"
         case SinglePrecision => "single"
       },

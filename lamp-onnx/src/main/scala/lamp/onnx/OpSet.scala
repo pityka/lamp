@@ -7,6 +7,7 @@ import lamp.STen
 import lamp.SinglePrecision
 import lamp.DoublePrecision
 import lamp.Scope
+import lamp.HalfPrecision
 
 trait NameMap {
   def apply(u: UUID): String
@@ -424,6 +425,8 @@ trait DefaultOpSet1 extends OpSet {
             Ops.attr(
               "to",
               op.precision match {
+                case HalfPrecision =>
+                  ox.TensorProto.DataType.FLOAT16.index.toLong
                 case SinglePrecision =>
                   ox.TensorProto.DataType.FLOAT.index.toLong
                 case DoublePrecision =>

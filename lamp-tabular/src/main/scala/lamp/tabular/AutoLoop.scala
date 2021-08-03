@@ -16,6 +16,7 @@ import lamp.CPU
 import cats.implicits._
 import lamp.SinglePrecision
 import org.saddle.index.IndexIntRange
+import lamp.HalfPrecision
 import lamp.DoublePrecision
 import lamp.CudaDevice
 import lamp.extratrees.RegressionTree
@@ -588,6 +589,7 @@ object AutoLoop {
         Scope { implicit scope =>
           val t2 = t.oneHot(numClasses)
           precision match {
+            case HalfPrecision => t2.castToHalf
             case SinglePrecision => t2.castToFloat
             case DoublePrecision => t2.castToDouble
           }
