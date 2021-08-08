@@ -1,7 +1,5 @@
 package lamp
 import lamp.autograd.Variable
-import aten.ATen
-import lamp.util.syntax
 import lamp.autograd.{Constant, param}
 
 /** Provides building blocks for neural networks
@@ -73,10 +71,9 @@ package object nn {
   ): Unit = {
     val norm = math.sqrt((gradients.map {
       case Some(g) =>
-        val tmp = ATen.pow_0(g.value, 2d)
-        val d = ATen.sum_0(tmp).toMat.raw(0)
-        tmp.release
-        d
+        Scope.leak { implicit scope =>
+          g.pow(2d).sum.toMat.raw(0)
+        }
       case None => 0d
     }: Seq[Double]).sum)
     if (norm > theta) {
