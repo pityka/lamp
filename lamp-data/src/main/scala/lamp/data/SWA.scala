@@ -70,7 +70,8 @@ object SWA {
       dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
       initState: Option[SWALoopState] = None,
       accumulateGradientOverNBatches: Int = 1,
-      learningRateScheduleInitState: Option[LRState] = None
+      learningRateScheduleInitState: Option[LRState] = None,
+      forwardPassAfterTraining: Boolean = true
   ): IO[(SupervisedModel[I, M], List[(Int, Double, Option[Double])])] = {
     val modelWithOptimizer = model.asTraining.zipOptimizer(optimizerFactory)
 
@@ -269,8 +270,11 @@ object SWA {
 
       (model, learningCurve) = trained
       // update batchnorm's state in a side effect
-      _ <- IOLoops
-        .forwardBatchStream(trainBatchesOverEpoch(), model.module)
+      _ <-
+        if (forwardPassAfterTraining)
+          IOLoops
+            .forwardBatchStream(trainBatchesOverEpoch(), model.module)
+        else IO.unit
     } yield trained
 
   }
