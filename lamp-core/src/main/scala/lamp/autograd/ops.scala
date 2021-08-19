@@ -1234,9 +1234,8 @@ case class NllLoss(
 
 }
 
-/** input: (N,T) where T>=1 are multiple independent tasks
-  * target: same shape as input, float with in [0,1]
-  * posWeight: is (T)
+/** input: (N,T) where T>=1 are multiple independent tasks target: same shape as
+  * input, float with in [0,1] posWeight: is (T)
   */
 case class BinaryCrossEntropyWithLogitsLoss(
     scope: Scope,
@@ -1305,10 +1304,15 @@ case class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
 
 /** 1D convolution
   *
-  * @param input batch x in_channels x L
-  * @param weight out_channels x in_channels x kernel_size
-  * @param bias out_channels
-  * @return Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)
+  * @param input
+  *   batch x in_channels x L
+  * @param weight
+  *   out_channels x in_channels x kernel_size
+  * @param bias
+  *   out_channels
+  * @return
+  *   Variable with Tensor of size batch x out_channels x L' (length depends on
+  *   stride/padding/dilation)
   */
 case class Conv1D(
     scope: Scope,
@@ -1451,10 +1455,15 @@ case class Conv1D(
 
 /** 2D convolution
   *
-  * @param input batch x in_channels x height x width
-  * @param weight out_channels x in_channels x kernel_size x kernel_size
-  * @param bias out_channels
-  * @return Variable with Tensor of size batch x out_channels x L' (length depends on stride/padding/dilation)
+  * @param input
+  *   batch x in_channels x height x width
+  * @param weight
+  *   out_channels x in_channels x kernel_size x kernel_size
+  * @param bias
+  *   out_channels
+  * @return
+  *   Variable with Tensor of size batch x out_channels x L' (length depends on
+  *   stride/padding/dilation)
   */
 case class Conv2D(
     scope: Scope,
@@ -1836,7 +1845,8 @@ case class Conv2DTransposed(
 
 /** 1D max pooling
   *
-  * @param input batch x in_channels x L
+  * @param input
+  *   batch x in_channels x L
   */
 case class MaxPool1D(
     scope: Scope,
@@ -1898,7 +1908,8 @@ case class MaxPool1D(
 
 /** 2D max pooling
   *
-  * @param input batch x in_channels x h x w
+  * @param input
+  *   batch x in_channels x h x w
   */
 case class MaxPool2D(
     scope: Scope,
@@ -1951,7 +1962,8 @@ case class MaxPool2D(
 
 /** 2D avg pooling
   *
-  * @param input batch x in_channels x h x w
+  * @param input
+  *   batch x in_channels x h x w
   */
 case class AvgPool2D(
     scope: Scope,
@@ -2211,8 +2223,8 @@ case class LayerNormOp(
   )
 }
 
-/** Batch Norm 2D
-  * 0-th dimension are samples. 1-th are features, everything else is averaged out.
+/** Batch Norm 2D 0-th dimension are samples. 1-th are features, everything else
+  * is averaged out.
   */
 case class BatchNorm2D(
     scope: Scope,

@@ -29,9 +29,11 @@ object Yogi {
       )
 }
 
-/** The Yogi optimizer algorithm
-  * I added the decoupled weight decay term following https://arxiv.org/pdf/1711.05101.pdf
-  * @see https://papers.nips.cc/paper/2018/file/90365351ccc7437a1309dc64e4db32a3-Paper.pdf Algorithm 2
+/** The Yogi optimizer algorithm I added the decoupled weight decay term
+  * following https://arxiv.org/pdf/1711.05101.pdf
+  * @see
+  *   https://papers.nips.cc/paper/2018/file/90365351ccc7437a1309dc64e4db32a3-Paper.pdf
+  *   Algorithm 2
   */
 case class Yogi(
     parameters: Seq[(STen, PTag)],

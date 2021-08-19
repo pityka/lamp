@@ -43,7 +43,9 @@ case object HalfPrecision extends FloatingPointPrecision {
   }
 }
 
-/** Represents a device where tensors are stored and tensor operations are executed */
+/** Represents a device where tensors are stored and tensor operations are
+  * executed
+  */
 sealed trait Device { self =>
   def to(t: Tensor): Tensor
   def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))
@@ -51,9 +53,8 @@ sealed trait Device { self =>
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions
   def setSeed(seed: Long): Unit
 
-  /** Executes f on a new stream
-    *  f must not switch to other threads
-    * Restores the stream to the default stream
+  /** Executes f on a new stream f must not switch to other threads Restores the
+    * stream to the default stream
     */
   def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A
 }

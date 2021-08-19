@@ -11,22 +11,23 @@ import lamp.Movable
   * ===Short outline of reverse autograd from scalar values===
   * `y = f1 o f2 o .. o fn`
   *
-  * One of these subexpression (f_i) has value w2 and arguments `w1`.
-  * We can write `dy/dw1 = dy/dw2 * dw2/dw1`.
-  * `dw2/dw1` is the Jacobian of `f_i` at the current value of `w1`.
-  * `dy/dw2` is the Jacobian of `y` wrt to `w2` at the current value of `w2`.
+  * One of these subexpression (f_i) has value w2 and arguments `w1`. We can
+  * write `dy/dw1 = dy/dw2 * dw2/dw1`. `dw2/dw1` is the Jacobian of `f_i` at the
+  * current value of `w1`. `dy/dw2` is the Jacobian of `y` wrt to `w2` at the
+  * current value of `w2`.
   *
-  * The current value of `w1` and `w2` are computed in a forward pass.
-  * The value `dy/dy` is 1 and from this `dy/dw2` is recursed in the backward pass.
-  * The Jacobian function of `dw2/dw1` is computed symbolically and hard coded.
+  * The current value of `w1` and `w2` are computed in a forward pass. The value
+  * `dy/dy` is 1 and from this `dy/dw2` is recursed in the backward pass. The
+  * Jacobian function of `dw2/dw1` is computed symbolically and hard coded.
   *
-  * The anonymous function which `Op`s must implement is `dy/dw2 => dy/dw2 * dw2/dw1`.
-  * The argument of that function (`dy/dw2`) is coming down from the backward pass.
-  * The `Op` must implement `dy/dw2 * dw2/dw1`.
+  * The anonymous function which `Op`s must implement is `dy/dw2 => dy/dw2 *
+  * dw2/dw1`. The argument of that function (`dy/dw2`) is coming down from the
+  * backward pass. The `Op` must implement `dy/dw2 * dw2/dw1`.
   *
   * The shape of `dy/dw2` is the shape of the value of the operation (`dy/dw2`).
-  * The shape of `dy/dw2 * dw2/dw1` is the shape of the parameter variable with respect which
-  * the derivative is taken, i.e. `w1` since we are computing `dy/dw1`.
+  * The shape of `dy/dw2 * dw2/dw1` is the shape of the parameter variable with
+  * respect which the derivative is taken, i.e. `w1` since we are computing
+  * `dy/dw1`.
   *
   * ===How to implement an operation===
   * {{{
@@ -38,14 +39,14 @@ import lamp.Movable
   *
   * // List all parameters which support partial derivatives, here both a and b
   * val params = List(
-  *  // partial derivative of the first argument
-  *  a.zipBackward { (p, out) =>
+  *   // partial derivative of the first argument
+  *   a.zipBackward { (p, out) =>
   *   // p is the incoming partial derivative, out is where the result is accumated into
   *   // Intermediate tensors are released due to the enclosing Scope.root
   *   Scope.root { implicit scope => out += (p * b.value).unbroadcast(a.sizes) }
   *   },
-  *  // partial derivative of the second argument ..
-  *  b.zipBackward { (p, out) =>
+  *   // partial derivative of the second argument ..
+  *   b.zipBackward { (p, out) =>
   *   Scope.root { implicit scope => out += (p * a.value).unbroadcast(b.sizes) }
   *
   *   }
@@ -55,8 +56,10 @@ import lamp.Movable
   *
   * }
   * }}}
-  * @see [[https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation]]
-  * @see [[http://www.cs.cmu.edu/~wcohen/10-605/notes/autodiff.pdf]]
+  * @see
+  *   [[https://en.wikipedia.org/wiki/Automatic_differentiation#Reverse_accumulation]]
+  * @see
+  *   [[http://www.cs.cmu.edu/~wcohen/10-605/notes/autodiff.pdf]]
   */
 trait Op {
 
@@ -65,16 +68,19 @@ trait Op {
 
   /** Implementation of the backward pass
     *
-    * A list of input variables paired up with an anonymous function computing the respective partial
-    * derivative. With the notation in the documentation of the trait [[lamp.autograd.Op]]:
-    * `dy/dw2 => dy/dw2 * dw2/dw1`. The first argument of the anonymous function is the incoming
-    * partial derivative (`dy/dw2`), the second argument is the output tensor into which the
-    * result (`dy/dw2 * dw2/dw1`) is accumulated (added).
+    * A list of input variables paired up with an anonymous function computing
+    * the respective partial derivative. With the notation in the documentation
+    * of the trait [[lamp.autograd.Op]]: `dy/dw2 => dy/dw2 * dw2/dw1`. The first
+    * argument of the anonymous function is the incoming partial derivative
+    * (`dy/dw2`), the second argument is the output tensor into which the result
+    * (`dy/dw2 * dw2/dw1`) is accumulated (added).
     *
-    * If the operation does not support computing the partial derivative for some of its arguments, then
-    * do not include that argument in this list.
+    * If the operation does not support computing the partial derivative for
+    * some of its arguments, then do not include that argument in this list.
     *
-    * @see The documentation on the trait [[lamp.autograd.Op]] for more details and example.
+    * @see
+    *   The documentation on the trait [[lamp.autograd.Op]] for more details and
+    *   example.
     */
   val params: List[(Variable, (STen, STen) => Unit)]
 }
@@ -164,25 +170,29 @@ object VariableNonConstant {
 
 /** A value of a tensor valued function, a vertex in the computational graph.
   *
-  * A Variable may be constant, i.e. depends on no other Variables.
-  * Constant variables may or may not need their partial derivatives computed.
+  * A Variable may be constant, i.e. depends on no other Variables. Constant
+  * variables may or may not need their partial derivatives computed.
   */
 sealed trait Variable {
 
-  /** The parent operation of this value in the computational graph. Empty for constants. */
+  /** The parent operation of this value in the computational graph. Empty for
+    * constants.
+    */
   def op: Option[Op]
 
   /** The actual tensor value of this Variable. */
   def value: STen
 
-  /** The partial derivative, or a placeholder tensor for the partial derivative.
+  /** The partial derivative, or a placeholder tensor for the partial
+    * derivative.
     *
-    * Returns empty iff this Variable needs no gradient computation. Otherwise a placeholder tensor
-    * is allocated upfront when the Variable is allocated.
+    * Returns empty iff this Variable needs no gradient computation. Otherwise a
+    * placeholder tensor is allocated upfront when the Variable is allocated.
     */
   def partialDerivative: Option[STen]
 
-  /** Returns true if [[lamp.autograd.Variable.partialDerivative]] is defined. */
+  /** Returns true if [[lamp.autograd.Variable.partialDerivative]] is defined.
+    */
   def needsGrad: Boolean = partialDerivative.isDefined
 
   override def toString =
@@ -200,10 +210,14 @@ sealed trait Variable {
   /** Returns unique, stable and random UUID. */
   val id = ju.UUID.randomUUID()
 
-  /** Returns an other Variable wrapping the same value tensor, without any parent and with `needsGrad=false`. */
+  /** Returns an other Variable wrapping the same value tensor, without any
+    * parent and with `needsGrad=false`.
+    */
   def detached = const(value)
 
-  /** Returns an other Variable wrapping the same value tensor, without any parent and with `needsGrad=true`. */
+  /** Returns an other Variable wrapping the same value tensor, without any
+    * parent and with `needsGrad=true`.
+    */
   def withGrad[S: Sc] = param(value)
 
   /** In place zeros out the partial derivative */
@@ -244,7 +258,8 @@ sealed trait Variable {
 
   /** Runs the backpropagation algorithm starting from this value
     *
-    * Only meaningful if this is scalar i.e. the number of elements in the value tensor is 1.
+    * Only meaningful if this is scalar i.e. the number of elements in the value
+    * tensor is 1.
     */
   def backprop(): Unit = {
     if (partialDerivative.isDefined) {

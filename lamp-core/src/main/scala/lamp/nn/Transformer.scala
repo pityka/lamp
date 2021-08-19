@@ -13,9 +13,8 @@ import lamp.Device
 
 /** TransformerEncoder module
   *
-  * Input is `(data, tokens)` where
-  * `data` is (batch, num tokens, in dimension), double tensor
-  * `tokens` is (batch,num tokens) long tensor.
+  * Input is `(data, tokens)` where `data` is (batch, num tokens, in dimension),
+  * double tensor `tokens` is (batch,num tokens) long tensor.
   *
   * Output is (bach, num tokens, out dimension)
   *
@@ -46,25 +45,35 @@ object TransformerEncoder {
 
   }
 
-  /** Factory for the encoder module of transformer
-    * Does *not* include embedding and positional encoding
+  /** Factory for the encoder module of transformer Does *not* include embedding
+    * and positional encoding
     *
-    * Input is `(data, tokens)` where
-    * `data` is (batch, num tokens, in dimension), double tensor
-    * `tokens` is (batch,num tokens) long tensor.
+    * Input is `(data, tokens)` where `data` is (batch, num tokens, in
+    * dimension), double tensor `tokens` is (batch,num tokens) long tensor.
     *
     * The sole purpose of `tokens` is to carry over the padding
     *
-    * @param numBlocks number of transformer blocks to create
-    * @param in input dimension
-    * @param attentionHiddenPerHeadDim size of hidden attention dimension of each attention head
-    * @param attentionNumHeads number of attention heads
-    * @param mlpHiddenDim size of hidden dimension of the two layer perceptron
-    * @param out output dimension
-    * @param dropout dropout rate
-    * @param padToken pad token, (batch, seq) positions where `tokens` == `padToken` are ignored
-    * @param tOpt tensor options
-    * @return a module
+    * @param numBlocks
+    *   number of transformer blocks to create
+    * @param in
+    *   input dimension
+    * @param attentionHiddenPerHeadDim
+    *   size of hidden attention dimension of each attention head
+    * @param attentionNumHeads
+    *   number of attention heads
+    * @param mlpHiddenDim
+    *   size of hidden dimension of the two layer perceptron
+    * @param out
+    *   output dimension
+    * @param dropout
+    *   dropout rate
+    * @param padToken
+    *   pad token, (batch, seq) positions where `tokens` == `padToken` are
+    *   ignored
+    * @param tOpt
+    *   tensor options
+    * @return
+    *   a module
     */
   def apply[S: Sc](
       numBlocks: Int,
@@ -94,7 +103,8 @@ object TransformerEncoder {
     )
 }
 
-/** A single block of the transformer encoder as defined in Fig 10.7.1 in d2l v0.16
+/** A single block of the transformer encoder as defined in Fig 10.7.1 in d2l
+  * v0.16
   */
 case class TransformerEncoderBlock(
     attention: MultiheadAttention,
@@ -202,11 +212,9 @@ object TransformerEncoderBlock {
 
 /** Multi-head scaled dot product attention module
   *
-  * Input: (query,key,value,tokens) where
-  *  query: batch x num queries x query dim
-  *  key: batch x num k-v x key dim
-  *  value: batch x num k-v x key value
-  *  tokens: batch x num queries, long type
+  * Input: (query,key,value,tokens) where query: batch x num queries x query dim
+  * key: batch x num k-v x key dim value: batch x num k-v x key value tokens:
+  * batch x num queries, long type
   *
   * Tokens is used to carry over padding information and ignore the padding
   */
@@ -294,11 +302,15 @@ object MultiheadAttention {
       }
     )
 
-  /** @param tokens batch x seq , type long
-    * @param maskable batch x seq x ???
+  /** @param tokens
+    *   batch x seq , type long
+    * @param maskable
+    *   batch x seq x ???
     * @param pad
     * @param fill
-    * @return batch x seq x ??? where (seq,batch,:) is set to fill if tokens(seq,batch)== maskedToken
+    * @return
+    *   batch x seq x ??? where (seq,batch,:) is set to fill if
+    *   tokens(seq,batch)== maskedToken
     */
   def sequenceMask[S: Sc](
       tokens: STen,
@@ -317,10 +329,14 @@ object MultiheadAttention {
 
   }
 
-  /** @param input batch x seq x ???
-    * @param mask scalar long
-    * @param tokens batch x seq , long
-    * @return batch x seq x ???
+  /** @param input
+    *   batch x seq x ???
+    * @param mask
+    *   scalar long
+    * @param tokens
+    *   batch x seq , long
+    * @return
+    *   batch x seq x ???
     */
   def maskedSoftmax[S: Sc](
       input: Variable,
@@ -340,12 +356,18 @@ object MultiheadAttention {
     *
     * (batch,query) locations where tokens(batch,query) == pad are ignored
     *
-    * @param query  batch x num queries x key dim
-    * @param key batch x num k-v pairs x key dim
-    * @param value batch x num k-v pairs x value dim
-    * @param tokens batch x num queries , type long
-    * @param pad scalar long
-    * @return  batch x num queries x value dim
+    * @param query
+    *   batch x num queries x key dim
+    * @param key
+    *   batch x num k-v pairs x key dim
+    * @param value
+    *   batch x num k-v pairs x value dim
+    * @param tokens
+    *   batch x num queries , type long
+    * @param pad
+    *   scalar long
+    * @return
+    *   batch x num queries x value dim
     */
   def scaledDotProductAttention[S: Sc](
       query: Variable,
@@ -368,24 +390,27 @@ object MultiheadAttention {
 
   }
 
-  /** Linearized dot product attention
-    *  https://arxiv.org/pdf/2006.16236.pdf
+  /** Linearized dot product attention https://arxiv.org/pdf/2006.16236.pdf
     *
-    * replaces exp(a dot b) with f(a) dot f(b)
-    * where f is any elementwise function,
-    *  in the paper f(x) = elu(x)+1
-    *  here f(x) = swish1(x)+1
-    * due to this decomposition a more efficient configuration of the chained matrix multiplication
-    * may be used: (Q Kt) V = Q (Kt V)
+    * replaces exp(a dot b) with f(a) dot f(b) where f is any elementwise
+    * function, in the paper f(x) = elu(x)+1 here f(x) = swish1(x)+1 due to this
+    * decomposition a more efficient configuration of the chained matrix
+    * multiplication may be used: (Q Kt) V = Q (Kt V)
     *
     * (batch,query) locations where tokens(batch,query) == pad are ignored
     *
-    * @param query  batch x num queries x key dim
-    * @param key batch x num k-v pairs x key dim
-    * @param value batch x num k-v pairs x value dim
-    * @param tokens batch x num queries , type long
-    * @param pad scalar long
-    * @return  batch x num queries x value dim
+    * @param query
+    *   batch x num queries x key dim
+    * @param key
+    *   batch x num k-v pairs x key dim
+    * @param value
+    *   batch x num k-v pairs x value dim
+    * @param tokens
+    *   batch x num queries , type long
+    * @param pad
+    *   scalar long
+    * @return
+    *   batch x num queries x value dim
     */
   def linearizedAttention[S: Sc](
       query: Variable,
@@ -420,17 +445,28 @@ object MultiheadAttention {
     *
     * (batch,query) locations where tokens(batch,query) == pad are ignored
     *
-    * @param query  batch x num queries x dq
-    * @param key batch x num k-v pairs x dk
-    * @param value batch x num k-v pairs x dv
-    * @param tokens batch x num queries , type long
-    * @param pad scalar long
-    * @param wQuery dq x hidden
-    * @param wKeys dk x hidden
-    * @param wValues  dv x hidden
-    * @param wOutput  hidden  x po
-    * @param numHeads number of output heads, must be divisible by hidden
-    * @return  batch x num queries x po
+    * @param query
+    *   batch x num queries x dq
+    * @param key
+    *   batch x num k-v pairs x dk
+    * @param value
+    *   batch x num k-v pairs x dv
+    * @param tokens
+    *   batch x num queries , type long
+    * @param pad
+    *   scalar long
+    * @param wQuery
+    *   dq x hidden
+    * @param wKeys
+    *   dk x hidden
+    * @param wValues
+    *   dv x hidden
+    * @param wOutput
+    *   hidden x po
+    * @param numHeads
+    *   number of output heads, must be divisible by hidden
+    * @return
+    *   batch x num queries x po
     */
   def multiheadAttention[S: Sc](
       query: Variable,
@@ -552,8 +588,8 @@ object PositionalEmbedding {
     STen.fromMat(m, device, precision)
   }
 
-  /** p(i,j) = min(maxDist,abs(i-j))
-    * returns the first `dimension` left singular vectors of the row normalized p
+  /** p(i,j) = min(maxDist,abs(i-j)) returns the first `dimension` left singular
+    * vectors of the row normalized p
     */
   def simpleSequence(
       sequenceLength: Int,

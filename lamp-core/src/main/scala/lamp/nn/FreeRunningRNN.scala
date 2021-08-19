@@ -2,8 +2,9 @@ package lamp.nn
 import lamp.autograd.Variable
 import lamp.Sc
 
-/** Wraps a (sequence x batch) long -> (sequence x batch x dim) double stateful module
-  * and runs in it greedy (argmax) generation mode over `timeSteps` steps.
+/** Wraps a (sequence x batch) long -> (sequence x batch x dim) double stateful
+  * module and runs in it greedy (argmax) generation mode over `timeSteps`
+  * steps.
   */
 case class FreeRunningRNN[T, M <: StatefulModule[Variable, Variable, T]](
     module: M with StatefulModule[Variable, Variable, T],

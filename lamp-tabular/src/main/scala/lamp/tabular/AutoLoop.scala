@@ -589,7 +589,7 @@ object AutoLoop {
         Scope { implicit scope =>
           val t2 = t.oneHot(numClasses)
           precision match {
-            case HalfPrecision => t2.castToHalf
+            case HalfPrecision   => t2.castToHalf
             case SinglePrecision => t2.castToFloat
             case DoublePrecision => t2.castToDouble
           }
@@ -740,7 +740,7 @@ object AutoLoop {
             LossFunctions.NLL(
               numClasses = classes,
               classWeights = classWeightsT
-            ),
+            )
           )
       }
 

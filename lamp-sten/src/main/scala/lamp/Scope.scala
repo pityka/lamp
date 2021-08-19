@@ -135,28 +135,31 @@ object Movable {
   *
   * Tracks allocations of aten.Tensor and aten.TensorOption instances.
   *
-  * aten.Tensor and aten.TensorOption instances are not freed up by the garbage collector.
-  * Lamp implements zoned memory management around these object.
-  * The managed counterpart of aten.Tensor is [[lamp.STen]], while for aten.TensorOption it is [[lamp.STenOptions]].
+  * aten.Tensor and aten.TensorOption instances are not freed up by the garbage
+  * collector. Lamp implements zoned memory management around these object. The
+  * managed counterpart of aten.Tensor is [[lamp.STen]], while for
+  * aten.TensorOption it is [[lamp.STenOptions]].
   *
-  * One can only create a [[lamp.STen]] instance with a [[lamp.Scope]] in implicit scope.
+  * One can only create a [[lamp.STen]] instance with a [[lamp.Scope]] in
+  * implicit scope.
   *
-  * Create new scopes with [[lamp.Scope.root]], [[lamp.Scope.apply]] or [[lamp.Scope.leak]].
+  * Create new scopes with [[lamp.Scope.root]], [[lamp.Scope.apply]] or
+  * [[lamp.Scope.leak]].
   *
   * =Examples=
   * {{{
   * // Scope.root returns Unit
   * Scope.root { implicit scope =>
-  *    val sum = Scope { implicit scope =>
-  *    // Intermediate values allocated in this block (`ident` and `ones`) are freed when
-  *    // this block returns
-  *    // The return value (`ident + ones`) of this block is moved to the outer scope
+  *     val sum = Scope { implicit scope =>
+  *     // Intermediate values allocated in this block (`ident` and `ones`) are freed when
+  *     // this block returns
+  *     // The return value (`ident + ones`) of this block is moved to the outer scope
   *     val ident = STen.eye(3, STenOptions.d)
   *     val ones = STen.ones(List(3, 3), STenOptions.d)
   *     ident + ones
-  *    }
-  *    assert(sum.toMat == mat.ones(3, 3) + mat.ident(3))
-  *    // `sum` is freed once this block exits
+  *     }
+  *     assert(sum.toMat == mat.ones(3, 3) + mat.ident(3))
+  *     // `sum` is freed once this block exits
   * }
   * }}}
   */
@@ -170,7 +173,8 @@ final class Scope private {
 
   /** Adds a resource to the managed resources, then returns it unchanged.
     *
-    * The resources will be released when this Scope goes out of scope or otherwise releases.
+    * The resources will be released when this Scope goes out of scope or
+    * otherwise releases.
     */
   def apply(resource: Tensor): Tensor = {
     register(resource)
@@ -179,7 +183,8 @@ final class Scope private {
 
   /** Adds a resource to the managed resources, then returns it unchanged.
     *
-    * The resources will be released when this Scope goes out of scope or otherwise releases.
+    * The resources will be released when this Scope goes out of scope or
+    * otherwise releases.
     */
   def apply(resource: TensorOptions): TensorOptions = {
     register(resource)
@@ -188,7 +193,8 @@ final class Scope private {
 
   /** Adds a resource to the managed resources.
     *
-    * The resources will be released when this Scope goes out of scope or otherwise releases.
+    * The resources will be released when this Scope goes out of scope or
+    * otherwise releases.
     */
   def register(resource: Tensor): Unit = {
     if (resource == null) throw new NullPointerException("null resource")
@@ -199,7 +205,8 @@ final class Scope private {
 
   /** Adds a resource to the managed resources.
     *
-    * The resources will be released when this Scope goes out of scope or otherwise releases.
+    * The resources will be released when this Scope goes out of scope or
+    * otherwise releases.
     */
   def register(resource: TensorOptions): Unit = {
     if (resource == null) throw new NullPointerException("null resource")
@@ -352,8 +359,8 @@ object Scope {
 
   /** Create new Scope bound to a cats-effect IO.
     *
-    * Will release when the IO finishes.
-    * Return values of the IO are moved to the parent scope.
+    * Will release when the IO finishes. Return values of the IO are moved to
+    * the parent scope.
     */
   def bracket[A: Movable](
       use: Scope => IO[A]
@@ -367,8 +374,8 @@ object Scope {
 
   /** Create new Scope bound to a cats-effect IO.
     *
-    * Will release when the IO finishes.
-    * Return values of the IO are moved to the parent scope.
+    * Will release when the IO finishes. Return values of the IO are moved to
+    * the parent scope.
     */
   def bracket[A: Movable](parent: Scope)(
       use: Scope => IO[A]
@@ -379,9 +386,9 @@ object Scope {
 
   /** Create new Scope bound to an anonymous function.
     *
-    * Will release when the function returns.
-    * Return values of the function are moved to the parent scope.
-    * Return values must conform to the [[lamp.Movable]] type class.
+    * Will release when the function returns. Return values of the function are
+    * moved to the parent scope. Return values must conform to the
+    * [[lamp.Movable]] type class.
     */
   def apply[A: Movable](
       op: Scope => A
@@ -405,8 +412,8 @@ object Scope {
 
   /** Create new Scope bound to an anonymous function. May leak resources.
     *
-    * Will release when the function returns.
-    * Return values are *not* moved to any parent scope.
+    * Will release when the function returns. Return values are *not* moved to
+    * any parent scope.
     *
     * This method exists to return GC-managed values from a Scope block.
     */

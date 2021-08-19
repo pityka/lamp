@@ -6,9 +6,10 @@ import org.saddle._
 
 /** Companion object of [[lamp.STen]]
   *
-  * - [[STen.fromDoubleArray]], [[STen.fromLongArray]], [[STen.fromFloatArray]] factory methods
-  * copy data from JVM arrays into off heap memory and create an STen instance
-  *  - There are similar factories which take SADDLE data structures
+  *   - [[STen.fromDoubleArray]], [[STen.fromLongArray]],
+  *     [[STen.fromFloatArray]] factory methods copy data from JVM arrays into
+  *     off heap memory and create an STen instance
+  *     - There are similar factories which take SADDLE data structures
   */
 object STen {
 
@@ -98,17 +99,23 @@ object STen {
   def fromFloatArray[S: Sc](ar: Array[Float], dim: Seq[Long], device: Device) =
     TensorHelpers.fromFloatArray(ar, dim, device).owned
 
-  /** Create tensor directly from file.
-    * Memory maps a file into host memory.
-    * Data is not passed through the JVM.
-    * Returned tensor is always on the CPU device.
+  /** Create tensor directly from file. Memory maps a file into host memory.
+    * Data is not passed through the JVM. Returned tensor is always on the CPU
+    * device.
     *
-    * @param path file path
-    * @param offset byte offset into the file. Must be page aligned (usually multiple of 4096)
-    * @param length byte length of the data
-    * @param scalarTypeByte scalar type (long=4,half=5,float=6,double=7)
-    * @param pin if true the mapped segment will be page locked with mlock(2)
-    * @return tensor on CPU
+    * @param path
+    *   file path
+    * @param offset
+    *   byte offset into the file. Must be page aligned (usually multiple of
+    *   4096)
+    * @param length
+    *   byte length of the data
+    * @param scalarTypeByte
+    *   scalar type (long=4,half=5,float=6,double=7)
+    * @param pin
+    *   if true the mapped segment will be page locked with mlock(2)
+    * @return
+    *   tensor on CPU
     */
   def fromFile[S: Sc](
       path: String,
@@ -124,17 +131,24 @@ object STen {
     aten.Tensor.from_file(path, offset, length, scalarTypeByte, pin).owned
   }
 
-  /** Create tensors directly from file.
-    * Memory maps a file into host memory.
-    * Data is not passed through the JVM.
-    * Returned tensor is always on the CPU device.
+  /** Create tensors directly from file. Memory maps a file into host memory.
+    * Data is not passed through the JVM. Returned tensor is always on the CPU
+    * device.
     *
-    * @param path file path
-    * @param offset byte offset into the file. Must be page aligned (usually multiple of 4096)
-    * @param length byte length of the data (all tensors in total)
-    * @param pin if true the mapped segment will be page locked with mlock(2)
-    * @param tensors list of tensors with (scalarType, byte offset, byte length), byte offset must be aligned to 8
-    * @return tensor on CPU
+    * @param path
+    *   file path
+    * @param offset
+    *   byte offset into the file. Must be page aligned (usually multiple of
+    *   4096)
+    * @param length
+    *   byte length of the data (all tensors in total)
+    * @param pin
+    *   if true the mapped segment will be page locked with mlock(2)
+    * @param tensors
+    *   list of tensors with (scalarType, byte offset, byte length), byte offset
+    *   must be aligned to 8
+    * @return
+    *   tensor on CPU
     */
   def tensorsFromFile[S: Sc](
       path: String,
@@ -528,7 +542,8 @@ object STenOptions {
   /** Returns an tensor option specifying CPU and long */
   def l = STen.lOptions
 
-  /** Returns an tensor option specifying CPU and dtype corresponding to the given byte
+  /** Returns an tensor option specifying CPU and dtype corresponding to the
+    * given byte
     *
     * 4 - long, 6 - float, 7 - double
     */
@@ -551,36 +566,41 @@ object STenOptions {
   * This class is a wrapper around aten.Tensor providing a more convenient API.
   * All allocating operations require an implicit [[lamp.Scope]].
   *
-  * STen instances are associated with a device which determines where the memory is allocated,
-  * and where the operations are performed.
-  * Operations on multiple tensors expect that all the arguments reside on the same device.
+  * STen instances are associated with a device which determines where the
+  * memory is allocated, and where the operations are performed. Operations on
+  * multiple tensors expect that all the arguments reside on the same device.
   *
-  * [[lamp.STen.options]] returns a [[lamp.STenOptions]] which describes the device, shape, data type and
-  * storage layout of a tensor.
-  * Most factory methods in the companion object in turn require a [[lamp.STenOptions]] to specify
-  * the device, data types and storage layout.
+  * [[lamp.STen.options]] returns a [[lamp.STenOptions]] which describes the
+  * device, shape, data type and storage layout of a tensor. Most factory
+  * methods in the companion object in turn require a [[lamp.STenOptions]] to
+  * specify the device, data types and storage layout.
   *
-  * Naming convention of most operations follows libtorch.
-  * Operations return their result in a copy, i.e. not in place. These operations need a [[lamp.Scope]].
-  * Operations whose name ends with an underscore are in place.
-  * Operations whose name contains `out` will write their results into the specified output tensor, these are in the companion object.
-  * Some operations are exempt from this naming rule, e.g. `+=`, `-=`, `*=` etc.
+  * Naming convention of most operations follows libtorch. Operations return
+  * their result in a copy, i.e. not in place. These operations need a
+  * [[lamp.Scope]]. Operations whose name ends with an underscore are in place.
+  * Operations whose name contains `out` will write their results into the
+  * specified output tensor, these are in the companion object. Some operations
+  * are exempt from this naming rule, e.g. `+=`, `-=`, `*=` etc.
   *
-  * Semantics of operations follow those of libtorch with the same name.
-  * Many of the operations broadcasts. See [[https://numpy.org/doc/stable/user/basics.broadcasting.html#general-broadcasting-rules]] for broadcasting rules. In short:
+  * Semantics of operations follow those of libtorch with the same name. Many of
+  * the operations broadcasts. See
+  * [[https://numpy.org/doc/stable/user/basics.broadcasting.html#general-broadcasting-rules]]
+  * for broadcasting rules. In short:
   *
-  *  1. shapes are aligned from the right, extending with ones to the left as needed.
-  *  2. If two aligned dimensions are not matching but one of them is 1, then it is expanded to the
-  *     size of the other dimension, pretending a copy of all its values. If two aligned dimension are not matching and neither of them is 1, then the operation fails.
+  *   1. shapes are aligned from the right, extending with ones to the left as
+  *      needed. 2. If two aligned dimensions are not matching but one of them
+  *      is 1, then it is expanded to the size of the other dimension,
+  *      pretending a copy of all its values. If two aligned dimension are not
+  *      matching and neither of them is 1, then the operation fails.
   * =Examples=
   * {{{
   * Scope.root { implicit scope =>
-  *    val sum = Scope { implicit scope =>
+  *     val sum = Scope { implicit scope =>
   *     val ident = STen.eye(3, STenOptions.d)
   *     val ones = STen.ones(List(3, 3), STenOptions.d)
   *     ident + ones
-  *    }
-  *    assert(sum.toMat == mat.ones(3, 3) + mat.ident(3))
+  *     }
+  *     assert(sum.toMat == mat.ones(3, 3) + mat.ident(3))
   * }
   * }}}
   * ===Broadcasting examples===
@@ -601,7 +621,8 @@ object STenOptions {
   * 3 x 4 x 6 Result // 2 != 4
   * }}}
   *
-  * The companion object contains various factories which copy data from the JVM memory to STen tensors.
+  * The companion object contains various factories which copy data from the JVM
+  * memory to STen tensors.
   */
 case class STen private (
     value: Tensor
@@ -617,49 +638,41 @@ case class STen private (
 
   /** Converts to a Mat[Double].
     *
-    * Copies to CPU if needed.
-    * Fails if dtype is not float or double.
-    * Fails if shape does not conform a matrix.
+    * Copies to CPU if needed. Fails if dtype is not float or double. Fails if
+    * shape does not conform a matrix.
     */
   def toMat = TensorHelpers.toMat(value)
 
   /** Converts to a Mat[Float].
     *
-    * Copies to CPU if needed.
-    * Fails if dtype is not float.
-    * Fails if shape does not conform a matrix.
+    * Copies to CPU if needed. Fails if dtype is not float. Fails if shape does
+    * not conform a matrix.
     */
   def toFloatMat = TensorHelpers.toFloatMat(value)
 
   /** Converts to a Mat[Long].
     *
-    * Copies to CPU if needed.
-    * Fails if dtype is not long.
-    * Fails if shape does not conform a matrix.
+    * Copies to CPU if needed. Fails if dtype is not long. Fails if shape does
+    * not conform a matrix.
     */
   def toLongMat = TensorHelpers.toLongMat(value)
 
   /** Converts to a Vec[Double].
     *
-    * Copies to CPU if needed.
-    * Fails if dtype is not float or double.
-    * Flattens the shape.
+    * Copies to CPU if needed. Fails if dtype is not float or double. Flattens
+    * the shape.
     */
   def toVec = TensorHelpers.toVec(value)
 
   /** Converts to a Vec[Float].
     *
-    * Copies to CPU if needed.
-    * Fails if dtype is not float.
-    * Flattens the shape.
+    * Copies to CPU if needed. Fails if dtype is not float. Flattens the shape.
     */
   def toFloatVec = TensorHelpers.toFloatVec(value)
 
   /** Converts to a Vec[Long].
     *
-    * Copies to CPU if needed.
-    * Fails if dtype is not long.
-    * Flattens the shape.
+    * Copies to CPU if needed. Fails if dtype is not long. Flattens the shape.
     */
   def toLongVec = TensorHelpers.toLongVec(value)
 
@@ -706,9 +719,9 @@ case class STen private (
   /** Returns the byte representation of the data type
     *
     * The mapping is:
-    *  - 4 for Long
-    *  - 6 for Float
-    *  - 7 for Double
+    *   - 4 for Long
+    *   - 6 for Float
+    *   - 7 for Double
     */
   def scalarTypeByte = Scope.leak { implicit scope => options.scalarTypeByte }
 
@@ -724,15 +737,21 @@ case class STen private (
   def copyTo[S: Sc](options: STenOptions) =
     value.to(options.value, true, true).owned
 
-  /** Overwrites the contents of this tensor with the contents of an other. Must conform. */
+  /** Overwrites the contents of this tensor with the contents of an other. Must
+    * conform.
+    */
   def copyFrom(source: Tensor, nonBlocking: Boolean = true) =
     value.copyFrom(source, nonBlocking)
 
-  /** Overwrites the contents of this tensor with the contents of an other. Must conform. non blocking is true */
+  /** Overwrites the contents of this tensor with the contents of an other. Must
+    * conform. non blocking is true
+    */
   def copyFrom(source: STen) =
     value.copyFrom(source.value, true)
 
-  /** Overwrites the contents of this tensor with the contents of an other. Must conform. */
+  /** Overwrites the contents of this tensor with the contents of an other. Must
+    * conform.
+    */
   def copyFrom(source: STen, nonBlocking: Boolean) =
     value.copyFrom(source.value, nonBlocking)
 
@@ -760,45 +779,61 @@ case class STen private (
   def flatten[S: Sc](startDim: Long, endDim: Long) =
     owned(ATen.flatten(value, startDim, endDim))
 
-  /** Selects along the given dimension with indices in the supplied long tensor. */
+  /** Selects along the given dimension with indices in the supplied long
+    * tensor.
+    */
   def indexSelect[S: Sc](dim: Long, index: STen) =
     owned(ATen.index_select(value, dim, index.value))
 
-  /** Selects along the given dimension with indices in the supplied long tensor. */
+  /** Selects along the given dimension with indices in the supplied long
+    * tensor.
+    */
   def indexSelect[S: Sc](dim: Long, index: Tensor) =
     owned(ATen.index_select(value, dim, index))
 
   /** Reduces the given dimension with the index of its maximum element.
     *
-    * @param keepDim if true then the reduced dimension is kept with size 1
+    * @param keepDim
+    *   if true then the reduced dimension is kept with size 1
     */
   def argmax[S: Sc](dim: Long, keepDim: Boolean) =
     owned(ATen.argmax(value, dim, keepDim))
 
   /** Reduces the given dimension with the index of its minimum element.
     *
-    * @param keepDim if true then the reduced dimension is kept with size 1
+    * @param keepDim
+    *   if true then the reduced dimension is kept with size 1
     */
   def argmin[S: Sc](dim: Long, keepDim: Boolean) =
     owned(ATen.argmin(value, dim, keepDim))
 
-  /** Fills the tensor with the given `fill` value in the locations indicated by the `mask` boolean mask. */
+  /** Fills the tensor with the given `fill` value in the locations indicated by
+    * the `mask` boolean mask.
+    */
   def maskFill[S: Sc](mask: STen, fill: Double) =
     owned(ATen.masked_fill_0(value, mask.value, fill))
 
-  /** Returns a boolean tensors of the same shape, indicating equality with the other tensor. */
+  /** Returns a boolean tensors of the same shape, indicating equality with the
+    * other tensor.
+    */
   def equ[S: Sc](other: STen) =
     owned(ATen.eq_1(value, other.value))
 
-  /** Returns a boolean tensors of the same shape, indicating equality with the other value. */
+  /** Returns a boolean tensors of the same shape, indicating equality with the
+    * other value.
+    */
   def equ[S: Sc](other: Double) =
     owned(ATen.eq_0(value, other))
 
-  /** Returns a boolean tensors of the same shape, indicating equality with the other value. */
+  /** Returns a boolean tensors of the same shape, indicating equality with the
+    * other value.
+    */
   def equ[S: Sc](other: Long) =
     owned(ATen.eq_0_l(value, other))
 
-  /** Concatenates two tensors along the given dimension. Other dimensions must conform. */
+  /** Concatenates two tensors along the given dimension. Other dimensions must
+    * conform.
+    */
   def cat[S: Sc](other: STen, dim: Long) =
     owned(ATen.cat(Array(value, other.value), dim))
 
@@ -976,8 +1011,8 @@ case class STen private (
 
   /** Batched matrix multiplication. Maps to Aten.bmm.
     *
-    * Performs the same matrix multiplication along multiple batches.
-    * Batch dimensions do not broadcast.
+    * Performs the same matrix multiplication along multiple batches. Batch
+    * dimensions do not broadcast.
     */
   def bmm[S: Sc](other: STen) =
     owned(ATen.bmm(value, other.value))
@@ -1085,7 +1120,8 @@ case class STen private (
 
   /** Reduces the given dimensions with the sum of their elements.
     *
-    * @param keepDim if true then the reduced dimensions are kept with size 1
+    * @param keepDim
+    *   if true then the reduced dimensions are kept with size 1
     */
   def sum[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(ATen.sum_1(value, dim.toArray.map(_.toLong), keepDim))
@@ -1100,12 +1136,17 @@ case class STen private (
 
   /** Selects the top k elements along the given dimension
     *
-    * @param k How many elements to select
-    * @param dim which dimension to select in
-    * @param largest if true, then the highest k element is selected
-    * @param sorted if true, the selected elements are further sorted
-    * @return a pair of (value,index) tensors where value holds the selected elements and
-    * index holds the indices of the selected elements
+    * @param k
+    *   How many elements to select
+    * @param dim
+    *   which dimension to select in
+    * @param largest
+    *   if true, then the highest k element is selected
+    * @param sorted
+    *   if true, the selected elements are further sorted
+    * @return
+    *   a pair of (value,index) tensors where value holds the selected elements
+    *   and index holds the indices of the selected elements
     */
   def topk[S: Sc](k: Int, dim: Int, largest: Boolean, sorted: Boolean) = {
     val (a, b) = ATen.topk(value, k, dim, largest, sorted)
@@ -1123,11 +1164,13 @@ case class STen private (
   /** In place fills the tensors with the given value */
   def fill_(v: Double) = ATen.fill__0(value, v)
 
-  /** Selects the elements according to the boolean mask. Returns a 1D tensor. */
+  /** Selects the elements according to the boolean mask. Returns a 1D tensor.
+    */
   def maskedSelect[S: Sc](mask: STen) =
     ATen.masked_select(value, mask.value).owned
 
-  /** Selects the elements according to the boolean mask. Returns a 1D tensor. */
+  /** Selects the elements according to the boolean mask. Returns a 1D tensor.
+    */
   def maskedSelect[S: Sc](mask: Tensor) =
     ATen.masked_select(value, mask).owned
 
@@ -1219,8 +1262,8 @@ case class STen private (
 
   /** Returns a tensor with a new shape.
     *
-    * No data is copied.
-    * The new shape must be compatible with the number of elements and the stride of the tensor.
+    * No data is copied. The new shape must be compatible with the number of
+    * elements and the stride of the tensor.
     */
   def view[S: Sc](dims: Long*) =
     owned(ATen._unsafe_view(value, dims.toArray))
@@ -1320,7 +1363,8 @@ case class STen private (
 
   /** Returns a long tensors with the argsort of the given dimension.
     *
-    * Indexing the given dimension by the returned tensor would result in a sorted order.
+    * Indexing the given dimension by the returned tensor would result in a
+    * sorted order.
     */
   def argsort[S: Sc](dim: Int, descending: Boolean) =
     owned(ATen.argsort(value, dim, descending))
@@ -1332,7 +1376,9 @@ case class STen private (
   def choleskySolve[S: Sc](choleskyFactor: STen, upper: Boolean) =
     owned(ATen.cholesky_solve(value, choleskyFactor.value, upper))
 
-  /** Return a boolean tensor indicating element-wise equality. Maps to Aten.equal */
+  /** Return a boolean tensor indicating element-wise equality. Maps to
+    * Aten.equal
+    */
   def equalDeep(input2: STen) =
     ATen.equal(value, input2.value)
 
@@ -1414,7 +1460,8 @@ case class STen private (
 
   /** Returns a tensor with a subset of its elements.
     *
-    * The returned tensor includes elements from `start` to `start+length` along the given dimension.
+    * The returned tensor includes elements from `start` to `start+length` along
+    * the given dimension.
     *
     * No copy is made, storage is shared.
     */

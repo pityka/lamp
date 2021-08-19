@@ -44,8 +44,8 @@ trait BatchStream[+I, S] { self =>
 
   def init: S
 
-  /** May be called from different threads, but always in serial
-    * State should be carried over in the state parameter and return type
+  /** May be called from different threads, but always in serial State should be
+    * carried over in the state parameter and return type
     */
   def nextBatch(
       device: Device,
