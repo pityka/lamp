@@ -1,4 +1,4 @@
-package lamp.example.timemachine
+package lamp.example.bert
 
 import lamp._
 import lamp.nn._

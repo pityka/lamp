@@ -25,13 +25,12 @@ Lamp may be used for scientific computing similarly to numpy, or to build neural
 
 It provides neural networks components:
 
-- fully connected, 1D and 2D convolutional, embedding, RNN, GRU, LSTM, GCN, self-attention (transformer) layers
+- fully connected, 1D and 2D convolutional, embedding, graph convolution, self-attention (transformer), BERT
 - various nonlinearities
-- batch normalization and weight normalization
-- seq2seq
-- dropout
+- batch, weight, layer normalization
+- dropout, weight decay
 - optimizers: SgdW, AdamW (see [here](https://arxiv.org/abs/1711.05101)), RAdam, Yogi
-- training loop and data loaders on top of cats-effect
+- multi gpu data parallel training loop and data loaders
 - checkpointing, ONNX export, NPY and CSV import
 
 This repository also hosts some other loosely related libraries. 
