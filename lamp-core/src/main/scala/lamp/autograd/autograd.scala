@@ -280,6 +280,15 @@ sealed trait Variable {
 
   def select[S: Sc](dim: Long, index: Long) =
     new Select(extractScope, this, dim = dim, index = index).value
+  def slice[S: Sc](dim: Long, start: Long, end: Long, step: Long) =
+    new Slice(
+      extractScope,
+      this,
+      dim = dim,
+      start = start,
+      end = end,
+      step = step
+    ).value
   def indexSelect[S: Sc](dim: Long, index: Variable) =
     new IndexSelect(extractScope, this, dim = dim, index = index).value
   def argmax[S: Sc](dim: Long, keepDim: Boolean) =

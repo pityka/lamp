@@ -168,6 +168,30 @@ object Text {
 
     (chars, text.map(c => chars(c)).toVector)
   }
+  def wordsToIntegers(
+      text: String,
+      minimumTokenId: Int,
+      minimumFrequency: Int
+  ) = {
+    val words = text
+      .split("\\s+")
+
+    val vocab = words
+      .groupBy(identity)
+      .toSeq
+      .map { case (word, repeats) =>
+        (word, repeats.size)
+      }
+      .filter(_._2 >= minimumFrequency)
+      .sortBy(_._2)
+      .reverse
+      .map(_._1)
+      .zipWithIndex
+      .map(v => (v._1, v._2 + minimumTokenId + 1))
+      .toMap
+
+    (words.map(w => vocab.getOrElse(w, minimumTokenId)), vocab)
+  }
   def charsToIntegers(text: String, chars: Map[Char, Int]) = {
 
     text.map(c => chars(c)).toVector

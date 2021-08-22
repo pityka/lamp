@@ -97,4 +97,119 @@ package object nn {
       tOpt
     )
   )
+
+  private def ssz(ts: GenericModule[_, _]*) = ts.map(_.state.size).sum
+
+  def loadMultiple[T1 <: GenericModule[_, _]: Load, T2 <: GenericModule[
+    _,
+    _
+  ]: Load](
+      t1: T1,
+      t2: T2,
+      tensors: Seq[STen]
+  ) = {
+    t1.load(tensors.take(ssz(t1)))
+    t2.load(tensors.drop(ssz(t1)).take(ssz(t2)))
+  }
+  def loadMultiple[
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load
+  ](
+      t1: T1,
+      t2: T2,
+      t3: T3,
+      tensors: Seq[STen]
+  ) = {
+    t1.load(tensors.take(ssz(t1)))
+    t2.load(tensors.drop(ssz(t1)).take(ssz(t2)))
+    t3.load(tensors.drop(ssz(t1, t2)).take(ssz(t3)))
+  }
+  def loadMultiple[
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load,
+      T4 <: GenericModule[_, _]: Load
+  ](
+      t1: T1,
+      t2: T2,
+      t3: T3,
+      t4: T4,
+      tensors: Seq[STen]
+  ) = {
+    t1.load(tensors.take(ssz(t1)))
+    t2.load(tensors.drop(ssz(t1)).take(ssz(t2)))
+    t3.load(tensors.drop(ssz(t1, t2)).take(ssz(t3)))
+    t4.load(tensors.drop(ssz(t1, t2, t3)).take(ssz(t4)))
+  }
+  def loadMultiple[
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load,
+      T4 <: GenericModule[_, _]: Load,
+      T5 <: GenericModule[_, _]: Load
+  ](
+      t1: T1,
+      t2: T2,
+      t3: T3,
+      t4: T4,
+      t5: T5,
+      tensors: Seq[STen]
+  ) = {
+    t1.load(tensors.take(ssz(t1)))
+    t2.load(tensors.drop(ssz(t1)).take(ssz(t2)))
+    t3.load(tensors.drop(ssz(t1, t2)).take(ssz(t3)))
+    t4.load(tensors.drop(ssz(t1, t2, t3)).take(ssz(t4)))
+    t5.load(tensors.drop(ssz(t1, t2, t3, t4)).take(ssz(t5)))
+  }
+  def loadMultiple[
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load,
+      T4 <: GenericModule[_, _]: Load,
+      T5 <: GenericModule[_, _]: Load,
+      T6 <: GenericModule[_, _]: Load
+  ](
+      t1: T1,
+      t2: T2,
+      t3: T3,
+      t4: T4,
+      t5: T5,
+      t6: T6,
+      tensors: Seq[STen]
+  ) = {
+    t1.load(tensors.take(ssz(t1)))
+    t2.load(tensors.drop(ssz(t1)).take(ssz(t2)))
+    t3.load(tensors.drop(ssz(t1, t2)).take(ssz(t3)))
+    t4.load(tensors.drop(ssz(t1, t2, t3)).take(ssz(t4)))
+    t5.load(tensors.drop(ssz(t1, t2, t3, t4)).take(ssz(t5)))
+    t6.load(tensors.drop(ssz(t1, t2, t3, t4, t5)).take(ssz(t6)))
+  }
+  def loadMultiple[
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load,
+      T4 <: GenericModule[_, _]: Load,
+      T5 <: GenericModule[_, _]: Load,
+      T6 <: GenericModule[_, _]: Load,
+      T7 <: GenericModule[_, _]: Load
+  ](
+      t1: T1,
+      t2: T2,
+      t3: T3,
+      t4: T4,
+      t5: T5,
+      t6: T6,
+      t7: T7,
+      tensors: Seq[STen]
+  ) = {
+    t1.load(tensors.take(ssz(t1)))
+    t2.load(tensors.drop(ssz(t1)).take(ssz(t2)))
+    t3.load(tensors.drop(ssz(t1, t2)).take(ssz(t3)))
+    t4.load(tensors.drop(ssz(t1, t2, t3)).take(ssz(t4)))
+    t5.load(tensors.drop(ssz(t1, t2, t3, t4)).take(ssz(t5)))
+    t6.load(tensors.drop(ssz(t1, t2, t3, t4, t5)).take(ssz(t6)))
+    t7.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6)).take(ssz(t7)))
+  }
+
 }

@@ -18,6 +18,11 @@ trait LossFunction {
 }
 
 object LossFunctions {
+  /* Ignores target (except shape(0)), useful if actual loss is computed upstream */
+  case object Identity extends LossFunction {
+    def apply[S: Sc](output: Variable, target: STen): (Variable, Long) =
+      (output, target.shape(0))
+  }
   case object MSE extends LossFunction {
     def apply[S: Sc](out: Variable, target: STen) = {
       val v = out.mseLoss(target)

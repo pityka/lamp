@@ -93,6 +93,30 @@ case class Select(scope: Scope, a: Variable, dim: Long, index: Long)
   val value =
     Variable(this, a.value.select(dim, index)(scope))(scope)
 }
+case class Slice(
+    scope: Scope,
+    a: Variable,
+    dim: Long,
+    start: Long,
+    end: Long,
+    step: Long
+) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp = STen.zeros(out.sizes, a.options)
+        val index = STen.arange_l(start, end, step, a.options.toLong)
+        val tmp2 = tmp.indexAdd(dim, index, p)
+        out += tmp2
+
+      }
+
+    }
+  )
+  val value =
+    Variable(this, a.value.slice(dim, start, end, step)(scope))(scope)
+}
 case class EqWhere(scope: Scope, a: Variable, b: Long) extends Op {
 
   val params = List()
@@ -1189,11 +1213,11 @@ case class NllLoss(
 
   assert(
     input.sizes.size == 2,
-    "Nll Loss assumes 2D input (samples x case classes). Higher dimensions not implemented."
+    "Nll Loss assumes 2D input (samples x classes). Higher dimensions not implemented."
   )
   assert(
     target.sizes.size == 1,
-    "Target should be a 1D tensor with [0,C-1] integers, C number of case classes."
+    "Target should be a 1D tensor with [0,C-1] integers, C number of classes."
   )
 
   val params = List(
@@ -2357,7 +2381,8 @@ case class Embedding(scope: Scope, input: Variable, weight: Variable)
     } catch {
       case e: Throwable =>
         println(weight.shape)
-        println(input.value.toLongMat)
+        println(input.value.toLongMat.toVec.min)
+        println(input.value.toLongMat.toVec.max)
         throw e
     }
 }

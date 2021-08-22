@@ -57,7 +57,9 @@ class GradientSuite extends AnyFunSuite {
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
   def t3x2 = t2x3.transpose(0, 1)(Scope.free)
 
-  def diff(m: Mat[Double], eps: Double = 1e-6)(f: Mat[Double] => Double): Mat[Double] = {
+  def diff(m: Mat[Double], eps: Double = 1e-6)(
+      f: Mat[Double] => Double
+  ): Mat[Double] = {
     mat.zeros(m.numRows, m.numCols).mapRows { case (row, i) =>
       (0 until row.length).map { j =>
         val epsM = mat.zeros(m.numRows, m.numCols)
@@ -83,7 +85,9 @@ class GradientSuite extends AnyFunSuite {
 
   }
 
-  def testGradientAndValue(id: String)(m: Mat[Double], expectedValue: Double, eps : Double = 1e-6)(
+  def testGradientAndValue(
+      id: String
+  )(m: Mat[Double], expectedValue: Double, eps: Double = 1e-6)(
       fun: (Mat[Double], Boolean, Boolean) => (Double, Option[Mat[Double]])
   ) = {
     test(id + ": gradient is correct") {
@@ -379,18 +383,19 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
-  testGradientAndValue("cast to float")(mat2x3, 21d, 1e-2) { (m, doBackprop, cuda) =>
-    Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val L = x1.cast(lamp.SinglePrecision).sum
-      if (doBackprop) {
-        L.backprop()
+  testGradientAndValue("cast to float")(mat2x3, 21d, 1e-2) {
+    (m, doBackprop, cuda) =>
+      Scope.leak { implicit scope =>
+        val x1 = param(STen.fromMat(m, cuda))
+        val L = x1.cast(lamp.SinglePrecision).sum
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          x1.partialDerivative.map(t => t.toMat)
+        )
       }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
-    }
   }
   testGradientAndValue("constadd")(mat2x3, 33d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
@@ -2553,6 +2558,26 @@ class GradientSuite extends AnyFunSuite {
           input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
         )
       }
+  }
+  testGradientAndValueND("slice ")(nd1x2x3x3, 120d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val input =
+        param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+
+      val output =
+        input.slice(dim = 2, start = 1, end = 3, step = 1)
+
+      assert(output.shape == List(1, 2, 2, 3))
+
+      val L = output.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+      )
+    }
   }
 
   testGradientAndValueND("stack 0")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>

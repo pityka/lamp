@@ -290,6 +290,14 @@ object STen {
   ) =
     owned(ATen.arange(start, end, step, tensorOptions.value))
 
+  def arange_l[S: Sc](
+      start: Long,
+      end: Long,
+      step: Long,
+      tensorOptions: STenOptions = STen.lOptions
+  ) =
+    owned(ATen.arange_l(start, end, step, tensorOptions.value))
+
   def linspace[S: Sc](
       start: Double,
       end: Double,

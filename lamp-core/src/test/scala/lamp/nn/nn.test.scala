@@ -386,6 +386,18 @@ class NNSuite extends AnyFunSuite {
       ()
     }
   }
+  test("linear 3D") {
+    Scope.root { implicit scope =>
+      val linear = Linear(5, 2, STenOptions.d)
+      val output =
+        linear.forward(const(STen.ones(List(3, 4, 5), STenOptions.d)))
+      val sum = output.sum
+      assert(output.value.sizes.toList == List(3, 4, 2))
+      val grad = linear.gradients(sum)
+      assert(grad.size == 2)
+      ()
+    }
+  }
   testGradientAndValue("Linear 0")(
     mat2x3,
     implicit pool =>
@@ -464,7 +476,7 @@ class NNSuite extends AnyFunSuite {
         dilation = 1,
         groups = 1
       ).lift,
-    11.1712
+    10.7941
   )
   testGradientAndValueND("Conv1D/cuda ", (), true)(
     nd1x2x3,
@@ -477,7 +489,7 @@ class NNSuite extends AnyFunSuite {
         dilation = 1,
         groups = 1
       ).lift,
-    14.2116
+    79.2702
   )
   testGradientAndValueND("Conv2D ", (), false)(
     nd1x2x3x3,
@@ -490,7 +502,7 @@ class NNSuite extends AnyFunSuite {
         dilation = 1,
         groups = 1
       ).lift,
-    79.2702
+    100.9049
   )
   testGradientAndValueND("Conv2D/cuda ", (), true)(
     nd1x2x3x3,
@@ -530,7 +542,7 @@ class NNSuite extends AnyFunSuite {
       Embedding(
         weights = param(STen.rand(List(2, 4), STenOptions.d))
       ).lift,
-    7.1808
+    9.1274
   )
   testGradientAndValueND("RNN ", Option.empty[Variable], false)(
     nd2x3x2,
@@ -540,7 +552,7 @@ class NNSuite extends AnyFunSuite {
         weightHh = param(STen.rand(List(4, 4), STenOptions.d)),
         biasH = param(STen.rand(List(4), STenOptions.d))
       ),
-    21.9659
+    23.4551
   )
   testGradientAndValueNDLong(
     "FreeRunning ",
@@ -562,7 +574,7 @@ class NNSuite extends AnyFunSuite {
       )
       FreeRunningRNN(rnn, 3)
     },
-    35.9078
+    35.6161
   )
   testGradientAndValueND("SeqLinear ", (), false)(
     nd2x3x2,
@@ -571,7 +583,7 @@ class NNSuite extends AnyFunSuite {
         weight = param(STen.rand(List(2, 4), STenOptions.d)),
         bias = param(STen.rand(List(4), STenOptions.d))
       ).lift,
-    90.2684
+    123.3801
   )
   testGradientAndValueND("GRU ", Option.empty[Variable], false)(
     nd2x3x2,
@@ -587,7 +599,7 @@ class NNSuite extends AnyFunSuite {
         biasZ = param(STen.rand(List(4), STenOptions.d)),
         biasR = param(STen.rand(List(4), STenOptions.d))
       ),
-    2.0383
+    1.9875
   )
   testGradientAndValueND("LSTM ", Option.empty[(Variable, Variable)], false)(
     nd2x3x2,
@@ -606,7 +618,7 @@ class NNSuite extends AnyFunSuite {
         biasF = param(STen.rand(List(4), STenOptions.d)),
         biasC = param(STen.rand(List(4), STenOptions.d))
       ),
-    17.8239
+    17.7721
   )
   test("RNN shape and loss") {
     Scope.root { implicit scope =>

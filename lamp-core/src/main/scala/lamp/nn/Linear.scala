@@ -10,10 +10,14 @@ case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
     weights -> Linear.Weights
   ) ++ bias.toList.map(b => (b, Linear.Bias))
 
-  def forward[S: Sc](x: Variable): Variable = {
-    val v = x.mm(weights)
-    bias.map(_ + v).getOrElse(v)
+  private def mm1[S: Sc](a: Variable, b: Variable) = {
+    val shape = a.shape
+    a.view(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
+  }
 
+  def forward[S: Sc](x: Variable): Variable = {
+    val v = if (x.shape.size == 2) x.mm(weights) else mm1(x, weights)
+    bias.map(_ + v).getOrElse(v)
   }
 }
 

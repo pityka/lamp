@@ -292,6 +292,100 @@ object Load {
   def make[M](f: M => Seq[STen] => Unit) = new Load[M] {
     def load(m: M, tensors: Seq[STen]): Unit = f(m)(tensors)
   }
+  def compose[M, T1 <: GenericModule[_, _]: Load](f1: M => T1) = Load.make[M] {
+    m => tensors =>
+      f1(m).load(tensors)
+  }
+  def compose[
+      M,
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load
+  ](
+      f1: M => T1,
+      f2: M => T2
+  ) = Load.make[M] { m => tensors =>
+    loadMultiple(f1(m), f2(m), tensors)
+  }
+  def compose[
+      M,
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load
+  ](
+      f1: M => T1,
+      f2: M => T2,
+      f3: M => T3
+  ) = Load.make[M] { m => tensors =>
+    loadMultiple(f1(m), f2(m), f3(m), tensors)
+  }
+  def compose[
+      M,
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load,
+      T4 <: GenericModule[_, _]: Load
+  ](
+      f1: M => T1,
+      f2: M => T2,
+      f3: M => T3,
+      f4: M => T4
+  ) = Load.make[M] { m => tensors =>
+    loadMultiple(f1(m), f2(m), f3(m), f4(m), tensors)
+  }
+  def compose[
+      M,
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load,
+      T4 <: GenericModule[_, _]: Load,
+      T5 <: GenericModule[_, _]: Load
+  ](
+      f1: M => T1,
+      f2: M => T2,
+      f3: M => T3,
+      f4: M => T4,
+      f5: M => T5
+  ) = Load.make[M] { m => tensors =>
+    loadMultiple(f1(m), f2(m), f3(m), f4(m), f5(m), tensors)
+  }
+  def compose[
+      M,
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load,
+      T4 <: GenericModule[_, _]: Load,
+      T5 <: GenericModule[_, _]: Load,
+      T6 <: GenericModule[_, _]: Load
+  ](
+      f1: M => T1,
+      f2: M => T2,
+      f3: M => T3,
+      f4: M => T4,
+      f5: M => T5,
+      f6: M => T6
+  ) = Load.make[M] { m => tensors =>
+    loadMultiple(f1(m), f2(m), f3(m), f4(m), f5(m), f6(m), tensors)
+  }
+  def compose[
+      M,
+      T1 <: GenericModule[_, _]: Load,
+      T2 <: GenericModule[_, _]: Load,
+      T3 <: GenericModule[_, _]: Load,
+      T4 <: GenericModule[_, _]: Load,
+      T5 <: GenericModule[_, _]: Load,
+      T6 <: GenericModule[_, _]: Load,
+      T7 <: GenericModule[_, _]: Load
+  ](
+      f1: M => T1,
+      f2: M => T2,
+      f3: M => T3,
+      f4: M => T4,
+      f5: M => T5,
+      f6: M => T6,
+      f7: M => T7
+  ) = Load.make[M] { m => tensors =>
+    loadMultiple(f1(m), f2(m), f3(m), f4(m), f5(m), f6(m), f7(m), tensors)
+  }
 }
 
 /** Type class about how to initialize recurrent neural networks */

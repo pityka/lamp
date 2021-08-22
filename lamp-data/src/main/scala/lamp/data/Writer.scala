@@ -118,15 +118,15 @@ object Writer {
         tensor.scalarTypeByte match {
           case 7 =>
             bb.asDoubleBuffer().put(arr.asInstanceOf[Array[Double]])
-            bb.position(bb.position + arr.length * 8)
+            bb.position(bb.position() + arr.length * 8)
 
           case 6 =>
             bb.asFloatBuffer().put(arr.asInstanceOf[Array[Float]])
-            bb.position(bb.position + arr.length * 4)
+            bb.position(bb.position() + arr.length * 4)
 
           case 4 =>
             bb.asLongBuffer().put(arr.asInstanceOf[Array[Long]])
-            bb.position(bb.position + arr.length * 8)
+            bb.position(bb.position() + arr.length * 8)
         }
 
         writeFully(bb, channel)
