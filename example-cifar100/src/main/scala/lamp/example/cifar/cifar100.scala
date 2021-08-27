@@ -45,7 +45,7 @@ object Cifar {
       val label2 = all.select(1, 1).castToLong
       val images0 = all.slice(1, 2, 3074, 1).view(-1, 3, 32, 32)
       val images = precision match {
-        case HalfPrecision => images0.castToHalf
+        case HalfPrecision   => images0.castToHalf
         case SinglePrecision => images0.castToFloat
         case DoublePrecision => images0.castToDouble
       }

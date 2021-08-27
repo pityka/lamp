@@ -37,22 +37,14 @@ class AttentionSuite extends AnyFunSuite {
         NDArray(Array(0L, 1L, 0L, 1L, 0L, 0L), List(2, 3))
       )
 
-      /** batch1: 1 0
-        * batch2: 0 1
-        * batch3: 1 0
+      /** batch1: 1 0 batch2: 0 1 batch3: 1 0
         */
       val nd3x2query = NDArray.tensorFromNDArray(
         NDArray(Array(1d, 0d, 0d, 1d, 1d, 0d), List(3, 2))
       )
 
-      /** time1:
-        *   batch1: 1 0
-        *   batch2: 1 0
-        *   batch3: 1 0
-        * time2:
-        *   batch1: 0 1
-        *   batch2: 0 1
-        *   batch3: 0 1
+      /** time1: batch1: 1 0 batch2: 1 0 batch3: 1 0 time2: batch1: 0 1 batch2:
+        * 0 1 batch3: 0 1
         */
       val nd2x3x2kv =
         NDArray.tensorFromNDArray(

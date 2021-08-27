@@ -6,8 +6,8 @@ import lamp.Sc
 import lamp.STen
 import lamp.STenOptions
 
-/** Inputs of size (sequence length * batch * in dim)
-  * Outputs of size (sequence length * batch * hidden dim)
+/** Inputs of size (sequence length * batch * in dim) Outputs of size (sequence
+  * length * batch * hidden dim)
   */
 case class RNN(
     weightXh: Constant,

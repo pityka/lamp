@@ -286,7 +286,8 @@ object Text {
   }
 
   /** Yields tensors of shape (time step x batch size)
-    * @param text pairs of (source,destination) units
+    * @param text
+    *   pairs of (source,destination) units
     */
   def minibatchesForSeq2Seq(
       text: IndexedSeq[(Vector[Long], Vector[Long])],

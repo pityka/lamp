@@ -9,7 +9,8 @@ import lamp.STen
 
 object GraphBatchStream {
 
-  /** Forms minibatches from multiple small graphs. Assumes target is graph level.
+  /** Forms minibatches from multiple small graphs. Assumes target is graph
+    * level.
     *
     * Returns a triple of node features, edge list, graph indices
     */

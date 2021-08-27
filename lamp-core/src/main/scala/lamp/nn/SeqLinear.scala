@@ -5,9 +5,8 @@ import lamp.Sc
 import lamp.STen
 import lamp.STenOptions
 
-/** Inputs of size (sequence length * batch * in dim)
-  * Outputs of size (sequence length * batch * output dim)
-  * Applies a linear function to each time step
+/** Inputs of size (sequence length * batch * in dim) Outputs of size (sequence
+  * length * batch * output dim) Applies a linear function to each time step
   */
 case class SeqLinear(
     weight: Constant,

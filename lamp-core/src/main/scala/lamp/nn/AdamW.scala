@@ -29,7 +29,8 @@ object AdamW {
       )
 }
 
-/** @see https://arxiv.org/pdf/1711.05101.pdf Algorithm 2
+/** @see
+  *   https://arxiv.org/pdf/1711.05101.pdf Algorithm 2
   */
 case class AdamW(
     parameters: Seq[(STen, PTag)],

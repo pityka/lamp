@@ -5,11 +5,15 @@ import lamp.Sc
 
 object Attention {
 
-  /** @param tokens seq x batch (long)
-    * @param maskable batch x seq
+  /** @param tokens
+    *   seq x batch (long)
+    * @param maskable
+    *   batch x seq
     * @param maskedToken
     * @param fill
-    * @return batch x seq where (seq,batch,:) is set to fill if tokens(seq,batch)== maskedToken
+    * @return
+    *   batch x seq where (seq,batch,:) is set to fill if tokens(seq,batch)==
+    *   maskedToken
     */
   def sequenceMask[S: Sc](
       tokens: Variable,
@@ -28,9 +32,12 @@ object Attention {
   }
 
   /** Dot product attention
-    * @param query  batch x d
-    * @param key num keys x batch x d
-    * @return  batch x d
+    * @param query
+    *   batch x d
+    * @param key
+    *   num keys x batch x d
+    * @return
+    *   batch x d
     */
   def dotProductAttention[S: Sc](
       query: Variable,

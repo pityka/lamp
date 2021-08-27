@@ -216,11 +216,10 @@ object BertPretrainModule {
 
 }
 
-/** Masked Language Model
-  * Input of (embedding, positions)
-  * Embedding of size (batch, num tokens, embedding dim)
-  * Positions of size (batch, max num tokens) long tensor indicating which positions to make predictions on
-  * Output (batch, len(Positions), vocabulary size)
+/** Masked Language Model Input of (embedding, positions) Embedding of size
+  * (batch, num tokens, embedding dim) Positions of size (batch, max num tokens)
+  * long tensor indicating which positions to make predictions on Output (batch,
+  * len(Positions), vocabulary size)
   *
   * @param mlp
   */
@@ -292,8 +291,8 @@ object MaskedLanguageModelModule {
 
 /** BertEncoder module
   *
-  * Input is `(tokens, segments)` where
-  * `tokens` and `segments` are both (batch,num tokens) long tensor.
+  * Input is `(tokens, segments)` where `tokens` and `segments` are both
+  * (batch,num tokens) long tensor.
   *
   * Output is (batch, num tokens, out dimension)
   */
@@ -368,22 +367,34 @@ object BertEncoder {
 
   /** Factory for the encoder module of Bert
     *
-    * Input is `(tokens, segments)` where
-    * `tokens` and `segments` are both (batch,num tokens) long tensor.
+    * Input is `(tokens, segments)` where `tokens` and `segments` are both
+    * (batch,num tokens) long tensor.
     *
-    * @param maxLength maximum num token length
-    * @param vocabularySize vocabulary size
-    * @param numBlocks number of transformer blocks to create
-    * @param embeddingDim input embedding dimension
-    * @param attentionHiddenPerHeadDim size of hidden attention dimension of each attention head
-    * @param attentionNumHeads number of attention heads
-    * @param mlpHiddenDim size of hidden dimension of the two layer perceptron
-    * @param out output dimension
-    * @param dropout dropout rate
-    * @param padToken pad token, (batch, seq) positions where `tokens` == `padToken` are ignored,
-    *        padding is not the same as masking
-    * @param tOpt tensor options
-    * @return a module
+    * @param maxLength
+    *   maximum num token length
+    * @param vocabularySize
+    *   vocabulary size
+    * @param numBlocks
+    *   number of transformer blocks to create
+    * @param embeddingDim
+    *   input embedding dimension
+    * @param attentionHiddenPerHeadDim
+    *   size of hidden attention dimension of each attention head
+    * @param attentionNumHeads
+    *   number of attention heads
+    * @param mlpHiddenDim
+    *   size of hidden dimension of the two layer perceptron
+    * @param out
+    *   output dimension
+    * @param dropout
+    *   dropout rate
+    * @param padToken
+    *   pad token, (batch, seq) positions where `tokens` == `padToken` are
+    *   ignored, padding is not the same as masking
+    * @param tOpt
+    *   tensor options
+    * @return
+    *   a module
     */
   def apply[S: Sc](
       maxLength: Int,

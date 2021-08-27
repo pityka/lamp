@@ -5,15 +5,19 @@ import lamp.STenOptions
 
 /** Factory for multilayer fully connected feed forward networks
   *
-  * Returned network has the following repeated structure:
-  * [linear -> batchnorm -> nonlinearity -> dropout]*
+  * Returned network has the following repeated structure: [linear -> batchnorm
+  * -> nonlinearity -> dropout]*
   *
   * The last block does not include the nonlinearity and the dropout.
   *
-  * @param in input dimensions
-  * @param out output dimensions
-  * @param hidden list of hidden dimensions
-  * @param dropout dropout applied to each block
+  * @param in
+  *   input dimensions
+  * @param out
+  *   output dimensions
+  * @param hidden
+  *   list of hidden dimensions
+  * @param dropout
+  *   dropout applied to each block
   */
 object MLP {
   sealed trait ActivationFunction
