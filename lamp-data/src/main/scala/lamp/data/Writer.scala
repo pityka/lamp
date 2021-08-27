@@ -13,23 +13,23 @@ import java.nio.channels.Channels
 
 /** Serializes tensors
   *
-  * This format is similar to the ONNX external tensor serialization format,
-  * but it uses JSON rather then protobuf.
+  * This format is similar to the ONNX external tensor serialization format, but
+  * it uses JSON rather then protobuf.
   *
   * Format specification
-  * ====================
-  * Sequences of tensors are serialized into a JSON descriptor and a data blob.
-  * The schema of the descriptor is the case class lamp.data.schemas.TensorList.
-  * The location field in this schema holds a path to the data blob.
-  * If this the location a relative POSIX then it is relative to the file path where the descriptor
-  * itself is written.
+  * ==================== Sequences of tensors are serialized into a JSON
+  * descriptor and a data blob. The schema of the descriptor is the case class
+  * lamp.data.schemas.TensorList. The location field in this schema holds a path
+  * to the data blob. If this the location a relative POSIX then it is relative
+  * to the file path where the descriptor itself is written.
   *
   * The descriptor may be embedded into larger JSON structures.
   *
-  * The data blob itself is the raw data in little endian byte order. Floating point is IEEE-754.
-  * The descriptor specifies the byte offset and byte length of the tensors inside the data blob.
-  * As such, the data blob contains no framing or other control bytes, but it may contain padding bytes
-  * between tensors.
+  * The data blob itself is the raw data in little endian byte order. Floating
+  * point is IEEE-754. The descriptor specifies the byte offset and byte length
+  * of the tensors inside the data blob. As such, the data blob contains no
+  * framing or other control bytes, but it may contain padding bytes between
+  * tensors.
   */
 object Writer {
 
@@ -96,7 +96,9 @@ object Writer {
     case other => Left(s"Type $other not supported.")
   }
 
-  /** Returns pair of (data length, total bytes written). Total bytes is data + pad. Pad pads to multiple of 8. */
+  /** Returns pair of (data length, total bytes written). Total bytes is data +
+    * pad. Pad pads to multiple of 8.
+    */
   private def writeTensorIntoChannel(
       tensor: STen,
       channel: WritableByteChannel,

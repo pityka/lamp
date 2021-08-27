@@ -6,19 +6,13 @@ import lamp.Sc
 import lamp.scope
 import lamp.STen
 
-/** Learnable mapping from classes to dense vectors.
-  * Equivalent to L * W where
-  *   L is the n x C one-hot encoded matrix of the classes
-  *   * is matrix multiplication
-  *   W is the C x dim dense matrix.
-  * W is learnable.
-  * L is never computed directly.
-  * C is the number of classes.
-  * n is the size of the batch.
+/** Learnable mapping from classes to dense vectors. Equivalent to L * W where L
+  * is the n x C one-hot encoded matrix of the classes * is matrix
+  * multiplication W is the C x dim dense matrix. W is learnable. L is never
+  * computed directly. C is the number of classes. n is the size of the batch.
   *
-  * Input is a long tensor with values in [0,C-1].
-  * Input shape is arbitrary, (*).
-  * Output shape is (* x D) where D is the embedding dimension.
+  * Input is a long tensor with values in [0,C-1]. Input shape is arbitrary,
+  * (*). Output shape is (* x D) where D is the embedding dimension.
   */
 case class Embedding(weights: Constant) extends Module {
   val state = List(

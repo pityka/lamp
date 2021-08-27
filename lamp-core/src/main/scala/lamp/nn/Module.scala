@@ -175,11 +175,11 @@ object GenericModule {
 /** Base type of modules
   *
   * Modules are functions of type `(Seq[lamp.autograd.Constant],A) => B`, where
-  * the `Seq[lamp.autograd.Constant]` arguments are optimizable parameters and `A` is a non-optimizable
-  * input.
+  * the `Seq[lamp.autograd.Constant]` arguments are optimizable parameters and
+  * `A` is a non-optimizable input.
   *
-  * Modules provide a way to build composite functions while also keep track of the parameter list of the
-  * composite function.
+  * Modules provide a way to build composite functions while also keep track of
+  * the parameter list of the composite function.
   *
   * ===Example===
   * {{{
@@ -187,24 +187,27 @@ object GenericModule {
   * case object Bias extends LeafTag
   * case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
   *
-  *  override val state = List(
-  *    weights -> Weights
-  *  ) ++ bias.toList.map(b => (b, Bias))
+  *   override val state = List(
+  *     weights -> Weights
+  *   ) ++ bias.toList.map(b => (b, Bias))
   *
-  *  def forward[S: Sc](x: Variable): Variable = {
-  *    val v = x.mm(weights)
-  *    bias.map(_ + v).getOrElse(v)
+  *   def forward[S: Sc](x: Variable): Variable = {
+  *     val v = x.mm(weights)
+  *     bias.map(_ + v).getOrElse(v)
   *
-  *  }
+  *   }
   * }
   * }}}
   *
-  * Some other attributes of modules are attached by type classes e.g. with the [[nn.TrainingMode]], [[nn.Load]]
-  * type classes.
+  * Some other attributes of modules are attached by type classes e.g. with the
+  * [[nn.TrainingMode]], [[nn.Load]] type classes.
   *
-  * @tparam A the argument type of the module
-  * @tparam B the value type of the module
-  * @see [[nn.Module]] is an alias for simple `Variable => Variable` modules
+  * @tparam A
+  *   the argument type of the module
+  * @tparam B
+  *   the value type of the module
+  * @see
+  *   [[nn.Module]] is an alias for simple `Variable => Variable` modules
   */
 trait GenericModule[A, B] {
 
@@ -283,7 +286,9 @@ object TrainingMode {
     TrainingMode.make(scala.Predef.identity[M], scala.Predef.identity[M])
 }
 
-/** Type class about how to load the contents of the state of modules from external tensors */
+/** Type class about how to load the contents of the state of modules from
+  * external tensors
+  */
 trait Load[M] {
   def load(m: M, tensors: Seq[STen]): Unit
 }

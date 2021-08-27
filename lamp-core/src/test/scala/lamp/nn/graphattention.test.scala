@@ -71,7 +71,7 @@ class GraphAttentionSuite extends AnyFunSuite {
         .owned
         .castToDouble
 
-      /**  3 x 6 (3 * 2head)
+      /** 3 x 6 (3 * 2head)
         */
       val wNodeValue = NDArray
         .tensorFromLongNDArray(

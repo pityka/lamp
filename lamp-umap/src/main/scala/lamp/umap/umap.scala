@@ -287,52 +287,72 @@ object Umap {
 
   }
 
-  /** Dimension reduction similar to UMAP
-    * For reference see [[https://arxiv.org/abs/1802.03426]]
-    * This method does not follow the above paper exactly.
+  /** Dimension reduction similar to UMAP For reference see
+    * [[https://arxiv.org/abs/1802.03426]] This method does not follow the above
+    * paper exactly.
     *
-    * Minimizes the objective function:
-    * L(x) = L_attraction(x) + L_repulsion(x)
+    * Minimizes the objective function: L(x) = L_attraction(x) + L_repulsion(x)
     *
-    * L_attraction(x) = sum over (i,j) edges : b_ij * ln(f(x_i,x_j))
-    * b_ij is the value of the 'UMAP graph' as in the above paper
-    * x_i is the low dimensional coordinate of the i-th sample
-    * f(x,y) = 1 if ||x-y||_2 < minDist , or exp(-(||x-y||_2 - minDist)) otherwise
+    * L_attraction(x) = sum over (i,j) edges : b_ij * ln(f(x_i,x_j)) b_ij is the
+    * value of the 'UMAP graph' as in the above paper x_i is the low dimensional
+    * coordinate of the i-th sample f(x,y) = 1 if ||x-y||_2 < minDist , or
+    * exp(-(||x-y||_2 - minDist)) otherwise
     *
-    * L_repulsion(x) = sum over (i,j) edges: (1-b_ij) * ln(1 - f(x_i,x_j)) , evaluated with sampling
-    * L_repulsion is evaluated by randomly sampling in each iteration from all (i,j) edges having b_ij=0
+    * L_repulsion(x) = sum over (i,j) edges: (1-b_ij) * ln(1 - f(x_i,x_j)) ,
+    * evaluated with sampling L_repulsion is evaluated by randomly sampling in
+    * each iteration from all (i,j) edges having b_ij=0
     *
-    * Nearest neighbor search is evaluated by brute force.
-    * It may be batched, and may be evaluated on the GPU.
+    * Nearest neighbor search is evaluated by brute force. It may be batched,
+    * and may be evaluated on the GPU.
     *
-    * L(x) is maximized by gradient descent, in particular Adam.
-    * Derivatives of L(x) are computed using reverse mode automatic differentiation (autograd).
+    * L(x) is maximized by gradient descent, in particular Adam. Derivatives of
+    * L(x) are computed using reverse mode automatic differentiation (autograd).
     * Gradient descent may be evaluated on the GPU.
     *
     * Distance metric is alway Euclidean.
     *
     * Differences to the algorithm described in the UMAP paper:
-    *   - The paper desribes a smooth approximation of the function 'f' (Definition 11.).
-    *     That approximation is not used in this code.
-    *   - The paper describes an optimization procedure different from the approach taken here.
-    *     They sample each edge according to b_ij and update the vertices one after the other.
-    *     The current code updates each locations all together according to the derivative of L(x).
+    *   - The paper desribes a smooth approximation of the function 'f'
+    *     (Definition 11.). That approximation is not used in this code.
+    *   - The paper describes an optimization procedure different from the
+    *     approach taken here. They sample each edge according to b_ij and
+    *     update the vertices one after the other. The current code updates each
+    *     locations all together according to the derivative of L(x).
     *
-    * @param data each row is a sample
-    * @param device device to run the optimization and KNN search (GPU or CPU)
-    * @param precision precision to run the KNN search, optimization is always in double precision
-    * @param k number of nearest neighbors to retrieve. Self is counted as nearest neighbor
-    * @param numDim number of dimensions to project to
-    * @param knnMinibatchSize KNN search may be batched if the device can't fit the whole distance matrix
-    * @param lr learning rate
-    * @param iterations number of epochs of optimization
-    * @param minDist see above equations for the definition, see the UMAP paper for its effect
-    * @param negativeSampleSize number of negative edges to select for each positive
+    * @param data
+    *   each row is a sample
+    * @param device
+    *   device to run the optimization and KNN search (GPU or CPU)
+    * @param precision
+    *   precision to run the KNN search, optimization is always in double
+    *   precision
+    * @param k
+    *   number of nearest neighbors to retrieve. Self is counted as nearest
+    *   neighbor
+    * @param numDim
+    *   number of dimensions to project to
+    * @param knnMinibatchSize
+    *   KNN search may be batched if the device can't fit the whole distance
+    *   matrix
+    * @param lr
+    *   learning rate
+    * @param iterations
+    *   number of epochs of optimization
+    * @param minDist
+    *   see above equations for the definition, see the UMAP paper for its
+    *   effect
+    * @param negativeSampleSize
+    *   number of negative edges to select for each positive
     * @param randomSeed
-    * @param balanceAttractionsAndRepulsions if true the number of negative samples will not affect the relative strength of attractions and repulsions (see @param repulsionStrength)
-    * @param repulsionStrength strength of repulsions compared to attractions
+    * @param balanceAttractionsAndRepulsions
+    *   if true the number of negative samples will not affect the relative
+    *   strength of attractions and repulsions (see @param repulsionStrength)
+    * @param repulsionStrength
+    *   strength of repulsions compared to attractions
     * @param logger
-    * @return a triple of the layout, the umap graph (b) and the final optimization loss
+    * @return
+    *   a triple of the layout, the umap graph (b) and the final optimization
+    *   loss
     */
   def umap(
       data: Mat[Double],

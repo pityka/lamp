@@ -69,8 +69,8 @@ object LossFunctions {
   }
 
   /** Return a loss function which takes outputs of time step x batch x classes
-    * and targets of time step x batch
-    * The returned loss is averaged over the batch and the time steps
+    * and targets of time step x batch The returned loss is averaged over the
+    * batch and the time steps
     */
   case class SequenceNLL(
       numClasses: Int,

@@ -2,20 +2,23 @@ package lamp
 
 /** Implements reverse mode automatic differentiaton
   *
-  * The main types in this package are [[lamp.autograd.Variable]] and [[lamp.autograd.Op]].
-  * The computational graph built by this package consists of vertices representing values (as [[lamp.autograd.Variable]]) and vertices representing operations (as [[lamp.autograd.Op]]).
+  * The main types in this package are [[lamp.autograd.Variable]] and
+  * [[lamp.autograd.Op]]. The computational graph built by this package consists
+  * of vertices representing values (as [[lamp.autograd.Variable]]) and vertices
+  * representing operations (as [[lamp.autograd.Op]]).
   *
-  * Variables contain the value of a `R^n^ => R^m^` function.
-  * Variables may also contain the partial derivative of their argument with respect to a single scalar.
-  * A Variable whose value is a scalar (m=1) can trigger the computation of partial derivatives of all
-  * the intermediate upstream Variables.
-  * Computing partial derivatives with respect to non-scalar variables is not supported.
+  * Variables contain the value of a `R^n^ => R^m^` function. Variables may also
+  * contain the partial derivative of their argument with respect to a single
+  * scalar. A Variable whose value is a scalar (m=1) can trigger the computation
+  * of partial derivatives of all the intermediate upstream Variables. Computing
+  * partial derivatives with respect to non-scalar variables is not supported.
   *
-  * A constant Variable  may be created with the `const`
-  * or `param` factory method in this package. `const` may be used for constants which
-  * do not need their partial derivatives to be computed. `param` on the other hand
-  * create Variables which will fill in their partial derivatives. Further variables may be created by the
-  * methods in this class, eventually expressing more complex `R^n^ => R^m^` functions.
+  * A constant Variable may be created with the `const` or `param` factory
+  * method in this package. `const` may be used for constants which do not need
+  * their partial derivatives to be computed. `param` on the other hand create
+  * Variables which will fill in their partial derivatives. Further variables
+  * may be created by the methods in this class, eventually expressing more
+  * complex `R^n^ => R^m^` functions.
   * ===Example===
   * {{{
   * lamp.Scope.root{ implicit scope =>
@@ -43,11 +46,14 @@ package lamp
   * }
   * }}}
   *
-  * This package may be used to compute the derivative of any function, provided the function can
-  * be composed out of the provided methods. A particular use case is gradient based optimization.
+  * This package may be used to compute the derivative of any function, provided
+  * the function can be composed out of the provided methods. A particular use
+  * case is gradient based optimization.
   *
-  * @see [[https://arxiv.org/pdf/1811.05031.pdf]] for a review of the algorithm
-  * @see [[lamp.autograd.Op]] for how to implement a new operation
+  * @see
+  *   [[https://arxiv.org/pdf/1811.05031.pdf]] for a review of the algorithm
+  * @see
+  *   [[lamp.autograd.Op]] for how to implement a new operation
   */
 package object autograd {
 

@@ -6,8 +6,8 @@ import lamp.Sc
 import lamp.STen
 import lamp.STenOptions
 
-/** Inputs of size (sequence length * batch * vocab)
-  * Outputs of size (sequence length * batch * output dim)
+/** Inputs of size (sequence length * batch * vocab) Outputs of size (sequence
+  * length * batch * output dim)
   */
 case class LSTM(
     weightXi: Constant,

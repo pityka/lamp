@@ -113,12 +113,14 @@ object GraphAttention {
       edgeJ: STen
   )
 
-  /** Graph Attention Network https://arxiv.org/pdf/1710.10903.pdf
-    * Non-linearity in eq 4 and dropout is not applied to the final vertex activations
+  /** Graph Attention Network https://arxiv.org/pdf/1710.10903.pdf Non-linearity
+    * in eq 4 and dropout is not applied to the final vertex activations
     *
     * Needs self edges to be already present in the graph
     *
-    * @return next node representation (without relu, dropout) and a tensor with the original node and edge features ligned up like [N_i, N_j, E_ij]
+    * @return
+    *   next node representation (without relu, dropout) and a tensor with the
+    *   original node and edge features ligned up like [N_i, N_j, E_ij]
     */
   def multiheadGraphAttention[S: Sc](
       nodeFeatures: Variable,
