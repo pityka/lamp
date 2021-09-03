@@ -115,7 +115,8 @@ object IOLoops {
       initState: Option[SimpleThenSWALoopState] = None,
       accumulateGradientOverNBatches: Int = 1,
       learningRateScheduleInitState: Option[LRState] = None,
-      swaLearningRateScheduleInitState: Option[LRStateSWA] = None
+      swaLearningRateScheduleInitState: Option[LRStateSWA] = None,
+      swaForwardPassAfterTraining: Boolean = true
   ) = {
     for {
       warmedup <-
@@ -191,7 +192,8 @@ object IOLoops {
           case None if typeTag[LRState] == typeTag[LRStateSWA] =>
             Some(warmupLRState.asInstanceOf[LRStateSWA])
           case _ => None
-        }
+        },
+        swaForwardPassAfterTraining
       )
     } yield {
       val swaModel = swaResult._1
@@ -331,21 +333,6 @@ object IOLoops {
         }
 
         for {
-          _ <-
-            if (checkpointState.isDefined)
-              checkpointState.get(
-                SimpleLoopState(
-                  modelWithOptimizer.model.module.state.map(_._1.value),
-                  modelWithOptimizer.optimizer.state,
-                  epoch,
-                  lastValidationLoss,
-                  minValidationLoss,
-                  minValidationLossModel,
-                  learningCurve
-                ),
-                lrState
-              )
-            else IO.unit
 
           trainingLoss <-
             if (dataParallelModels.isEmpty)
@@ -422,13 +409,32 @@ object IOLoops {
                 Some(copyModel)
               else minValidationLossModel
             } else minValidationLossModel
+          nextLearningCurve = (
+            epoch,
+            trainingLoss,
+            maybeValidationLoss
+          ) :: learningCurve
+          _ <-
+            if (checkpointState.isDefined)
+              checkpointState.get(
+                SimpleLoopState(
+                  modelWithOptimizer.model.module.state.map(_._1.value),
+                  modelWithOptimizer.optimizer.state,
+                  epoch + 1,
+                  maybeValidationLoss,
+                  nextMinValidationLoss,
+                  nextMinValidationLossModel,
+                  nextLearningCurve
+                ),
+                lrState
+              )
+            else IO.unit
           next <- loop(
             epoch = epoch + 1,
             lastValidationLoss = maybeValidationLoss,
             minValidationLoss = nextMinValidationLoss,
             minValidationLossModel = nextMinValidationLossModel,
-            learningCurve =
-              (epoch, trainingLoss, maybeValidationLoss) :: learningCurve,
+            learningCurve = nextLearningCurve,
             lrState = nextLearningRateScheduleState
           )
         } yield next
