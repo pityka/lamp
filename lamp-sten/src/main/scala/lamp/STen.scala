@@ -75,7 +75,8 @@ object STen {
   def fromLongVec[S: Sc](
       m: Vec[Long],
       device: Device
-  ) = owned(TensorHelpers.fromLongVec(m, device))
+  ) = if (m.isEmpty) STen.zeros(List(0), device.to(STenOptions.l))
+  else owned(TensorHelpers.fromLongVec(m, device))
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromLongVec[S: Sc](
@@ -85,7 +86,8 @@ object STen {
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromLongArray[S: Sc](ar: Array[Long], dim: Seq[Long], device: Device) =
-    TensorHelpers.fromLongArray(ar, dim, device).owned
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.l))
+    else TensorHelpers.fromLongArray(ar, dim, device).owned
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromDoubleArray[S: Sc](
@@ -94,11 +96,13 @@ object STen {
       device: Device,
       precision: FloatingPointPrecision
   ) =
-    TensorHelpers.fromDoubleArray(ar, dim, device, precision).owned
+    if (ar.isEmpty) STen.zeros(dim, device.options(precision))
+    else TensorHelpers.fromDoubleArray(ar, dim, device, precision).owned
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromFloatArray[S: Sc](ar: Array[Float], dim: Seq[Long], device: Device) =
-    TensorHelpers.fromFloatArray(ar, dim, device).owned
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.f))
+    else TensorHelpers.fromFloatArray(ar, dim, device).owned
 
   /** Create tensor directly from file. Memory maps a file into host memory.
     * Data is not passed through the JVM. Returned tensor is always on the CPU
