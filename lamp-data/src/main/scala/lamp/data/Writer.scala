@@ -44,7 +44,6 @@ object Writer {
       offsets =>
         val tensorDescriptors =
           offsets.zip(tensors).map { case ((offset, length, _), tensor) =>
-            assert(length > 0, s"length is $length")
             assert(offset >= 0, s"offset is $offset")
             schemas.TensorDescriptor(
               dims = tensor.shape,
@@ -68,20 +67,23 @@ object Writer {
     Scope.leak { implicit scope =>
       val section = tensor0.view(-1).slice(0, start, end, 1)
       val t = if (section.isCPU) section else section.copyToDevice(lamp.CPU)
-
+      val numel = t.numel
       val array = (t.scalarTypeByte match {
         case 7 =>
           val arr = Array.ofDim[Double]((end - start).toInt)
-          assert(t.value.copyToDoubleArray(arr))
+          assert(arr.length == numel)
+          if (numel > 0) { assert(t.value.copyToDoubleArray(arr)) }
           arr
         case 6 =>
           val arr = Array.ofDim[Float]((end - start).toInt)
-          assert(t.value.copyToFloatArray(arr))
+          assert(arr.length == numel)
+          if (numel > 0) { assert(t.value.copyToFloatArray(arr)) }
 
           arr
         case 4 =>
           val arr = Array.ofDim[Long]((end - start).toInt)
-          assert(t.value.copyToLongArray(arr))
+          assert(arr.length == numel)
+          if (numel > 0) { assert(t.value.copyToLongArray(arr)) }
           arr
       })
 
@@ -187,7 +189,7 @@ object Writer {
       tensors: Seq[STen],
       file: File,
       bufferSize: Int = 16384
-  ) = {
+  ): IO[Either[String, Unit]] = {
     val dataPath = new File(file.getAbsolutePath + ".data")
     val channel = Resource.make(IO {
       val descriptorChannel = new FileOutputStream(file, false).getChannel
