@@ -56,7 +56,8 @@ object STen {
       m: Vec[Double],
       device: Device,
       precision: FloatingPointPrecision
-  ) = owned(TensorHelpers.fromVec(m, device, precision))
+  ) = if (m.isEmpty) STen.zeros(List(0), device.options(precision))
+  else owned(TensorHelpers.fromVec(m, device, precision))
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromLongMat[S: Sc](
