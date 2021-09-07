@@ -176,19 +176,27 @@ object STen {
         tensors.forall(v => v._2 + v._3 <= length),
         "Some tensor offset +length is out of bounds"
       )
-      assert(length > 0, s"Length is $length")
-      aten.Tensor
-        .tensors_from_file(
-          path,
-          offset,
-          length,
-          pin,
-          tensors.map(_._1).toArray,
-          tensors.map(_._2).toArray,
-          tensors.map(_._3).toArray
-        )
-        .toVector
-        .map(_.owned)
+      if (length == 0)
+        tensors.toVector.map { case (tpe, _, _) =>
+          tpe match {
+            case 4 => STen.zeros(List(0), STenOptions.l)
+            case 6 => STen.zeros(List(0), STenOptions.f)
+            case 7 => STen.zeros(List(0), STenOptions.d)
+          }
+        }
+      else
+        aten.Tensor
+          .tensors_from_file(
+            path,
+            offset,
+            length,
+            pin,
+            tensors.map(_._1).toArray,
+            tensors.map(_._2).toArray,
+            tensors.map(_._3).toArray
+          )
+          .toVector
+          .map(_.owned)
     }
 
   }
