@@ -223,7 +223,8 @@ object GCN {
       ones.release
       val ident = {
         val selfLoops = {
-          val ar = ATen.arange(0d, numNodes.toDouble, 1.0, tOptLongDevice.value)
+          val ar =
+            ATen.arange_2(0d, numNodes.toDouble, 1.0, tOptLongDevice.value)
           val ar2 = ATen._unsafe_view(ar, Array(-1, 1))
           val r = ar2.repeat(Array(1, 2))
           ar.release

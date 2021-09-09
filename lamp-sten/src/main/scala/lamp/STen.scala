@@ -315,7 +315,7 @@ object STen {
       step: Double,
       tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.arange(start, end, step, tensorOptions.value))
+    owned(ATen.arange_2(start, end, step, tensorOptions.value))
 
   def arange_l[S: Sc](
       start: Long,
@@ -323,7 +323,7 @@ object STen {
       step: Long,
       tensorOptions: STenOptions = STen.lOptions
   ) =
-    owned(ATen.arange_l(start, end, step, tensorOptions.value))
+    owned(ATen.arange_2_l(start, end, step, tensorOptions.value))
 
   def linspace[S: Sc](
       start: Double,
@@ -421,13 +421,13 @@ object STen {
       self: STen,
       other: Double
   ): Unit =
-    ATen.pow_out_0(out.value, self.value, other)
+    ATen.pow_out_2(out.value, self.value, other)
   def powOut(
       out: STen,
       self: STen,
       other: STen
   ): Unit =
-    ATen.pow_out_1(out.value, self.value, other.value)
+    ATen.pow_out_0(out.value, self.value, other.value)
   def sumOut(
       out: STen,
       self: STen,
@@ -1014,7 +1014,7 @@ case class STen private (
 
   /** Division. */
   def /[S: Sc](other: Double) =
-    owned(ATen.div_1(value, other))
+    owned(ATen.div_2(value, other))
 
   /** In place division. */
   def /=(other: STen): Unit =
@@ -1131,11 +1131,11 @@ case class STen private (
   def remainder[S: Sc](other: Double) =
     ATen.remainder_0(value, other).owned
 
-  def pow[S: Sc](exponent: Double) = owned(ATen.pow_0(value, exponent))
+  def pow[S: Sc](exponent: Double) = owned(ATen.pow_2(value, exponent))
   def pow[S: Sc](exponent: STen) =
-    owned(ATen.pow_1(value, exponent.value))
+    owned(ATen.pow_0(value, exponent.value))
   def pow_(exponent: Double) =
-    ATen.pow_out_0(value, value, exponent)
+    ATen.pow_out_2(value, value, exponent)
 
   def sum[S: Sc] = owned(ATen.sum_0(value))
 
@@ -1237,13 +1237,13 @@ case class STen private (
       index: STen,
       source: STen
   ) =
-    owned(ATen.index_add(value, dim, index.value, source.value))
+    owned(ATen.index_add_0(value, dim, index.value, source.value))
   def indexAdd[S: Sc](
       dim: Long,
       index: Tensor,
       source: STen
   ) =
-    owned(ATen.index_add(value, dim, index, source.value))
+    owned(ATen.index_add_0(value, dim, index, source.value))
   def indexFill[S: Sc](
       dim: Long,
       index: STen,
@@ -1298,6 +1298,7 @@ case class STen private (
     owned(
       ATen.norm_2(
         value,
+        2d,
         dim.toArray.map(_.toLong),
         keepDim,
         STen.dOptions.scalarTypeByte
@@ -1347,11 +1348,11 @@ case class STen private (
   def std[S: Sc](dim: Int, unbiased: Boolean, keepDim: Boolean) =
     owned(ATen.std_1(value, Array(dim), unbiased, keepDim))
 
-  def median[S: Sc] = owned(ATen.median_1(value))
+  def median[S: Sc] = owned(ATen.median_0(value))
 
   /** Reduces the given dimension with its median. */
   def median[S: Sc](dim: Int, keepDim: Boolean) = {
-    val (a, b) = ATen.median_0(value, dim, keepDim)
+    val (a, b) = ATen.median_1(value, dim, keepDim)
     owned(a) -> owned(b)
   }
 
@@ -1361,20 +1362,20 @@ case class STen private (
     owned(a) -> owned(b)
   }
 
-  def max[S: Sc] = owned(ATen.max_2(value))
+  def max[S: Sc] = owned(ATen.max_1(value))
 
   /** Return a boolean tensor indicating elementwise max. */
-  def max[S: Sc](other: STen) = owned(ATen.max_1(value, other.value))
+  def max[S: Sc](other: STen) = owned(ATen.max_2(value, other.value))
 
   /** Reduces the given dimension with its max. */
   def max[S: Sc](dim: Int, keepDim: Boolean) = {
     val (a, b) = ATen.max_0(value, dim, keepDim)
     owned(a) -> owned(b)
   }
-  def min[S: Sc] = owned(ATen.min_2(value))
+  def min[S: Sc] = owned(ATen.min_1(value))
 
   /** Return a boolean tensor indicating elementwise min. */
-  def min[S: Sc](other: STen) = owned(ATen.min_1(value, other.value))
+  def min[S: Sc](other: STen) = owned(ATen.min_2(value, other.value))
 
   /** Reduces the given dimension with its max. */
   def min[S: Sc](dim: Int, keepDim: Boolean) = {
@@ -1466,6 +1467,10 @@ case class STen private (
     ATen
       .index_put(value, indices.map(_.value).toArray, values.value, accumulate)
       .owned
+  def put[S: Sc](index: STen, values: STen, accumulate: Boolean) =
+    ATen
+      .put(value, index.value, values.value, accumulate)
+      .owned
   def indexCopy[S: Sc](dim: Int, index: STen, source: STen) =
     ATen
       .index_copy(value, dim, index.value, source.value)
@@ -1543,7 +1548,7 @@ case class STen private (
 
   /** Returns the indices of non-zero values */
   def where[S: Sc] =
-    ATen.where_1(value).toList.map(_.owned)
+    ATen.where_4(value).toList.map(_.owned)
 
   def round[S: Sc] = ATen.round(value).owned
 
@@ -1582,9 +1587,6 @@ case class STen private (
   def outer[S: Sc](other: STen) = {
     ATen.outer(value, other.value).owned
   }
-  def cond[S: Sc] = {
-    ATen.linalg_cond_0(value).owned
-  }
   def cond[S: Sc](norm: String) = {
     ATen.linalg_cond_1(value, norm).owned
   }
@@ -1605,7 +1607,7 @@ case class STen private (
     (a.owned, b.owned)
   }
   def matrixRank[S: Sc](hermitian: Boolean) = {
-    ATen.linalg_matrix_rank(value, hermitian).owned
+    ATen.linalg_matrix_rank_0(value, hermitian).owned
   }
 
   def toDense[S: Sc] = value.to_dense().owned

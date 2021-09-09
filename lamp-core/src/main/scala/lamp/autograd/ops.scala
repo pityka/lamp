@@ -1110,6 +1110,7 @@ case class WeightNorm(scope: Scope, v: Variable, g: Variable, dim: Long)
     scope(
       ATen.norm_2(
         v.value.value,
+        2d,
         Array(dim),
         false,
         v.options(scope).scalarTypeByte
@@ -1229,7 +1230,7 @@ case class NllLoss(
               p.value,
               input.value.value,
               target.value,
-              weights.value,
+              Option(weights.value),
               reduction.asLong,
               ignore,
               total_weight
@@ -1244,7 +1245,7 @@ case class NllLoss(
     ATen.nll_loss_forward(
       input.value.value,
       target.value,
-      weights.value,
+      Option(weights.value),
       reduction.asLong,
       ignore
     )
@@ -1401,7 +1402,7 @@ case class Conv1D(
       )
       val zero = ATen
         .zeros(Array(p_repeated_viewed.sizes.apply(0)), p.options(scope).value)
-      val conv_0 = ATen.conv1d(
+      val conv_0 = ATen.conv1d_0(
         input_viewed,
         p_repeated_viewed,
         Some(zero),
@@ -1463,7 +1464,7 @@ case class Conv1D(
     Variable(
       this, {
         STen.owned(
-          ATen.conv1d(
+          ATen.conv1d_0(
             input.value.value,
             weight.value.value,
             Some(bias.value.value),
@@ -1611,7 +1612,7 @@ case class Conv2D(
               Array(p_repeated_viewed.sizes.apply(0)),
               p.options(scope).value
             )
-          val conv_0 = ATen.conv2d(
+          val conv_0 = ATen.conv2d_0(
             input_viewed,
             p_repeated_viewed,
             Some(zero),
@@ -1692,7 +1693,7 @@ case class Conv2D(
     Variable(
       this, {
         STen.owned(
-          ATen.conv2d(
+          ATen.conv2d_0(
             input.value.value,
             weight.value.value,
             Some(bias.value.value),
@@ -1896,7 +1897,7 @@ case class MaxPool1D(
         val p_select = ATen.select(p_flatten, 0, i)
         val mask_select = ATen.select(mask_flatten, 0, i)
         val zeros_select = ATen.select(zeros_flatten, 0, i)
-        val added = ATen.index_add(zeros_select, 0, mask_select, p_select)
+        val added = ATen.index_add_0(zeros_select, 0, mask_select, p_select)
         p_select.release
         mask_select.release
         zeros_select.release
@@ -2093,10 +2094,10 @@ case class BatchNorm(
 
   val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
     input_flattened,
-    weight.value.value,
-    bias.value.value,
-    runningMean.value,
-    runningVar.value,
+    Option(weight.value.value),
+    Option(bias.value.value),
+    Option(runningMean.value),
+    Option(runningVar.value),
     training,
     momentum,
     eps
@@ -2118,11 +2119,11 @@ case class BatchNorm(
       val (gradInput, a, b) = ATen.native_batch_norm_backward(
         flattened_p,
         input_flattened,
-        weight.value.value,
-        runningMean.value,
-        runningVar.value,
-        saveMean,
-        saveInvstd,
+        Option(weight.value.value),
+        Option(runningMean.value),
+        Option(runningVar.value),
+        Option(saveMean),
+        Option(saveInvstd),
         training,
         eps,
         Array(true, false, false)
@@ -2141,11 +2142,11 @@ case class BatchNorm(
       val (a, gradWeight, b) = ATen.native_batch_norm_backward(
         flattened_p,
         input_flattened,
-        weight.value.value,
-        runningMean.value,
-        runningVar.value,
-        saveMean,
-        saveInvstd,
+        Option(weight.value.value),
+        Option(runningMean.value),
+        Option(runningVar.value),
+        Option(saveMean),
+        Option(saveInvstd),
         training,
         eps,
         Array(false, true, false)
@@ -2184,8 +2185,8 @@ case class LayerNormOp(
   val (output, mean, rstd) = ATen.native_layer_norm(
     input.value.value,
     normalizedShape.toArray,
-    weight.value.value,
-    bias.value.value,
+    Option(weight.value.value),
+    Option(bias.value.value),
     eps
   )
 
@@ -2201,10 +2202,10 @@ case class LayerNormOp(
         p.value,
         input.value.value,
         normalizedShape.toArray,
-        mean,
-        rstd,
-        weight.value.value,
-        bias.value.value,
+        (mean),
+        (rstd),
+        Option(weight.value.value),
+        Option(bias.value.value),
         Array(true, false, false)
       )
       ATen.add_out(out.value, out.value, gradInput, 1d)
@@ -2219,8 +2220,8 @@ case class LayerNormOp(
         normalizedShape.toArray,
         mean,
         rstd,
-        weight.value.value,
-        bias.value.value,
+        Option(weight.value.value),
+        Option(bias.value.value),
         Array(false, true, false)
       )
       ATen.add_out(out.value, out.value, gradWeight, 1d)
@@ -2235,8 +2236,8 @@ case class LayerNormOp(
         normalizedShape.toArray,
         mean,
         rstd,
-        weight.value.value,
-        bias.value.value,
+        Option(weight.value.value),
+        Option(bias.value.value),
         Array(false, false, true)
       )
       ATen.add_out(out.value, out.value, gradBias, 1d)
@@ -2284,10 +2285,10 @@ case class BatchNorm2D(
 
   val (output, saveMean, saveInvstd) = ATen.native_batch_norm(
     input.value.value,
-    weight.value.value,
-    bias.value.value,
-    runningMean.value,
-    runningVar.value,
+    Option(weight.value.value),
+    Option(bias.value.value),
+    Option(runningMean.value),
+    Option(runningVar.value),
     training,
     momentum,
     eps
@@ -2302,11 +2303,11 @@ case class BatchNorm2D(
       val (gradInput, a, b) = ATen.native_batch_norm_backward(
         p.value,
         input.value.value,
-        weight.value.value,
-        runningMean.value,
-        runningVar.value,
-        saveMean,
-        saveInvstd,
+        Option(weight.value.value),
+        Option(runningMean.value),
+        Option(runningVar.value),
+        Option(saveMean),
+        Option(saveInvstd),
         training,
         eps,
         Array(true, false, false)
@@ -2323,11 +2324,11 @@ case class BatchNorm2D(
       val (a, gradWeight, b) = ATen.native_batch_norm_backward(
         p.value,
         input.value.value,
-        weight.value.value,
-        runningMean.value,
-        runningVar.value,
-        saveMean,
-        saveInvstd,
+        Option(weight.value.value),
+        Option(runningMean.value),
+        Option(runningVar.value),
+        Option(saveMean),
+        Option(saveInvstd),
         training,
         eps,
         Array(false, true, false)

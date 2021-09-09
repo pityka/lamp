@@ -23,7 +23,7 @@ case class GraphReadout[M <: GraphModule](
     val (nodes, edges, graphIndices) = x
     val (mN, _) = m.forward((nodes, edges))
 
-    val max = ATen.max_2(graphIndices.value.value)
+    val max = ATen.max_1(graphIndices.value.value)
 
     val maxi = max.toLongMat.raw(0) + 1
     max.release
