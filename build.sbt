@@ -66,7 +66,7 @@ val saddleVersion = "2.2.8"
 val upickleVersion = "1.4.0"
 val scalaTestVersion = "3.2.9"
 val scribeVersion = "3.5.5"
-val catsEffectVersion = "3.2.7"
+val catsEffectVersion = "3.2.8"
 val catsCoreVersion = "2.6.0"
 
 lazy val sten = project
@@ -77,7 +77,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+95-5401e60b",
+        "io.github.pityka" %% "aten-scala-core" % "0.0.0+98-d86a7b82",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
