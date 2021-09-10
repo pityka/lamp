@@ -224,7 +224,7 @@ package object nn {
       T5 <: GenericModule[_, _]: Load,
       T6 <: GenericModule[_, _]: Load,
       T7 <: GenericModule[_, _]: Load,
-      T8 <: GenericModule[_, _]: Load,
+      T8 <: GenericModule[_, _]: Load
   ](
       t1: T1,
       t2: T2,
@@ -243,7 +243,7 @@ package object nn {
     t5.load(tensors.drop(ssz(t1, t2, t3, t4)).take(ssz(t5)))
     t6.load(tensors.drop(ssz(t1, t2, t3, t4, t5)).take(ssz(t6)))
     t7.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6)).take(ssz(t7)))
-    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7)).take(ssz(t8)))
+    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7)).take(ssz(t8)))
   }
   def loadMultiple[
       T1 <: GenericModule[_, _]: Load,
@@ -254,7 +254,7 @@ package object nn {
       T6 <: GenericModule[_, _]: Load,
       T7 <: GenericModule[_, _]: Load,
       T8 <: GenericModule[_, _]: Load,
-      T9 <: GenericModule[_, _]: Load,
+      T9 <: GenericModule[_, _]: Load
   ](
       t1: T1,
       t2: T2,
@@ -274,8 +274,8 @@ package object nn {
     t5.load(tensors.drop(ssz(t1, t2, t3, t4)).take(ssz(t5)))
     t6.load(tensors.drop(ssz(t1, t2, t3, t4, t5)).take(ssz(t6)))
     t7.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6)).take(ssz(t7)))
-    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7)).take(ssz(t8)))
-    t9.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8)).take(ssz(t9)))
+    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7)).take(ssz(t8)))
+    t9.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8)).take(ssz(t9)))
   }
   def loadMultiple[
       T1 <: GenericModule[_, _]: Load,
@@ -287,7 +287,7 @@ package object nn {
       T7 <: GenericModule[_, _]: Load,
       T8 <: GenericModule[_, _]: Load,
       T9 <: GenericModule[_, _]: Load,
-      T10 <: GenericModule[_, _]: Load,
+      T10 <: GenericModule[_, _]: Load
   ](
       t1: T1,
       t2: T2,
@@ -308,9 +308,11 @@ package object nn {
     t5.load(tensors.drop(ssz(t1, t2, t3, t4)).take(ssz(t5)))
     t6.load(tensors.drop(ssz(t1, t2, t3, t4, t5)).take(ssz(t6)))
     t7.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6)).take(ssz(t7)))
-    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7)).take(ssz(t8)))
-    t9.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8)).take(ssz(t9)))
-    t10.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8, t9)).take(ssz(t10)))
+    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7)).take(ssz(t8)))
+    t9.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8)).take(ssz(t9)))
+    t10.load(
+      tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8, t9)).take(ssz(t10))
+    )
   }
   def loadMultiple[
       T1 <: GenericModule[_, _]: Load,
@@ -323,7 +325,7 @@ package object nn {
       T8 <: GenericModule[_, _]: Load,
       T9 <: GenericModule[_, _]: Load,
       T10 <: GenericModule[_, _]: Load,
-      T11 <: GenericModule[_, _]: Load,
+      T11 <: GenericModule[_, _]: Load
   ](
       t1: T1,
       t2: T2,
@@ -345,10 +347,14 @@ package object nn {
     t5.load(tensors.drop(ssz(t1, t2, t3, t4)).take(ssz(t5)))
     t6.load(tensors.drop(ssz(t1, t2, t3, t4, t5)).take(ssz(t6)))
     t7.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6)).take(ssz(t7)))
-    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7)).take(ssz(t8)))
-    t9.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8)).take(ssz(t9)))
-    t10.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8, t9)).take(ssz(t10)))
-    t11.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8, t9,t10)).take(ssz(t11)))
+    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7)).take(ssz(t8)))
+    t9.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8)).take(ssz(t9)))
+    t10.load(
+      tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8, t9)).take(ssz(t10))
+    )
+    t11.load(
+      tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10)).take(ssz(t11))
+    )
   }
   def loadMultiple[
       T1 <: GenericModule[_, _]: Load,
@@ -362,7 +368,7 @@ package object nn {
       T9 <: GenericModule[_, _]: Load,
       T10 <: GenericModule[_, _]: Load,
       T11 <: GenericModule[_, _]: Load,
-      T12 <: GenericModule[_, _]: Load,
+      T12 <: GenericModule[_, _]: Load
   ](
       t1: T1,
       t2: T2,
@@ -385,11 +391,19 @@ package object nn {
     t5.load(tensors.drop(ssz(t1, t2, t3, t4)).take(ssz(t5)))
     t6.load(tensors.drop(ssz(t1, t2, t3, t4, t5)).take(ssz(t6)))
     t7.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6)).take(ssz(t7)))
-    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7)).take(ssz(t8)))
-    t9.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8)).take(ssz(t9)))
-    t10.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8, t9)).take(ssz(t10)))
-    t11.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8, t9,t10)).take(ssz(t11)))
-    t12.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6,t7, t8, t9,t10,t11)).take(ssz(t12)))
+    t8.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7)).take(ssz(t8)))
+    t9.load(tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8)).take(ssz(t9)))
+    t10.load(
+      tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8, t9)).take(ssz(t10))
+    )
+    t11.load(
+      tensors.drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10)).take(ssz(t11))
+    )
+    t12.load(
+      tensors
+        .drop(ssz(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11))
+        .take(ssz(t12))
+    )
   }
 
 }
