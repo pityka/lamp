@@ -183,11 +183,12 @@ object GraphAttention {
         dot + edgeKey.reshape(List(-1, numHeads, 1))
 
     }
-    val e = activations.exp
-    val s = e.indexAdd(const(edgeJ), 0, nodeFeatures.shape(0))
-    val sBroadCast = s.indexSelect(dim = 0, const(edgeJ))
-    val softmax = e / (sBroadCast + 1e-2)
-    val a = softmax.view(List(-1, numHeads, 1))
+    val c = const(activations.value.max)
+    val e = (activations - c).exp
+    val lse = e.indexAdd(const(edgeJ), 0, nodeFeatures.shape(0)).log + c
+    val lseBroadCast = lse.indexSelect(dim = 0, const(edgeJ))
+    val logsoftmax = activations - lseBroadCast
+    val a = logsoftmax.exp.view(List(-1, numHeads, 1))
 
     assert(
       nodeValue.shape(1) % numHeads == 0,

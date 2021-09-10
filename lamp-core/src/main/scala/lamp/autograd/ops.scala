@@ -2505,3 +2505,58 @@ case class CholeskySolve(
     )
   )(scope)
 }
+
+case class ElementWiseMinimum(scope: Scope, a: Variable, b: Variable)
+    extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp = STen.zerosLike(out)
+        out += tmp.maskedScatter(mask, p)
+      }
+    },
+    b.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp = STen.zerosLike(out)
+        out += tmp.maskedScatter(maskneg, p)
+      }
+    }
+  )
+
+  val value =
+    Variable(this, a.value.min(b.value)(scope))(
+      scope
+    )
+
+  val mask = a.value.equ(value.value)(scope)
+  val maskneg = mask.not(scope)
+
+}
+case class ElementWiseMaximum(scope: Scope, a: Variable, b: Variable)
+    extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp = STen.zerosLike(out)
+        out += tmp.maskedScatter(mask, p)
+      }
+    },
+    b.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp = STen.zerosLike(out)
+        out += tmp.maskedScatter(maskneg, p)
+      }
+    }
+  )
+
+  val value =
+    Variable(this, a.value.max(b.value)(scope))(
+      scope
+    )
+
+  val mask = a.value.equ(value.value)(scope)
+  val maskneg = mask.not(scope)
+
+}

@@ -1364,7 +1364,7 @@ case class STen private (
 
   def max[S: Sc] = owned(ATen.max_1(value))
 
-  /** Return a boolean tensor indicating elementwise max. */
+  /** Return the elementwise max. */
   def max[S: Sc](other: STen) = owned(ATen.max_2(value, other.value))
 
   /** Reduces the given dimension with its max. */
@@ -1374,8 +1374,8 @@ case class STen private (
   }
   def min[S: Sc] = owned(ATen.min_1(value))
 
-  /** Return a boolean tensor indicating elementwise min. */
-  def min[S: Sc](other: STen) = owned(ATen.min_2(value, other.value))
+  /** Return the elementwise minimum. */
+  def min[S: Sc](other: STen) = owned(ATen.minimum(value, other.value))
 
   /** Reduces the given dimension with its max. */
   def min[S: Sc](dim: Int, keepDim: Boolean) = {
@@ -1444,9 +1444,13 @@ case class STen private (
   def ne[S: Sc](other: Double) =
     ATen.ne_0(value, other).owned
 
-  /** Returns the negation. */
+  /** Returns the negation (not for Boolean). */
   def neg[S: Sc] =
     ATen.neg(value).owned
+
+  /** Returns the logical negation ( for Boolean). */
+  def not[S: Sc] =
+    ATen.logical_not(value).owned
 
   /** Return a boolean tensor indicating element-wise is-nan. */
   def isnan[S: Sc] =

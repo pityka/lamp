@@ -498,6 +498,66 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  testGradientAndValue("min - left")(mat2x3, 21d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(STen.fromMat(m, cuda))
+      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val L = x1.minimum(x2).sum
+
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("min - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(STen.fromMat(m, cuda))
+      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+
+      val L = x2.minimum(x1).sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("max - left")(mat2x3, 42d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(STen.fromMat(m, cuda))
+      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val L = x1.maximum(x2).sum
+
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("max - right")(mat2x3, 42d) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(STen.fromMat(m, cuda))
+      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+
+      val L = x2.maximum(x1).sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
 
   testGradientAndValue("mm - left")(mat2x3, 358d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
@@ -2834,4 +2894,5 @@ class GradientSuite extends AnyFunSuite {
         )
       }
   }
+
 }
