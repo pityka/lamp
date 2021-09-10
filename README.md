@@ -11,7 +11,7 @@ Lamp is a Scala library for deep learning and scientific computing.
 It features a native CPU and GPU backend and operates on off-heap memory. 
 
 Lamp is inspired by [pytorch](https://pytorch.org/). 
-The foundation of lamp is a [JNI binding to ATen](https://github.com/pityka/aten-scala), the C++ tensor backend of torch ([see here](https://pytorch.org/cppdocs/#aten])).
+The foundation of lamp is a [JNI binding to ATen](https://github.com/pityka/aten-scala), the C++ tensor backend of pytorch ([see here](https://pytorch.org/cppdocs/#aten])).
 As a consequence lamp uses fast CPU and GPU code and stores its data in off-heap memory.
 
 [Documentation](https://pityka.github.io/lamp)
@@ -40,16 +40,16 @@ This repository also hosts some other loosely related libraries.
 
 # Platforms
 
-Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.8.0 shared libraries in its linker path.
+Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.9.0 shared libraries in its linker path.
 
-On mac it suffices to copy the shared libraries from `https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.8.0.zip` to e.g. `/usr/local/lib/`.
+On mac it suffices to copy the shared libraries from `https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.9.0.zip` to e.g. `/usr/local/lib/`.
 On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile).
 
 # Dependencies
 
 In addition to the libtorch shared libraries:
 - `lamp-core` depends on [saddle-core](https://github.com/pityka/saddle), [cats-effect](https://github.com/typelevel/cats-effect) and [aten-scala](https://github.com/pityka/aten-scala)
-- `lamp-data` further depends on [scribe](https://github.com/outr/scribe) and [ujson](https://github.com/lihaoyi/upickle)
+- `lamp-data` further depends on [scribe](https://github.com/outr/scribe) and [jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala)
 
 # Completeness
 
