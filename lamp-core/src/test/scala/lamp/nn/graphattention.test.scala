@@ -129,8 +129,8 @@ class GraphAttentionSuite extends AnyFunSuite {
         .toMat
       assert(result.numRows == 5)
       assert(result.numCols == 6)
-      assert(result.raw(0, 0) == 1.0000000000000004)
-      assert(result.raw(0, 3) == 1.4999999999999998)
+      assert(result.roundTo(10).raw(0, 0) == 1.0)
+      assert(result.roundTo(10).raw(0, 3) == 1.5)
       val resultDot = GraphAttention
         .multiheadGraphAttention(
           nodeFeatures = const(nodes),
@@ -147,8 +147,8 @@ class GraphAttentionSuite extends AnyFunSuite {
         .toMat
       assert(resultDot.numRows == 5)
       assert(resultDot.numCols == 6)
-      assert(resultDot.raw(0, 0) == 1.0000000000000002)
-      assert(resultDot.raw(0, 3) == 1.4999999999999998)
+      assert(resultDot.roundTo(10).raw(0, 0) == 1.0)
+      assert(resultDot.roundTo(10).raw(0, 3) == 1.5)
 
       assert(
         GraphAttention
