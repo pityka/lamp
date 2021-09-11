@@ -16,6 +16,12 @@ import cats.effect.std.Queue
   */
 object IOLoops {
 
+  case class TrainingLoopContext(
+      epoch: Int,
+      lastValidationLoss: Option[Double],
+      minValidationLoss: Option[Double]
+  )
+
   def forwardBatchStream[I, M <: GenericModule[I, Variable], S](
       batchStream: BatchStream[I, S],
       model: M with GenericModule[I, Variable]
@@ -89,11 +95,14 @@ object IOLoops {
   ]: Load, LRState: TypeTag, LRStateSWA: TypeTag, BatchStreamState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
-      trainBatchesOverEpoch: () => BatchStream[I, BatchStreamState],
+      trainBatchesOverEpoch: TrainingLoopContext => BatchStream[
+        I,
+        BatchStreamState
+      ],
       warmupEpochs: Int,
       swaEpochs: Int,
       validationBatchesOverEpoch: Option[
-        () => BatchStream[I, BatchStreamState]
+        TrainingLoopContext => BatchStream[I, BatchStreamState]
       ] = None,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
       validationCallback: ValidationCallback = ValidationCallback.noop,
@@ -212,9 +221,12 @@ object IOLoops {
   ]: Load, LRState, BatchStreamState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
-      trainBatchesOverEpoch: () => BatchStream[I, BatchStreamState],
+      trainBatchesOverEpoch: TrainingLoopContext => BatchStream[
+        I,
+        BatchStreamState
+      ],
       validationBatchesOverEpoch: Option[
-        () => BatchStream[I, BatchStreamState]
+        TrainingLoopContext => BatchStream[I, BatchStreamState]
       ],
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
@@ -340,7 +352,13 @@ object IOLoops {
                 epoch,
                 trainingCallback,
                 modelWithOptimizer,
-                trainBatchesOverEpoch(),
+                trainBatchesOverEpoch(
+                  TrainingLoopContext(
+                    epoch,
+                    lastValidationLoss,
+                    minValidationLoss
+                  )
+                ),
                 logger,
                 learningRateFactor,
                 prefetch,
@@ -351,7 +369,13 @@ object IOLoops {
                 epoch,
                 trainingCallback,
                 modelWithOptimizer,
-                trainBatchesOverEpoch(),
+                trainBatchesOverEpoch(
+                  TrainingLoopContext(
+                    epoch,
+                    lastValidationLoss,
+                    minValidationLoss
+                  )
+                ),
                 logger,
                 learningRateFactor,
                 dataParallelModels,
@@ -365,7 +389,13 @@ object IOLoops {
               if (dataParallelModels.isEmpty)
                 validationOneEpoch(
                   model = modelWithOptimizer.model,
-                  validationBatches = validationBatchesOverEpoch.get(),
+                  validationBatches = validationBatchesOverEpoch.get(
+                    TrainingLoopContext(
+                      epoch,
+                      lastValidationLoss,
+                      minValidationLoss
+                    )
+                  ),
                   validationCallback = validationCallback,
                   logger = logger,
                   epochCount = epoch
@@ -374,7 +404,13 @@ object IOLoops {
                 DataParallel
                   .validationOneEpoch(
                     models = modelWithOptimizer.model +: dataParallelModels,
-                    validationBatches = validationBatchesOverEpoch.get(),
+                    validationBatches = validationBatchesOverEpoch.get(
+                      TrainingLoopContext(
+                        epoch,
+                        lastValidationLoss,
+                        minValidationLoss
+                      )
+                    ),
                     validationCallback = validationCallback,
                     logger = logger,
                     epochCount = epoch

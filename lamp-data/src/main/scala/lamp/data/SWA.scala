@@ -53,9 +53,12 @@ object SWA {
   ]: Load, LRState, BatchStreamState](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
-      trainBatchesOverEpoch: () => BatchStream[I, BatchStreamState],
+      trainBatchesOverEpoch: IOLoops.TrainingLoopContext => BatchStream[
+        I,
+        BatchStreamState
+      ],
       validationBatchesOverEpoch: Option[
-        () => BatchStream[I, BatchStreamState]
+        IOLoops.TrainingLoopContext => BatchStream[I, BatchStreamState]
       ],
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
@@ -163,7 +166,13 @@ object SWA {
                 epoch,
                 trainingCallback,
                 modelWithOptimizer,
-                trainBatchesOverEpoch(),
+                trainBatchesOverEpoch(
+                  IOLoops.TrainingLoopContext(
+                    epoch,
+                    lastValidationLoss,
+                    minValidationLoss
+                  )
+                ),
                 logger,
                 learningRateFactor,
                 prefetch,
@@ -174,7 +183,13 @@ object SWA {
                 epoch,
                 trainingCallback,
                 modelWithOptimizer,
-                trainBatchesOverEpoch(),
+                trainBatchesOverEpoch(
+                  IOLoops.TrainingLoopContext(
+                    epoch,
+                    lastValidationLoss,
+                    minValidationLoss
+                  )
+                ),
                 logger,
                 learningRateFactor,
                 dataParallelModels,
@@ -189,7 +204,13 @@ object SWA {
                 IOLoops
                   .validationOneEpoch(
                     model = modelWithOptimizer.model,
-                    validationBatches = validationBatchesOverEpoch.get(),
+                    validationBatches = validationBatchesOverEpoch.get(
+                      IOLoops.TrainingLoopContext(
+                        epoch,
+                        lastValidationLoss,
+                        minValidationLoss
+                      )
+                    ),
                     validationCallback = validationCallback,
                     logger = logger,
                     epochCount = epoch
@@ -199,7 +220,13 @@ object SWA {
                 DataParallel
                   .validationOneEpoch(
                     models = modelWithOptimizer.model +: dataParallelModels,
-                    validationBatches = validationBatchesOverEpoch.get(),
+                    validationBatches = validationBatchesOverEpoch.get(
+                      IOLoops.TrainingLoopContext(
+                        epoch,
+                        lastValidationLoss,
+                        minValidationLoss
+                      )
+                    ),
                     validationCallback = validationCallback,
                     logger = logger,
                     epochCount = epoch
@@ -273,7 +300,16 @@ object SWA {
       _ <-
         if (forwardPassAfterTraining)
           IOLoops
-            .forwardBatchStream(trainBatchesOverEpoch(), model.module)
+            .forwardBatchStream(
+              trainBatchesOverEpoch(
+                IOLoops.TrainingLoopContext(
+                  learningCurve.size,
+                  None,
+                  None
+                )
+              ),
+              model.module
+            )
         else IO.unit
     } yield trained
 
