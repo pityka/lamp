@@ -262,7 +262,7 @@ object Train extends App {
           )
         }
         val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-        val trainEpochs = () =>
+        val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           Text
             .minibatchesForSeq2Seq(
               trainTokenized,
@@ -271,15 +271,16 @@ object Train extends App {
               vocab('#'),
               rng
             )
-        val testEpochs = testTokenized.map { t => () =>
-          Text
-            .minibatchesForSeq2Seq(
-              t,
-              config.validationBatchSize,
-              lookAhead,
-              vocab('#'),
-              rng
-            )
+        val testEpochs = testTokenized.map {
+          t => (_: IOLoops.TrainingLoopContext) =>
+            Text
+              .minibatchesForSeq2Seq(
+                t,
+                config.validationBatchSize,
+                lookAhead,
+                vocab('#'),
+                rng
+              )
         }
 
         val optimizer = AdamW.factory(

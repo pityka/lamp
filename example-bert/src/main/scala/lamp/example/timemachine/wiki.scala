@@ -180,7 +180,7 @@ object Train extends App {
         scribe.info("Learnable parameters: " + net.learnableParameters)
 
         val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-        val trainEpochs = () =>
+        val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           lamp.data.bert.minibatchesFromFull(
             config.trainBatchSize,
             true,
@@ -196,7 +196,7 @@ object Train extends App {
             ),
             rng
           )
-        val validEpochs = () =>
+        val validEpochs = (_: IOLoops.TrainingLoopContext) =>
           lamp.data.bert.minibatchesFromFull(
             config.trainBatchSize,
             true,

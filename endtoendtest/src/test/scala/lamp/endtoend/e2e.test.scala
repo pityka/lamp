@@ -117,7 +117,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         LossFunctions.NLL(numClasses, classWeights)
       )
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-      val makeTrainingBatch = () =>
+      val makeTrainingBatch = (_:IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           1024,
           false,

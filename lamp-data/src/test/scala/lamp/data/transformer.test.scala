@@ -67,7 +67,7 @@ class TransformerSuite extends AnyFunSuite {
 
       val trainedModel = Scope { implicit scope =>
         val makeTrainingBatch =
-          () =>
+          (_: IOLoops.TrainingLoopContext) =>
             BatchStream.minibatchesFromFull(
               1024,
               false,

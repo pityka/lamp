@@ -121,13 +121,13 @@ object Train extends App {
 
           println(s"Number of parameters: ${model.module.learnableParameters}")
 
-          val makeTrainingBatch = () =>
+          val makeTrainingBatch = (_:IOLoops.TrainingLoopContext) =>
             GraphBatchStream.bigGraphModeFullBatch(
               nodes = nodesT,
               edges = edgesT,
               targetPerNode = trainL
             )
-          val makeValidationBatch = () =>
+          val makeValidationBatch = (_:IOLoops.TrainingLoopContext) =>
             GraphBatchStream.bigGraphModeFullBatch(
               nodes = nodesT,
               edges = edgesT,

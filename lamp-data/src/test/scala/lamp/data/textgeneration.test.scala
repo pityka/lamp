@@ -69,7 +69,7 @@ class TextGenerationSuite extends AnyFunSuite {
         )
       }
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-      val trainEpochs = () =>
+      val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
         Text
           .minibatchesFromText(
             trainTokenized,
@@ -147,7 +147,7 @@ class TextGenerationSuite extends AnyFunSuite {
         )
       }
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-      val trainEpochs = () =>
+      val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
         Text
           .minibatchesFromText(
             trainTokenized,

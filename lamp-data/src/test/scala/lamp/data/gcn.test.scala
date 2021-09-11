@@ -201,7 +201,7 @@ class GCNSuite extends AnyFunSuite {
           LossFunctions.NLL(7, classWeights, ignore = -100)
         )
 
-        val makeTrainingBatch = () =>
+        val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
           GraphBatchStream.bigGraphModeFullBatch(
             nodes = featureT,
             edges = edges,
@@ -341,7 +341,7 @@ class GCNSuite extends AnyFunSuite {
         LossFunctions.NLL(7, classWeights, ignore = -100)
       )
 
-      val makeTrainingBatch = () =>
+      val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
         GraphBatchStream.bigGraphModeFullBatch(
           nodes = featureT,
           edges = edges,

@@ -192,7 +192,7 @@ object Train extends App {
           s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
         )
         val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-        val trainEpochs = () =>
+        val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           BatchStream.minibatchesFromFull(
             config.trainBatchSize,
             true,
@@ -200,7 +200,7 @@ object Train extends App {
             trainTarget,
             rng
           )
-        val testEpochs = () =>
+        val testEpochs = (_: IOLoops.TrainingLoopContext) =>
           BatchStream.minibatchesFromFull(
             config.testBatchSize,
             true,
@@ -227,7 +227,7 @@ object Train extends App {
           )
           .unsafeRunSync()
 
-        testEpochs()
+        testEpochs(IOLoops.TrainingLoopContext(0,None,None))
           .nextBatch(device, 0)
           .flatMap(
             _._2

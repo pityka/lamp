@@ -21,6 +21,9 @@ object IOLoops {
       lastValidationLoss: Option[Double],
       minValidationLoss: Option[Double]
   )
+  object TrainingLoopContext {
+    def empty: TrainingLoopContext = IOLoops.TrainingLoopContext(0,None,None)
+  }
 
   def forwardBatchStream[I, M <: GenericModule[I, Variable], S](
       batchStream: BatchStream[I, S],

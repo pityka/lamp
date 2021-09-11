@@ -80,10 +80,11 @@ class IOLoopSuite extends AnyFunSuite {
               learningRate = simple(0.0001),
               weightDecay = simple(0.001d)
             ),
-          trainBatchesOverEpoch =
-            () => BatchStream.fromFullBatch(x, target, device),
-          validationBatchesOverEpoch =
-            Some(() => BatchStream.fromFullBatch(x, target, device)),
+          trainBatchesOverEpoch = (_: IOLoops.TrainingLoopContext) =>
+            BatchStream.fromFullBatch(x, target, device),
+          validationBatchesOverEpoch = Some((_: IOLoops.TrainingLoopContext) =>
+            BatchStream.fromFullBatch(x, target, device)
+          ),
           warmupEpochs = 50,
           swaEpochs = 20,
           trainingCallback = TrainingCallback.noop,
@@ -157,9 +158,9 @@ class IOLoopSuite extends AnyFunSuite {
               learningRate = simple(0.0001),
               weightDecay = simple(0.001d)
             ),
-          trainBatchesOverEpoch =
-            () => BatchStream.minibatchesFromFull(200, true, x, target, rng),
-          validationBatchesOverEpoch = Some(() =>
+          trainBatchesOverEpoch = (_: IOLoops.TrainingLoopContext) =>
+            BatchStream.minibatchesFromFull(200, true, x, target, rng),
+          validationBatchesOverEpoch = Some((_: IOLoops.TrainingLoopContext) =>
             BatchStream.minibatchesFromFull(200, true, x, target, rng)
           ),
           epochs = 50,
@@ -227,9 +228,9 @@ class IOLoopSuite extends AnyFunSuite {
               learningRate = simple(0.0001),
               weightDecay = simple(0.001d)
             ),
-          trainBatchesOverEpoch =
-            () => BatchStream.minibatchesFromFull(200, true, x, target, rng),
-          validationBatchesOverEpoch = Some(() =>
+          trainBatchesOverEpoch = (_: IOLoops.TrainingLoopContext) =>
+            BatchStream.minibatchesFromFull(200, true, x, target, rng),
+          validationBatchesOverEpoch = Some((_: IOLoops.TrainingLoopContext) =>
             BatchStream.minibatchesFromFull(200, true, x, target, rng)
           ),
           epochs = 50,

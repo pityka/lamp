@@ -156,7 +156,7 @@ object Train extends App {
           )
         }
         val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-        val trainEpochs = () =>
+        val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           Text
             .minibatchesFromText(
               trainTokenized,
@@ -164,7 +164,7 @@ object Train extends App {
               lookAhead,
               rng
             )
-        val testEpochs = () =>
+        val testEpochs = (_: IOLoops.TrainingLoopContext) =>
           Text
             .minibatchesFromText(
               testTokenized,

@@ -78,7 +78,7 @@ class MLPSuite extends AnyFunSuite {
       )
 
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-      val makeValidationBatch = () =>
+      val makeValidationBatch = (_: IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           200,
           true,
@@ -86,7 +86,7 @@ class MLPSuite extends AnyFunSuite {
           testTarget,
           rng
         )
-      val makeTrainingBatch = () =>
+      val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           200,
           true,
