@@ -162,7 +162,7 @@ This factory function will then be called in each epoch.
 Lamp provides a helper which chops up the full batch of data into mini-batches.
 ```scala mdoc
 import lamp.data._
-val makeTrainingBatch = () =>
+val makeTrainingBatch = (_:IOLoops.TrainingLoopContext) =>
       BatchStream.minibatchesFromFull(
         minibatchSize = 200,
         dropLast = true,
