@@ -5,6 +5,9 @@ import aten.TensorTrace
 import aten.TensorTraceData
 import aten.TensorOptionsTrace
 
+/** Utility to periodically log active tensors See
+  * [[lamp.data.TensorLogger#start]]
+  */
 object TensorLogger {
 
   def formatLine(data: TensorTraceData) =
@@ -37,6 +40,21 @@ object TensorLogger {
   ) = {
     val currentTime = nanoTime
 
+    val totalActiveBytePerDevice = actives
+      .map { t =>
+        val numel = t.getShape().toList.foldLeft(1L)(_ * _)
+        val elementSize = t.getScalarType() match {
+          case 4 => 8
+          case 5 => 2
+          case 6 => 4
+          case 7 => 8
+          case _ => 1
+        }
+        val numbytes = numel * elementSize
+        (t.getCpu(), numbytes)
+      }
+      .groupMapReduce(_._1)(_._2)(_ + _)
+
     val lifetimes = actives
       .map { case data =>
         (data, (currentTime - data.getBirth) * 1e-6)
@@ -58,7 +76,7 @@ object TensorLogger {
       }
     }
 
-    (histogram, lifetimes)
+    (histogram, lifetimes, totalActiveBytePerDevice)
   }
   def logTensors(
       logger: String => Unit,
@@ -100,10 +118,12 @@ object TensorLogger {
       case 3600d => "1h"
       case _     => "Inf"
     }
-    val (histogram, actives) = makeStatistic(nanoTime, data)(filter)
+    val (histogram, actives, totalBytes) = makeStatistic(nanoTime, data)(filter)
     val string = s" lifetime histogram: ${histogram
       .map { case (_, high, count) => s"<${format(high / 1000)}:$count" }
-      .mkString("|")}, total=${histogram.map(_._3).sum}. ${actives
+      .mkString("|")}, total=${histogram.map(_._3).sum}. \nTotal bytes on CPU: ${totalBytes
+      .get(true)
+      .getOrElse(0L)}. Total bytes on all GPUs: ${totalBytes.get(false).getOrElse(0L)}.  ${actives
       .filter { case (_, ms) => ms >= detailMinMs && ms <= detailMaxMs }
       .take(detailNum)
       .map { case (data, duration) =>
@@ -137,6 +157,36 @@ object TensorLogger {
     logger("\n" + strings.mkString("\n"))
   }
 
+  /** Log active tensors with a given frequency
+    *
+    * The log string itself consists of a summary statistics of active tensors
+    * and a list of detailed information on some number of active tensors. The
+    * detailed information shows the stack trace where the tensor was allocated.
+    * The tensors eligible for detail are specified by a filter on their
+    * lifetime.
+    *
+    * This method will spawn a new Thread, which repeatedly logs and sleeps
+    * until not canceled.
+    *
+    * @param frequency
+    *   the frequency with which the logging will occur
+    * @param logger
+    *   a side effecting lambda which executes the log
+    * @param filter
+    *   a predicate taking some information about the tensor and the lifetime of
+    *   the tensor in milliseconds
+    * @param detailMinMs
+    *   minimum lifetime in milliseconds for a tensor to be eligible for
+    *   detailed logging
+    * @param detailMaxMs
+    *   maximum lifetime in milliseconds for a tensor to be eligible for
+    *   detailed logging
+    * @param detailNum
+    *   max number of tensors in the detailed section
+    * @return
+    *   an instance of TensorLogger whose sole purpose is its `cancel()` method
+    *   which stops the logger
+    */
   def start(
       frequency: FiniteDuration = 5 seconds
   )(
@@ -145,7 +195,7 @@ object TensorLogger {
       detailMinMs: Double,
       detailMaxMs: Double,
       detailNum: Int
-  ) = {
+  ): TensorLogger = {
     TensorTrace.enable()
     TensorOptionsTrace.enable()
     @volatile
@@ -170,6 +220,10 @@ object TensorLogger {
   }
 
 }
+
+/** Class holding a lambda to stop the logging. See its companion object. See
+  * [[lamp.data.TensorLogger#start]]
+  */
 case class TensorLogger(
     stop: () => Unit
 ) {

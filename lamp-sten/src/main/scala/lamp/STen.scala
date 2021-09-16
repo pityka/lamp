@@ -9,7 +9,7 @@ import org.saddle._
   *   - [[STen.fromDoubleArray]], [[STen.fromLongArray]],
   *     [[STen.fromFloatArray]] factory methods copy data from JVM arrays into
   *     off heap memory and create an STen instance
-  *     - There are similar factories which take SADDLE data structures
+  *   - There are similar factories which take SADDLE data structures
   */
 object STen {
 
@@ -582,7 +582,7 @@ object STenOptions {
 
 }
 
-/** Memory managed, off-heap N-dimensional array.
+/** Memory managed, off-heap, GPU and CPU compatible N-dimensional array.
   *
   * This class is a wrapper around aten.Tensor providing a more convenient API.
   * All allocating operations require an implicit [[lamp.Scope]].

@@ -79,4 +79,35 @@ Most regular Scala types and primities have a `Movable` instance which return th
 
 `Scope.root` is meant to be used as the outermost Scope. It can not return anything, thus it takes a lambda with a Unit return type.
 
+# Debug memory leaks with TensorLogger
 
+Lamp comes with utility in `lamp.data.TensorLogger` which records tensor allocations and deallocations. 
+This is disabled by default.
+You can enable the utility with the `lamp.data.TensorLogger.start` method, which has the following signature:
+```scala
+ def start(
+      frequency: FiniteDuration = 5 seconds
+  )(
+      logger: String => Unit,
+      filter: (TensorTraceData, Double) => Boolean,
+      detailMinMs: Double,
+      detailMaxMs: Double,
+      detailNum: Int
+  ) : TensorLogger 
+```
+Once started, this will log a summary and detailed information on live tensors with the required frequency.
+It should be stopped with the `cancel()` method on the `TensorLogger` instance.
+
+Example, this will print a stack trace of all active CUDA tensors older than 1 minute, but younger than 5 minutes.
+```scala mdoc:compile-only
+import scala.concurrent.duration._
+val stop = lamp.data.TensorLogger.start(
+  frequency = 5 seconds // FiniteDuration
+)(
+  logger = line => println(line), 
+  filter = (tensorInfo, _) => !tensorInfo.getCpu , 
+  detailMinMs = 60 * 1000,
+  detailMaxMs = 5 * 60 * 1000, 
+  detailNum = 5
+  )
+```
