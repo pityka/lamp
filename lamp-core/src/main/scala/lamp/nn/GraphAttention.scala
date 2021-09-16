@@ -170,7 +170,7 @@ object GraphAttention {
         (ninjeij
           .transpose(0, 1) bmm wAttention
           .view(List(K, numHeads, 1))
-          .transpose(0, 1)).swish1.transpose(0, 1).view(List(-1, numHeads))
+          .transpose(0, 1)).tanh.transpose(0, 1).view(List(-1, numHeads))
 
       case None =>
         val ni =
