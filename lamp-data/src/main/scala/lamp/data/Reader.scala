@@ -38,21 +38,23 @@ object Reader {
       device: Device,
       pin: Boolean
   )(implicit scope: Scope): Seq[STen] = {
-    STen
-      .tensorsFromFile(
-        path = new File(pathOfDescriptor.getParent, descriptor.location)
-          .getAbsolutePath(),
-        offset = descriptor.byteOffset,
-        length = descriptor.byteLength,
-        pin = pin,
-        tensors = descriptor.tensors.map { td =>
-          (td.dataType, td.byteOffset, td.byteLength)
-        }.toList
-      )
-      .zip(descriptor.tensors)
-      .map { case (t1, descr) =>
-        device.to(t1.view(descr.dims: _*))
-      }
+    Scope { implicit scope =>
+      STen
+        .tensorsFromFile(
+          path = new File(pathOfDescriptor.getParent, descriptor.location)
+            .getAbsolutePath(),
+          offset = descriptor.byteOffset,
+          length = descriptor.byteLength,
+          pin = pin,
+          tensors = descriptor.tensors.map { td =>
+            (td.dataType, td.byteOffset, td.byteLength)
+          }.toList
+        )
+        .zip(descriptor.tensors)
+        .map { case (t1, descr) =>
+          device.to(t1.view(descr.dims: _*))
+        }
+    }
 
   }
 
