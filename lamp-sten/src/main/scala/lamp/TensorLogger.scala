@@ -52,8 +52,7 @@ object TensorLogger {
         }
         val numbytes = numel * elementSize
         (t.getCpu(), numbytes)
-      }
-      .groupMapReduce(_._1)(_._2)(_ + _)
+      }.groupBy(_._1).map(v => (v._1,v._2.map(_._2).sum))
 
     val lifetimes = actives
       .map { case data =>
