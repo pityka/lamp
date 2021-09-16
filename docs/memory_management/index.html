@@ -193,6 +193,34 @@ It is defined as</p>
 
 <p><code>Scope.root</code> is meant to be used as the outermost Scope. It can not return anything, thus it takes a lambda with a Unit return type.</p>
 
+<h1 id="debug-memory-leaks-with-tensorlogger">Debug memory leaks with TensorLogger</h1>
+
+<p>Lamp comes with utility in <code>lamp.data.TensorLogger</code> which records tensor allocations and deallocations.
+This is disabled by default.
+You can enable the utility with the <code>lamp.data.TensorLogger.start</code> method, which has the following signature:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"> <span style="color:#66d9ef">def</span> start<span style="color:#f92672">(</span>
+      frequency<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">FiniteDuration</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">5</span> seconds
+  <span style="color:#f92672">)(</span>
+      logger<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">String</span> <span style="color:#f92672">=&gt;</span> <span style="color:#a6e22e">Unit</span><span style="color:#f92672">,</span>
+      filter<span style="color:#66d9ef">:</span> <span style="color:#f92672">(</span><span style="color:#66d9ef">TensorTraceData</span><span style="color:#f92672">,</span> <span style="color:#66d9ef">Double</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">=&gt;</span> <span style="color:#a6e22e">Boolean</span><span style="color:#f92672">,</span>
+      detailMinMs<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Double</span><span style="color:#f92672">,</span>
+      detailMaxMs<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Double</span><span style="color:#f92672">,</span>
+      detailNum<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Int</span>
+  <span style="color:#f92672">)</span> <span style="color:#66d9ef">:</span> <span style="color:#66d9ef">TensorLogger</span> </code></pre></div>
+<p>Once started, this will log a summary and detailed information on live tensors with the required frequency.
+It should be stopped with the <code>cancel()</code> method on the <code>TensorLogger</code> instance.</p>
+
+<p>Example, this will print a stack trace of all active CUDA tensors older than 1 minute, but younger than 5 minutes.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> scala.concurrent.duration._
+<span style="color:#66d9ef">val</span> stop <span style="color:#66d9ef">=</span> lamp<span style="color:#f92672">.</span>data<span style="color:#f92672">.</span><span style="color:#a6e22e">TensorLogger</span><span style="color:#f92672">.</span>start<span style="color:#f92672">(</span>
+  frequency <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">5</span> seconds <span style="color:#75715e">// FiniteDuration
+</span><span style="color:#75715e"></span><span style="color:#f92672">)(</span>
+  logger <span style="color:#66d9ef">=</span> line <span style="color:#66d9ef">=&gt;</span> println<span style="color:#f92672">(</span>line<span style="color:#f92672">),</span> 
+  filter <span style="color:#66d9ef">=</span> <span style="color:#f92672">(</span>tensorInfo<span style="color:#f92672">,</span> <span style="color:#66d9ef">_</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">=&gt;</span> <span style="color:#f92672">!</span>tensorInfo<span style="color:#f92672">.</span>getCpu <span style="color:#f92672">,</span> 
+  detailMinMs <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">60</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">1000</span><span style="color:#f92672">,</span>
+  detailMaxMs <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">5</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">60</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">1000</span><span style="color:#f92672">,</span> 
+  detailNum <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">5</span>
+  <span style="color:#f92672">)</span></code></pre></div>
 </div>
 </div>
 
