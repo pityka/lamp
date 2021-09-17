@@ -22,7 +22,7 @@ object IOLoops {
       minValidationLoss: Option[Double]
   )
   object TrainingLoopContext {
-    def empty: TrainingLoopContext = IOLoops.TrainingLoopContext(0,None,None)
+    def empty: TrainingLoopContext = IOLoops.TrainingLoopContext(0, None, None)
   }
 
   def forwardBatchStream[I, M <: GenericModule[I, Variable], S](

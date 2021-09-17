@@ -227,7 +227,7 @@ object Train extends App {
           )
           .unsafeRunSync()
 
-        testEpochs(IOLoops.TrainingLoopContext(0,None,None))
+        testEpochs(IOLoops.TrainingLoopContext(0, None, None))
           .nextBatch(device, 0)
           .flatMap(
             _._2
