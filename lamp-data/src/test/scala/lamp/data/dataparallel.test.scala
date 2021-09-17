@@ -78,7 +78,7 @@ class DataParallelLoopSuite extends AnyFunSuite {
             ),
           trainBatchesOverEpoch =
             _ => BatchStream.minibatchesFromFull(200, true, x, target, rng),
-          validationBatchesOverEpoch = Some( (_: IOLoops.TrainingLoopContext) =>
+          validationBatchesOverEpoch = Some((_: IOLoops.TrainingLoopContext) =>
             BatchStream.minibatchesFromFull(200, true, x, target, rng)
           ),
           epochs = 50,
