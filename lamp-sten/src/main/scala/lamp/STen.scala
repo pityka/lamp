@@ -553,7 +553,9 @@ case class STenOptions(value: aten.TensorOptions) {
 
   /** Returns the byte representation of dtype
     *
-    * 4 - long, 6 - float, 7 - oble
+    * 0 - byte, 1 - char 2 - short 3 - int 4 - long, 5 - half 6 - float, 7 -
+    * double, 8 - complex half 9 - complex float 10 - complex double 11 - bool
+    * 15 - bfloat16 12,13,14,16 - quantized ints
     */
   def scalarTypeByte = value.scalarTypeByte
 }
@@ -571,7 +573,9 @@ object STenOptions {
   /** Returns an tensor option specifying CPU and dtype corresponding to the
     * given byte
     *
-    * 4 - long, 6 - float, 7 - double
+    * 0 - byte, 1 - char 2 - short 3 - int 4 - long, 5 - half 6 - float, 7 -
+    * double, 8 - complex half 9 - complex float 10 - complex double 11 - bool
+    * 15 - bfloat16 12,13,14,16 - quantized ints
     */
   def fromScalarType[S: Sc](b: Byte) =
     owned(aten.TensorOptions.fromScalarType(b))
