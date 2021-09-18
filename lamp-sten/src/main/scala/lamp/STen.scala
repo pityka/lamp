@@ -515,6 +515,11 @@ object STen {
   def where[S: Sc](condition: Tensor, self: STen, other: STen) =
     ATen.where_0(condition, self.value, other.value).owned
 
+  def lstsq[S: Sc](A: STen, B: STen) = {
+    val (a, b, c, d) = ATen.linalg_lstsq(A.value, B.value)
+    (a.owned, b.owned, c.owned, d.owned)
+  }
+
 }
 
 case class STenOptions(value: aten.TensorOptions) {
@@ -1122,7 +1127,7 @@ case class STen private (
   def floor_() = ATen.floor_(value)
   def reciprocal[S: Sc] = owned(ATen.reciprocal(value))
   def reciprocal_() = ATen.reciprocal_(value)
-  def det[S: Sc] = owned(ATen.det(value))
+  def det[S: Sc] = owned(ATen.linalg_det(value))
   def trace[S: Sc] = owned(ATen.trace(value))
 
   def remainder[S: Sc](other: STen) =
@@ -1391,8 +1396,8 @@ case class STen private (
   def argsort[S: Sc](dim: Int, descending: Boolean) =
     owned(ATen.argsort(value, dim, descending))
 
-  def cholesky[S: Sc](upper: Boolean) =
-    owned(ATen.cholesky(value, upper))
+  def choleskyLower[S: Sc] =
+    owned(ATen.linalg_cholesky(value))
   def choleskyInverse[S: Sc](upper: Boolean) =
     owned(ATen.cholesky_inverse(value, upper))
   def choleskySolve[S: Sc](choleskyFactor: STen, upper: Boolean) =
@@ -1561,9 +1566,14 @@ case class STen private (
 
   def frobeniusNorm[S: Sc] = ATen.frobenius_norm_0(value).owned
 
-  def svd[S: Sc] = {
-    val (ut, s, v) = ATen.svd(value, true, true)
-    (ut.owned, s.owned, v.owned)
+  /** @param fullMatrices
+    *   whether to return reduced or full matrices (in case of non-square input)
+    * @return
+    *   (U,S,Vh) , Vh being the conjugate transpose of V ; input = U diag(S) Vh
+    */
+  def svd[S: Sc](fullMatrices: Boolean = true) = {
+    val (u, s, vh) = ATen.linalg_svd(value, fullMatrices)
+    (u.owned, s.owned, vh.owned)
   }
 
   def diag[S: Sc](diagonal: Long) = {
@@ -1594,11 +1604,21 @@ case class STen private (
   def cond[S: Sc](norm: String) = {
     ATen.linalg_cond_1(value, norm).owned
   }
-  def cond[S: Sc](hermitian: Boolean) = {
+  def pinv[S: Sc](hermitian: Boolean) = {
     ATen.linalg_pinv_0(value, 1e-15, hermitian).owned
   }
   def solve[S: Sc](other: Tensor) = {
     ATen.linalg_solve(value, other).owned
+  }
+  def tensordot[S: Sc](other: STen, dims: List[Int], dimsOther: List[Int]) = {
+    ATen
+      .tensordot(
+        value,
+        other.value,
+        dims.map(_.toLong).toArray,
+        dimsOther.map(_.toLong).toArray
+      )
+      .owned
   }
   def tensorinv[S: Sc](int: Int) = {
     ATen.linalg_tensorinv(value, int).owned
