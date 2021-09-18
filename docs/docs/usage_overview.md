@@ -48,12 +48,12 @@ Scope.root{ implicit scope =>
   assert(singleChannel.shape == List(768L,1024L))
 
   // svd
-  val (u,s,v) = singleChannel.svd
+  val (u,s,vt) = singleChannel.svd(false)
   assert(u.shape == List(768,768))
   assert(s.shape == List(768))
-  assert(v.shape == List(1024,768))
+  assert(vt.shape == List(768,1024))
 
-  val errorOfSVD = (singleChannel - ((u * s) matmul v.t)).norm2(dim=List(0,1), keepDim=false)
+  val errorOfSVD = (singleChannel - ((u * s) matmul vt)).norm2(dim=List(0,1), keepDim=false)
   assert(errorOfSVD.toMat.raw(0) < 1E-6)
 } 
 

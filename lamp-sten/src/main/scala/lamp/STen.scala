@@ -1575,7 +1575,7 @@ case class STen private (
     * @return
     *   (U,S,Vh) , Vh being the conjugate transpose of V ; input = U diag(S) Vh
     */
-  def svd[S: Sc](fullMatrices: Boolean = true) = {
+  def svd[S: Sc](fullMatrices: Boolean = false) = {
     val (u, s, vh) = ATen.linalg_svd(value, fullMatrices)
     (u.owned, s.owned, vh.owned)
   }
