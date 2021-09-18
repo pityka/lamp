@@ -869,7 +869,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("cholesky solve, b")(mat2x2, 58.2500) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val l = param(STen.fromMat(mat2x2PD).cholesky(false))
+        val l = param(STen.fromMat(mat2x2PD).choleskyLower)
         val x1 = param(STen.fromMat(m, cuda))
         val L = x1.choleskySolve(l, false).sum
         if (doBackprop) {

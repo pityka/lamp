@@ -450,8 +450,8 @@ sealed trait Variable {
   def inv[S: Sc] = new Inv(extractScope, this).value
   def pinv[S: Sc](rcond: Double = 1e-5) =
     new PInv(extractScope, this, rcond).value
-  def cholesky[S: Sc](upper: Boolean = false) =
-    new Cholesky(extractScope, this, upper).value
+  def choleskyLower[S: Sc] =
+    new Cholesky(extractScope, this).value
   def choleskySolve[S: Sc](factor: Variable, upper: Boolean = false) =
     new CholeskySolve(
       extractScope,

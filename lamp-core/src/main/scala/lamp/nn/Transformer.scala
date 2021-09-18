@@ -616,7 +616,8 @@ object PositionalEmbedding {
       val t = STen.fromMat(m, device, precision)
       val len = (t * t).sum(dim = 1, keepDim = false).sqrt
       val normed = t / len.view(-1, 1)
-      val (ut, s, _) = normed.svd
+      val (u, s, _) = normed.svd()
+      val ut = u.t
       val m3 = ut.slice(1, 0, dimension, 1) * (s.slice(0, 0, dimension, 1).sqrt)
       m3
     }

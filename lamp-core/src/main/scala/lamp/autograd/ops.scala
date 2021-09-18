@@ -2403,7 +2403,6 @@ case class Embedding(scope: Scope, input: Variable, weight: Variable)
 case class Cholesky(
     scope: Scope,
     input: Variable,
-    upper: Boolean
 ) extends Op {
 
   val params = List(
@@ -2413,13 +2412,10 @@ case class Cholesky(
         // https://arxiv.org/pdf/1602.07527.pdf
         val batch = input.shape.size == 3
         val size = input.shape(input.shape.size - 2)
-        val l =
-          if (!upper) value.value
-          else value.value.transpose(-1, -2)
+        val l = value.value
+          
 
-        val g =
-          if (!upper) p
-          else p.transpose(-1, -2)
+        val g = p
 
         val lInv =
           STen
@@ -2450,7 +2446,7 @@ case class Cholesky(
   )
   val value = Variable(
     this,
-    input.value.cholesky(upper)(scope)
+    input.value.choleskyLower(scope)
   )(scope)
 }
 case class CholeskySolve(
