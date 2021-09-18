@@ -300,7 +300,7 @@ object SWA {
       _ <-
         if (forwardPassAfterTraining)
           IOLoops
-            .forwardBatchStream(
+            .forwardAndDiscardBatchStream(
               trainBatchesOverEpoch(
                 IOLoops.TrainingLoopContext(
                   learningCurve.size,

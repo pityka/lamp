@@ -7,6 +7,7 @@ import lamp.autograd.Variable
 import lamp.STen
 import lamp.Scope
 import cats.effect.std.Queue
+import lamp.Movable
 
 /** Contains a training loops and helpers around it
   *
@@ -25,7 +26,7 @@ object IOLoops {
     def empty: TrainingLoopContext = IOLoops.TrainingLoopContext(0, None, None)
   }
 
-  def forwardBatchStream[I, M <: GenericModule[I, Variable], S](
+  def forwardAndDiscardBatchStream[I, M <: GenericModule[I, Variable], S](
       batchStream: BatchStream[I, S],
       model: M with GenericModule[I, Variable]
   ): IO[Unit] = {
@@ -54,10 +55,11 @@ object IOLoops {
       loop(next, s1)
     }
   }
+
   def runBatchStream[I, M <: GenericModule[I, Variable], S](
       batchStream: BatchStream[I, S],
       model: M with GenericModule[I, Variable]
-  )(implicit scope: Scope) = {
+  )(implicit scope: Scope): IO[List[STen]] = {
 
     val device = model.state.head._1.value.device
 
@@ -90,6 +92,65 @@ object IOLoops {
       loop(next, Nil, s1)
     }
   }
+  def parallelRunBatchStream[I, O, M <: GenericModule[I, O], S, O2: Movable](
+      batchStream: BatchStream[I, S],
+      models: Seq[M with GenericModule[I, O]]
+  )(tx: ((I, STen), O) => O2)(implicit scope: Scope): IO[Vector[O2]] = {
+    val devices = models.map(_.state.head._1.value.device).toList
+    import cats.effect.syntax.all._
+
+    def loop(
+        acc: Vector[O2],
+        s0: S
+    ): IO[Vector[O2]] = {
+      DataParallel
+        .makeMultipleBatches(
+          devices = devices,
+          makeOne = (device: lamp.Device, state: S) =>
+            batchStream
+              .nextBatch(device, state)
+        )(s0)
+        .flatMap { case (s1, resource) =>
+          resource
+            .use { batches =>
+              batches
+                .map { case batches =>
+                  batches
+                    .zip(models)
+                    .parTraverseN(batches.size) { case (batch, model) =>
+                      IO {
+                        Scope { implicit scope =>
+                          val forwarded =
+                            model.forward(batch._1)
+                          val o2 = tx(batch, forwarded)
+                          o2
+                        }
+                      }
+                    }
+                } match {
+                case EndStream  => IO.pure((s1, EndStream))
+                case EmptyBatch => IO.pure((s1, EmptyBatch))
+                case NonEmptyBatch(io) =>
+                  io.map(v => (s1, NonEmptyBatch(v)))
+              }
+            }
+        }
+        .flatMap {
+          case (_, EndStream) => IO.pure(acc)
+          case (s1, EmptyBatch) =>
+            loop(acc, s1)
+          case (s1, NonEmptyBatch(results)) =>
+            loop(acc ++ results, s1)
+        }
+
+    }
+
+    loop(
+      Vector.empty[O2],
+      batchStream.init
+    )
+  }
+
   import scala.reflect.runtime.universe._
 
   def withSWA[I, M <: GenericModule[
