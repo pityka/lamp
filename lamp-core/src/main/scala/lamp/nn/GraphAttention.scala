@@ -135,9 +135,8 @@ object GraphAttention {
       numHeads: Int
   ) = {
 
-    def mm(a: Variable, b: Variable) = 
-      a.mm(b).view(List(a.shape(0),numHeads,b.shape(1)/numHeads))
-    
+    def mm(a: Variable, b: Variable) =
+      a.mm(b).view(List(a.shape(0), numHeads, b.shape(1) / numHeads))
 
     val nodeKey1 = mm(nodeFeatures, wNodeKey1)
     val nodeKey2 = mm(nodeFeatures, wNodeKey2)
