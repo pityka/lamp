@@ -169,6 +169,7 @@ final class Scope private {
 
   @volatile
   private var closed = false
+  @volatile
   private var resources = new ConcurrentLinkedQueue[ResourceType]()
 
   /** Adds a resource to the managed resources, then returns it unchanged.
@@ -293,23 +294,27 @@ final class Scope private {
         (Option.empty[A], Nil, resources.iterator.asScala.toList, Some(t))
       }
       .flatMap { case (last, movables, releasable, error) =>
-        closed = true
-        var rs = releasable.distinct
-        this.resources =
-          null // allow GC, in case something is holding a reference to `this`
-        var toThrow: Throwable = null
-        while (rs.nonEmpty) {
-          val resource = rs.head
-          rs = rs.tail
-          try resource.fold(_.release(), _.release())
-          catch {
-            case t: Throwable =>
-              toThrow = t
+        IO {
+          closed = true
+          var rs = releasable.distinct
+          this.resources =
+            null // allow GC, in case something is holding a reference to `this`
+          var toThrow: Throwable = null
+          while (rs.nonEmpty) {
+            val resource = rs.head
+            rs = rs.tail
+            try resource.fold(_.release(), _.release())
+            catch {
+              case t: Throwable =>
+                toThrow = t
+            }
           }
+          toThrow
+        }.flatMap { toThrow =>
+          if (toThrow != null) IO.raiseError(toThrow)
+          else if (error.isDefined) IO.raiseError(error.get)
+          else IO.pure((last.get, movables))
         }
-        if (toThrow != null) IO.raiseError(toThrow)
-        else if (error.isDefined) IO.raiseError(error.get)
-        else IO.pure((last.get, movables))
       }
 
   }
