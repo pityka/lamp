@@ -465,6 +465,8 @@ sealed trait Variable {
     new ElementWiseMaximum(extractScope, this, other).value
   def clamp[S: Sc](min: Variable, max: Variable) =
     (this.minimum(max)).maximum(min)
+  def debug[S: Sc](fun: (STen, Boolean, Boolean) => Unit) =
+    new Debug(extractScope, this, fun).value
   def toMat = value.toMat
   def toLongMat = value.toLongMat
 }

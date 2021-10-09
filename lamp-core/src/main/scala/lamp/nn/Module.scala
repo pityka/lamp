@@ -122,6 +122,14 @@ object Fun {
   implicit val trainingMode = TrainingMode.identity[Fun]
   implicit val load = Load.identity[Fun]
 }
+case class Debug(fun: (STen, Boolean, Boolean) => Unit) extends Module {
+  def state = Nil
+  def forward[S: Sc](x: Variable): Variable = x.debug(fun)
+}
+object Debug {
+  implicit val trainingMode = TrainingMode.identity[Debug]
+  implicit val load = Load.identity[Debug]
+}
 
 case class GenericFun[A, B](fun: Scope => A => B) extends GenericModule[A, B] {
   def state = Nil

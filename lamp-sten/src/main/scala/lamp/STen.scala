@@ -1465,6 +1465,11 @@ case class STen private (
   def isnan[S: Sc] =
     ATen.isnan(value).owned
 
+  /** Return a boolean scalar tensor indicating that any of the elements is true
+    */
+  def any[S: Sc] =
+    ATen.any_1(value).owned
+
   /** Return a boolean tensor indicating element-wise is-finite. */
   def isfinite[S: Sc] =
     ATen.isfinite(value).owned

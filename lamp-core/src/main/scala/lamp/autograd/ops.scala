@@ -2555,3 +2555,25 @@ case class ElementWiseMaximum(scope: Scope, a: Variable, b: Variable)
   val maskneg = mask.not(scope)
 
 }
+
+case class Debug(
+    scope: Scope,
+    a: Variable,
+    callback: (STen, Boolean, Boolean) => Unit
+) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val hasna = p.isnan.any.castToLong.toLongMat.raw(0) == 1
+        val hasbig = p.ge(1e6).any.castToLong.toLongMat.raw(0) == 1
+        callback(p, hasna, hasbig)
+
+      }
+      out += p
+    }
+  )
+
+  val value = Variable(this, a.value)(scope)
+
+}
