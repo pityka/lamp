@@ -7,6 +7,29 @@ import lamp.scope
 import lamp.STen
 import lamp.Movable
 
+case class Recursive[A, M <: GenericModule[A, A]](
+    member: M with GenericModule[A, A],
+    n: Int
+) extends GenericModule[A, A] {
+  override def state = member.state
+   
+  def forward[S: Sc](x: A) =
+  (0 until n).foldLeft(x)((x,_) => member.forward(x))
+
+}
+object Recursive {
+
+  implicit def trainingMode[A, M <: GenericModule[A, A]: TrainingMode] =
+    TrainingMode.make[Recursive[A, M]](
+      module => Recursive(module.member.asEval,module.n),
+      module => Recursive(module.member.asTraining,module.n)
+    )
+
+  implicit def load[A, M <: GenericModule[A, A]: Load] : Load[Recursive[A,M]] =
+    Load.compose(_.member)
+
+}
+
 case class EitherModule[
     A,
     B,
