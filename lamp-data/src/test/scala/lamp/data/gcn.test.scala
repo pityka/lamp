@@ -5,6 +5,7 @@ import org.saddle._
 import org.saddle.order._
 import lamp.autograd._
 import lamp.nn._
+import lamp.nn.graph._
 import lamp.{CPU, CudaDevice, DoublePrecision}
 import aten.ATen
 import lamp.SinglePrecision
@@ -31,7 +32,7 @@ class GCNSuite extends AnyFunSuite {
         Vec(1d, 0d, 0d, 0d),
         Vec(1d, 0d, 0d, 0d)
       )
-      val edges = const(
+      val edges =
         STen.fromLongMat(
           Mat(
             Vec(0L, 1L),
@@ -40,9 +41,9 @@ class GCNSuite extends AnyFunSuite {
           ).T,
           device
         )
-      )
 
-      val aggregated = GCN.gcnAggregation(nodes, edges)
+      val aggregated =
+        GCN.gcnAggregation(nodes, edges.select(1, 0), edges.select(1, 1))
 
       val output = aggregated.toMat
 
@@ -95,7 +96,15 @@ class GCNSuite extends AnyFunSuite {
         )
       )
 
-      val (nodeStates, _) = module.forward((nodes, edges))
+      val graph = Graph(
+        nodes,
+        const(STen.scalarDouble(0d, nodes.options)), // unused
+        edges.value.select(1, 0),
+        edges.value.select(1, 1),
+        STen.scalarLong(-1L, nodes.options) // unused
+      )
+
+      val nodeStates = module.forward(graph).nodeFeatures
       val output = nodeStates.toMat
 
       val expected = {
@@ -179,6 +188,12 @@ class GCNSuite extends AnyFunSuite {
         STen.fromLongMat(mat.map(_.toLong), device)
 
       }
+      val graph = GraphBatchStream.Graph(
+        nodeFeatures = featureT,
+        edgeFeatures = STen.zeros(List(edges.shape(0))),
+        edgeI = edges.select(1, 0),
+        edgeJ = edges.select(1, 1)
+      )
       val trainedModel = Scope { implicit scope =>
         val classWeights = STen.ones(List(7), device.options(precision))
         val model = SupervisedModel(
@@ -189,7 +204,7 @@ class GCNSuite extends AnyFunSuite {
               tOpt = device.options(precision),
               dropout = 0.95
             ),
-            GenericFun[(Variable, Variable), Variable](_ => _._1),
+            GenericFun[Graph, Variable](_ => _.nodeFeatures),
             Linear(
               in = 128,
               out = 7,
@@ -202,9 +217,8 @@ class GCNSuite extends AnyFunSuite {
         )
 
         val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
-          GraphBatchStream.bigGraphModeFullBatch(
-            nodes = featureT,
-            edges = edges,
+          GraphBatchStream.singleLargeGraph(
+            graph = graph,
             targetPerNode = labelsT
           )
 
@@ -227,7 +241,8 @@ class GCNSuite extends AnyFunSuite {
       }
 
       val accuracy = {
-        val input = (const(featureT), const(edges))
+        val input = graph.toVariable
+
         val output =
           trainedModel.asEval.forward(input)
         val file = java.io.File.createTempFile("dfs", ".onnx")
@@ -237,12 +252,16 @@ class GCNSuite extends AnyFunSuite {
         ) {
           case x if x == output =>
             lamp.onnx.VariableInfo(output, "output", input = false)
-          case x if x == input._1 =>
-            lamp.onnx.VariableInfo(input._1, "node features", input = true)
+          case x if x == input.nodeFeatures =>
+            lamp.onnx.VariableInfo(
+              input.nodeFeatures,
+              "node features",
+              input = true
+            )
           case x if x.value.options.isSparse =>
             lamp.onnx.VariableInfo(x, "graph adj", input = true)
           case x: ConstantWithoutGrad
-              if x.value.shape.head == input._1.shape.head =>
+              if x.value.shape.head == input.nodeFeatures.shape.head =>
             lamp.onnx.VariableInfo(x, "graph degree", input = true)
         }
         println(file)
@@ -264,124 +283,6 @@ class GCNSuite extends AnyFunSuite {
     tensorLogger.cancel()
     TensorLogger.detailAllTensors(s => scribe.info(s))
     TensorLogger.detailAllTensorOptions(s => scribe.info(s))
-  }
-  test1("cora ngcn") { cuda =>
-    val device = if (cuda) CudaDevice(0) else CPU
-    val precision = SinglePrecision
-
-    Scope.root { implicit scope =>
-      val (featureT, labelsT, nodeIndex, unmaskedLabels) = {
-        val frame = Frame(
-          scala.io.Source
-            .fromInputStream(getClass.getResourceAsStream("/cora.content"))
-            .getLines()
-            .map { line =>
-              val spl = line.split("\t")
-              val key = spl.head
-              val content = spl.drop(1).dropRight(1).map(_.toDouble).toVec
-              val label = spl.last
-              ((key, label), Series(content))
-            }
-            .toList: _*
-        ).T
-        val features = frame.toMat
-        val labelString = frame.rowIx.map(_._2).toVec
-        val str2int = labelString.toArray.distinct.sorted.zipWithIndex.toMap
-        val labelInt = labelString.map(str2int)
-        val labelIntMasked = {
-          val keep =
-            Index(
-              0 until 7 map (i =>
-                labelInt.find(_ == i).head(20)
-              ) reduce (_ concat _)
-            )
-          labelInt.zipMapIdx((i, idx) => if (keep.contains(idx)) i else -100)
-        }
-        val nodeIndex = frame.rowIx.map(_._1)
-
-        val featureT = STen.fromMat(features, device, precision)
-        val labelsT =
-          STen.fromLongVec(labelIntMasked.map(_.toLong), device)
-        (featureT, labelsT, nodeIndex, labelInt)
-      }
-      val edges = {
-        val mat = Mat(
-          scala.io.Source
-            .fromInputStream(getClass.getResourceAsStream("/cora.cites"))
-            .getLines()
-            .map { line =>
-              val spl = line.split("\t")
-              val key1 = spl(0)
-              val key2 = spl(1)
-              Vec(nodeIndex.getFirst(key1), nodeIndex.getFirst(key2))
-            }
-            .toList: _*
-        ).T
-
-        STen.fromLongMat(mat.map(_.toLong), device)
-
-      }
-      val classWeights = STen.ones(List(7), device.options(precision))
-
-      val model = SupervisedModel(
-        sequence(
-          NGCN.ngcn(
-            in = 1433,
-            middle = 128,
-            out = 7,
-            tOpt = device.options(precision),
-            dropout = 0.95,
-            K = 3,
-            r = 1,
-            includeZeroOrder = false
-          ),
-          GenericFun[(Variable, Variable), Variable](_ => _._1),
-          Fun(implicit scope => _.logSoftMax(1))
-        ),
-        LossFunctions.NLL(7, classWeights, ignore = -100)
-      )
-
-      val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
-        GraphBatchStream.bigGraphModeFullBatch(
-          nodes = featureT,
-          edges = edges,
-          targetPerNode = labelsT
-        )
-
-      val (_, trainedModel, _, _, _) = IOLoops
-        .epochs(
-          model = model,
-          optimizerFactory = AdamW
-            .factory(
-              learningRate = simple(0.01),
-              weightDecay = simple(5e-3d),
-              debias = false
-            ),
-          trainBatchesOverEpoch = makeTrainingBatch,
-          validationBatchesOverEpoch = None,
-          epochs = 100,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback = ValidationCallback.noop,
-          logger = None
-        )
-        .unsafeRunSync()
-
-      val accuracy = {
-        val output =
-          trainedModel.module.asEval.forward((const(featureT), const(edges)))
-        val prediction = {
-          val argm = ATen.argmax(output.value.value, 1, false)
-          val r = TensorHelpers.toLongMat(argm).toVec
-          argm.release
-          r
-        }
-        val correct =
-          prediction.zipMap(unmaskedLabels)((a, b) => if (a == b) 1d else 0d)
-        correct.mean2
-      }
-      println(accuracy)
-      assert(accuracy > 0.6)
-    }
   }
 
   test1("small graph mode batchstream") { cuda =>
@@ -415,22 +316,29 @@ class GCNSuite extends AnyFunSuite {
             device
           )
         )
-      )
+      ).map { case (nodes, edges) =>
+        GraphBatchStream.Graph(
+          nodeFeatures = nodes,
+          edgeFeatures = STen.zeros(List(edges.shape(0))),
+          edgeI = edges.select(1, 0),
+          edgeJ = edges.select(1, 1)
+        )
+      }
       val rng = org.saddle.spire.random.rng.Cmwc5.apply()
       val targets = STen.fromVec(Vec(0d, 1d), device, precision)
       val (batch, _) = GraphBatchStream
-        .smallGraphMode(2, graphs.toVec, targets, Some(rng))
+        .smallGraphStream(2, graphs.toVec, targets, Some(rng))
         .nextBatch(device, 0)
         .flatMap(_._2.allocated)
         .unsafeRunSync()
-      val ((batchNodes, batchEdges, batchGraphIndices), batchTarget) =
+      val (batchGraph, batchTarget) =
         batch.unsafeGet
-      assert(batchNodes.shape == List(10, 2))
-      assert(batchEdges.toLongMat.raw(9, 0) >= 5)
-      assert(batchEdges.toLongMat.raw(0, 0) < 5)
+      assert(batchGraph.nodeFeatures.shape == List(10, 2))
+      assert(batchGraph.edgeI.toLongVec.raw(9) >= 5)
+      assert(batchGraph.edgeI.toLongVec.raw(0) < 5)
       assert(
-        batchGraphIndices.toLongMat.row(0) == Vec(0L, 0L, 0L, 0L, 0L, 1L, 1L,
-          1L, 1L, 1L)
+        batchGraph.vertexPoolingIndices.toLongMat.row(0) == Vec(0L, 0L, 0L, 0L,
+          0L, 1L, 1L, 1L, 1L, 1L)
       )
       assert(batchTarget.sizes.toList == List(2))
     }
@@ -458,11 +366,18 @@ class GCNSuite extends AnyFunSuite {
           device
         )
       )
-      val graphIndices = const(
+      val graphIndices =
         STen.fromLongVec(
           Vec(0L, 0L, 0L, 0L, 0L, 1L, 1L, 1L, 1L, 1L),
           device
         )
+
+      val graph = Graph(
+        nodes,
+        const(STen.scalarDouble(0d, nodes.options)), // unused
+        edges.value.select(1, 0),
+        edges.value.select(1, 1),
+        graphIndices
       )
       val module = GCN(
         ResidualModule(
@@ -476,7 +391,8 @@ class GCNSuite extends AnyFunSuite {
         )
       )
 
-      val (nodeStates, _) = module.forward((nodes, edges))
+      val graph2 = module.forward(graph)
+      val nodeStates = graph2.nodeFeatures
       assert(nodeStates.toMat.numRows == 10)
       assert(nodeStates.toMat.numCols == 3)
       nodeStates.sum.backprop()
@@ -484,19 +400,9 @@ class GCNSuite extends AnyFunSuite {
         module.transform.transform.m1.weights.partialDerivative.isDefined
       )
 
-      val readoutModule = GraphReadout(
-        Passthrough(
-          Linear(
-            weights = param(STen.eye(3, tOpt)),
-            bias = None
-          )
-        ),
-        GraphReadout.Mean
-      )
-
       val nodesStatesM = nodeStates.toMat
-      val graphStates =
-        readoutModule.forward((nodeStates, edges, graphIndices))
+      val graphStates = VertexPooling.apply(graph2, VertexPooling.Mean)
+
       val graphStatesM = graphStates.toMat
 
       assert(graphStates.toMat.numRows == 2)
@@ -506,10 +412,7 @@ class GCNSuite extends AnyFunSuite {
           nodesStatesM.row(5, 6, 7, 8, 9).reduceCols((v, _) => v.mean)
         ).T
       )
-      graphStates.sum.backprop()
-      assert(
-        readoutModule.m.m.weights.partialDerivative.isDefined
-      )
+
     }
   }
 

@@ -4,6 +4,7 @@ import org.saddle._
 import lamp._
 import lamp.autograd._
 import lamp.nn._
+import lamp.nn.graph._
 import lamp.data._
 import cats.effect.unsafe.implicits.global
 
@@ -85,15 +86,6 @@ object Train extends App {
 
           val model = SupervisedModel(
             sequence(
-              // NGCN.ngcn(
-              //   in = 128,
-              //   middle = 128,
-              //   out = numClasses,
-              //   tOpt = device.options(precision),
-              //   dropout = 0.5,
-              //   K = 5,
-              //   r = 1
-              // ),
               GCN.gcn(
                 in = 128,
                 out = 128,
@@ -113,7 +105,7 @@ object Train extends App {
                 dropout = 0.5,
                 nonLinearity = false
               ),
-              GenericFun[(Variable, Variable), Variable](_ => _._1),
+              GenericFun[Graph, Variable](_ => _.nodeFeatures),
               Fun(scope => variable => variable.logSoftMax(1)(scope))
             ),
             LossFunctions.NLL(numClasses, classWeights, ignore = -100)
@@ -121,16 +113,21 @@ object Train extends App {
 
           println(s"Number of parameters: ${model.module.learnableParameters}")
 
+          val graph = GraphBatchStream.Graph(
+              nodeFeatures = nodesT,
+              edgeFeatures = STen.zeros(List(edgesT.shape(0))),
+              edgeI = edgesT.select(1,0),
+              edgeJ = edgesT.select(1,1)
+              )
+
           val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
-            GraphBatchStream.bigGraphModeFullBatch(
-              nodes = nodesT,
-              edges = edgesT,
+            GraphBatchStream.singleLargeGraph(
+              graph = graph,
               targetPerNode = trainL
             )
           val makeValidationBatch = (_: IOLoops.TrainingLoopContext) =>
-            GraphBatchStream.bigGraphModeFullBatch(
-              nodes = nodesT,
-              edges = edgesT,
+            GraphBatchStream.singleLargeGraph(
+              graph = graph,
               targetPerNode = validL
             )
 
@@ -152,7 +149,7 @@ object Train extends App {
 
           val accuracy = {
             val output =
-              trainedModel.module.asEval.forward((const(nodesT), const(edgesT)))
+              trainedModel.module.asEval.forward(graph.toVariable)
             val prediction = {
               val argm = output.value.argmax(1, false)
               val r =
