@@ -1,7 +1,8 @@
-package lamp.nn
+package lamp.nn.graph
 
 import lamp.autograd.{const, Variable}
 import lamp._
+import lamp.nn._
 import lamp.autograd.Constant
 
 case class GraphAttention(
@@ -13,9 +14,9 @@ case class GraphAttention(
     nonLinearity: Boolean,
     dropout: Dropout,
     numHeads: Int
-) extends GenericModule[GraphAttention.Graph, GraphAttention.Graph] {
+) extends GenericModule[Graph, Graph] {
 
-  override def forward[S: Sc](x: GraphAttention.Graph): GraphAttention.Graph = {
+  override def forward[S: Sc](x: Graph): Graph = {
     val activation = GraphAttention.multiheadGraphAttention(
       nodeFeatures = x.nodeFeatures,
       edgeFeatures = x.edgeFeatures,
@@ -106,13 +107,7 @@ object GraphAttention {
 
   case object Weights extends LeafTag
 
-  case class Graph(
-      nodeFeatures: Variable,
-      edgeFeatures: Variable,
-      edgeI: STen,
-      edgeJ: STen
-  )
-
+ 
   /** Graph Attention Network https://arxiv.org/pdf/1710.10903.pdf Non-linearity
     * in eq 4 and dropout is not applied to the final vertex activations
     *

@@ -6,6 +6,9 @@ import lamp.autograd._
 import lamp.util.NDArray
 import lamp.Scope
 import lamp.STen._
+import lamp.nn.graph.GraphAttention
+import lamp.nn.graph.Graph
+import lamp.STen
 
 class GraphAttentionSuite extends AnyFunSuite {
 
@@ -22,6 +25,8 @@ class GraphAttentionSuite extends AnyFunSuite {
         )
         .owned
         .castToDouble
+
+      val graphIndices = STen.zeros(List(5))
 
       /** edge features, 6 x 2
         */
@@ -164,11 +169,12 @@ class GraphAttentionSuite extends AnyFunSuite {
             nonLinearity = false
           )
           .forward(
-            GraphAttention.Graph(
+            Graph(
               const(nodes),
               const(edges),
               edgeIdx.select(1, 0),
-              edgeIdx.select(1, 1)
+              edgeIdx.select(1, 1),
+              graphIndices
             )
           )
           .nodeFeatures
@@ -189,11 +195,11 @@ class GraphAttentionSuite extends AnyFunSuite {
             nonLinearity = false
           )
           .forward(
-            GraphAttention.Graph(
+            Graph(
               const(nodes),
               const(edges),
               edgeIdx.select(1, 0),
-              edgeIdx.select(1, 1)
+              edgeIdx.select(1, 1),graphIndices
             )
           )
           .nodeFeatures

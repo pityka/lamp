@@ -2,31 +2,42 @@ package lamp.data
 
 import org.saddle._
 import lamp.autograd.{const}
-import lamp.Device
-import lamp.autograd.Variable
-import lamp.Scope
-import lamp.STen
+import lamp._
 
 object GraphBatchStream {
+
+  case class Graph(
+      nodeFeatures: STen,
+      edgeFeatures: STen,
+      edgeI: STen,
+      edgeJ: STen
+  ) {
+    def toVariable[S: Sc] = lamp.nn.graph.Graph(
+      const(nodeFeatures),
+      const(edgeFeatures),
+      edgeI,
+      edgeJ,
+      STen.zeros(List(1))
+    )
+  }
 
   /** Forms minibatches from multiple small graphs. Assumes target is graph
     * level.
     *
     * Returns a triple of node features, edge list, graph indices
     */
-  def smallGraphMode(
+  def smallGraphStream(
       minibatchSize: Int,
-      graphNodesAndEdges: Vec[(STen, STen)],
+      graphNodesAndEdges: Vec[Graph],
       targetPerGraph: STen,
       rng: Option[org.saddle.spire.random.Generator]
-  ): BatchStream[(Variable, Variable, Variable), Int] = {
+  ): BatchStream[lamp.nn.graph.Graph, Int] = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       Scope.inResource.map { implicit scope =>
         val selectedGraphs = graphNodesAndEdges.take(idx).toSeq
         val (
           _,
           _,
-          nodes,
           edgesI,
           edgesJ,
           graphIndices
@@ -35,67 +46,63 @@ object GraphBatchStream {
             (
               0L,
               0L,
-              Seq.empty[STen],
-              Vector.empty[Long],
-              Vector.empty[Long],
-              Vector.empty[Long]
+              Vector.empty[STen],
+              Vector.empty[STen],
+              Vector.empty[STen]
             )
           ) {
             case (
                   (
                     offset,
                     graphIndex,
-                    nodeAccumalator,
                     edgeAccumulatorI,
                     edgeAccumulatorJ,
                     graphIndicesAccumulator
                   ),
-                  (nextNodes, nextEdges)
+                  nextGraph
                 ) =>
-              val numNodes = nextNodes.sizes.head.toInt
-              val edges = nextEdges.toLongMat.rows
-                .map(v => v.raw(0) -> v.raw(1))
-              assert(edges.map(_._1).forall(e => e >= 0 && e < numNodes))
-              assert(edges.map(_._2).forall(e => e >= 0 && e < numNodes))
-              val mappedEdges = edges.map { case (i, j) =>
-                (i + offset, j + offset)
-              }
-              val graphIndices =
-                (0 until numNodes map (_ => graphIndex)).toVector
+              val numNodes = nextGraph.nodeFeatures.shape(0)
+              val mappedEdgeI = nextGraph.edgeI + offset
+              val mappedEdgeJ = nextGraph.edgeJ + offset
 
-              val newOffset = offset + numNodes
-              val newGraphIndex = graphIndex + 1
-              val newNodeAcc = nodeAccumalator :+ nextNodes
-              val newEdgeAccI = edgeAccumulatorI ++ mappedEdges.map(_._1)
-              val newEdgeAccJ = edgeAccumulatorJ ++ mappedEdges.map(_._2)
-              val newGraphIndices = graphIndicesAccumulator ++ graphIndices
+              val graphIndices = {
+                val z = STen.zeros(List(numNodes),STenOptions.l)
+                z + graphIndex
+              }
+
               (
-                newOffset,
-                newGraphIndex,
-                newNodeAcc,
-                newEdgeAccI,
-                newEdgeAccJ,
-                newGraphIndices
+                offset + numNodes,
+                graphIndex + 1,
+                edgeAccumulatorI :+ mappedEdgeI,
+                edgeAccumulatorJ :+ mappedEdgeJ,
+                graphIndicesAccumulator :+ graphIndices
               )
           }
         val nodesV = {
           val t = Scope { implicit scope =>
-            val c = STen.cat(nodes, 0)
+            val c = STen.cat(selectedGraphs.map(_.nodeFeatures), 0)
             device.to(c)
           }
           const(t)
         }
         val edgesV = {
-          val s = Scope { implicit scope =>
-            val i = STen.fromLongVec(edgesI.toVec, device)
-            val j = STen.fromLongVec(edgesJ.toVec, device)
-            STen.stack(List(i, j), 1)
+          val t = Scope { implicit scope =>
+            val c = STen.cat(selectedGraphs.map(_.edgeFeatures), 0)
+            device.to(c)
           }
-          const(s)
+          const(t)
         }
-        val graphIndicesV = const(
-          STen.fromLongVec(graphIndices.toVec, device)
-        )
+        val edgesIC = Scope { implicit scope =>
+          device.to(STen.cat(edgesI, 0))
+        }
+        val edgesJC = Scope { implicit scope =>
+          device.to(STen.cat(edgesJ, 0))
+        }
+
+        val graphIndicesV =
+          Scope { implicit scope =>
+            device.to(STen.cat(graphIndices, 0))
+          }
 
         val selectedTargetOnDevice = Scope { implicit scope =>
           val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
@@ -104,7 +111,16 @@ object GraphBatchStream {
         }
 
         StreamControl(
-          ((nodesV, edgesV, graphIndicesV), selectedTargetOnDevice)
+          (
+            lamp.nn.graph.Graph(
+              nodeFeatures = nodesV,
+              edgeFeatures = edgesV,
+              edgeJ = edgesJC,
+              edgeI = edgesIC,
+              vertexPoolingIndices = graphIndicesV
+            ),
+            selectedTargetOnDevice
+          )
         )
       }
     }
@@ -132,17 +148,13 @@ object GraphBatchStream {
     *
     * Returns a pair of node features, edge list
     */
-  def bigGraphModeFullBatch(
-      nodes: STen,
-      edges: STen,
+  def singleLargeGraph(
+      graph: GraphBatchStream.Graph,
       targetPerNode: STen
-  ): BatchStream[(Variable, Variable), Boolean] =
-    BatchStream.single(Scope.inResource.map { _ =>
-      val nodesV = const(nodes)
-      val edgesV = const(edges)
-
+  ): BatchStream[lamp.nn.graph.Graph, Boolean] =
+    BatchStream.single(Scope.inResource.map { implicit scope =>
       StreamControl(
-        ((nodesV, edgesV), targetPerNode)
+        (graph.toVariable, targetPerNode)
       )
     })
 

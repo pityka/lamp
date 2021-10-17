@@ -35,7 +35,7 @@ package object nn {
   type Module = GenericModule[Variable, Variable]
   type StatefulModule[A, B, C] = GenericModule[(A, C), (B, C)]
   type StatefulModule2[A, B, C, D] = GenericModule[(A, C), (B, D)]
-  type GraphModule = GenericModule[(Variable, Variable), (Variable, Variable)]
+  
 
   implicit class TrainingModeSyntax[M: TrainingMode](m: M) {
     def asEval: M = implicitly[TrainingMode[M]].asEval(m)
