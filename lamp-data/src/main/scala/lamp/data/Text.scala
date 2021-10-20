@@ -388,6 +388,14 @@ object Text {
 
   }
 
+  def sentenceToPaddedVec(
+      sentence: String,
+      maxLength: Int,
+      pad: Int,
+      vocabulary: Map[Char, Int]
+  ) =
+    sentence.map(vocabulary).toArray.take(maxLength).padTo(maxLength, pad).toVec
+
   def sentencesToPaddedMatrix(
       sentences: Seq[String],
       maxLength: Int,
@@ -395,7 +403,7 @@ object Text {
       vocabulary: Map[Char, Int]
   ): Mat[Int] = {
     Mat(sentences.map { s =>
-      s.map(vocabulary).toArray.take(maxLength).padTo(maxLength, pad).toVec
+      sentenceToPaddedVec(s,maxLength,pad,vocabulary)
     }: _*).T
   }
 }

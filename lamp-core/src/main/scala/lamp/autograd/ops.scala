@@ -230,13 +230,9 @@ case class Where(
 case class ArgMax(scope: Scope, a: Variable, dim: Long, keepDim: Boolean)
     extends Op {
 
-  val params = List(
-    a.zipBackward { (_, _) =>
-      throw new RuntimeException("Argmax is not differentiable")
-    }
-  )
+  val params = Nil
   val value =
-    Variable(this, a.value.argmax(dim, keepDim)(scope))(scope)
+    const(a.value.argmax(dim, keepDim)(scope))
 }
 
 case class Assign(scope: Scope, abandon: Variable, keep: Variable) extends Op {
@@ -249,13 +245,9 @@ case class Assign(scope: Scope, abandon: Variable, keep: Variable) extends Op {
 }
 case class OneHot(scope: Scope, a: Variable, numClasses: Int) extends Op {
 
-  val params = List(
-    a.zipBackward { (_, _) =>
-      throw new RuntimeException("OneHot is not differentiable")
-    }
-  )
+  val params = Nil
   val value =
-    Variable(this, a.value.oneHot(numClasses)(scope))(scope)
+    const(a.value.oneHot(numClasses)(scope))
 }
 case class CastToPrecision(
     scope: Scope,

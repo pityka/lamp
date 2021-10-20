@@ -148,6 +148,22 @@ lazy val e2etest = project
   .dependsOn(forest)
   .dependsOn(core % "test->test;compile->compile")
 
+lazy val tabular = project
+  .in(file("lamp-tabular-gnn"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-tabular-gnn",
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
+    testOptions in AllTest := Nil
+  )
+  .dependsOn(data)
+  .dependsOn(core % "test->test;compile->compile")
+
 lazy val umap = project
   .in(file("lamp-umap"))
   .configs(Cuda)
@@ -333,6 +349,7 @@ lazy val root = project
     sten,
     core,
     data,
+    tabular,
     knn,
     forest,
     umap,
