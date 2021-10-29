@@ -11,7 +11,14 @@ import lamp.data.BatchStream
 import lamp.data.StreamControl
 
 sealed trait ColumnDataType
-case class SingleVariableColumn(variable: Variable) extends ColumnDataType
+case class SingleVariableColumn(constant: Constant) extends ColumnDataType
+
+object ColumnDataType {
+  implicit val movable: Movable[ColumnDataType] =
+    Movable.by[ColumnDataType, Constant](_ match {
+      case SingleVariableColumn(constant) => constant
+    })
+}
 
 sealed trait ColumnModule extends GenericModule[ColumnDataType, Variable]
 
@@ -62,15 +69,40 @@ case class ColumnLinearModule(embedding: lamp.nn.Linear) extends ColumnModule {
 }
 
 case class TableInColumns(
-    columns: Seq[ColumnDataType]
-)
+    columns: Seq[ColumnDataType],
+    length: Long
+) {
+  def takeRows(v: Vec[Long], device: Device)(implicit
+      scope: Scope
+  ): TableInColumns = Scope { implicit scope =>
+    val currentDevice = columns.head match {
+      case SingleVariableColumn(variable) =>
+        variable.value.device
+    }
+    val indexS = STen.fromLongVec(v, currentDevice)
+    TableInColumns(
+      columns = columns.map {
+        _ match {
+          case SingleVariableColumn(variable) =>
+            SingleVariableColumn(
+              const(
+                variable.value
+                  .indexSelect(dim = 0, index = indexS)
+                  .copyToDevice(device)
+              )
+            )
 
-case class Batch(
-    tables: Seq[TableInColumns],
-    edgeI: STen,
-    edgeJ: STen,
-    vertexPooling: STen
-)
+        }
+      },
+      length = v.length
+    )
+
+  }
+}
+object TableInColumns {
+  implicit val movable: Movable[TableInColumns] =
+    Movable.by[TableInColumns, Seq[ColumnDataType]](_.columns)
+}
 
 case class Relation(
     table1Idx: Int,
@@ -86,20 +118,118 @@ case class Tables(
     poolMask: IndexedSeq[Vec[Boolean]],
     targets: IndexedSeq[STen]
 )
+case class Batch(
+    tables: Seq[TableInColumns],
+    edgeI: STen,
+    edgeJ: STen,
+    vertexPooling: STen,
+    target: STen
+) {
+  def subset[S: Sc](select: Vec[Long], device: Device): Batch = {
+    val sorted = select.sorted
+
+    val tableLengths = tables.map(_.length)
+    val tableOffsets = tableLengths.scanLeft(0L)(_ + _)
+
+    val selectedTables = tableOffsets.zip(tableLengths).zipWithIndex.map {
+      case ((tableOffset, tableLength), tableIdx) =>
+        tables(tableIdx).takeRows(
+          sorted
+            .filter(x => x >= tableOffset && x < tableOffset + tableLength)
+            .map(_ - tableOffset),
+          device
+        )
+    }
+
+    val sortedI = Index(sorted)
+
+    val ni1 = edgeI.toLongVec.map(x => sortedI.getFirst(x).toLong)
+    val nj1 = edgeJ.toLongVec.map(x => sortedI.getFirst(x).toLong)
+    val keep = Index(ni1.find(_ >= 0))
+      .intersect(Index(nj1.find(_ >= 0)))
+      .index
+      .toVec
+      .toArray
+    val ni = ni1.take(keep)
+    val nj = nj1.take(keep)
+    val vp1 = vertexPooling.toLongVec
+      .map(x => sortedI.getFirst(x).toLong)
+
+    val keepVp = vp1.find(_ >= 0)
+
+    val vp = vp1.take(keep.toArray)
+
+    Batch(
+      selectedTables,
+      STen.fromLongVec(ni, device),
+      STen.fromLongVec(nj, device),
+      STen.fromLongVec(vp, device),
+      target.indexSelect(
+        dim = 0,
+        index = STen.fromLongVec(keepVp.map(_.toLong), device)
+      )
+    )
+
+  }
+}
 object Batch {
+
+  def bfs(
+      start: Vec[Long],
+      indexI: Index[Long],
+      indexJ: Index[Long],
+      depth: Int
+  ): Vec[Long] = {
+
+    val edgeI = indexI.toVec
+    val edgeJ = indexJ.toVec
+
+    def getChildren(nodes: Vec[Long]): Vec[Long] =
+      (edgeI.take(indexI(nodes.toArray)) concat
+        edgeJ.take(indexJ(nodes.toArray)))
+
+    def substract(v1: Index[Long], v2: Vec[Long]): Vec[Long] =
+      v2.filter(l => !v1.contains(l))
+
+    def loop(
+        unexplored: Vec[Long],
+        explored: Index[Long],
+        currentDepth: Int
+    ): Vec[Long] = {
+      if (unexplored.isEmpty || currentDepth == depth) explored.toVec
+      else {
+        val children = getChildren(unexplored)
+        val novel = substract(explored, children)
+        loop(novel, explored.concat(Index(novel)), currentDepth + 1)
+      }
+    }
+
+    loop(start, Index.empty, 0)
+
+  }
 
   def subsetBySubject(
       minibatchSize: Int,
-      numSubjects: Int,
+      subjects: Vec[Int],
+      tables: Tables,
+      depth: Int,
       rng: Option[org.saddle.spire.random.Generator]
-  )(
-      subset: (Scope, Device, Vec[Int]) => (Tables, STen)
-  ): BatchStream[Batch, Int] = {
+  )(implicit scope: Scope): BatchStream[Batch, Int] = {
+    val batch = Batch.makeBatch(tables, STenOptions.f)
+    val indexI = Index(batch.edgeI.toLongVec)
+    val indexJ = Index(batch.edgeJ.toLongVec)
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       Scope.inResource.map { implicit scope =>
-        val (tables, target) = subset(scope, device, idx.toVec)
+        val selected = bfs(
+          start = idx.toVec.map(_.toLong),
+          indexI = indexI,
+          indexJ = indexJ,
+          depth = depth
+        )
+        val s = batch.subset(selected, device)
+
         StreamControl(
-          (Batch.makeBatch(tables, target.options), target)
+          (s, s.target)
         )
       }
     }
@@ -108,13 +238,12 @@ object Batch {
       rng
         .map(rng =>
           array
-            .shuffle(array.range(0, numSubjects), rng)
+            .shuffle(subjects.toArray, rng)
             .grouped(minibatchSize)
             .toList
         )
         .getOrElse(
-          array
-            .range(0, numSubjects)
+          subjects.toArray
             .grouped(minibatchSize)
             .toList
         )
@@ -160,7 +289,8 @@ object Batch {
       },
       dim = 0
     )
-    Batch(dataTables, i, j, vertexPooling)
+    val targets = STen.cat(tables.targets, dim = 0)
+    Batch(dataTables, i, j, vertexPooling, targets)
   }
 }
 
@@ -190,6 +320,16 @@ case class TableGNN[M <: GenericModule[Graph, Graph]](
 }
 
 object TableGNN {
+
+  def inferEmbeddingTypes(
+      dataTables: Seq[TableInColumns]
+  ): Seq[Seq[EmbeddingType]] = {
+    dataTables.map { columns =>
+      columns.columns.map { column =>
+        EmbeddingType.inferFromColumn(column)
+      }
+    }
+  }
 
   def make[S: Sc](
       tableColumnTypes: Seq[Seq[EmbeddingType]],
@@ -285,9 +425,54 @@ object TableGNN {
 }
 
 sealed trait EmbeddingType
-case class Embedder(numClasses: Int, outDim: Int) extends EmbeddingType
-case class Linear(inDim: Int, outDim: Int) extends EmbeddingType
+
+object EmbeddingType {
+  case class Embedder(numClasses: Int, outDim: Int) extends EmbeddingType
+  case class Linear(inDim: Int, outDim: Int) extends EmbeddingType
 // case class NLP(length: Int, outDim: Int) extends EmbeddingType
+  def inferFromColumn(column: ColumnDataType): EmbeddingType = column match {
+    case SingleVariableColumn(constant) =>
+      constant.shape.size match {
+        case 1 =>
+          Scope.leak { implicit scope =>
+            val randomIndex = STen.randint(
+              constant.shape(0),
+              List(math.min(constant.shape(0), 10000)),
+              STenOptions.l
+            )
+            val sample = constant.value.indexSelect(dim = 0, randomIndex)
+
+            // test this
+            val uniqueCount = sample
+              .unique(
+                dim = 0,
+                sorted = false,
+                returnInverse = false,
+                returnCounts = false
+              )
+              ._1
+              .shape(0)
+              .toInt
+            val isFloat = constant.options.isFloat || constant.options.isDouble
+            if (uniqueCount > 2000 || isFloat) Linear(inDim = 1, outDim = 8)
+            else
+              Embedder(
+                numClasses = uniqueCount,
+                outDim = math.max(1, math.sqrt(uniqueCount) / 8).toInt * 8
+              )
+
+          }
+
+        case 2 =>
+          Linear(
+            inDim = constant.shape(1).toInt,
+            outDim = math.max(1, constant.shape(1).toInt / 8) * 16
+          )
+        case _ => ???
+      }
+
+  }
+}
 
 case class TableEmbedder(
     embedders: Seq[ColumnModule],
@@ -339,14 +524,14 @@ object TableEmbedder {
   ): TableEmbedder = {
     val d = columnEmbeddingTypes.map {
       _ match {
-        case Embedder(_, outDim) => outDim
-        case Linear(_, outDim)   => outDim
+        case EmbeddingType.Embedder(_, outDim) => outDim
+        case EmbeddingType.Linear(_, outDim)   => outDim
       }
     }.sum
     TableEmbedder(
       columnEmbeddingTypes map { attr =>
         attr match {
-          case Embedder(numClasses, outDim) =>
+          case EmbeddingType.Embedder(numClasses, outDim) =>
             ColumnEmbeddingModule(
               lamp.nn
                 .Embedding(
@@ -355,7 +540,7 @@ object TableEmbedder {
                   tOpt = tOpt
                 )
             )
-          case Linear(in, out) =>
+          case EmbeddingType.Linear(in, out) =>
             ColumnLinearModule(
               lamp.nn.Linear(in = in, out = out, tOpt = tOpt, bias = true)
             )
