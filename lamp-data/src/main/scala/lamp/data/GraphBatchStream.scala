@@ -66,7 +66,7 @@ object GraphBatchStream {
               val mappedEdgeJ = nextGraph.edgeJ + offset
 
               val graphIndices = {
-                val z = STen.zeros(List(numNodes),STenOptions.l)
+                val z = STen.zeros(List(numNodes), STenOptions.l)
                 z + graphIndex
               }
 

@@ -84,7 +84,7 @@ class GreenerManufacturingSuite extends AnyFunSuite {
         )
         .toOption
         .get
-      val rawTrainingData = rawTrainingData0 //.row(0 -> 3999)
+      val rawTrainingData = rawTrainingData0 // .row(0 -> 3999)
       // val rawTestData = rawTrainingData0.row(4000 -> *)
       val rawTestData = org.saddle.csv.CsvParser
         .parseSourceWithHeader[String](

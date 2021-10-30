@@ -199,7 +199,8 @@ class GraphAttentionSuite extends AnyFunSuite {
               const(nodes),
               const(edges),
               edgeIdx.select(1, 0),
-              edgeIdx.select(1, 1),graphIndices
+              edgeIdx.select(1, 1),
+              graphIndices
             )
           )
           .nodeFeatures

@@ -136,7 +136,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         trainBatchesOverEpoch = makeTrainingBatch,
         validationBatchesOverEpoch = None,
         epochs = 50,
-        logger = None //Some(logger)
+        logger = None // Some(logger)
       )
       val output = trainedModel
         .map(

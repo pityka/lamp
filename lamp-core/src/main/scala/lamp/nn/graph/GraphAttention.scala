@@ -107,7 +107,6 @@ object GraphAttention {
 
   case object Weights extends LeafTag
 
- 
   /** Graph Attention Network https://arxiv.org/pdf/1710.10903.pdf Non-linearity
     * in eq 4 and dropout is not applied to the final vertex activations
     *

@@ -17,7 +17,7 @@ case class GCN[M <: Module](
   override def forward[S: Sc](
       x: Graph
   ): Graph = {
-    val message = GCN.gcnAggregation(x.nodeFeatures, x.edgeI,x.edgeJ)
+    val message = GCN.gcnAggregation(x.nodeFeatures, x.edgeI, x.edgeJ)
     val transformedNodes = transform.forward(message)
 
     x.copy(nodeFeatures = transformedNodes)
@@ -34,7 +34,7 @@ object GCN {
       numNodes: Long
   ) = {
 
-    val edgeList = STen.stack(List(edgeI,edgeJ),dim=1)
+    val edgeList = STen.stack(List(edgeI, edgeJ), dim = 1)
 
     val tOptDoubleDevice =
       if (valueOpt.isCPU)
@@ -125,7 +125,7 @@ object GCN {
   def gcnAggregation[S: Sc](
       nodeFeatures: Variable,
       edgeI: STen,
-      edgeJ: STen,
+      edgeJ: STen
   ): Variable = {
     val (degrees, a) = computeSparseAdjacency(
       nodeFeatures.options,
