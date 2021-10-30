@@ -52,7 +52,7 @@ object MLP {
       case Swish1  => Fun(scope => input => input.swish1(scope))
       case Sigmoid => Fun(scope => input => input.sigmoid(scope))
     }
-    def makeNorm(normDim:Int): Sequential[Variable, EitherModule[
+    def makeNorm(normDim: Int): Sequential[Variable, EitherModule[
       Variable,
       Variable,
       lamp.nn.BatchNorm,
@@ -64,7 +64,9 @@ object MLP {
       case NormType.LayerNorm =>
         Sequential(
           EitherModule(
-            Right(lamp.nn.LayerNorm(normalizedShape = List(normDim), tOpt = tOpt))
+            Right(
+              lamp.nn.LayerNorm(normalizedShape = List(normDim), tOpt = tOpt)
+            )
           )
         )
     }

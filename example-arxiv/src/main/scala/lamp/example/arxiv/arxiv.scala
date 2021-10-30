@@ -114,11 +114,11 @@ object Train extends App {
           println(s"Number of parameters: ${model.module.learnableParameters}")
 
           val graph = GraphBatchStream.Graph(
-              nodeFeatures = nodesT,
-              edgeFeatures = STen.zeros(List(edgesT.shape(0))),
-              edgeI = edgesT.select(1,0),
-              edgeJ = edgesT.select(1,1)
-              )
+            nodeFeatures = nodesT,
+            edgeFeatures = STen.zeros(List(edgesT.shape(0))),
+            edgeI = edgesT.select(1, 0),
+            edgeJ = edgesT.select(1, 1)
+          )
 
           val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
             GraphBatchStream.singleLargeGraph(

@@ -201,7 +201,7 @@ final class Scope private {
     if (resource == null) throw new NullPointerException("null resource")
     if (closed)
       throw new IllegalStateException("already been closed")
-    resources.add(Left(resource)) //Left(resource) :: resources
+    resources.add(Left(resource)) // Left(resource) :: resources
   }
 
   /** Adds a resource to the managed resources.
