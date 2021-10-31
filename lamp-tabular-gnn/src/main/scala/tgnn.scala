@@ -10,17 +10,17 @@ import org.saddle.index.InnerJoin
 import lamp.data.BatchStream
 import lamp.data.StreamControl
 
-sealed trait ColumnDataType
-case class SingleVariableColumn(constant: Constant) extends ColumnDataType
+sealed trait ColumnData
+case class SingleVariableColumn(constant: Constant) extends ColumnData
 
-object ColumnDataType {
-  implicit val movable: Movable[ColumnDataType] =
-    Movable.by[ColumnDataType, Constant](_ match {
+object ColumnData {
+  implicit val movable: Movable[ColumnData] =
+    Movable.by[ColumnData, Constant](_ match {
       case SingleVariableColumn(constant) => constant
     })
 }
 
-sealed trait ColumnModule extends GenericModule[ColumnDataType, Variable]
+sealed trait ColumnModule extends GenericModule[ColumnData, Variable]
 
 object ColumnModule {
 
@@ -50,7 +50,7 @@ object ColumnModule {
 case class ColumnEmbeddingModule(embedding: lamp.nn.Embedding)
     extends ColumnModule {
 
-  override def forward[S: Sc](x: ColumnDataType): Variable = x match {
+  override def forward[S: Sc](x: ColumnData): Variable = x match {
     case SingleVariableColumn(variable) => embedding.forward(variable)
     case _                              => ???
   }
@@ -59,7 +59,7 @@ case class ColumnEmbeddingModule(embedding: lamp.nn.Embedding)
 }
 case class ColumnLinearModule(embedding: lamp.nn.Linear) extends ColumnModule {
 
-  override def forward[S: Sc](x: ColumnDataType): Variable = x match {
+  override def forward[S: Sc](x: ColumnData): Variable = x match {
     case SingleVariableColumn(variable) => embedding.forward(variable)
     case _                              => ???
   }
@@ -69,7 +69,7 @@ case class ColumnLinearModule(embedding: lamp.nn.Linear) extends ColumnModule {
 }
 
 case class TableInColumns(
-    columns: Seq[ColumnDataType],
+    columns: Seq[ColumnData],
     length: Long
 ) {
   def takeRows(v: Vec[Long], device: Device)(implicit
@@ -101,7 +101,7 @@ case class TableInColumns(
 }
 object TableInColumns {
   implicit val movable: Movable[TableInColumns] =
-    Movable.by[TableInColumns, Seq[ColumnDataType]](_.columns)
+    Movable.by[TableInColumns, Seq[ColumnData]](_.columns)
 }
 
 case class Relation(
@@ -430,7 +430,7 @@ object EmbeddingType {
   case class Embedder(numClasses: Int, outDim: Int) extends EmbeddingType
   case class Linear(inDim: Int, outDim: Int) extends EmbeddingType
 // case class NLP(length: Int, outDim: Int) extends EmbeddingType
-  def inferFromColumn(column: ColumnDataType): EmbeddingType = column match {
+  def inferFromColumn(column: ColumnData): EmbeddingType = column match {
     case SingleVariableColumn(constant) =>
       constant.shape.size match {
         case 1 =>

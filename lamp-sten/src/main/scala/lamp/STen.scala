@@ -90,6 +90,11 @@ object STen {
     else TensorHelpers.fromLongArray(ar, dim, device).owned
 
   /** Returns a tensor with the given content and shape on the given device */
+  def fromLongArrayOfArrays[S: Sc](ar: Array[Array[Long]], dim: Seq[Long], device: Device) =
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.l))
+    else TensorHelpers.fromLongArrayOfArrays(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromDoubleArray[S: Sc](
       ar: Array[Double],
       dim: Seq[Long],
