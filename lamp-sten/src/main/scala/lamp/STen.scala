@@ -917,6 +917,7 @@ case class STen private (
     case 4 => castToLong
   }
 
+  
   /** Casts to char */
   def castToChar[S: Sc] = owned(ATen._cast_Char(value, true))
 

@@ -21,6 +21,40 @@ class TableSuite extends AnyFunSuite {
 1,4.5
 2,6.0"""
 
+  test("row with missing") {
+    Scope.root { implicit scope =>
+      val channel =
+        Channels.newChannel(new ByteArrayInputStream(csvText.getBytes()))
+      val table = Table
+        .readHeterogeneousFromCSVChannel(
+          List(
+            (0, I64Column),
+            (1, F32Column),
+            (2, DateTimeColumn()),
+            (3, BooleanColumn()),
+            (4, TextColumn(64, -1L, None))
+          ),
+          channel = channel,
+          recordSeparator = "\n",
+          header = true
+        )
+        .toOption
+        .get
+
+      val selected = table.rows(Array(-1, 1, -1, 2, 1))
+      assert(
+        selected.col(1).toFloatVec.toString == Vec(
+          Float.NaN,
+          2.5f,
+          Float.NaN,
+          3.0f,
+          2.5f
+        ).toString
+      )
+
+    }
+  }
+
   test("join") {
     Scope.root { implicit scope =>
       val channel =
@@ -113,10 +147,11 @@ class TableSuite extends AnyFunSuite {
         .toOption
         .get
 
-      val grouped = table.groupBy(0)( table => Table.unnamed(table.col(1).mean.view(-1)))
+      val grouped =
+        table.groupBy(0)(table => Table.unnamed(table.col(1).mean.view(-1)))
       assert(grouped.numRows == 2)
       assert(grouped.numCols == 1)
-      assert(grouped.col(0).toFloatVec == Vec(1.5,2.75))
+      assert(grouped.col(0).toFloatVec == Vec(1.5, 2.75))
 
     }
   }

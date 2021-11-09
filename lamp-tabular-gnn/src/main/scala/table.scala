@@ -13,22 +13,23 @@ import org.saddle.Index
 import org.saddle.index.InnerJoin
 
 case class Table(
-    columns: Vector[(STen, Option[String])],
+    columns: Vector[Table.Column],
     indices: Map[Int, Index[Long]]
 ) {
 
   def fuse[S: Sc] = {
-    val highestTpe = columns.map(_._1.scalarTypeByte).max
+    val highestTpe = columns.map(_.values.scalarTypeByte).max
     STen.cat(
-      columns.map(_._1.castToType(highestTpe).view(numRows, -1)),
+      columns.map(_.values.castToType(highestTpe).view(numRows, -1)),
       dim = 1
     )
   }
 
   override def toString =
-    s"Table(\n[$numRows x $numCols]\n\tName\tShape\tType\tTensor\n${columns.zipWithIndex
-      .map { case ((sten, name), idx) =>
-        idx.toString + ".\t" + name.getOrElse("_") + "\t" + sten.shape.mkString("[", ",", "]") + "\t" + sten.scalarTypeByte + "\t" + sten
+    s"Table(\n[$numRows x $numCols]\n\tName\tShape\tValueType\tType\tTensor\n${columns.zipWithIndex
+      .map { case (Table.Column(sten, name, tpe), idx) =>
+        idx.toString + ".\t" + name
+          .getOrElse("_") + "\t" + sten.shape.mkString("[", ",", "]") + "\t" + sten.scalarTypeByte + "\t" + tpe + "\t" + sten
       }
       .mkString("\n")}\n)"
 
@@ -69,16 +70,20 @@ case class Table(
 
   }
 
-  def device: Device = columns.headOption.map(_._1.device).getOrElse(lamp.CPU)
+  def device: Device =
+    columns.headOption.map(_.values.device).getOrElse(lamp.CPU)
 
   def copyToDevice[S: Sc](device: Device) =
-    Table(columns.map { case (st, n) => (st.copyToDevice(device), n) }, indices)
+    Table(
+      columns.map { column => column.copy(column.values.copyToDevice(device)) },
+      indices
+    )
 
   def numCols: Int = columns.length
 
-  def numRows: Long = columns.headOption.map(_._1.shape(0)).getOrElse(0L)
+  def numRows: Long = columns.headOption.map(_.values.shape(0)).getOrElse(0L)
 
-  def colNames: Vector[Option[String]] = columns.map(_._2)
+  def colNames: Vector[Option[String]] = columns.map(_.name)
 
   def groupBy[S: Sc](col: Int)(transform: Table => Table): Table = {
     val index = indexCols(List(col)).indices(col)
@@ -96,7 +101,7 @@ case class Table(
   }
 
   val nameToIndex: Map[String, Int] = columns.zipWithIndex
-    .map(v => v._1._2 -> v._2)
+    .map(v => v._1.name -> v._2)
     .collect { case (Some(value), idx) => (value, idx) }
     .toMap
 
@@ -109,16 +114,21 @@ case class Table(
         )
         .distinct
         .map { idx =>
-          idx -> Index(columns(idx)._1.toLongVec)
+          idx -> Index(columns(idx).values.toLongVec)
         })
     )
   }
 
-  def col(idx: Int): STen = columns(idx)._1
+  def col(idx: Int): STen = columns(idx).values
 
   def col(name: String): STen = col(nameToIndex(name))
 
-  def colName(idx: Int): Option[String] = columns(idx)._2
+  def colName(idx: Int): Option[String] = columns(idx).name
+
+  def colType(idx: Int): Table.ColumnDataType = columns(idx).tpe
+  def colType(name: String): Table.ColumnDataType = columns(
+    nameToIndex(name)
+  ).tpe
 
   def cols(idx: Int*): Table = {
     val map = idx.zipWithIndex.toMap
@@ -130,27 +140,48 @@ case class Table(
   def withoutCol(s: Set[Int]) = {
     cols(columns.zipWithIndex.map(_._2).filterNot(s.contains): _*)
   }
+  def updateColName(name: String, newName: Option[String]): Table =
+    updateColName(nameToIndex(name), newName)
+  def updateColName(idx: Int, newName: Option[String]): Table =
+    Table(columns.updated(idx, columns(idx).copy(name = newName)))
+  def updateColType(name: String, newTpe: Table.ColumnDataType): Table =
+    updateColType(nameToIndex(name), newTpe)
+  def updateColType(idx: Int, newTpe: Table.ColumnDataType): Table =
+    Table(columns.updated(idx, columns(idx).copy(tpe = newTpe)))
 
-  def updateCol(name: String, update: STen): Table =
-    updateCol(nameToIndex(name), update)
+  def updateCol(
+      name: String,
+      update: STen,
+      tpe: Option[Table.ColumnDataType]
+  ): Table =
+    updateCol(nameToIndex(name), update, tpe)
 
-  def updateCol(idx: Int, update: STen): Table = {
+  def updateCol(
+      idx: Int,
+      update: STen,
+      tpe: Option[Table.ColumnDataType] = None
+  ): Table = {
     val old = columns(idx)
-    require(old._1.shape(0) == update.shape(0))
+    require(old.values.shape(0) == update.shape(0))
     Table(
-      columns.updated(idx, (update, old._2)),
+      columns
+        .updated(idx, Table.Column(update, old.name, tpe.getOrElse(old.tpe))),
       indices = indices.removed(idx)
     )
   }
 
   def mapColNames(fun: (Option[String], Int) => Option[String]) = Table(
-    columns.map(_._1).zip(columns.map(_._2).zipWithIndex.map(fun.tupled)),
+    columns.zip(columns.map(_.name).zipWithIndex.map(fun.tupled)).map {
+      case (old, newname) => old.copy(name = newname)
+    },
     indices
   )
 
   def mapCols(
       fun: STen => STen
-  ): Table = Table(columns.map(_._1).map(fun).zip(columns.map(_._2)))
+  ): Table = Table(columns.map(_.values).map(fun).zip(columns).map {
+    case (v, old) => old.copy(values = v)
+  })
 
   def join[S: Sc](col: Int, other: Table, otherCol: Int): Table = {
     val indexA = indexCols(List(col)).indices(col)
@@ -166,9 +197,10 @@ case class Table(
   def union[S: Sc](others: Table*): Table = {
     val c = (0 until numCols).map { colIdx =>
       val name = colName(colIdx)
+      val tpe = colType(colIdx)
       val s1 = col(colIdx)
       val s3 = STen.cat(List(s1) ++ others.map(_.col(colIdx)), dim = 0)
-      (s3, name)
+      Table.Column(s3, name, tpe)
     }.toVector
     Table(c)
   }
@@ -182,36 +214,94 @@ case class Table(
     Table(c, i)
   }
 
-  def bind(col: STen): Table = bind(Table(Vector((col, None))))
+  def bind(col: STen): Table = bind(Table.unnamed(col))
 
   def rows[S: Sc](idx: STen): Table = {
     Table(
-      columns.map { case (sten, name) =>
-        (sten.indexSelect(dim = 0, index = idx), name)
+      columns.map { case Table.Column(sten, name, tpe) =>
+        Table.Column(sten.indexSelect(dim = 0, index = idx), name, tpe)
       }
     )
   }
 
-  def rows[S: Sc](idx: Array[Int]): Table = {
+  def rows(idx: Array[Int])(implicit scope: Scope): Table = {
     import org.saddle._
-    rows(STen.fromLongVec(idx.toVec.map(_.toLong), device = device))
+    val vidx = idx.toVec.map(_.toLong)
+    if (vidx.countif(_ < 0) == 0)
+      rows(STen.fromLongVec(vidx, device = device))
+    else {
+      Table(columns.map { case Table.Column(sten, name, tpe) =>
+        Scope { implicit scope =>
+          val shape = vidx.length.toLong :: sten.shape.drop(1)
+          val missing = STen.zeros(shape, sten.options.toDouble)
+          missing.fill_(Double.NaN)
+          val cast = missing.castToType(sten.scalarTypeByte)
+
+          val nonmissingIdxLocationV = vidx.find(_ >= 0L)
+          val nonmissingIdxLocation =
+            STen
+              .fromLongVec(nonmissingIdxLocationV.map(_.toLong), device)
+              .view(
+                nonmissingIdxLocationV.length.toLong :: sten.shape
+                  .drop(1)
+                  .map(_ => 1L): _*
+              )
+              .expand(
+                nonmissingIdxLocationV.length.toLong :: sten.shape.drop(1)
+              )
+          val nonmissingIdxValueV = vidx.take(nonmissingIdxLocationV.toArray)
+          val nonmissingIdxValue =
+            STen.fromLongVec(nonmissingIdxValueV.map(_.toLong), device)
+
+          val nonmissingValues = sten.indexSelect(0, nonmissingIdxValue)
+
+          val ret = cast.scatter(0, nonmissingIdxLocation, nonmissingValues)
+          Table.Column(ret, name, tpe)
+        }
+
+      })
+
+    }
   }
 
 }
 
 object Table {
 
+  def dataTypeFromScalarTypeByte(s: Byte) = s match {
+    case 7 => F64Column
+    case 6 => F32Column
+    case 5 => I64Column
+  }
+
   def unnamed(cols: STen*): Table =
-    Table(cols.map((_, None)).toVector, Map.empty[Int, Index[Long]])
-    
-  def apply(cols: Seq[(STen, Option[String])]): Table =
+    Table(
+      cols
+        .map(s =>
+          Table.Column(s, None, dataTypeFromScalarTypeByte(s.scalarTypeByte))
+        )
+        .toVector,
+      Map.empty[Int, Index[Long]]
+    )
+
+  def apply(cols: Seq[Table.Column]): Table =
     Table(cols.toVector, Map.empty[Int, Index[Long]])
+
+  case class Column(
+      values: STen,
+      name: Option[String],
+      tpe: Table.ColumnDataType
+  )
+  object Column {
+    implicit val movable: Movable[Column] = Movable.by(_.values)
+  }
 
   sealed trait ColumnDataType {
     type Buf
     def allocateBuffer(): Buf
     def parseIntoBuffer(string: String, buffer: Buf): Unit
     def copyBufferToSTen(buf: Buf)(implicit scope: Scope): STen
+
   }
   final case class DateTimeColumn(
       parse: String => Long = DateTimeColumn.parse _
@@ -440,10 +530,12 @@ object Table {
             device.to(sten)
           } else sten
           val name = colIndex.map(_.apply(idx))
-          (ondevice, name)
+          Table.Column(ondevice, name, tpe)
       }
-      if (columns.map(_._1.shape(0)).distinct.size != 1)
-        Left(s"Uneven length ${columns.map(_._1.shape(0)).toVector} columns")
+      if (columns.map(_.values.shape(0)).distinct.size != 1)
+        Left(
+          s"Uneven length ${columns.map(_.values.shape(0)).toVector} columns"
+        )
       else {
 
         Right(Table(columns.toVector))
@@ -451,6 +543,5 @@ object Table {
     }
 
   }
-
 
 }
