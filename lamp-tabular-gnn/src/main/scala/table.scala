@@ -183,14 +183,25 @@ case class Table(
     case (v, old) => old.copy(values = v)
   })
 
-  def join[S: Sc](col: Int, other: Table, otherCol: Int): Table = {
+  def join[S: Sc](
+      col: Int,
+      other: Table,
+      otherCol: Int,
+      how: org.saddle.index.JoinType = InnerJoin
+  ): Table = {
     val indexA = indexCols(List(col)).indices(col)
     val indexB = other.indexCols(List(otherCol)).indices(otherCol)
-    val reindexer = indexA.join(indexB, InnerJoin)
-    val asub = reindexer.lTake.map(i => this.rows(i)).getOrElse(this)
+    val reindexer = indexA.join(indexB, how)
+    val a =
+      if (how == org.saddle.index.RightJoin) this.withoutCol(Set(col)) else this
+    val b =
+      if (how == org.saddle.index.LeftJoin || how == org.saddle.index.InnerJoin)
+        other.withoutCol(Set(otherCol))
+      else other
+    val asub = reindexer.lTake.map(i => a.rows(i)).getOrElse(a)
     val bsub = reindexer.rTake
-      .map(i => other.withoutCol(Set(otherCol)).rows(i))
-      .getOrElse(other.withoutCol(Set(otherCol)))
+      .map(i => b.rows(i))
+      .getOrElse(b)
     asub.bind(bsub)
   }
 

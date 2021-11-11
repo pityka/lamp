@@ -7,6 +7,7 @@ import org.scalatest.compatible.Assertion
 import org.saddle._
 import java.nio.channels.Channels
 import java.io.ByteArrayInputStream
+import org.saddle.index._
 
 class TableSuite extends AnyFunSuite {
   import Table._
@@ -20,6 +21,57 @@ class TableSuite extends AnyFunSuite {
 2,5.5
 1,4.5
 2,6.0"""
+  val csvText3 = """hint,hfloat2
+2,0.5
+3,1.5"""
+
+ test("outer join") {
+    Scope.root { implicit scope =>
+      val channel =
+        Channels.newChannel(new ByteArrayInputStream(csvText3.getBytes()))
+      val channel2 =
+        Channels.newChannel(new ByteArrayInputStream(csvText2.getBytes()))
+      val table = Table
+        .readHeterogeneousFromCSVChannel(
+          List(
+            (0, I64Column),
+            (1, F32Column)
+          ),
+          channel = channel,
+          recordSeparator = "\n",
+          header = true
+        )
+        .toOption
+        .get
+      val table2 = Table
+        .readHeterogeneousFromCSVChannel(
+          List(
+            (0, I64Column),
+            (1, F32Column)
+          ),
+          channel = channel2,
+          recordSeparator = "\n",
+          header = true
+        )
+        .toOption
+        .get
+      val right = table.join(0, table2, 0, RightJoin)
+      val left = table.join(0, table2, 0, LeftJoin)
+      val outer = table.join(0, table2, 0, OuterJoin)
+      assert(right.numRows == 3)
+      assert(left.numRows == 3)
+      assert(outer.numRows == 4)
+      assert(right.numCols == 3)
+      assert(left.numCols == 3)
+      assert(outer.numCols == 4)
+      assert(right.col("hfloat2").toVec.toString == Vec(0.5,Double.NaN,0.5).toString)
+      assert(right.col("hfloat").toVec.toString == Vec(5.5,4.5,6.0).toString)
+      assert(left.col("hfloat2").toVec.toString == Vec(0.5,0.5,1.5).toString)
+      assert(left.col("hfloat").toVec.toString == Vec(5.5,6.0,Double.NaN).toString)
+      assert(outer.col("hfloat2").toVec.toString == Vec(0.5,0.5,1.5,Double.NaN).toString)
+      assert(outer.col("hfloat").toVec.toString == Vec(5.5,6.0,Double.NaN,4.5).toString)
+    }
+  }
 
   test("row with missing") {
     Scope.root { implicit scope =>
