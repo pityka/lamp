@@ -8,9 +8,16 @@ import lamp.io.csv.Buffer
 import org.saddle.scalar.ScalarTagLong
 import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
+import org.saddle._
 import java.io.File
 import org.saddle.Index
 import org.saddle.index.InnerJoin
+import lamp.tgnn.Table.DateTimeColumn
+import lamp.tgnn.Table.BooleanColumn
+import lamp.tgnn.Table.TextColumn
+import lamp.tgnn.Table.I64Column
+import lamp.tgnn.Table.F32Column
+import lamp.tgnn.Table.F64Column
 
 case class Table(
     columns: Vector[Table.Column],
@@ -37,36 +44,54 @@ case class Table(
     implicit scope =>
       val n = math.min(numRows, nrows).toInt
       val m = math.min(numCols, ncols)
-      val a = cols(0 until m / 2: _*).rows((0 until n / 2).toArray).fuse
-      val b =
-        cols(m / 2 until m: _*).rows((0 until n / 2).toArray).fuse
-      val c =
-        cols(0 until m / 2: _*).rows((n / 2 until n).toArray).fuse
-      val d = cols((m / 2 until m): _*)
-        .rows((n / 2 until n).toArray)
-        .fuse
+      val columnIdxNeeded = (0 until m / 2) ++ (m / 2 until m)
+      val rowIdxNeeded = (0 until n / 2) ++ (n / 2 until n)
 
-      def rep(i: Int, s: String) = {
-        val sh = col(i).shape
-        val repeats = sh match {
-          case List(_)    => 1
-          case List(_, x) => x.toInt
-          case _          => ???
+      val selected = cols(columnIdxNeeded: _*).rows(rowIdxNeeded: _*)
+
+      val stringFrame = selected.columns.map { column =>
+        val name = column.name.getOrElse("")
+        val frame = column.tpe match {
+          case DateTimeColumn(_) =>
+            Frame(
+              name -> column.values.toLongVec.map(l =>
+                if ( ScalarTagLong.isMissing(l))  null else java.time.Instant.ofEpochMilli(l).toString()
+              )
+            )
+          case BooleanColumn(_) =>
+            Frame(
+              name -> column.values.toLongVec.map(l =>
+                if ( ScalarTagLong.isMissing(l))  null 
+                else if (l == 0) "false"
+                 else "true"
+              )
+            )
+          case TextColumn(_, pad, vocabulary) =>
+            val reverseVocabulary = vocabulary.map(_.map(_.swap))
+            Frame(name -> column.values.toLongMat.rows.map { row =>
+              if (row.countif(ScalarTagLong.isMissing) > 0) null 
+              else 
+              row
+                .filter(_ != pad)
+                .map(l => reverseVocabulary.map(_.apply(l)).getOrElse(l.toChar))
+                .toArray
+                .mkString
+            }.toVec)
+          case I64Column => 
+            val m  =column.values.toLongMat.map(ScalarTagLong.show)
+
+              m.toFrame.setColIndex(Index(0 until m.numCols map (_ => name):_*))
+          case F32Column => 
+            val m  =column.values.toFloatMat.map(ScalarTagFloat.show)
+              m.toFrame.setColIndex(Index(0 until m.numCols map (_ => name):_*))
+          case F64Column => 
+            val m  =column.values.toMat.map(ScalarTagDouble.show)
+              m.toFrame.setColIndex(Index(0 until m.numCols map (_ => name):_*))
         }
-        (0 until repeats) map (_ => s)
-      }
-
-      val colnames =
-        (0 until m / 2).flatMap(i => rep(i, colName(i).getOrElse("_" + i))) ++
-          (m / 2 until m).flatMap(i => rep(i, colName(i).getOrElse("_" + i)))
-
-      ((a
-        .cat(b, dim = 1))
-        .cat((c.cat(d, dim = 1)), dim = 0))
-        .toMat
-        .toFrame
-        .setColIndex(Index(colnames: _*))
-        .stringify(nrows, ncols)
+        frame
+      }.reduce(_ rconcat _).setRowIndex(Index(rowIdxNeeded:_*))
+      
+      stringFrame.stringify(nrows,ncols)
 
   }
 
@@ -234,6 +259,8 @@ case class Table(
       }
     )
   }
+
+  def rows(idx: Int*)(implicit scope: Scope): Table = rows(idx.toArray)
 
   def rows(idx: Array[Int])(implicit scope: Scope): Table = {
     import org.saddle._

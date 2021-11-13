@@ -70,6 +70,7 @@ class TableSuite extends AnyFunSuite {
       assert(left.col("hfloat").toVec.toString == Vec(5.5,6.0,Double.NaN).toString)
       assert(outer.col("hfloat2").toVec.toString == Vec(0.5,0.5,1.5,Double.NaN).toString)
       assert(outer.col("hfloat").toVec.toString == Vec(5.5,6.0,Double.NaN,4.5).toString)
+      
     }
   }
 
@@ -282,6 +283,7 @@ class TableSuite extends AnyFunSuite {
         )
         .toOption
         .get
+      println(table.stringify())
 
       assert(table.numRows == 3L)
       assert(table.numCols == 5)
