@@ -66,7 +66,7 @@ object TensorHelpers {
         } else if (shape.size == 1) {
           val arr = Array.ofDim[Double](shape(0).toInt)
           require(t.copyToDoubleArray(arr))
-          Mat.apply(1, shape(0).toInt, arr)
+          Mat.apply( shape(0).toInt,1, arr)
         } else throw new RuntimeException("shape: " + shape.toVector)
 
       }
@@ -158,7 +158,7 @@ object TensorHelpers {
       } else if (shape.size == 1) {
         val arr = Array.ofDim[Float](shape(0).toInt)
         assert(t.copyToFloatArray(arr))
-        Mat.apply(1, shape(0).toInt, arr)
+        Mat.apply(shape(0).toInt,1, arr)
       } else throw new RuntimeException("shape: " + shape.toVector)
     } finally {
       if (t != t0) { t.release }
@@ -183,7 +183,7 @@ object TensorHelpers {
       } else if (shape.size == 1) {
         val arr = Array.ofDim[Long](shape(0).toInt)
         assert(t.copyToLongArray(arr))
-        Mat.apply(1, shape(0).toInt, arr)
+        Mat.apply( shape(0).toInt,1, arr)
       } else ???
     } finally {
       if (t != t0) { t.release }

@@ -337,7 +337,7 @@ class GCNSuite extends AnyFunSuite {
       assert(batchGraph.edgeI.toLongVec.raw(9) >= 5)
       assert(batchGraph.edgeI.toLongVec.raw(0) < 5)
       assert(
-        batchGraph.vertexPoolingIndices.toLongMat.row(0) == Vec(0L, 0L, 0L, 0L,
+        batchGraph.vertexPoolingIndices.toLongMat.T.row(0) == Vec(0L, 0L, 0L, 0L,
           0L, 1L, 1L, 1L, 1L, 1L)
       )
       assert(batchTarget.sizes.toList == List(2))

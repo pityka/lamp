@@ -50,24 +50,24 @@ class TensorHelperSuite extends AnyFunSuite {
   test("to/from double Vec") {
     val eye = ATen.ones(Array(3L), TensorOptions.d)
     val m = TensorHelpers.toMat(eye)
-    assert(m == mat.ones(1, 3))
+    assert(m == mat.ones( 3,1))
   }
   test("to/from float Vec") {
     val eye = ATen.ones(Array(3L), TensorOptions.f)
     val m = TensorHelpers.toFloatMat(eye)
-    assert(m == mat.ones(1, 3).map(_.toFloat))
+    assert(m == mat.ones( 3,1).map(_.toFloat))
   }
   test("to/from long Vec") {
     val eye = ATen.ones(Array(3L), TensorOptions.l)
     val m = TensorHelpers.toLongMat(eye)
-    assert(m == mat.ones(1, 3).map(_.toLong))
+    assert(m == mat.ones( 3,1).map(_.toLong))
   }
 
   test("index") {
     val m = TensorHelpers.fromMat(mat.ident(3))
     val idx = ATen.squeeze_0(TensorHelpers.fromLongMat(Mat(Vec(1L))))
     val m2 = ATen.index(m, Array(idx))
-    assert(TensorHelpers.toMat(m2) == Mat(Vec(0d, 1d, 0d)).T)
+    assert(TensorHelpers.toMat(m2) == Mat(Vec(0d, 1d, 0d)))
   }
   test("fromMatList") {
     val m =
