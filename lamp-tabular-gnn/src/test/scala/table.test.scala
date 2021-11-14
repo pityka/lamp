@@ -24,6 +24,38 @@ class TableSuite extends AnyFunSuite {
   val csvText3 = """hint,hfloat2
 2,0.5
 3,1.5"""
+  val csvText4 = """key,pivot,value
+0,"a","v1"
+0,"b","v2"
+0,"b","v3"
+1,"c","v4"
+2,"a","v5"
+0,"c","v6"
+3,"d","v7"
+"""
+
+test("pivot") {
+    Scope.root { implicit scope =>
+      val channel =
+        Channels.newChannel(new ByteArrayInputStream(csvText4.getBytes()))
+     
+      val table = Table
+        .readHeterogeneousFromCSVChannel(
+          List(
+            (0, I64Column),
+            (1, TextColumn(2,-1,None)),
+            (2, TextColumn(2,-1,None))
+          ),
+          channel = channel,
+          recordSeparator = "\n",
+          header = true
+        )
+        .toOption
+        .get
+        val pivoted = table.pivot[Long,String](0,1)(_.cols(2).rows(0))
+        println(pivoted.stringify())
+    }
+  }
 
  test("outer join") {
     Scope.root { implicit scope =>
@@ -63,7 +95,7 @@ class TableSuite extends AnyFunSuite {
       assert(outer.numRows == 4)
       assert(right.numCols == 3)
       assert(left.numCols == 3)
-      assert(outer.numCols == 4)
+      assert(outer.numCols == 3)
       assert(right.col("hfloat2").toVec.toString == Vec(0.5,Double.NaN,0.5).toString)
       assert(right.col("hfloat").toVec.toString == Vec(5.5,4.5,6.0).toString)
       assert(left.col("hfloat2").toVec.toString == Vec(0.5,0.5,1.5).toString)
@@ -201,7 +233,7 @@ class TableSuite extends AnyFunSuite {
         .get
 
       val grouped =
-        table.groupBy(0)(table => Table.unnamed(table.col(1).mean.view(-1)))
+        table.groupByThenUnion[Long](0)((_,table) => Table.unnamed(table.col(1).mean.view(-1)))
       assert(grouped.numRows == 2)
       assert(grouped.numCols == 1)
       assert(grouped.col(0).toFloatVec == Vec(1.5, 2.75))
@@ -283,7 +315,6 @@ class TableSuite extends AnyFunSuite {
         )
         .toOption
         .get
-      println(table.stringify())
 
       assert(table.numRows == 3L)
       assert(table.numCols == 5)

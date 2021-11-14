@@ -9,6 +9,7 @@ import org.saddle.scalar.ScalarTagLong
 import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 import org.saddle._
+import org.saddle.order._
 import java.io.File
 import org.saddle.Index
 import org.saddle.index.InnerJoin
@@ -18,10 +19,10 @@ import lamp.tgnn.Table.TextColumn
 import lamp.tgnn.Table.I64Column
 import lamp.tgnn.Table.F32Column
 import lamp.tgnn.Table.F64Column
+import org.saddle.index.OuterJoin
 
 case class Table(
-    columns: Vector[Table.Column],
-    indices: Map[Int, Index[Long]]
+    columns: Vector[Table.Column[_]]
 ) {
 
   def fuse[S: Sc] = {
@@ -33,10 +34,10 @@ case class Table(
   }
 
   override def toString =
-    s"Table(\n[$numRows x $numCols]\n\tName\tShape\tValueType\tType\tTensor\n${columns.zipWithIndex
-      .map { case (Table.Column(sten, name, tpe), idx) =>
+    s"Table(\n[$numRows x $numCols]\n\tName\tShape\tValueType\tType\tTensor\tIndeed\n${columns.zipWithIndex
+      .map { case (Table.Column(sten, name, tpe, index), idx) =>
         idx.toString + ".\t" + name
-          .getOrElse("_") + "\t" + sten.shape.mkString("[", ",", "]") + "\t" + sten.scalarTypeByte + "\t" + tpe + "\t" + sten
+          .getOrElse("_") + "\t" + sten.shape.mkString("[", ",", "]") + "\t" + sten.scalarTypeByte + "\t" + tpe + "\t" + sten + "\t" + index.isDefined
       }
       .mkString("\n")}\n)"
 
@@ -49,49 +50,61 @@ case class Table(
 
       val selected = cols(columnIdxNeeded: _*).rows(rowIdxNeeded: _*)
 
-      val stringFrame = selected.columns.map { column =>
-        val name = column.name.getOrElse("")
-        val frame = column.tpe match {
-          case DateTimeColumn(_) =>
-            Frame(
-              name -> column.values.toLongVec.map(l =>
-                if ( ScalarTagLong.isMissing(l))  null else java.time.Instant.ofEpochMilli(l).toString()
+      val stringFrame = selected.columns
+        .map { column =>
+          val name = column.name.getOrElse("")
+          val frame = column.tpe match {
+            case DateTimeColumn(_) =>
+              Frame(
+                name -> column.values.toLongVec.map(l =>
+                  if (ScalarTagLong.isMissing(l)) null
+                  else java.time.Instant.ofEpochMilli(l).toString()
+                )
               )
-            )
-          case BooleanColumn(_) =>
-            Frame(
-              name -> column.values.toLongVec.map(l =>
-                if ( ScalarTagLong.isMissing(l))  null 
-                else if (l == 0) "false"
-                 else "true"
+            case BooleanColumn(_) =>
+              Frame(
+                name -> column.values.toLongVec.map(l =>
+                  if (ScalarTagLong.isMissing(l)) null
+                  else if (l == 0) "false"
+                  else "true"
+                )
               )
-            )
-          case TextColumn(_, pad, vocabulary) =>
-            val reverseVocabulary = vocabulary.map(_.map(_.swap))
-            Frame(name -> column.values.toLongMat.rows.map { row =>
-              if (row.countif(ScalarTagLong.isMissing) > 0) null 
-              else 
-              row
-                .filter(_ != pad)
-                .map(l => reverseVocabulary.map(_.apply(l)).getOrElse(l.toChar))
-                .toArray
-                .mkString
-            }.toVec)
-          case I64Column => 
-            val m  =column.values.toLongMat.map(ScalarTagLong.show)
+            case TextColumn(_, pad, vocabulary) =>
+              val reverseVocabulary = vocabulary.map(_.map(_.swap))
+              Frame(name -> column.values.toLongMat.rows.map { row =>
+                if (row.countif(ScalarTagLong.isMissing) > 0) null
+                else
+                  row
+                    .filter(_ != pad)
+                    .map(l =>
+                      reverseVocabulary.map(_.apply(l)).getOrElse(l.toChar)
+                    )
+                    .toArray
+                    .mkString
+              }.toVec)
+            case I64Column =>
+              val m = column.values.toLongMat.map(ScalarTagLong.show)
 
-              m.toFrame.setColIndex(Index(0 until m.numCols map (_ => name):_*))
-          case F32Column => 
-            val m  =column.values.toFloatMat.map(ScalarTagFloat.show)
-              m.toFrame.setColIndex(Index(0 until m.numCols map (_ => name):_*))
-          case F64Column => 
-            val m  =column.values.toMat.map(ScalarTagDouble.show)
-              m.toFrame.setColIndex(Index(0 until m.numCols map (_ => name):_*))
+              m.toFrame.setColIndex(
+                Index(0 until m.numCols map (_ => name): _*)
+              )
+            case F32Column =>
+              val m = column.values.toFloatMat.map(ScalarTagFloat.show)
+              m.toFrame.setColIndex(
+                Index(0 until m.numCols map (_ => name): _*)
+              )
+            case F64Column =>
+              val m = column.values.toMat.map(ScalarTagDouble.show)
+              m.toFrame.setColIndex(
+                Index(0 until m.numCols map (_ => name): _*)
+              )
+          }
+          frame
         }
-        frame
-      }.reduce(_ rconcat _).setRowIndex(Index(rowIdxNeeded:_*))
-      
-      stringFrame.stringify(nrows,ncols)
+        .reduce(_ rconcat _)
+        .setRowIndex(Index(rowIdxNeeded: _*))
+
+      stringFrame.stringify(nrows, ncols)
 
   }
 
@@ -100,8 +113,7 @@ case class Table(
 
   def copyToDevice[S: Sc](device: Device) =
     Table(
-      columns.map { column => column.copy(column.values.copyToDevice(device)) },
-      indices
+      columns.map { column => column.copy(column.values.copyToDevice(device)) }
     )
 
   def numCols: Int = columns.length
@@ -110,19 +122,49 @@ case class Table(
 
   def colNames: Vector[Option[String]] = columns.map(_.name)
 
-  def groupBy[S: Sc](col: Int)(transform: Table => Table): Table = {
-    val index = indexCols(List(col)).indices(col)
-
-    val uniq = index.uniques.toVec
-
-    val tables = uniq.map { key =>
+  def groupBy[IndexType: ORD: ST, T](
+      col: Int
+  )(transform: (IndexType, Table) => T)(implicit scope: Scope): Vector[T] = {
+    val index = indexCols(List(col)).columns(col).indexAs[IndexType].get.index
+    val uniques = index.uniques.toVec
+    val builder = new scala.collection.immutable.VectorBuilder[T]
+    uniques.foreach { key =>
       val locs = index.get(key)
       val row = rows(locs)
-      transform(row)
+      builder.addOne(transform(key, row))
+      ()
     }
 
-    tables(0).union(tables.toSeq.tail: _*)
+    builder.result()
 
+  }
+
+  def groupByThenUnion[IndexType: ORD: ST](
+      col: Int
+  )(transform: (IndexType, Table) => Table)(implicit scope: Scope): Table = {
+    val tables = groupBy[IndexType, Table](col)(transform)
+    tables(0).union(tables.toSeq.tail: _*)
+  }
+
+  def pivot[IndexType0, IndexType1: ORD: ST](col0: Int, col1: Int)(
+      selectAndAggregate: Table => Table
+  )(implicit scope: Scope): Table = {
+    val indexed = indexCols(List(col0, col1))
+    val columns = indexed
+      .groupBy[IndexType1, Table](col1) { case (pivotValue, samePivot) =>
+        samePivot.groupByThenUnion[IndexType1](col0) {
+          case (_, samePivotSameKey) =>
+            samePivotSameKey
+              .cols(col0)
+              .rows(0)
+              .bind(
+                selectAndAggregate(samePivotSameKey)
+                  .updateColName(0, Some(pivotValue.toString))
+              )
+        }
+      }
+      .toSeq
+    columns.reduceLeft((a, b) => a.join(0, b, 0, OuterJoin))
   }
 
   val nameToIndex: Map[String, Int] = columns.zipWithIndex
@@ -131,17 +173,14 @@ case class Table(
     .toMap
 
   def indexCols(colIdx: Seq[Int] = Nil, names: Seq[String] = Nil): Table = {
-    copy(indices =
-      indices ++ ((colIdx ++ names.flatMap(n => nameToIndex.get(n).toList))
-        .filter(i =>
-          !indices
-            .contains(i)
-        )
-        .distinct
-        .map { idx =>
-          idx -> Index(columns(idx).values.toLongVec)
-        })
+
+    val toUpdate =
+      (colIdx ++ names.flatMap(n => nameToIndex.get(n).toList)).distinct
+    val updated = toUpdate.foldLeft(columns)((columns, idx) =>
+      columns.updated(idx, columns(idx).withIndex)
     )
+    copy(columns = updated)
+
   }
 
   def col(idx: Int): STen = columns(idx).values
@@ -155,13 +194,10 @@ case class Table(
     nameToIndex(name)
   ).tpe
 
-  def cols(idx: Int*): Table = {
-    val map = idx.zipWithIndex.toMap
-    val c = idx.map(i => columns(i)).toVector
-    val i = indices.map { case (oldIdx, index) => (map(oldIdx), index) }
-    Table(c, i)
-  }
+  def cols(idx: Int*): Table =
+    Table(idx.map(i => columns(i)).toVector)
 
+  def withoutCol(s: Int): Table = withoutCol(Set(s))
   def withoutCol(s: Set[Int]) = {
     cols(columns.zipWithIndex.map(_._2).filterNot(s.contains): _*)
   }
@@ -190,16 +226,17 @@ case class Table(
     require(old.values.shape(0) == update.shape(0))
     Table(
       columns
-        .updated(idx, Table.Column(update, old.name, tpe.getOrElse(old.tpe))),
-      indices = indices.removed(idx)
+        .updated(
+          idx,
+          Table.Column(update, old.name, tpe.getOrElse(old.tpe), None)
+        )
     )
   }
 
   def mapColNames(fun: (Option[String], Int) => Option[String]) = Table(
     columns.zip(columns.map(_.name).zipWithIndex.map(fun.tupled)).map {
       case (old, newname) => old.copy(name = newname)
-    },
-    indices
+    }
   )
 
   def mapCols(
@@ -208,26 +245,72 @@ case class Table(
     case (v, old) => old.copy(values = v)
   })
 
-  def join[S: Sc](
+  def join[IndexType](
       col: Int,
       other: Table,
       otherCol: Int,
       how: org.saddle.index.JoinType = InnerJoin
-  ): Table = {
-    val indexA = indexCols(List(col)).indices(col)
-    val indexB = other.indexCols(List(otherCol)).indices(otherCol)
+  )(implicit scope: Scope): Table = {
+    val indexA = indexCols(List(col)).columns(col).indexAs[IndexType].get.index
+    val indexB = other
+      .indexCols(List(otherCol))
+      .columns(otherCol)
+      .indexAs[IndexType]
+      .get
+      .index
     val reindexer = indexA.join(indexB, how)
-    val a =
-      if (how == org.saddle.index.RightJoin) this.withoutCol(Set(col)) else this
-    val b =
-      if (how == org.saddle.index.LeftJoin || how == org.saddle.index.InnerJoin)
-        other.withoutCol(Set(otherCol))
-      else other
-    val asub = reindexer.lTake.map(i => a.rows(i)).getOrElse(a)
+
+    val asub = reindexer.lTake.map(i => this.rows(i)).getOrElse(this)
     val bsub = reindexer.rTake
-      .map(i => b.rows(i))
-      .getOrElse(b)
-    asub.bind(bsub)
+      .map(i => other.rows(i))
+      .getOrElse(other)
+
+    val a =
+      if (how == org.saddle.index.RightJoin || how == OuterJoin)
+        asub.withoutCol(Set(col))
+      else asub
+    val b =
+      if (
+        how == org.saddle.index.LeftJoin || how == org.saddle.index.InnerJoin || how == OuterJoin
+      )
+        bsub.withoutCol(Set(otherCol))
+      else bsub
+
+    val bind = a.bind(b)
+
+    if (how == OuterJoin) {
+
+      val kA = asub.columns(col).values
+      val kB = bsub.columns(otherCol).values
+
+      val idx =
+        reindexer.rTake.getOrElse(array.range(0, other.numRows.toInt)).toVec
+
+      val nonmissingIdxLocationV = idx.find(_ >= 0L)
+      val nonmissingIdxLocation =
+        STen
+          .fromLongVec(nonmissingIdxLocationV.map(_.toLong), device)
+          .view(
+            nonmissingIdxLocationV.length.toLong :: kB.shape
+              .drop(1)
+              .map(_ => 1L): _*
+          )
+          .expand(
+            nonmissingIdxLocationV.length.toLong :: kB.shape.drop(1)
+          )
+      val nonmissingIdxValueV = idx.take(nonmissingIdxLocationV.toArray)
+      val nonmissingIdxValue =
+        STen.fromLongVec(nonmissingIdxValueV.map(_.toLong), device)
+
+      val nonmissingValues =
+        other.col(otherCol).indexSelect(0, nonmissingIdxValue)
+
+      val ret = kA.scatter(0, nonmissingIdxLocation, nonmissingValues)
+      val merged = Table(Vector(asub.columns(col).copy(values = ret)))
+      merged.bind(bind)
+
+    } else bind
+
   }
 
   def union[S: Sc](others: Table*): Table = {
@@ -236,7 +319,7 @@ case class Table(
       val tpe = colType(colIdx)
       val s1 = col(colIdx)
       val s3 = STen.cat(List(s1) ++ others.map(_.col(colIdx)), dim = 0)
-      Table.Column(s3, name, tpe)
+      Table.Column(s3, name, tpe, None)
     }.toVector
     Table(c)
   }
@@ -244,18 +327,15 @@ case class Table(
   def bind(other: Table): Table = {
     require(numRows == other.numRows)
     val c = columns ++ other.columns
-    val i = (other.indices.map { case (oldIdx, index) =>
-      (oldIdx + this.numCols) -> index
-    }) ++ this.indices
-    Table(c, i)
+    Table(c)
   }
 
   def bind(col: STen): Table = bind(Table.unnamed(col))
 
   def rows[S: Sc](idx: STen): Table = {
     Table(
-      columns.map { case Table.Column(sten, name, tpe) =>
-        Table.Column(sten.indexSelect(dim = 0, index = idx), name, tpe)
+      columns.map { case Table.Column(sten, name, tpe, _) =>
+        Table.Column(sten.indexSelect(dim = 0, index = idx), name, tpe, None)
       }
     )
   }
@@ -268,7 +348,7 @@ case class Table(
     if (vidx.countif(_ < 0) == 0)
       rows(STen.fromLongVec(vidx, device = device))
     else {
-      Table(columns.map { case Table.Column(sten, name, tpe) =>
+      Table(columns.map { case Table.Column(sten, name, tpe, _) =>
         Scope { implicit scope =>
           val shape = vidx.length.toLong :: sten.shape.drop(1)
           val missing = STen.zeros(shape, sten.options.toDouble)
@@ -294,7 +374,7 @@ case class Table(
           val nonmissingValues = sten.indexSelect(0, nonmissingIdxValue)
 
           val ret = cast.scatter(0, nonmissingIdxLocation, nonmissingValues)
-          Table.Column(ret, name, tpe)
+          Table.Column(ret, name, tpe, None)
         }
 
       })
@@ -316,22 +396,90 @@ object Table {
     Table(
       cols
         .map(s =>
-          Table.Column(s, None, dataTypeFromScalarTypeByte(s.scalarTypeByte))
+          Table
+            .Column(s, None, dataTypeFromScalarTypeByte(s.scalarTypeByte), None)
         )
-        .toVector,
-      Map.empty[Int, Index[Long]]
+        .toVector
     )
 
-  def apply(cols: Seq[Table.Column]): Table =
-    Table(cols.toVector, Map.empty[Int, Index[Long]])
+  sealed trait ColumnIndex[T] {
+    def index: Index[T]
+    implicit def st: ST[T]
+    implicit def ord: ORD[T]
+    def uniqueLocations: Array[Vec[Int]] = {
+      val u = index.uniques
+      u.toVec.toArray.map { l =>
+        index.get(l).toVec
+      }
+    }
 
-  case class Column(
+  }
+  case class LongIndex(index: Index[Long]) extends ColumnIndex[Long] {
+    val st = ScalarTagLong
+    val ord = implicitly[ORD[Long]]
+  }
+  case class FloatIndex(index: Index[Float]) extends ColumnIndex[Float] {
+    val st = ScalarTagFloat
+    val ord = implicitly[ORD[Float]]
+  }
+  case class DoubleIndex(index: Index[Double]) extends ColumnIndex[Double] {
+    val st = ScalarTagDouble
+    val ord = implicitly[ORD[Double]]
+  }
+  case class StringIndex(index: Index[String]) extends ColumnIndex[String] {
+    val st = implicitly[ST[String]]
+    val ord = implicitly[ORD[String]]
+  }
+
+  case class Column[T](
       values: STen,
       name: Option[String],
-      tpe: Table.ColumnDataType
-  )
+      tpe: Table.ColumnDataType,
+      index: Option[ColumnIndex[_]]
+  ) {
+
+    def indexAs[A] = index.asInstanceOf[Option[ColumnIndex[A]]]
+
+    def withIndex = if (index.isDefined) this else copy(index = Some(makeIndex))
+
+    def makeIndex: ColumnIndex[_] = tpe match {
+      case DateTimeColumn(_) =>
+        LongIndex(Index(values.toLongVec))
+
+      case BooleanColumn(_) =>
+        LongIndex(Index(values.toLongVec))
+
+      case TextColumn(_, pad, vocabulary) =>
+        val reverseVocabulary = vocabulary.map(_.map(_.swap))
+        val vec = values.toLongMat.rows.map { row =>
+          if (row.countif(ScalarTagLong.isMissing) > 0) null
+          else
+            row
+              .filter(_ != pad)
+              .map(l => reverseVocabulary.map(_.apply(l)).getOrElse(l.toChar))
+              .toArray
+              .mkString
+        }.toVec
+        StringIndex(Index(vec))
+      case I64Column =>
+        val m = Scope.leak { implicit scope =>
+          values.view(values.shape(0), -1).select(1, 0).toLongVec
+        }
+        LongIndex(Index(m))
+      case F32Column =>
+        val m = Scope.leak { implicit scope =>
+          values.view(values.shape(0), -1).select(1, 0).toFloatVec
+        }
+        FloatIndex(Index(m))
+      case F64Column =>
+        val m = Scope.leak { implicit scope =>
+          values.view(values.shape(0), -1).select(1, 0).toVec
+        }
+        DoubleIndex(Index(m))
+    }
+  }
   object Column {
-    implicit val movable: Movable[Column] = Movable.by(_.values)
+    implicit val movable: Movable[Column[_]] = Movable.by(_.values)
   }
 
   sealed trait ColumnDataType {
@@ -568,7 +716,7 @@ object Table {
             device.to(sten)
           } else sten
           val name = colIndex.map(_.apply(idx))
-          Table.Column(ondevice, name, tpe)
+          Table.Column(ondevice, name, tpe, None)
       }
       if (columns.map(_.values.shape(0)).distinct.size != 1)
         Left(
