@@ -149,8 +149,7 @@ case class Table(
   def pivot[IndexType0, IndexType1: ORD: ST](col0: Int, col1: Int)(
       selectAndAggregate: Table => Table
   )(implicit scope: Scope): Table = {
-    val indexed = indexCols(List(col0, col1))
-    val columns = indexed
+    val columns = this
       .groupBy[IndexType1, Table](col1) { case (pivotValue, samePivot) =>
         samePivot.groupByThenUnion[IndexType1](col0) {
           case (_, samePivotSameKey) =>
