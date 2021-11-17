@@ -159,7 +159,10 @@ lazy val tabular = project
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
     testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
+    testOptions in AllTest := Nil,
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-parse" % "0.3.5"
+    )
   )
   .dependsOn(data)
   .dependsOn(core % "test->test;compile->compile")
