@@ -90,7 +90,11 @@ object STen {
     else TensorHelpers.fromLongArray(ar, dim, device).owned
 
   /** Returns a tensor with the given content and shape on the given device */
-  def fromLongArrayOfArrays[S: Sc](ar: Array[Array[Long]], dim: Seq[Long], device: Device) =
+  def fromLongArrayOfArrays[S: Sc](
+      ar: Array[Array[Long]],
+      dim: Seq[Long],
+      device: Device
+  ) =
     if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.l))
     else TensorHelpers.fromLongArrayOfArrays(ar, dim, device).owned
 
@@ -525,6 +529,9 @@ object STen {
     (a.owned, b.owned, c.owned, d.owned)
   }
 
+  def cartesianProduct[S: Sc](list: List[STen]) =
+    ATen.cartesian_prod(list.map(_.value).toArray).owned
+
 }
 
 case class STenOptions(value: aten.TensorOptions) {
@@ -917,7 +924,6 @@ case class STen private (
     case 4 => castToLong
   }
 
-  
   /** Casts to char */
   def castToChar[S: Sc] = owned(ATen._cast_Char(value, true))
 
@@ -1427,6 +1433,23 @@ case class STen private (
   def gt[S: Sc](other: Double) =
     ATen.gt_0(value, other).owned
 
+  /** Return a boolean tensor with element-wise logical and. */
+  def logicalAnd[S: Sc](other: STen) =
+    ATen.logical_and(value, other.value).owned
+
+
+  /** Return a boolean tensor with element-wise logical or. */
+  def logicalOr[S: Sc](other: STen) =
+    ATen.logical_or(value, other.value).owned
+
+  /** Return a boolean tensor with element-wise logical xor. */
+  def logicalXor[S: Sc](other: STen) =
+    ATen.logical_xor(value, other.value).owned
+
+  /** Return a boolean tensor with element-wise logical not. */
+  def logicalNot[S: Sc] =
+    ATen.logical_not(value).owned
+
   /** Return a boolean tensor indicating element-wise less-than. */
   def lt[S: Sc](other: STen) =
     ATen.lt_1(value, other.value).owned
@@ -1459,11 +1482,11 @@ case class STen private (
   def ne[S: Sc](other: Double) =
     ATen.ne_0(value, other).owned
 
-  /** Returns the negation (not for Boolean). */
+  /** Returns the negation (not applicable for Boolean). */
   def neg[S: Sc] =
     ATen.neg(value).owned
 
-  /** Returns the logical negation ( for Boolean). */
+  /** Returns the logical negation (applicable for Boolean). */
   def not[S: Sc] =
     ATen.logical_not(value).owned
 

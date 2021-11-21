@@ -25,10 +25,21 @@ case class Table(
     columns: Vector[Table.Column[_]]
 ) {
 
-  def fuse[S: Sc] = {
-    val highestTpe = columns.map(_.values.scalarTypeByte).max
+  def equalDeep(other: Table) = {
+    val a1 = columns.map(v => (v.index, v.name, v.tpe))
+    val a2 = other.columns.map(v => (v.index, v.name, v.tpe))
+    a1 == a2 && {
+      columns
+        .map(_.values)
+        .zip(other.columns.map(_.values))
+        .map(v => v._1.equalDeep(v._2))
+        .forall(identity)
+    }
+  }
+
+  def toSTen[S: Sc] = {
     STen.cat(
-      columns.map(_.values.castToType(highestTpe).view(numRows, -1)),
+      columns.map(_.values.castToType(7).view(numRows, -1)),
       dim = 1
     )
   }
@@ -384,6 +395,8 @@ case class Table(
 }
 
 object Table {
+
+  implicit val movable: Movable[Table] = Movable.by(_.columns)
 
   def dataTypeFromScalarTypeByte(s: Byte) = s match {
     case 7 => F64Column
