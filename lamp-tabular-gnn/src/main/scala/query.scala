@@ -6,6 +6,7 @@ import org.saddle.index.JoinType
 import java.util.UUID
 import lamp._
 import org.saddle.index.InnerJoin
+import org.saddle.index.RightJoin
 
 /* Notes:
  * - relational algebra (operator tree) != relational calculus (declarative)
@@ -45,6 +46,8 @@ object RelationalAlgebra {
     def col(i: Int): TableColumnRef = TableColumnRef(this, IdxColumnRef(i))
     def col(s: String): TableColumnRef =
       TableColumnRef(this, StringColumnRef(s))
+
+    def asOp = TableOp(this)
   }
   case class TableColumnRef(table: TableRef, column: ColumnRef) {
     override def toString = s"${table}.$column"
@@ -129,22 +132,11 @@ object RelationalAlgebra {
 
   def tableRef(alias: String): TableRef = new TableRef(alias)
   def table(ref: TableRef) = TableOp(ref)
-  def withTableRef(table: Table, alias: String)(
-      fun: TableRef => OpWithTableRef
-  ): OpWithTableRef = {
+  def queryAs(table: Table, alias: String)(
+      fun: TableRef => Result
+  ): Result = {
     val tref = tableRef(alias)
-    val opWithTableRef = fun(tref).bind(tref, table)
-    opWithTableRef
-  }
-
-  case class OpWithTableRef(
-      op: Op,
-      boundRefs: List[(TableRef, Table)]
-  ) {
-    def bind(ref: TableRef, table: Table) = copy(
-      boundRefs = (ref, table) :: boundRefs
-    )
-    def interpret[S: Sc] = op.done.interpret(boundRefs: _*)
+    fun(tref).bind(tref, table)
   }
 
   sealed trait Op {
@@ -159,11 +151,16 @@ object RelationalAlgebra {
         thisColumn: TableColumnRef,
         that: Op,
         thatColumn: TableColumnRef
-    ) = InnerEquiJoin(this, that, thisColumn, thatColumn)
+    ) = EquiJoin(this, that, thisColumn, thatColumn, InnerJoin)
+    def outerEquiJoin(
+        thisColumn: TableColumnRef,
+        that: Op,
+        thatColumn: TableColumnRef,
+        joinType: JoinType = org.saddle.index.OuterJoin
+    ) = EquiJoin(this, that, thisColumn, thatColumn, joinType)
 
     def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
       done.interpret(tables: _*)
-    def bind = OpWithTableRef(this,Nil)
 
   }
   trait Op0 extends Op {
@@ -184,7 +181,13 @@ object RelationalAlgebra {
   case class Projection(input: Op, projectTo: Seq[TableColumnRef]) extends Op1 {
     override def toString = s"PROJECT(${projectTo.mkString(",")})"
   }
-  case class Result(input: Op) extends Op1 {
+  case class Result(input: Op, boundTables: List[(TableRef, Table)] = Nil)
+      extends Op1 {
+    def bind(tableRef: TableRef, table: Table) =
+      copy(boundTables = (tableRef, table) :: boundTables)
+    def interpret(implicit scope: Scope): Table = {
+      interpret(boundTables: _*)
+    }
     def interpret(tables: (TableRef, Table)*)(implicit
         scope: Scope
     ): Table = {
@@ -216,21 +219,23 @@ object RelationalAlgebra {
   case class Product(input1: Op, input2: Op) extends Op2 {
     override def toString = "PRODUCT"
   }
-  case class InnerEquiJoin(
-      input1: Op,
-      input2: Op,
-      column1: TableColumnRef,
-      column2: TableColumnRef
-  ) extends Op2 {
-    override def toString = s"INNERJOIN($column1,$column2)"
-  }
-  // case class OuterEquiJoin(
+  // case class InnerEquiJoin(
   //     input1: Op,
   //     input2: Op,
   //     column1: TableColumnRef,
-  //     column2: TableColumnRef,
-  //     joinType: String
-  // ) extends Op
+  //     column2: TableColumnRef
+  // ) extends Op2 {
+  //   override def toString = s"INNERJOIN($column1,$column2)"
+  // }
+  case class EquiJoin(
+      input1: Op,
+      input2: Op,
+      column1: TableColumnRef,
+      column2: TableColumnRef,
+      joinType: JoinType
+  ) extends Op2 {
+    override def toString = s"EQUIJOIN($column1,$column2,$joinType)"
+  }
 
   def extractColumnRefs(table: Table): IndexedSeq[ColumnRef] =
     (0 until table.columns.size map (i =>
@@ -273,9 +278,8 @@ object RelationalAlgebra {
     )
 
     def loop(ops: Seq[Op], outputs: Map[UUID, Output]): Table = {
-      // println(ops.head)
       ops.head match {
-        case op @ InnerEquiJoin(input1, input2, col1, col2) =>
+        case op @ EquiJoin(input1, input2, col1, col2, joinType) =>
           assert(!outputs.contains(op.id))
           val inputData1 = outputs(input1.id)
           val inputData2 = outputs(input2.id)
@@ -291,16 +295,28 @@ object RelationalAlgebra {
             inputData1.columnMap(col1),
             inputData2.table,
             inputData2.columnMap(col2),
-            InnerJoin
+            joinType
           )
           val oldCol2Idx = inputData2.columnMap(col2)
-          val newMapping = inputData1.columnMap ++
-            inputData2.columnMap.map { v =>
+          val oldCol1Idx = inputData1.columnMap(col1)
+
+          val leftMapping = inputData1.columnMap
+            .map { v =>
               val shiftback =
-                if (v._2 > oldCol2Idx) -1
+                if (v._2 > oldCol1Idx && joinType == RightJoin) -1
+                else 0
+              (v._1, v._2 + shiftback)
+            }
+            .filterNot { case (ref, _) => joinType == RightJoin && ref == col1 }
+          val rightMapping = inputData2.columnMap
+            .map { v =>
+              val shiftback =
+                if (v._2 > oldCol2Idx && joinType != RightJoin) -1
                 else 0
               (v._1, v._2 + inputData1.table.numCols + shiftback)
             }
+            .filterNot { case (ref, _) => joinType != RightJoin && ref == col2 }
+          val newMapping = leftMapping ++ rightMapping
 
           loop(
             ops.tail,
@@ -383,8 +399,8 @@ object RelationalAlgebra {
           val table = inputData.table.cols(columnIdx: _*)
           val newMap = projectTo.zip(0 until projectTo.length).toMap
           loop(ops.tail, outputs + (op.id -> Output(table, newMap)))
-        case Result(input) => outputs(input.id).table
-        case x             => throw new RuntimeException("Unexpected op " + x)
+        case Result(input, _) => outputs(input.id).table
+        case x => throw new RuntimeException("Unexpected op " + x)
       }
     }
 

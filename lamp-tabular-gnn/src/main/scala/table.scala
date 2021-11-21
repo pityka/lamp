@@ -56,66 +56,69 @@ case class Table(
     implicit scope =>
       val n = math.min(numRows, nrows).toInt
       val m = math.min(numCols, ncols)
-      val columnIdxNeeded = (0 until m / 2) ++ (m / 2 until m)
-      val rowIdxNeeded = (0 until n / 2) ++ (n / 2 until n)
+      if (n == 0 || m == 0) "Empty Table"
+      else {
+        val columnIdxNeeded = (0 until m / 2) ++ (m / 2 until m)
+        val rowIdxNeeded = (0 until n / 2) ++ (n / 2 until n)
 
-      val selected = cols(columnIdxNeeded: _*).rows(rowIdxNeeded: _*)
+        val selected = cols(columnIdxNeeded: _*).rows(rowIdxNeeded: _*)
 
-      val stringFrame = selected.columns
-        .map { column =>
-          val name = column.name.getOrElse("")
-          val frame = column.tpe match {
-            case DateTimeColumn(_) =>
-              Frame(
-                name -> column.values.toLongVec.map(l =>
-                  if (ScalarTagLong.isMissing(l)) null
-                  else java.time.Instant.ofEpochMilli(l).toString()
+        val stringFrame = selected.columns
+          .map { column =>
+            val name = column.name.getOrElse("")
+            val frame = column.tpe match {
+              case DateTimeColumn(_) =>
+                Frame(
+                  name -> column.values.toLongVec.map(l =>
+                    if (ScalarTagLong.isMissing(l)) null
+                    else java.time.Instant.ofEpochMilli(l).toString()
+                  )
                 )
-              )
-            case BooleanColumn(_) =>
-              Frame(
-                name -> column.values.toLongVec.map(l =>
-                  if (ScalarTagLong.isMissing(l)) null
-                  else if (l == 0) "false"
-                  else "true"
+              case BooleanColumn(_) =>
+                Frame(
+                  name -> column.values.toLongVec.map(l =>
+                    if (ScalarTagLong.isMissing(l)) null
+                    else if (l == 0) "false"
+                    else "true"
+                  )
                 )
-              )
-            case TextColumn(_, pad, vocabulary) =>
-              val reverseVocabulary = vocabulary.map(_.map(_.swap))
-              Frame(name -> column.values.toLongMat.rows.map { row =>
-                if (row.countif(ScalarTagLong.isMissing) > 0) null
-                else
-                  row
-                    .filter(_ != pad)
-                    .map(l =>
-                      reverseVocabulary.map(_.apply(l)).getOrElse(l.toChar)
-                    )
-                    .toArray
-                    .mkString
-              }.toVec)
-            case I64Column =>
-              val m = column.values.toLongMat.map(ScalarTagLong.show)
+              case TextColumn(_, pad, vocabulary) =>
+                val reverseVocabulary = vocabulary.map(_.map(_.swap))
+                Frame(name -> column.values.toLongMat.rows.map { row =>
+                  if (row.countif(ScalarTagLong.isMissing) > 0) null
+                  else
+                    row
+                      .filter(_ != pad)
+                      .map(l =>
+                        reverseVocabulary.map(_.apply(l)).getOrElse(l.toChar)
+                      )
+                      .toArray
+                      .mkString
+                }.toVec)
+              case I64Column =>
+                val m = column.values.toLongMat.map(ScalarTagLong.show)
 
-              m.toFrame.setColIndex(
-                Index(0 until m.numCols map (_ => name): _*)
-              )
-            case F32Column =>
-              val m = column.values.toFloatMat.map(ScalarTagFloat.show)
-              m.toFrame.setColIndex(
-                Index(0 until m.numCols map (_ => name): _*)
-              )
-            case F64Column =>
-              val m = column.values.toMat.map(ScalarTagDouble.show)
-              m.toFrame.setColIndex(
-                Index(0 until m.numCols map (_ => name): _*)
-              )
+                m.toFrame.setColIndex(
+                  Index(0 until m.numCols map (_ => name): _*)
+                )
+              case F32Column =>
+                val m = column.values.toFloatMat.map(ScalarTagFloat.show)
+                m.toFrame.setColIndex(
+                  Index(0 until m.numCols map (_ => name): _*)
+                )
+              case F64Column =>
+                val m = column.values.toMat.map(ScalarTagDouble.show)
+                m.toFrame.setColIndex(
+                  Index(0 until m.numCols map (_ => name): _*)
+                )
+            }
+            frame
           }
-          frame
-        }
-        .reduce(_ rconcat _)
-        .setRowIndex(Index(rowIdxNeeded: _*))
+          .reduce(_ rconcat _)
+          .setRowIndex(Index(rowIdxNeeded: _*))
 
-      stringFrame.stringify(nrows, ncols)
+        stringFrame.stringify(nrows, ncols)
+      }
 
   }
 
@@ -276,12 +279,12 @@ case class Table(
       .getOrElse(other)
 
     val a =
-      if (how == org.saddle.index.RightJoin || how == OuterJoin)
+      if (how == org.saddle.index.RightJoin)
         asub.withoutCol(Set(col))
       else asub
     val b =
       if (
-        how == org.saddle.index.LeftJoin || how == org.saddle.index.InnerJoin || how == OuterJoin
+        how == org.saddle.index.LeftJoin || how == org.saddle.index.InnerJoin || how == org.saddle.index.OuterJoin
       )
         bsub.withoutCol(Set(otherCol))
       else bsub
@@ -316,8 +319,8 @@ case class Table(
         other.col(otherCol).indexSelect(0, nonmissingIdxValue)
 
       val ret = kA.scatter(0, nonmissingIdxLocation, nonmissingValues)
-      val merged = Table(Vector(asub.columns(col).copy(values = ret)))
-      merged.bind(bind)
+      val merged = asub.columns(col).copy(values = ret)
+      Table(bind.columns.updated(col, merged))
 
     } else bind
 

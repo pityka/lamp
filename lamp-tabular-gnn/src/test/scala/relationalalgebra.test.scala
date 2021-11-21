@@ -111,22 +111,58 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       assert(
         RelationalAlgebra
-          .withTableRef(table, "t1") { tref1 =>
-            RelationalAlgebra.withTableRef(table2, "t2") { tref2 =>
-              RelationalAlgebra
-                .table(tref1)
+          .queryAs(table, "t1") { tref1 =>
+            RelationalAlgebra.queryAs(table2, "t2") { tref2 =>
+              tref1.asOp
                 .innerEquiJoin(
                   tref1.col("hint"),
-                  RelationalAlgebra.table(tref2),
+                  tref2.asOp,
                   tref2.col("hint")
                 )
                 .filter(tref2.col("hfloat") === 4.5)
-                .bind
+                .done
             }
           }
           .interpret
           .col(5)
           .toMat == Mat(Vec(4.5))
+      )
+      assert(
+        RelationalAlgebra
+          .queryAs(table, "t1") { tref1 =>
+            RelationalAlgebra.queryAs(table2, "t2") { tref2 =>
+              tref1.asOp
+                .product(
+                  tref2.asOp
+                )
+                .done
+            }
+          }
+          .interpret
+          .col(6)
+          .toVec == Vec(5.5, 4.5, 6.0, 5.5, 4.5, 6.0, 5.5, 4.5, 6.0)
+        // .toMat == Mat(Vec(4.5))
+      )
+
+      assert(
+        RelationalAlgebra
+          .queryAs(table, "t1") { tref1 =>
+            RelationalAlgebra.queryAs(table2, "t2") { tref2 =>
+              tref1.asOp
+                .outerEquiJoin(
+                  tref1.col("hfloat"),
+                  tref2.asOp,
+                  tref2.col("hfloat")
+                )
+                .filter(tref1.col("hfloat") === 4.5)
+                .done
+            }
+          }
+          .interpret
+          .col(1)
+          .toVec == Vec(4.5)
+        // .col(5)
+        // .toMat == Mat(Vec(4.5))
       )
     }
   }
