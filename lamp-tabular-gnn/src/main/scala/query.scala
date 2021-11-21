@@ -129,6 +129,23 @@ object RelationalAlgebra {
 
   def tableRef(alias: String): TableRef = new TableRef(alias)
   def table(ref: TableRef) = TableOp(ref)
+  def withTableRef(table: Table, alias: String)(
+      fun: TableRef => OpWithTableRef
+  ): OpWithTableRef = {
+    val tref = tableRef(alias)
+    val opWithTableRef = fun(tref).bind(tref, table)
+    opWithTableRef
+  }
+
+  case class OpWithTableRef(
+      op: Op,
+      boundRefs: List[(TableRef, Table)]
+  ) {
+    def bind(ref: TableRef, table: Table) = copy(
+      boundRefs = (ref, table) :: boundRefs
+    )
+    def interpret[S: Sc] = op.done.interpret(boundRefs: _*)
+  }
 
   sealed trait Op {
     val id = UUID.randomUUID()
@@ -143,6 +160,10 @@ object RelationalAlgebra {
         that: Op,
         thatColumn: TableColumnRef
     ) = InnerEquiJoin(this, that, thisColumn, thatColumn)
+
+    def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
+      done.interpret(tables: _*)
+    def bind = OpWithTableRef(this,Nil)
 
   }
   trait Op0 extends Op {
@@ -243,8 +264,7 @@ object RelationalAlgebra {
 
   def interpret(root: Result, tables: Map[TableRef, Table])(implicit
       scope: Scope
-  ): Table = {
-
+  ): Table = Scope { implicit scope =>
     val sorted = topologicalSort(root).reverse
 
     case class Output(
@@ -273,13 +293,18 @@ object RelationalAlgebra {
             inputData2.columnMap(col2),
             InnerJoin
           )
-          val newMap = inputData1.columnMap ++ inputData2.columnMap.map(v =>
-            (v._1, v._2 + inputData1.table.numCols)
-          )
+          val oldCol2Idx = inputData2.columnMap(col2)
+          val newMapping = inputData1.columnMap ++
+            inputData2.columnMap.map { v =>
+              val shiftback =
+                if (v._2 > oldCol2Idx) -1
+                else 0
+              (v._1, v._2 + inputData1.table.numCols + shiftback)
+            }
 
           loop(
             ops.tail,
-            outputs + (op.id -> Output(joined, newMap))
+            outputs + (op.id -> Output(joined, newMapping))
           )
 
         case op @ TableOp(tableRef) =>

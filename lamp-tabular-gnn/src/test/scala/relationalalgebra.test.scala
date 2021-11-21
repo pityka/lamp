@@ -5,6 +5,7 @@ import java.nio.channels.Channels
 import Table._
 import lamp._
 import java.io.ByteArrayInputStream
+import org.saddle._
 class RelationAlgebraSuite extends AnyFunSuite {
   val csvText = """hint,hfloat,htime,hbool,htext
 1,1.5,2020-01-01T00:00:00Z,false,"something, something"
@@ -71,24 +72,62 @@ class RelationAlgebraSuite extends AnyFunSuite {
       println(table3.stringify())
 
       val tref1 = RelationalAlgebra.tableRef("t1")
+      val tref2 = RelationalAlgebra.tableRef("t2")
       val noop = RelationalAlgebra.table(tref1).done
       assert(noop.interpret(tref1 -> table) == table)
       assert(noop.interpret(tref1 -> table) != table2)
       assert(noop.interpret(tref1 -> table2) == table2)
 
-      val project = RelationalAlgebra.table(tref1).project(tref1.col(0),tref1.col("hbool")).project(tref1.col("hbool")).done 
+      val project = RelationalAlgebra
+        .table(tref1)
+        .project(tref1.col(0), tref1.col("hbool"))
+        .project(tref1.col("hbool"))
+        .done
       assert(project.interpret(tref1 -> table) == table.cols(3))
 
       val predicate = tref1.col("hbool") === 0
-    
-      println(predicate)
-      println(predicate.negate)
-      println(predicate.negate.or(predicate))
 
-      val filter = RelationalAlgebra.table(tref1).filter(predicate.negate.or(predicate)).done 
-      println(filter.interpret(tref1 -> table).stringify())
+      val filter = RelationalAlgebra
+        .table(tref1)
+        .filter(predicate.negate.or(predicate))
+        .done
       assert(filter.interpret(tref1 -> table) equalDeep table)
       assert(filter.interpret(tref1 -> table) != table)
+
+      val innerJoin =
+        RelationalAlgebra
+          .table(tref1)
+          .innerEquiJoin(
+            tref1.col("hint"),
+            RelationalAlgebra.table(tref2),
+            tref2.col("hint")
+          )
+          .done
+
+      assert(
+        innerJoin.interpret(tref1 -> table, tref2 -> table2) equalDeep table
+          .join(0, table2, 0)
+      )
+
+      assert(
+        RelationalAlgebra
+          .withTableRef(table, "t1") { tref1 =>
+            RelationalAlgebra.withTableRef(table2, "t2") { tref2 =>
+              RelationalAlgebra
+                .table(tref1)
+                .innerEquiJoin(
+                  tref1.col("hint"),
+                  RelationalAlgebra.table(tref2),
+                  tref2.col("hint")
+                )
+                .filter(tref2.col("hfloat") === 4.5)
+                .bind
+            }
+          }
+          .interpret
+          .col(5)
+          .toMat == Mat(Vec(4.5))
+      )
     }
   }
 }
