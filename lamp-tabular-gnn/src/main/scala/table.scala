@@ -136,16 +136,44 @@ case class Table(
 
   def colNames: Vector[Option[String]] = columns.map(_.name)
 
-  def groupBy[IndexType: ORD: ST, T](
-      col: Int
-  )(transform: (IndexType, Table) => T)(implicit scope: Scope): Vector[T] = {
-    val index = indexCols(List(col)).columns(col).indexAs[IndexType].get.index
-    val uniques = index.uniques.toVec
+  def groupByGroupIndices[S: Sc](
+      cols: Int*
+  ): IndexedSeq[STen] = {
+
+    val factorized = cols.map { col =>
+      val values = columns(col).values
+      val (uniques, uniqueLocations, _) = values.unique(
+        dim = 0,
+        sorted = false,
+        returnInverse = true,
+        returnCounts = false
+      )
+      val uniqueIds =
+        STen.arange_l(0, uniques.shape(0), 1, uniqueLocations.options)
+      uniqueIds.indexSelect(0, uniqueLocations)
+    }
+
+    val cartesianProductOfUniqueIds = STen.cartesianProduct(factorized.toList)
+    val (groups, groupLocations, _) = cartesianProductOfUniqueIds.unique(
+      dim = 0,
+      sorted = false,
+      returnInverse = true,
+      returnCounts = false
+    )
+
+    0L until groups.shape(0) map (groupId =>
+      groupLocations.equ(groupId).where.head
+    )
+
+  }
+
+  def groupBy[T](
+      cols: Int*
+  )(transform: STen => T)(implicit scope: Scope): Vector[T] = {
+    val indices = groupByGroupIndices(cols: _*)
     val builder = new scala.collection.immutable.VectorBuilder[T]
-    uniques.foreach { key =>
-      val locs = index.get(key)
-      val row = rows(locs)
-      builder.addOne(transform(key, row))
+    indices.foreach { locs =>
+      builder.addOne(transform(locs))
       ()
     }
 
@@ -153,27 +181,36 @@ case class Table(
 
   }
 
-  def groupByThenUnion[IndexType: ORD: ST](
+  def groupByThenUnion(
       col: Int
-  )(transform: (IndexType, Table) => Table)(implicit scope: Scope): Table = {
-    val tables = groupBy[IndexType, Table](col)(transform)
+  )(transform: STen => Table)(implicit scope: Scope): Table = {
+    val tables = groupBy[Table](col)(transform)
     tables(0).union(tables.toSeq.tail: _*)
   }
 
-  def pivot[IndexType0, IndexType1: ORD: ST](col0: Int, col1: Int)(
+  def pivot(col0: Int, col1: Int)(
       selectAndAggregate: Table => Table
   )(implicit scope: Scope): Table = {
     val columns = this
-      .groupBy[IndexType1, Table](col1) { case (pivotValue, samePivot) =>
-        samePivot.groupByThenUnion[IndexType1](col0) {
-          case (_, samePivotSameKey) =>
-            samePivotSameKey
-              .cols(col0)
-              .rows(0)
-              .bind(
-                selectAndAggregate(samePivotSameKey)
-                  .updateColName(0, Some(pivotValue.toString))
-              )
+      .groupBy[Table](col1) { case samePivotLocs =>
+        val samePivotTable = rows(samePivotLocs)
+        val pivotValueAsString = samePivotTable
+          .cols(col1)
+          .rows(0)
+          .columns
+          .head
+          .toVec(0)
+          .toString
+        samePivotTable.groupByThenUnion(col0) { case samePivotSameKeyLocs =>
+          val table = rows(samePivotSameKeyLocs)
+
+          table
+            .cols(col0)
+            .rows(0)
+            .bind(
+              selectAndAggregate(table)
+                .updateColName(0, Some(pivotValueAsString))
+            )
         }
       }
       .toSeq
@@ -457,6 +494,41 @@ object Table {
 
     def withIndex = if (index.isDefined) this else copy(index = Some(makeIndex))
 
+    def toVec: Vec[_] = tpe match {
+      case DateTimeColumn(_) =>
+        values.toLongVec
+
+      case BooleanColumn(_) =>
+        values.toLongVec
+
+      case TextColumn(_, pad, vocabulary) =>
+        val reverseVocabulary = vocabulary.map(_.map(_.swap))
+        val vec = values.toLongMat.rows.map { row =>
+          if (row.countif(ScalarTagLong.isMissing) > 0) null
+          else
+            row
+              .filter(_ != pad)
+              .map(l => reverseVocabulary.map(_.apply(l)).getOrElse(l.toChar))
+              .toArray
+              .mkString
+        }.toVec
+        vec
+      case I64Column =>
+        val m = Scope.leak { implicit scope =>
+          values.view(values.shape(0), -1).select(1, 0).toLongVec
+        }
+        m
+      case F32Column =>
+        val m = Scope.leak { implicit scope =>
+          values.view(values.shape(0), -1).select(1, 0).toFloatVec
+        }
+        m
+      case F64Column =>
+        val m = Scope.leak { implicit scope =>
+          values.view(values.shape(0), -1).select(1, 0).toVec
+        }
+        m
+    }
     def makeIndex: ColumnIndex[_] = tpe match {
       case DateTimeColumn(_) =>
         LongIndex(Index(values.toLongVec))

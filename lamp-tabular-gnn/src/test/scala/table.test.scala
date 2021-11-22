@@ -52,8 +52,9 @@ test("pivot") {
         )
         .toOption
         .get
-        val pivoted = table.pivot[Long,String](0,1)(_.cols(2).rows(0))
+        val pivoted = table.pivot(0,1)(_.cols(2).rows(0))
         println(pivoted.stringify())
+        assert(false)
     }
   }
 
@@ -211,6 +212,7 @@ test("pivot") {
     }
   }
 
+  
   test("group by") {
     Scope.root { implicit scope =>
       val channel =
@@ -233,7 +235,7 @@ test("pivot") {
         .get
 
       val grouped =
-        table.groupByThenUnion[Long](0)((_,table) => Table.unnamed(table.col(1).mean.view(-1)))
+        table.groupByThenUnion(0)(locs => Table.unnamed(table.rows(locs).col(1).mean.view(-1)))
       assert(grouped.numRows == 2)
       assert(grouped.numCols == 1)
       assert(grouped.col(0).toFloatVec == Vec(1.5, 2.75))

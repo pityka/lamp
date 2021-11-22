@@ -118,6 +118,7 @@ object RelationalAlgebra {
     def apply(refs: TableColumnRef*)(
         impl: PredicateHelper => Scope => STen
     ): Predicate = Predicate(refs, impl)
+
   }
   case class BooleanNegation(factor: BooleanFactor) extends BooleanFactor {
     override def toString = s"\u00AC$factor"
@@ -128,6 +129,19 @@ object RelationalAlgebra {
   case class BooleanExpression(terms: NonEmptyList[BooleanTerm]) // and
       extends BooleanFactor {
     override def toString = terms.toList.mkString(" \u2227 ")
+  }
+
+  case class ColumnFunction(
+      columnRefs: Seq[TableColumnRef],
+      impl: PredicateHelper => Scope => Table.Column[_]
+  ) {
+    override def toString = s"[${columnRefs.mkString(",")}]"
+  }
+  object F {
+    def apply(refs: TableColumnRef*)(
+        impl: PredicateHelper => Scope => Table.Column[_]
+    ): ColumnFunction = ColumnFunction(refs, impl)
+
   }
 
   def tableRef(alias: String): TableRef = new TableRef(alias)
@@ -215,18 +229,18 @@ object RelationalAlgebra {
   case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
     override def toString = s"FILTER($booleanExpression)"
   }
+  case class Aggregate(
+      input: Op,
+      groupBy: Seq[TableColumnRef],
+      aggregate: Seq[(ColumnFunction, TableColumnRef)]
+  ) extends Op1 {
+    override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")})"
+  }
 
   case class Product(input1: Op, input2: Op) extends Op2 {
     override def toString = "PRODUCT"
   }
-  // case class InnerEquiJoin(
-  //     input1: Op,
-  //     input2: Op,
-  //     column1: TableColumnRef,
-  //     column2: TableColumnRef
-  // ) extends Op2 {
-  //   override def toString = s"INNERJOIN($column1,$column2)"
-  // }
+
   case class EquiJoin(
       input1: Op,
       input2: Op,
@@ -337,6 +351,18 @@ object RelationalAlgebra {
             ops.tail,
             outputs + (op.id -> Output(table, mapping))
           )
+        // case op @ Aggregate(input, groupBy, aggregate) =>
+          // ???
+          // assert(!outputs.contains(op.id))
+          // val inputData = outputs(input.id)
+          // val newTable = Scope { implicit scope =>
+          //   val needed
+          // }
+          // val newColumnMap = ???
+          // loop(
+          //   ops.tail,
+          //   outputs + (op.id -> Output(newTable, ???))
+          // )
         case op @ Filter(input, booleanExpression) =>
           assert(!outputs.contains(op.id))
           val inputData = outputs(input.id)
