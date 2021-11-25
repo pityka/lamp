@@ -124,7 +124,8 @@ class RelationAlgebraSuite extends AnyFunSuite {
             }
           }
           .interpret
-          .col(5).values
+          .col(5)
+          .values
           .toMat == Mat(Vec(4.5))
       )
       assert(
@@ -161,23 +162,39 @@ class RelationAlgebraSuite extends AnyFunSuite {
           .interpret
           .col(1)
           .toVec == Vec(4.5)
-        // .col(5)
-        // .toMat == Mat(Vec(4.5))
+      )
+
+      assert(
+        RelationalAlgebra
+          .queryAs(table, "t1") { tref1 =>
+            tref1.asOp
+              .aggregate(tref1.col("hint"))(
+                RelationalAlgebra.P.first(tref1.col("htime")) as tref1.col(
+                  "htime"
+                ),
+                RelationalAlgebra.P.avg(tref1.col("hfloat")) as tref1.col(
+                  "hfloatavg"
+                )
+              )
+              .done
+          }
+          .interpret
+          .col("hfloatavg")
+          .toVec == Vec(1.5, 2.75)
       )
       
         assert(RelationalAlgebra
           .queryAs(table, "t1") { tref1 =>
-            val q = tref1.asOp.aggregate(tref1.col("hint"))(
-              RelationalAlgebra.P.first(tref1.col("htime")) as tref1.col("htime"),
-              RelationalAlgebra.P.avg(tref1.col("hfloat")) as tref1.col("hfloatavg"),
-            ).done
-            println(q.stringify)
-            q
+            tref1.scan
+              .pivot(tref1.col("hint"), tref1.col("hbool"))(
+                RelationalAlgebra.P.avg(tref1.col("hfloat"))
+              )
+              .done
           }
-          .interpret.col("hfloatavg").toVec == Vec(1.5,2.75))
-        // .col(5)
-        // .toMat == Mat(Vec(4.5))
+          .interpret
+          .rows(0).toSTen.toVec == Vec(1d,1.5,Double.NaN))
       
+
     }
   }
 }

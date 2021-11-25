@@ -187,6 +187,9 @@ object RelationalAlgebra {
     def aggregate(groupBy: TableColumnRef*)(
         aggregates: ColumnFunctionWithOutputRef*
     ) = Aggregate(this, groupBy, aggregates)
+    def pivot(rowKeys: TableColumnRef, colKeys: TableColumnRef)(
+        aggregate: ColumnFunction
+    ) = Pivot(this, rowKeys, colKeys, aggregate)
 
     def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
       done.interpret(tables: _*)
@@ -251,6 +254,14 @@ object RelationalAlgebra {
       aggregate: Seq[ColumnFunctionWithOutputRef]
   ) extends Op1 {
     override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")})"
+  }
+  case class Pivot(
+      input: Op,
+      rowKeys: TableColumnRef,
+      colKeys: TableColumnRef,
+      aggregate: ColumnFunction
+  ) extends Op1 {
+    override def toString = s"PIVOT($rowKeys x $colKeys)"
   }
 
   case class Product(input1: Op, input2: Op) extends Op2 {
@@ -409,6 +420,46 @@ object RelationalAlgebra {
             case (ColumnFunctionWithOutputRef(_, newName), idx) =>
               newName -> idx
           }.toMap
+          loop(
+            ops.tail,
+            outputs + (op.id -> Output(newTable, newColumnMap))
+          )
+        case op @ Pivot(input, rowKeys, colKeys, aggregate) =>
+          assert(!outputs.contains(op.id))
+          val inputData = outputs(input.id)
+          val mapping = inputData.columnMap
+          val table = inputData.table
+          val allNeededColumnRefs =
+            aggregate.columnRefs.distinct
+          val newTable = Scope { implicit scope =>
+            val colIdx0 = mapping(rowKeys)
+            val colIdx1 = mapping(colKeys)
+            table.pivot(colIdx0, colIdx1)(table =>
+              Table(
+                Vector(aggregate.impl(PredicateHelper(allNeededColumnRefs.map {
+                  columnRef =>
+                    (columnRef, table.columns(mapping(columnRef)))
+                }.toMap))(implicitly[Scope]))
+              )
+            )
+
+          }
+
+          val newColumnMap = {
+            val aggregateRef = aggregate.columnRefs.head
+            val colnames = newTable.columns
+              .drop(1)
+              .zipWithIndex
+              .map(v => v._1.name.getOrElse(v._2.toString))
+            Map(rowKeys -> 0) ++ colnames.zipWithIndex.map { case (name, idx) =>
+              (
+                aggregateRef.table.col(
+                  aggregateRef.column.toString + "." + name
+                ),
+                idx + 1
+              )
+            }
+          }
           loop(
             ops.tail,
             outputs + (op.id -> Output(newTable, newColumnMap))
