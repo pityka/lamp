@@ -1,11 +1,7 @@
 package lamp.tgnn
 
-import cats.data.NonEmptyList
-// import lamp.STen
-import org.saddle.index.JoinType
 import java.util.UUID
 import lamp._
-import org.saddle.index.InnerJoin
 import org.saddle.index.RightJoin
 
 /* Notes:
@@ -50,70 +46,9 @@ object RelationalAlgebra {
     def asOp = TableOp(this)
     def scan = asOp
   }
-  case class TableColumnRef(table: TableRef, column: ColumnRef) {
+  case class TableColumnRef(table: TableRef, column: ColumnRef)
+      extends TableColumnRefSyntax {
     override def toString = s"${table}.$column"
-
-    def select = P(this) { input => _ =>
-      input(this)
-    }
-
-    def ===(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      Table.Column.bool(input(this).values.equ(input(other).values).castToLong)
-    }
-    def !=(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      Table.Column.bool(
-        input(this).values.equ(input(other).values).logicalNot.castToLong
-      )
-    }
-    def <(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      Table.Column.bool(input(this).values.lt(input(other).values).castToLong)
-    }
-    def >(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      Table.Column.bool(input(this).values.gt(input(other).values).castToLong)
-    }
-    def <=(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      Table.Column.bool(input(this).values.le(input(other).values).castToLong)
-    }
-    def >=(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      Table.Column.bool(input(this).values.ge(input(other).values).castToLong)
-    }
-
-    def ===(other: Double) = P(this) { input => implicit scope =>
-      Table.Column.bool(input(this).values.equ(other).castToLong)
-    }
-    def !=(other: Double) = P(this) { input => implicit scope =>
-      Table.Column.bool(input(this).values.equ(other).logicalNot.castToLong)
-    }
-    def <(other: Double) = P(this) { input => implicit scope =>
-      Table.Column.bool(input(this).values.lt(other).castToLong)
-    }
-    def >(other: Double) = P(this) { input => implicit scope =>
-      Table.Column.bool(input(this).values.gt(other).castToLong)
-    }
-    def <=(other: Double) = P(this) { input => implicit scope =>
-      Table.Column.bool(input(this).values.le(other).castToLong)
-    }
-    def >=(other: Double) = P(this) { input => implicit scope =>
-      Table.Column.bool(input(this).values.ge(other).castToLong)
-    }
-
-  }
-
-  sealed trait BooleanFactor {
-    def negate: BooleanFactor = BooleanNegation(this)
-    def or(that: BooleanFactor*): BooleanFactor = BooleanExpression(
-      NonEmptyList(BooleanTerm(NonEmptyList(this, that.toList)), Nil)
-    )
-    def and(that: BooleanFactor*): BooleanFactor = BooleanExpression(
-      NonEmptyList(
-        BooleanTerm(NonEmptyList(this, Nil)),
-        that.toList.map(f => BooleanTerm(NonEmptyList(f, Nil)))
-      )
-    )
-  }
-
-  case class PredicateHelper(map: Map[TableColumnRef, Table.Column]) {
-    def apply(t: TableColumnRef) = map(t)
   }
   case class ColumnFunctionWithOutputRef(
       function: ColumnFunction,
@@ -121,164 +56,8 @@ object RelationalAlgebra {
   ) {
     override def toString = function.toString
   }
-  case class ColumnFunction(
-      columnRefs: Seq[TableColumnRef],
-      impl: PredicateHelper => Scope => Table.Column
-  ) extends BooleanFactor {
-    def as(ref: TableColumnRef) = ColumnFunctionWithOutputRef(this, ref)
-    def asSelf = ColumnFunctionWithOutputRef(this, columnRefs.head)
-    override def toString = s"[${columnRefs.mkString(",")}]"
-  }
-  object P {
-    def apply(refs: TableColumnRef*)(
-        impl: PredicateHelper => Scope => Table.Column
-    ): ColumnFunction = ColumnFunction(refs, impl)
 
-    def first(other: TableColumnRef) = P(other) { input => implicit scope =>
-      val col = input(other)
-      Table.Column(col.values.select(0, 0).view(1), None, col.tpe, None)
-    }
-    def avg(other: TableColumnRef) = P(other) { input => implicit scope =>
-      val col = input(other)
-      Table.Column(col.values.mean(0, true).view(1), None, col.tpe, None)
-    }
-
-  }
-  case class BooleanNegation(factor: BooleanFactor) extends BooleanFactor {
-    override def toString = s"\u00AC$factor"
-  }
-  case class BooleanTerm(factors: NonEmptyList[BooleanFactor]) { // or
-    override def toString = factors.toList.mkString("(", " \u2228 ", ")")
-  }
-  case class BooleanExpression(terms: NonEmptyList[BooleanTerm]) // and
-      extends BooleanFactor {
-    override def toString = terms.toList.mkString(" \u2227 ")
-  }
-
-  def tableRef(alias: String): TableRef = new TableRef(alias)
-  def table(ref: TableRef) = TableOp(ref)
-  def queryAs(table: Table, alias: String)(
-      fun: TableRef => Result
-  ): Result = {
-    val tref = tableRef(alias)
-    fun(tref).bind(tref, table)
-  }
-
-  sealed trait Op {
-    val id = UUID.randomUUID()
-    def inputs: Seq[Op]
-
-    def done = Result(this)
-    def project(projectTo: ColumnFunctionWithOutputRef*) =
-      Projection(this, projectTo)
-    def filter(expr: BooleanFactor) = Filter(this, expr)
-    def product(that: Op) = Product(this, that)
-    def innerEquiJoin(
-        thisColumn: TableColumnRef,
-        that: Op,
-        thatColumn: TableColumnRef
-    ) = EquiJoin(this, that, thisColumn, thatColumn, InnerJoin)
-    def outerEquiJoin(
-        thisColumn: TableColumnRef,
-        that: Op,
-        thatColumn: TableColumnRef,
-        joinType: JoinType = org.saddle.index.OuterJoin
-    ) = EquiJoin(this, that, thisColumn, thatColumn, joinType)
-    def aggregate(groupBy: TableColumnRef*)(
-        aggregates: ColumnFunctionWithOutputRef*
-    ) = Aggregate(this, groupBy, aggregates)
-    def pivot(rowKeys: TableColumnRef, colKeys: TableColumnRef)(
-        aggregate: ColumnFunction
-    ) = Pivot(this, rowKeys, colKeys, aggregate)
-
-    def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
-      done.interpret(tables: _*)
-
-  }
-  trait Op0 extends Op {
-    def inputs = Nil
-  }
-  trait Op1 extends Op {
-    def input: Op
-    def inputs = List(input)
-  }
-  trait Op2 extends Op {
-    def input1: Op
-    def input2: Op
-    def inputs = List(input1, input2)
-  }
-  case class TableOp(tableRef: TableRef) extends Op0 {
-    override def toString = s"TABLE($tableRef)"
-  }
-  case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
-      extends Op1 {
-    override def toString = s"PROJECT(${projectTo.mkString(",")})"
-  }
-  case class Result(input: Op, boundTables: List[(TableRef, Table)] = Nil)
-      extends Op1 {
-    def bind(tableRef: TableRef, table: Table) =
-      copy(boundTables = (tableRef, table) :: boundTables)
-    def interpret(implicit scope: Scope): Table = {
-      interpret(boundTables: _*)
-    }
-    def interpret(tables: (TableRef, Table)*)(implicit
-        scope: Scope
-    ): Table = {
-      assert(
-        tables.map(_._1).distinct.size == tables.size,
-        "Non unique table refs"
-      )
-      RelationalAlgebra.interpret(this, tables.toMap)
-    }
-    override def toString = "RESULT"
-    def stringify: String = {
-
-      def loop(head: Op, indent: Int): Vector[String] = {
-        val inputs = head.inputs.toVector
-        val me = head.toString
-        val kids = inputs.flatMap(k => loop(k, indent + 1))
-        val line = (0 until indent map (_ => "  ") mkString) + me
-        kids.prepended(line)
-      }
-
-      loop(this, 0).mkString("\n")
-
-    }
-  }
-  case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
-    override def toString = s"FILTER($booleanExpression)"
-  }
-  case class Aggregate(
-      input: Op,
-      groupBy: Seq[TableColumnRef],
-      aggregate: Seq[ColumnFunctionWithOutputRef]
-  ) extends Op1 {
-    override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")})"
-  }
-  case class Pivot(
-      input: Op,
-      rowKeys: TableColumnRef,
-      colKeys: TableColumnRef,
-      aggregate: ColumnFunction
-  ) extends Op1 {
-    override def toString = s"PIVOT($rowKeys x $colKeys)"
-  }
-
-  case class Product(input1: Op, input2: Op) extends Op2 {
-    override def toString = "PRODUCT"
-  }
-
-  case class EquiJoin(
-      input1: Op,
-      input2: Op,
-      column1: TableColumnRef,
-      column2: TableColumnRef,
-      joinType: JoinType
-  ) extends Op2 {
-    override def toString = s"EQUIJOIN($column1,$column2,$joinType)"
-  }
-
-  def extractColumnRefs(table: Table): IndexedSeq[ColumnRef] =
+  private def extractColumnRefs(table: Table): IndexedSeq[ColumnRef] =
     (0 until table.columns.size map (i =>
       IdxColumnRef(i)
     )) ++ table.nameToIndex.keySet.toSeq.map(s => StringColumnRef(s))
@@ -562,7 +341,7 @@ object RelationalAlgebra {
 
   }
 
-  def topologicalSort(root: Op): Seq[Op] = {
+  private def topologicalSort(root: Op): Seq[Op] = {
     type V = Op
     var order = List.empty[V]
     var marks = Set.empty[UUID]
@@ -592,53 +371,33 @@ object RelationalAlgebra {
 
 }
 
-object Query {
+object Q {
+  import RelationalAlgebra._
+  def apply(refs: TableColumnRef*)(
+      impl: PredicateHelper => Scope => Table.Column
+  ): ColumnFunction = ColumnFunction(refs, impl)
 
-  // case class Filter(input: Op, expression: BooleanExpression)
+  def first(other: TableColumnRef) = apply(other) { input => implicit scope =>
+    val col = input(other)
+    Table.Column(col.values.select(0, 0).view(1), None, col.tpe, None)
+  }
+  def avg(other: TableColumnRef) = apply(other) { input => implicit scope =>
+    val col = input(other)
+    Table.Column(col.values.mean(0, true).view(1), None, col.tpe, None)
+  }
 
-  sealed trait ColumnRef
-  case class IdxColumnRef(idx: Int) extends ColumnRef
-  case class StringColumnRef(string: String) extends ColumnRef
-  class TableRef
-
-  sealed trait TableExpression
-  case class LeafTable(s: Table) extends TableExpression
-
-  case class TableColumnRef(table: TableRef, column: ColumnRef)
-
-  case class From(table: FromTable, joins: List[JoinedTable])
-  case class FromTable(tableRef: TableExpression)
-  case class JoinedTable(
-      tableRef: TableExpression,
-      joinType: JoinType,
-      joinColumn1: TableColumnRef,
-      joinColumn2: TableColumnRef
-  )
-
-  sealed trait BooleanFactor
-  case class TablePredicate(
-      columnRefs: Seq[TableColumnRef]
-      // fun: Seq[TableColumnRef] => STen
-  ) extends BooleanFactor
-  case class BooleanNegation(factor: BooleanFactor) extends BooleanFactor
-  case class BooleanTerm(factors: NonEmptyList[BooleanFactor]) // or
-  case class BooleanExpression(terms: NonEmptyList[BooleanTerm]) // and
-      extends BooleanFactor
-
-  case class GroupBy(columnRefs: Seq[TableColumnRef])
-  case class Projection(columnRefs: Seq[TableColumnRef])
-
-  case class Query(
-      from: From,
-      filter: BooleanExpression,
-      groupBy: GroupBy,
-      projection: Projection,
-      having: BooleanExpression
-  ) extends TableExpression
-
-  // def execute(
-  //   query: Query,
-  //   data:
-  // )
+  def table(alias: String): TableRef = new TableRef(alias)
+  def query(table: Table, alias: String)(
+      fun: TableRef => Result
+  ): Result = {
+    val tref = Q.table(alias)
+    fun(tref).bind(tref, table)
+  }
+  def query(table: Table)(
+      fun: TableRef => Result
+  ): Result = {
+    val tref = Q.table(java.util.UUID.randomUUID().toString)
+    fun(tref).bind(tref, table)
+  }
 
 }

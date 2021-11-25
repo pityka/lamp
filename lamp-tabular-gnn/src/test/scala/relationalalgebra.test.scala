@@ -71,35 +71,32 @@ class RelationAlgebraSuite extends AnyFunSuite {
       println(table2.stringify())
       println(table3.stringify())
 
-      val tref1 = RelationalAlgebra.tableRef("t1")
-      val tref2 = RelationalAlgebra.tableRef("t2")
-      val noop = RelationalAlgebra.table(tref1).done
+      val tref1 = Q.table("t1")
+      val tref2 = Q.table("t2")
+      val noop = tref1.scan.done
       assert(noop.interpret(tref1 -> table) == table)
       assert(noop.interpret(tref1 -> table) != table2)
       assert(noop.interpret(tref1 -> table2) == table2)
 
-      val project = RelationalAlgebra
-        .table(tref1)
-        .project(tref1.col(0).select.asSelf, tref1.col("hbool").select.asSelf)
-        .project(tref1.col("hbool").select.asSelf)
+      val project = tref1.scan
+        .project(tref1.col(0).self, tref1.col("hbool").self)
+        .project(tref1.col("hbool").self)
         .done
       assert(project.interpret(tref1 -> table) == table.cols(3))
 
       val predicate = tref1.col("hbool") === 0
 
-      val filter = RelationalAlgebra
-        .table(tref1)
+      val filter = tref1.scan
         .filter(predicate.negate.or(predicate))
         .done
       assert(filter.interpret(tref1 -> table) equalDeep table)
       assert(filter.interpret(tref1 -> table) != table)
 
       val innerJoin =
-        RelationalAlgebra
-          .table(tref1)
+        tref1.scan
           .innerEquiJoin(
             tref1.col("hint"),
-            RelationalAlgebra.table(tref2),
+            tref2.scan,
             tref2.col("hint")
           )
           .done
@@ -110,90 +107,83 @@ class RelationAlgebraSuite extends AnyFunSuite {
       )
 
       assert(
-        RelationalAlgebra
-          .queryAs(table, "t1") { tref1 =>
-            RelationalAlgebra.queryAs(table2, "t2") { tref2 =>
-              tref1.asOp
-                .innerEquiJoin(
-                  tref1.col("hint"),
-                  tref2.asOp,
-                  tref2.col("hint")
-                )
-                .filter(tref2.col("hfloat") === 4.5)
-                .done
-            }
+        Q.query(table) { tref1 =>
+          Q.query(table2) { tref2 =>
+            tref1.scan
+              .innerEquiJoin(
+                tref1.col("hint"),
+                tref2.scan,
+                tref2.col("hint")
+              )
+              .filter(tref2.col("hfloat") === 4.5)
+              .done
           }
-          .interpret
+        }.interpret
           .col(5)
           .values
           .toMat == Mat(Vec(4.5))
       )
       assert(
-        RelationalAlgebra
-          .queryAs(table, "t1") { tref1 =>
-            RelationalAlgebra.queryAs(table2, "t2") { tref2 =>
-              tref1.asOp
-                .product(
-                  tref2.asOp
-                )
-                .done
-            }
+        Q.query(table, "t1") { tref1 =>
+          Q.query(table2, "t2") { tref2 =>
+            tref1.scan
+              .product(
+                tref2.asOp
+              )
+              .done
           }
-          .interpret
+        }.interpret
           .col(6)
           .toVec == Vec(5.5, 4.5, 6.0, 5.5, 4.5, 6.0, 5.5, 4.5, 6.0)
         // .toMat == Mat(Vec(4.5))
       )
 
       assert(
-        RelationalAlgebra
-          .queryAs(table, "t1") { tref1 =>
-            RelationalAlgebra.queryAs(table2, "t2") { tref2 =>
-              tref1.asOp
-                .outerEquiJoin(
-                  tref1.col("hfloat"),
-                  tref2.asOp,
-                  tref2.col("hfloat")
-                )
-                .filter(tref1.col("hfloat") === 4.5)
-                .done
-            }
+        Q.query(table, "t1") { tref1 =>
+          Q.query(table2, "t2") { tref2 =>
+            tref1.scan
+              .outerEquiJoin(
+                tref1.col("hfloat"),
+                tref2.scan,
+                tref2.col("hfloat")
+              )
+              .filter(tref1.col("hfloat") === 4.5)
+              .done
           }
-          .interpret
+        }.interpret
           .col(1)
           .toVec == Vec(4.5)
       )
 
       assert(
-        RelationalAlgebra
-          .queryAs(table, "t1") { tref1 =>
-            tref1.asOp
-              .aggregate(tref1.col("hint"))(
-                RelationalAlgebra.P.first(tref1.col("htime")) as tref1.col(
-                  "htime"
-                ),
-                RelationalAlgebra.P.avg(tref1.col("hfloat")) as tref1.col(
-                  "hfloatavg"
-                )
+        Q.query(table, "t1") { tref1 =>
+          tref1.scan
+            .aggregate(tref1.col("hint"))(
+              Q.first(tref1.col("htime")) as tref1.col(
+                "htime"
+              ),
+              Q.avg(tref1.col("hfloat")) as tref1.col(
+                "hfloatavg"
               )
-              .done
-          }
-          .interpret
+            )
+            .done
+        }.interpret
           .col("hfloatavg")
           .toVec == Vec(1.5, 2.75)
       )
-      
-        assert(RelationalAlgebra
-          .queryAs(table, "t1") { tref1 =>
-            tref1.scan
-              .pivot(tref1.col("hint"), tref1.col("hbool"))(
-                RelationalAlgebra.P.avg(tref1.col("hfloat"))
-              )
-              .done
-          }
-          .interpret
-          .rows(0).toSTen.toVec == Vec(1d,1.5,Double.NaN))
-      
+
+      assert(
+        Q.query(table, "t1") { tref1 =>
+          tref1.scan
+            .pivot(tref1.col("hint"), tref1.col("hbool"))(
+              Q.avg(tref1.col("hfloat"))
+            )
+            .done
+        }.interpret
+          .rows(0)
+          .toSTen
+          .toVec == Vec(1d, 1.5, Double.NaN)
+      )
 
     }
   }
