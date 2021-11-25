@@ -132,7 +132,7 @@ case class Table(
 
   def numCols: Int = columns.length
 
-  def numRows: Long = columns.headOption.map(_.values.shape(0)).getOrElse(0L)
+  def numRows: Long = columns.headOption.map(_.values.shape.headOption.getOrElse(1L)).getOrElse(0L)
 
   def colNames: Vector[Option[String]] = columns.map(_.name)
 
@@ -161,6 +161,8 @@ case class Table(
       returnCounts = false
     )
 
+    // this loop is quadratic
+    // this should be done by sorting
     0L until groups.shape(0) map (groupId =>
       groupLocations.equ(groupId).where.head
     )
@@ -384,8 +386,8 @@ case class Table(
 
   def rows[S: Sc](idx: STen): Table = {
     Table(
-      columns.map { case Table.Column(sten, name, tpe, _) =>
-        Table.Column(sten.indexSelect(dim = 0, index = idx), name, tpe, None)
+      columns.map { column =>
+        column.select(idx)
       }
     )
   }
@@ -490,9 +492,15 @@ object Table {
       index: Option[ColumnIndex[_]]
   ) {
 
+    def select[S: Sc](idx: STen): Column[T] =
+      Table.Column(values.indexSelect(dim = 0, index = idx), name, tpe, None)
+
     def indexAs[A] = index.asInstanceOf[Option[ColumnIndex[A]]]
 
     def withIndex = if (index.isDefined) this else copy(index = Some(makeIndex))
+
+    def withName(s:String) = copy(name = Some(s))
+    def withName(s:Option[String]) = copy(name = s)
 
     def toVec: Vec[_] = tpe match {
       case DateTimeColumn(_) =>
@@ -567,6 +575,7 @@ object Table {
   }
   object Column {
     implicit val movable: Movable[Column[_]] = Movable.by(_.values)
+    def bool(s:STen) = Column(s,None,BooleanColumn(),None)
   }
 
   sealed trait ColumnDataType {
@@ -816,5 +825,9 @@ object Table {
     }
 
   }
+
+    def union[S: Sc](tables: Table*): Table = 
+      tables.head.union(tables.tail:_*)
+  
 
 }

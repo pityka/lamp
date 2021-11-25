@@ -53,41 +53,43 @@ object RelationalAlgebra {
     override def toString = s"${table}.$column"
 
     def ===(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      input(this).values.equ(input(other).values)
+      Table.Column.bool(input(this).values.equ(input(other).values).castToLong)
     }
     def !=(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      input(this).values.equ(input(other).values).logicalNot
+      Table.Column.bool(
+        input(this).values.equ(input(other).values).logicalNot.castToLong
+      )
     }
     def <(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      input(this).values.lt(input(other).values)
+      Table.Column.bool(input(this).values.lt(input(other).values).castToLong)
     }
     def >(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      input(this).values.gt(input(other).values)
+      Table.Column.bool(input(this).values.gt(input(other).values).castToLong)
     }
     def <=(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      input(this).values.le(input(other).values)
+      Table.Column.bool(input(this).values.le(input(other).values).castToLong)
     }
     def >=(other: TableColumnRef) = P(this, other) { input => implicit scope =>
-      input(this).values.ge(input(other).values)
+      Table.Column.bool(input(this).values.ge(input(other).values).castToLong)
     }
 
     def ===(other: Double) = P(this) { input => implicit scope =>
-      input(this).values.equ(other)
+      Table.Column.bool(input(this).values.equ(other).castToLong)
     }
     def !=(other: Double) = P(this) { input => implicit scope =>
-      input(this).values.equ(other).logicalNot
+      Table.Column.bool(input(this).values.equ(other).logicalNot.castToLong)
     }
     def <(other: Double) = P(this) { input => implicit scope =>
-      input(this).values.lt(other)
+      Table.Column.bool(input(this).values.lt(other).castToLong)
     }
     def >(other: Double) = P(this) { input => implicit scope =>
-      input(this).values.gt(other)
+      Table.Column.bool(input(this).values.gt(other).castToLong)
     }
     def <=(other: Double) = P(this) { input => implicit scope =>
-      input(this).values.le(other)
+      Table.Column.bool(input(this).values.le(other).castToLong)
     }
     def >=(other: Double) = P(this) { input => implicit scope =>
-      input(this).values.ge(other)
+      Table.Column.bool(input(this).values.ge(other).castToLong)
     }
 
   }
@@ -108,16 +110,25 @@ object RelationalAlgebra {
   case class PredicateHelper(map: Map[TableColumnRef, Table.Column[_]]) {
     def apply(t: TableColumnRef) = map(t)
   }
-  case class Predicate(
+  case class ColumnFunction(
       columnRefs: Seq[TableColumnRef],
-      impl: PredicateHelper => Scope => STen
+      impl: PredicateHelper => Scope => Table.Column[_]
   ) extends BooleanFactor {
     override def toString = s"[${columnRefs.mkString(",")}]"
   }
   object P {
     def apply(refs: TableColumnRef*)(
-        impl: PredicateHelper => Scope => STen
-    ): Predicate = Predicate(refs, impl)
+        impl: PredicateHelper => Scope => Table.Column[_]
+    ): ColumnFunction = ColumnFunction(refs, impl)
+
+    def first(other: TableColumnRef) = P(other) { input => implicit scope =>
+      val col = input(other)
+      Table.Column(col.values.select(0, 0).view(1), None, col.tpe, None)
+    }
+    def avg(other: TableColumnRef) = P(other) { input => implicit scope =>
+      val col = input(other)
+      Table.Column(col.values.mean(0, true).view(1), None, col.tpe, None)
+    }
 
   }
   case class BooleanNegation(factor: BooleanFactor) extends BooleanFactor {
@@ -131,12 +142,6 @@ object RelationalAlgebra {
     override def toString = terms.toList.mkString(" \u2227 ")
   }
 
-  case class ColumnFunction(
-      columnRefs: Seq[TableColumnRef],
-      impl: PredicateHelper => Scope => Table.Column[_]
-  ) {
-    override def toString = s"[${columnRefs.mkString(",")}]"
-  }
   object F {
     def apply(refs: TableColumnRef*)(
         impl: PredicateHelper => Scope => Table.Column[_]
@@ -172,6 +177,9 @@ object RelationalAlgebra {
         thatColumn: TableColumnRef,
         joinType: JoinType = org.saddle.index.OuterJoin
     ) = EquiJoin(this, that, thisColumn, thatColumn, joinType)
+    def aggregate(groupBy: TableColumnRef*)(
+        aggregates: (ColumnFunction, TableColumnRef)*
+    ) = Aggregate(this, groupBy, aggregates)
 
     def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
       done.interpret(tables: _*)
@@ -261,9 +269,9 @@ object RelationalAlgebra {
       table: Table,
       mapping: Map[TableColumnRef, Int]
   ): STen = factor match {
-    case Predicate(columnRefs, impl) =>
+    case ColumnFunction(columnRefs, impl) =>
       val columns = columnRefs.map(c => (c, table.columns(mapping(c)))).toMap
-      impl(PredicateHelper(columns))(implicitly[Scope])
+      impl(PredicateHelper(columns))(implicitly[Scope]).values
     case BooleanNegation(factor) =>
       val t = interpretBooleanExpression(factor, table, mapping)
       t.logicalNot
@@ -351,18 +359,47 @@ object RelationalAlgebra {
             ops.tail,
             outputs + (op.id -> Output(table, mapping))
           )
-        // case op @ Aggregate(input, groupBy, aggregate) =>
-          // ???
-          // assert(!outputs.contains(op.id))
-          // val inputData = outputs(input.id)
-          // val newTable = Scope { implicit scope =>
-          //   val needed
-          // }
-          // val newColumnMap = ???
-          // loop(
-          //   ops.tail,
-          //   outputs + (op.id -> Output(newTable, ???))
-          // )
+        case op @ Aggregate(input, groupBy, aggregations) =>
+          assert(!outputs.contains(op.id))
+          val inputData = outputs(input.id)
+          val mapping = inputData.columnMap
+          val table = inputData.table
+          val newTable = Scope { implicit scope =>
+            val groupByColumnIndices = groupBy.map(mapping)
+            val locations = table.groupByGroupIndices(groupByColumnIndices: _*)
+            val allNeededColumnRefs =
+              aggregations.flatMap(_._1.columnRefs).distinct
+
+            val aggregates = locations
+              .map { locs =>
+                val selectedColumns = allNeededColumnRefs.map { columnRef =>
+                  columnRef -> table
+                    .columns(mapping(columnRef))
+                    .select(locs)
+                }.toMap
+                Table(aggregations.map { case (ColumnFunction(_, impl), newName) =>
+                  val aggregatedColumn =
+                    impl(PredicateHelper(selectedColumns))(
+                      implicitly[Scope]
+                    ).withName(newName.column match {
+                      case IdxColumnRef(_) => None
+                      case StringColumnRef(string) => Some(string)
+                    })
+                  aggregatedColumn
+                }.toVector)
+
+              }
+
+            Table.union(aggregates: _*)
+
+          }
+          val newColumnMap = aggregations.zipWithIndex.map {
+            case ((_, newName), idx) => newName -> idx
+          }.toMap
+          loop(
+            ops.tail,
+            outputs + (op.id -> Output(newTable, newColumnMap))
+          )
         case op @ Filter(input, booleanExpression) =>
           assert(!outputs.contains(op.id))
           val inputData = outputs(input.id)
