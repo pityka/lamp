@@ -48,9 +48,14 @@ object RelationalAlgebra {
       TableColumnRef(this, StringColumnRef(s))
 
     def asOp = TableOp(this)
+    def scan = asOp
   }
   case class TableColumnRef(table: TableRef, column: ColumnRef) {
     override def toString = s"${table}.$column"
+
+    def select = P(this) { input => _ =>
+      input(this)
+    }
 
     def ===(other: TableColumnRef) = P(this, other) { input => implicit scope =>
       Table.Column.bool(input(this).values.equ(input(other).values).castToLong)
@@ -110,10 +115,18 @@ object RelationalAlgebra {
   case class PredicateHelper(map: Map[TableColumnRef, Table.Column]) {
     def apply(t: TableColumnRef) = map(t)
   }
+  case class ColumnFunctionWithOutputRef(
+      function: ColumnFunction,
+      outputRef: TableColumnRef
+  ) {
+    override def toString = function.toString
+  }
   case class ColumnFunction(
       columnRefs: Seq[TableColumnRef],
       impl: PredicateHelper => Scope => Table.Column
   ) extends BooleanFactor {
+    def as(ref: TableColumnRef) = ColumnFunctionWithOutputRef(this, ref)
+    def asSelf = ColumnFunctionWithOutputRef(this, columnRefs.head)
     override def toString = s"[${columnRefs.mkString(",")}]"
   }
   object P {
@@ -142,13 +155,6 @@ object RelationalAlgebra {
     override def toString = terms.toList.mkString(" \u2227 ")
   }
 
-  object F {
-    def apply(refs: TableColumnRef*)(
-        impl: PredicateHelper => Scope => Table.Column
-    ): ColumnFunction = ColumnFunction(refs, impl)
-
-  }
-
   def tableRef(alias: String): TableRef = new TableRef(alias)
   def table(ref: TableRef) = TableOp(ref)
   def queryAs(table: Table, alias: String)(
@@ -163,7 +169,8 @@ object RelationalAlgebra {
     def inputs: Seq[Op]
 
     def done = Result(this)
-    def project(projectTo: TableColumnRef*) = Projection(this, projectTo)
+    def project(projectTo: ColumnFunctionWithOutputRef*) =
+      Projection(this, projectTo)
     def filter(expr: BooleanFactor) = Filter(this, expr)
     def product(that: Op) = Product(this, that)
     def innerEquiJoin(
@@ -178,7 +185,7 @@ object RelationalAlgebra {
         joinType: JoinType = org.saddle.index.OuterJoin
     ) = EquiJoin(this, that, thisColumn, thatColumn, joinType)
     def aggregate(groupBy: TableColumnRef*)(
-        aggregates: (ColumnFunction, TableColumnRef)*
+        aggregates: ColumnFunctionWithOutputRef*
     ) = Aggregate(this, groupBy, aggregates)
 
     def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
@@ -200,7 +207,8 @@ object RelationalAlgebra {
   case class TableOp(tableRef: TableRef) extends Op0 {
     override def toString = s"TABLE($tableRef)"
   }
-  case class Projection(input: Op, projectTo: Seq[TableColumnRef]) extends Op1 {
+  case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
+      extends Op1 {
     override def toString = s"PROJECT(${projectTo.mkString(",")})"
   }
   case class Result(input: Op, boundTables: List[(TableRef, Table)] = Nil)
@@ -240,7 +248,7 @@ object RelationalAlgebra {
   case class Aggregate(
       input: Op,
       groupBy: Seq[TableColumnRef],
-      aggregate: Seq[(ColumnFunction, TableColumnRef)]
+      aggregate: Seq[ColumnFunctionWithOutputRef]
   ) extends Op1 {
     override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")})"
   }
@@ -368,7 +376,7 @@ object RelationalAlgebra {
             val groupByColumnIndices = groupBy.map(mapping)
             val locations = table.groupByGroupIndices(groupByColumnIndices: _*)
             val allNeededColumnRefs =
-              aggregations.flatMap(_._1.columnRefs).distinct
+              aggregations.flatMap(_.function.columnRefs).distinct
 
             val aggregates = locations
               .map { locs =>
@@ -377,15 +385,19 @@ object RelationalAlgebra {
                     .columns(mapping(columnRef))
                     .select(locs)
                 }.toMap
-                Table(aggregations.map { case (ColumnFunction(_, impl), newName) =>
-                  val aggregatedColumn =
-                    impl(PredicateHelper(selectedColumns))(
-                      implicitly[Scope]
-                    ).withName(newName.column match {
-                      case IdxColumnRef(_) => None
-                      case StringColumnRef(string) => Some(string)
-                    })
-                  aggregatedColumn
+                Table(aggregations.map {
+                  case ColumnFunctionWithOutputRef(
+                        ColumnFunction(_, impl),
+                        newName
+                      ) =>
+                    val aggregatedColumn =
+                      impl(PredicateHelper(selectedColumns))(
+                        implicitly[Scope]
+                      ).withName(newName.column match {
+                        case IdxColumnRef(_)         => None
+                        case StringColumnRef(string) => Some(string)
+                      })
+                    aggregatedColumn
                 }.toVector)
 
               }
@@ -394,7 +406,8 @@ object RelationalAlgebra {
 
           }
           val newColumnMap = aggregations.zipWithIndex.map {
-            case ((_, newName), idx) => newName -> idx
+            case (ColumnFunctionWithOutputRef(_, newName), idx) =>
+              newName -> idx
           }.toMap
           loop(
             ops.tail,
@@ -456,12 +469,39 @@ object RelationalAlgebra {
           assert(!outputs.contains(op.id))
           val inputData = outputs(input.id)
           val providedColumns = inputData.columnMap.keySet
-          val missing = projectTo.toSet &~ providedColumns.toSet
+          val neededColumns = projectTo.flatMap(_.function.columnRefs).toSet
+          val missing = neededColumns &~ providedColumns.toSet
           assert(missing.isEmpty, s"$missing columns are missing")
-          val columnIdx = projectTo.map(inputData.columnMap)
-          val table = inputData.table.cols(columnIdx: _*)
-          val newMap = projectTo.zip(0 until projectTo.length).toMap
-          loop(ops.tail, outputs + (op.id -> Output(table, newMap)))
+
+          val inputColumnMap =
+            PredicateHelper(neededColumns.toSeq.map { columnRef =>
+              columnRef -> inputData.table
+                .columns(inputData.columnMap(columnRef))
+            }.toMap)
+
+          val projectedTable = Table(projectTo.map {
+            case ColumnFunctionWithOutputRef(
+                  ColumnFunction(_, impl),
+                  newName
+                ) =>
+              val aggregatedColumn =
+                impl(inputColumnMap)(implicitly[Scope]).withName(
+                  newName.column match {
+                    case IdxColumnRef(_)         => None
+                    case StringColumnRef(string) => Some(string)
+                  }
+                )
+              aggregatedColumn
+          }.toVector)
+
+          val newColumnMap = projectTo.zipWithIndex.map {
+            case (ColumnFunctionWithOutputRef(_, newName), idx) =>
+              newName -> idx
+          }.toMap
+          loop(
+            ops.tail,
+            outputs + (op.id -> Output(projectedTable, newColumnMap))
+          )
         case Result(input, _) => outputs(input.id).table
         case x => throw new RuntimeException("Unexpected op " + x)
       }

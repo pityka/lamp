@@ -80,8 +80,8 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       val project = RelationalAlgebra
         .table(tref1)
-        .project(tref1.col(0), tref1.col("hbool"))
-        .project(tref1.col("hbool"))
+        .project(tref1.col(0).select.asSelf, tref1.col("hbool").select.asSelf)
+        .project(tref1.col("hbool").select.asSelf)
         .done
       assert(project.interpret(tref1 -> table) == table.cols(3))
 
@@ -168,8 +168,8 @@ class RelationAlgebraSuite extends AnyFunSuite {
         assert(RelationalAlgebra
           .queryAs(table, "t1") { tref1 =>
             val q = tref1.asOp.aggregate(tref1.col("hint"))(
-              RelationalAlgebra.P.first(tref1.col("htime")) -> tref1.col("htime"),
-              RelationalAlgebra.P.avg(tref1.col("hfloat")) -> tref1.col("hfloatavg"),
+              RelationalAlgebra.P.first(tref1.col("htime")) as tref1.col("htime"),
+              RelationalAlgebra.P.avg(tref1.col("hfloat")) as tref1.col("hfloatavg"),
             ).done
             println(q.stringify)
             q
