@@ -124,7 +124,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
             }
           }
           .interpret
-          .col(5)
+          .col(5).values
           .toMat == Mat(Vec(4.5))
       )
       assert(
@@ -164,8 +164,8 @@ class RelationAlgebraSuite extends AnyFunSuite {
         // .col(5)
         // .toMat == Mat(Vec(4.5))
       )
-      println(
-        RelationalAlgebra
+      
+        assert(RelationalAlgebra
           .queryAs(table, "t1") { tref1 =>
             val q = tref1.asOp.aggregate(tref1.col("hint"))(
               RelationalAlgebra.P.first(tref1.col("htime")) -> tref1.col("htime"),
@@ -174,10 +174,10 @@ class RelationAlgebraSuite extends AnyFunSuite {
             println(q.stringify)
             q
           }
-          .interpret.stringify()
+          .interpret.col("hfloatavg").toVec == Vec(1.5,2.75))
         // .col(5)
         // .toMat == Mat(Vec(4.5))
-      )
+      
     }
   }
 }

@@ -22,7 +22,7 @@ import lamp.tgnn.Table.F64Column
 import org.saddle.index.OuterJoin
 
 case class Table(
-    columns: Vector[Table.Column[_]]
+    columns: Vector[Table.Column]
 ) {
 
   def equalDeep(other: Table) = {
@@ -164,6 +164,9 @@ case class Table(
     // this loop is quadratic
     // this should be done by sorting
     0L until groups.shape(0) map (groupId =>
+      // {println(groupLocations.toLongVec)
+      // println(groupId)
+      // println(groupLocations.equ(groupId).where.head.toLongVec)
       groupLocations.equ(groupId).where.head
     )
 
@@ -204,8 +207,7 @@ case class Table(
           .toVec(0)
           .toString
         samePivotTable.groupByThenUnion(col0) { case samePivotSameKeyLocs =>
-          val table = rows(samePivotSameKeyLocs)
-
+          val table = samePivotTable.rows(samePivotSameKeyLocs)
           table
             .cols(col0)
             .rows(0)
@@ -235,9 +237,9 @@ case class Table(
 
   }
 
-  def col(idx: Int): STen = columns(idx).values
+  def col(idx: Int): Table.Column = columns(idx)
 
-  def col(name: String): STen = col(nameToIndex(name))
+  def col(name: String): Table.Column = col(nameToIndex(name))
 
   def colName(idx: Int): Option[String] = columns(idx).name
 
@@ -355,7 +357,7 @@ case class Table(
         STen.fromLongVec(nonmissingIdxValueV.map(_.toLong), device)
 
       val nonmissingValues =
-        other.col(otherCol).indexSelect(0, nonmissingIdxValue)
+        other.col(otherCol).values.indexSelect(0, nonmissingIdxValue)
 
       val ret = kA.scatter(0, nonmissingIdxLocation, nonmissingValues)
       val merged = asub.columns(col).copy(values = ret)
@@ -369,8 +371,8 @@ case class Table(
     val c = (0 until numCols).map { colIdx =>
       val name = colName(colIdx)
       val tpe = colType(colIdx)
-      val s1 = col(colIdx)
-      val s3 = STen.cat(List(s1) ++ others.map(_.col(colIdx)), dim = 0)
+      val s1 = col(colIdx).values
+      val s3 = STen.cat(List(s1) ++ others.map(_.col(colIdx).values), dim = 0)
       Table.Column(s3, name, tpe, None)
     }.toVector
     Table(c)
@@ -485,14 +487,14 @@ object Table {
     val ord = implicitly[ORD[String]]
   }
 
-  case class Column[T](
+  case class Column(
       values: STen,
       name: Option[String],
       tpe: Table.ColumnDataType,
       index: Option[ColumnIndex[_]]
   ) {
 
-    def select[S: Sc](idx: STen): Column[T] =
+    def select[S: Sc](idx: STen): Column =
       Table.Column(values.indexSelect(dim = 0, index = idx), name, tpe, None)
 
     def indexAs[A] = index.asInstanceOf[Option[ColumnIndex[A]]]
@@ -512,7 +514,7 @@ object Table {
       case TextColumn(_, pad, vocabulary) =>
         val reverseVocabulary = vocabulary.map(_.map(_.swap))
         val vec = values.toLongMat.rows.map { row =>
-          if (row.countif(ScalarTagLong.isMissing) > 0) null
+          if ( row.count == 0) null
           else
             row
               .filter(_ != pad)
@@ -574,7 +576,7 @@ object Table {
     }
   }
   object Column {
-    implicit val movable: Movable[Column[_]] = Movable.by(_.values)
+    implicit val movable: Movable[Column] = Movable.by(_.values)
     def bool(s:STen) = Column(s,None,BooleanColumn(),None)
   }
 

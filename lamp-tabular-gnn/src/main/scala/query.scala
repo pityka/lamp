@@ -107,18 +107,18 @@ object RelationalAlgebra {
     )
   }
 
-  case class PredicateHelper(map: Map[TableColumnRef, Table.Column[_]]) {
+  case class PredicateHelper(map: Map[TableColumnRef, Table.Column]) {
     def apply(t: TableColumnRef) = map(t)
   }
   case class ColumnFunction(
       columnRefs: Seq[TableColumnRef],
-      impl: PredicateHelper => Scope => Table.Column[_]
+      impl: PredicateHelper => Scope => Table.Column
   ) extends BooleanFactor {
     override def toString = s"[${columnRefs.mkString(",")}]"
   }
   object P {
     def apply(refs: TableColumnRef*)(
-        impl: PredicateHelper => Scope => Table.Column[_]
+        impl: PredicateHelper => Scope => Table.Column
     ): ColumnFunction = ColumnFunction(refs, impl)
 
     def first(other: TableColumnRef) = P(other) { input => implicit scope =>
@@ -144,7 +144,7 @@ object RelationalAlgebra {
 
   object F {
     def apply(refs: TableColumnRef*)(
-        impl: PredicateHelper => Scope => Table.Column[_]
+        impl: PredicateHelper => Scope => Table.Column
     ): ColumnFunction = ColumnFunction(refs, impl)
 
   }

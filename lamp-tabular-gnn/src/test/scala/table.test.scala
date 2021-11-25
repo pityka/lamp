@@ -53,8 +53,9 @@ test("pivot") {
         .toOption
         .get
         val pivoted = table.pivot(0,1)(_.cols(2).rows(0))
-        println(pivoted.stringify())
-        assert(false)
+        assert(pivoted.numRows == 4)
+        assert(pivoted.numCols == 5)
+        assert(pivoted.col("a").toVec == Vec("v1",null,"v5",null))
     }
   }
 
@@ -97,12 +98,12 @@ test("pivot") {
       assert(right.numCols == 3)
       assert(left.numCols == 3)
       assert(outer.numCols == 3)
-      assert(right.col("hfloat2").toVec.toString == Vec(0.5,Double.NaN,0.5).toString)
-      assert(right.col("hfloat").toVec.toString == Vec(5.5,4.5,6.0).toString)
-      assert(left.col("hfloat2").toVec.toString == Vec(0.5,0.5,1.5).toString)
-      assert(left.col("hfloat").toVec.toString == Vec(5.5,6.0,Double.NaN).toString)
-      assert(outer.col("hfloat2").toVec.toString == Vec(0.5,0.5,1.5,Double.NaN).toString)
-      assert(outer.col("hfloat").toVec.toString == Vec(5.5,6.0,Double.NaN,4.5).toString)
+      assert(right.col("hfloat2").values.toVec.toString == Vec(0.5,Double.NaN,0.5).toString)
+      assert(right.col("hfloat").values.toVec.toString == Vec(5.5,4.5,6.0).toString)
+      assert(left.col("hfloat2").values.toVec.toString == Vec(0.5,0.5,1.5).toString)
+      assert(left.col("hfloat").values.toVec.toString == Vec(5.5,6.0,Double.NaN).toString)
+      assert(outer.col("hfloat2").values.toVec.toString == Vec(0.5,0.5,1.5,Double.NaN).toString)
+      assert(outer.col("hfloat").values.toVec.toString == Vec(5.5,6.0,Double.NaN,4.5).toString)
       
     }
   }
@@ -129,7 +130,7 @@ test("pivot") {
 
       val selected = table.rows(Array(-1, 1, -1, 2, 1))
       assert(
-        selected.col(1).toFloatVec.toString == Vec(
+        selected.col(1).values.toFloatVec.toString == Vec(
           Float.NaN,
           2.5f,
           Float.NaN,
@@ -177,8 +178,8 @@ test("pivot") {
       val joined = table.join(0, table2, 0)
       assert(joined.numRows == 5)
       assert(joined.numCols == 6)
-      assert(joined.col(5).toFloatVec == Vec(4.5, 5.5, 6.0, 5.5, 6.0))
-      assert(joined.col(0).toLongVec == Vec(1L, 2L, 2L, 2L, 2L))
+      assert(joined.col(5).values.toFloatVec == Vec(4.5, 5.5, 6.0, 5.5, 6.0))
+      assert(joined.col(0).values.toLongVec == Vec(1L, 2L, 2L, 2L, 2L))
     }
   }
   test("union") {
@@ -205,7 +206,7 @@ test("pivot") {
       assert(unioned.numRows == table.numRows * 3)
       assert(unioned.numCols == table.numCols)
       assert(
-        unioned.col(1).toFloatVec == Vec(1.5f, 2.5f, 3.0f, 1.5f, 2.5f, 3.0f,
+        unioned.col(1).values.toFloatVec == Vec(1.5f, 2.5f, 3.0f, 1.5f, 2.5f, 3.0f,
           1.5f, 2.5, 3.0f)
       )
 
@@ -235,10 +236,10 @@ test("pivot") {
         .get
 
       val grouped =
-        table.groupByThenUnion(0)(locs => Table.unnamed(table.rows(locs).col(1).mean.view(-1)))
+        table.groupByThenUnion(0)(locs => Table.unnamed(table.rows(locs).col(1).values.mean.view(-1)))
       assert(grouped.numRows == 2)
       assert(grouped.numCols == 1)
-      assert(grouped.col(0).toFloatVec == Vec(1.5, 2.75))
+      assert(grouped.col(0).values.toFloatVec == Vec(1.5, 2.75))
 
     }
   }
@@ -274,18 +275,18 @@ test("pivot") {
           Some("htext")
         )
       )
-      assert(table.col(0).toFloatVec == Vec(1.5f, 2.5f, 3.0f))
+      assert(table.col(0).values.toFloatVec == Vec(1.5f, 2.5f, 3.0f))
       assert(
-        table.col(1).toLongVec == Vec(
+        table.col(1).values.toLongVec == Vec(
           java.time.Instant.parse("2020-01-01T00:00:00Z").toEpochMilli(),
           java.time.Instant.parse("2021-01-01T00:00:00Z").toEpochMilli(),
           java.time.Instant.parse("2021-01-01T00:00:00Z").toEpochMilli()
         )
       )
-      assert(table.col(2).toLongVec == Vec(0L, 1L, 1L))
+      assert(table.col(2).values.toLongVec == Vec(0L, 1L, 1L))
       assert(
         table
-          .col(3)
+          .col(3).values
           .toLongMat
           .rows
           .map(v => v.filter(_ >= 0).map(_.toChar).toSeq.mkString) == Seq(
@@ -329,19 +330,19 @@ test("pivot") {
           Some("htext")
         )
       )
-      assert(table.col(0).toLongVec == Vec(1L, 2L, 2L))
-      assert(table.col(1).toFloatVec == Vec(1.5f, 2.5f, 3.0f))
+      assert(table.col(0).values.toLongVec == Vec(1L, 2L, 2L))
+      assert(table.col(1).values.toFloatVec == Vec(1.5f, 2.5f, 3.0f))
       assert(
-        table.col(2).toLongVec == Vec(
+        table.col(2).values.toLongVec == Vec(
           java.time.Instant.parse("2020-01-01T00:00:00Z").toEpochMilli(),
           java.time.Instant.parse("2021-01-01T00:00:00Z").toEpochMilli(),
           java.time.Instant.parse("2021-01-01T00:00:00Z").toEpochMilli()
         )
       )
-      assert(table.col(3).toLongVec == Vec(0L, 1L, 1L))
+      assert(table.col(3).values.toLongVec == Vec(0L, 1L, 1L))
       assert(
         table
-          .col(4)
+          .col(4).values
           .toLongMat
           .rows
           .map(v => v.filter(_ >= 0).map(_.toChar).toSeq.mkString) == Seq(
