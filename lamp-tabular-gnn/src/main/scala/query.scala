@@ -2,7 +2,6 @@ package lamp.tgnn
 
 import java.util.UUID
 import lamp._
-import org.saddle.index.RightJoin
 
 /* Notes:
  * - relational algebra (operator tree) != relational calculus (declarative)
@@ -87,61 +86,20 @@ object RelationalAlgebra {
         .reduce((a, b) => a.logicalAnd(b))
   }
 
+  case class TableWithColumnMapping(
+      table: Table,
+      columnMap: Map[TableColumnRef, Int]
+  )
   def interpret(root: Result, tables: Map[TableRef, Table])(implicit
       scope: Scope
   ): Table = Scope { implicit scope =>
     val sorted = topologicalSort(root).reverse
 
-    case class Output(
-        table: Table,
-        columnMap: Map[TableColumnRef, Int]
-    )
-
-    def loop(ops: Seq[Op], outputs: Map[UUID, Output]): Table = {
+    def loop(
+        ops: Seq[Op],
+        outputs: Map[UUID, TableWithColumnMapping]
+    ): Table = {
       ops.head match {
-        case op @ EquiJoin(input1, input2, col1, col2, joinType) =>
-          assert(!outputs.contains(op.id))
-          val inputData1 = outputs(input1.id)
-          val inputData2 = outputs(input2.id)
-          assert(
-            inputData1.columnMap.contains(col1),
-            s"Missing $col1 from table to join"
-          )
-          assert(
-            inputData2.columnMap.contains(col2),
-            s"Missing $col2 from table to join"
-          )
-          val joined = inputData1.table.join(
-            inputData1.columnMap(col1),
-            inputData2.table,
-            inputData2.columnMap(col2),
-            joinType
-          )
-          val oldCol2Idx = inputData2.columnMap(col2)
-          val oldCol1Idx = inputData1.columnMap(col1)
-
-          val leftMapping = inputData1.columnMap
-            .map { v =>
-              val shiftback =
-                if (v._2 > oldCol1Idx && joinType == RightJoin) -1
-                else 0
-              (v._1, v._2 + shiftback)
-            }
-            .filterNot { case (ref, _) => joinType == RightJoin && ref == col1 }
-          val rightMapping = inputData2.columnMap
-            .map { v =>
-              val shiftback =
-                if (v._2 > oldCol2Idx && joinType != RightJoin) -1
-                else 0
-              (v._1, v._2 + inputData1.table.numCols + shiftback)
-            }
-            .filterNot { case (ref, _) => joinType != RightJoin && ref == col2 }
-          val newMapping = leftMapping ++ rightMapping
-
-          loop(
-            ops.tail,
-            outputs + (op.id -> Output(joined, newMapping))
-          )
 
         case op @ TableOp(tableRef) =>
           assert(!outputs.contains(op.id))
@@ -155,184 +113,29 @@ object RelationalAlgebra {
           }.toMap
           loop(
             ops.tail,
-            outputs + (op.id -> Output(table, mapping))
-          )
-        case op @ Aggregate(input, groupBy, aggregations) =>
-          assert(!outputs.contains(op.id))
-          val inputData = outputs(input.id)
-          val mapping = inputData.columnMap
-          val table = inputData.table
-          val newTable = Scope { implicit scope =>
-            val groupByColumnIndices = groupBy.map(mapping)
-            val locations = table.groupByGroupIndices(groupByColumnIndices: _*)
-            val allNeededColumnRefs =
-              aggregations.flatMap(_.function.columnRefs).distinct
-
-            val aggregates = locations
-              .map { locs =>
-                val selectedColumns = allNeededColumnRefs.map { columnRef =>
-                  columnRef -> table
-                    .columns(mapping(columnRef))
-                    .select(locs)
-                }.toMap
-                Table(aggregations.map {
-                  case ColumnFunctionWithOutputRef(
-                        ColumnFunction(_, impl),
-                        newName
-                      ) =>
-                    val aggregatedColumn =
-                      impl(PredicateHelper(selectedColumns))(
-                        implicitly[Scope]
-                      ).withName(newName.column match {
-                        case IdxColumnRef(_)         => None
-                        case StringColumnRef(string) => Some(string)
-                      })
-                    aggregatedColumn
-                }.toVector)
-
-              }
-
-            Table.union(aggregates: _*)
-
-          }
-          val newColumnMap = aggregations.zipWithIndex.map {
-            case (ColumnFunctionWithOutputRef(_, newName), idx) =>
-              newName -> idx
-          }.toMap
-          loop(
-            ops.tail,
-            outputs + (op.id -> Output(newTable, newColumnMap))
-          )
-        case op @ Pivot(input, rowKeys, colKeys, aggregate) =>
-          assert(!outputs.contains(op.id))
-          val inputData = outputs(input.id)
-          val mapping = inputData.columnMap
-          val table = inputData.table
-          val allNeededColumnRefs =
-            aggregate.columnRefs.distinct
-          val newTable = Scope { implicit scope =>
-            val colIdx0 = mapping(rowKeys)
-            val colIdx1 = mapping(colKeys)
-            table.pivot(colIdx0, colIdx1)(table =>
-              Table(
-                Vector(aggregate.impl(PredicateHelper(allNeededColumnRefs.map {
-                  columnRef =>
-                    (columnRef, table.columns(mapping(columnRef)))
-                }.toMap))(implicitly[Scope]))
-              )
-            )
-
-          }
-
-          val newColumnMap = {
-            val aggregateRef = aggregate.columnRefs.head
-            val colnames = newTable.columns
-              .drop(1)
-              .zipWithIndex
-              .map(v => v._1.name.getOrElse(v._2.toString))
-            Map(rowKeys -> 0) ++ colnames.zipWithIndex.map { case (name, idx) =>
-              (
-                aggregateRef.table.col(
-                  aggregateRef.column.toString + "." + name
-                ),
-                idx + 1
-              )
-            }
-          }
-          loop(
-            ops.tail,
-            outputs + (op.id -> Output(newTable, newColumnMap))
-          )
-        case op @ Filter(input, booleanExpression) =>
-          assert(!outputs.contains(op.id))
-          val inputData = outputs(input.id)
-          val newTable = Scope { implicit scope =>
-            val booleanMask = interpretBooleanExpression(
-              booleanExpression,
-              inputData.table,
-              inputData.columnMap
-            )
-            val indices = booleanMask.where.head
-            inputData.table.rows(indices)
-          }
-          loop(
-            ops.tail,
-            outputs + (op.id -> Output(newTable, inputData.columnMap))
-          )
-        case op @ Product(input1, input2) =>
-          assert(!outputs.contains(op.id))
-          val inputData1 = outputs(input1.id)
-          val inputData2 = outputs(input2.id)
-          val inputTableRefs1 = inputData1.columnMap.keys.map(_.table).toSet
-          val inputTableRefs2 = inputData2.columnMap.keys.map(_.table).toSet
-          assert(
-            (inputTableRefs1 & inputTableRefs2).isEmpty,
-            "Joining same tables aliases"
-          )
-          val t3 = Scope { implicit scope =>
-            val idx1 = STen.arange_l(
-              0,
-              inputData1.table.numRows,
-              1L,
-              inputData1.table.device.to(STen.lOptions)
-            )
-            val idx2 = STen.arange_l(
-              0,
-              inputData2.table.numRows,
-              1L,
-              inputData2.table.device.to(STen.lOptions)
-            )
-            val cartes = STen.cartesianProduct(List(idx1, idx2))
-            val t1 = inputData1.table.rows(cartes.select(1, 0))
-            val t2 = inputData2.table.rows(cartes.select(1, 1))
-            t1.bind(t2)
-          }
-          val newMap = inputData1.columnMap ++ inputData2.columnMap.map(v =>
-            (v._1, v._2 + inputData1.table.numCols)
-          )
-          loop(
-            ops.tail,
-            outputs + (op.id -> Output(t3, newMap))
+            outputs + (op.id -> TableWithColumnMapping(table, mapping))
           )
 
-        case op @ Projection(input, projectTo) =>
-          assert(!outputs.contains(op.id))
-          val inputData = outputs(input.id)
-          val providedColumns = inputData.columnMap.keySet
-          val neededColumns = projectTo.flatMap(_.function.columnRefs).toSet
-          val missing = neededColumns &~ providedColumns.toSet
-          assert(missing.isEmpty, s"$missing columns are missing")
-
-          val inputColumnMap =
-            PredicateHelper(neededColumns.toSeq.map { columnRef =>
-              columnRef -> inputData.table
-                .columns(inputData.columnMap(columnRef))
-            }.toMap)
-
-          val projectedTable = Table(projectTo.map {
-            case ColumnFunctionWithOutputRef(
-                  ColumnFunction(_, impl),
-                  newName
-                ) =>
-              val aggregatedColumn =
-                impl(inputColumnMap)(implicitly[Scope]).withName(
-                  newName.column match {
-                    case IdxColumnRef(_)         => None
-                    case StringColumnRef(string) => Some(string)
-                  }
-                )
-              aggregatedColumn
-          }.toVector)
-
-          val newColumnMap = projectTo.zipWithIndex.map {
-            case (ColumnFunctionWithOutputRef(_, newName), idx) =>
-              newName -> idx
-          }.toMap
-          loop(
-            ops.tail,
-            outputs + (op.id -> Output(projectedTable, newColumnMap))
-          )
         case Result(input, _) => outputs(input.id).table
+        case op: Op2 =>
+          assert(!outputs.contains(op.id))
+
+          val result = op.impl(outputs(op.input1.id), outputs(op.input2.id))
+
+          loop(
+            ops.tail,
+            outputs + (op.id -> result)
+          )
+        case op: Op1 =>
+          assert(!outputs.contains(op.id))
+
+          val result = op.impl(outputs(op.input.id))
+
+          loop(
+            ops.tail,
+            outputs + (op.id -> result)
+          )
+
         case x => throw new RuntimeException("Unexpected op " + x)
       }
     }
@@ -370,5 +173,3 @@ object RelationalAlgebra {
   }
 
 }
-
-
