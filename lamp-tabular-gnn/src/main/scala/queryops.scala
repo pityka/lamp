@@ -109,10 +109,9 @@ case class Result(input: Op, boundTables: List[(TableRef, Table)] = Nil)
 
   def bind(tableRef: TableRef, table: Table) =
     copy(boundTables = (tableRef, table) :: boundTables)
-  def interpret(implicit scope: Scope): Table = {
+  def interpret(implicit scope: Scope): Table = 
     interpret(boundTables: _*)
-
-  }
+  
   def interpret(tables: (TableRef, Table)*)(implicit
       scope: Scope
   ): Table = {
