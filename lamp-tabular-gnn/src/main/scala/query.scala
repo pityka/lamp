@@ -95,6 +95,18 @@ object RelationalAlgebra {
   ): Table = Scope { implicit scope =>
     val sorted = topologicalSort(root).reverse
 
+    def makeMapping(tableRef: TableRef): TableWithColumnMapping = {
+      val table = tables(tableRef)
+      val columnRefs =
+        extractColumnRefs(table).map(TableColumnRef(tableRef, _))
+      val mapping = columnRefs.map {
+        case ref @ TableColumnRef(_, IdxColumnRef(idx)) => (ref, idx)
+        case ref @ TableColumnRef(_, StringColumnRef(string)) =>
+          (ref, table.nameToIndex(string))
+      }.toMap
+      TableWithColumnMapping(table, mapping)
+    }
+
     def loop(
         ops: Seq[Op],
         outputs: Map[UUID, TableWithColumnMapping]
@@ -103,37 +115,28 @@ object RelationalAlgebra {
 
         case op @ TableOp(tableRef) =>
           assert(!outputs.contains(op.id))
-          val table = tables(tableRef)
-          val columnRefs =
-            extractColumnRefs(table).map(TableColumnRef(tableRef, _))
-          val mapping = columnRefs.map {
-            case ref @ TableColumnRef(_, IdxColumnRef(idx)) => (ref, idx)
-            case ref @ TableColumnRef(_, StringColumnRef(string)) =>
-              (ref, table.nameToIndex(string))
-          }.toMap
           loop(
             ops.tail,
-            outputs + (op.id -> TableWithColumnMapping(table, mapping))
+            outputs + (op.id -> makeMapping(tableRef))
           )
 
-        case Result(input, _) => outputs(input.id).table
+        case op @ Result(input, _) =>
+          assert(!outputs.contains(op.id))
+          outputs(input.id).table
         case op: Op2 =>
           assert(!outputs.contains(op.id))
 
-          val result = op.impl(outputs(op.input1.id), outputs(op.input2.id))
-
           loop(
             ops.tail,
-            outputs + (op.id -> result)
+            outputs + (op.id -> op
+              .impl(outputs(op.input1.id), outputs(op.input2.id)))
           )
         case op: Op1 =>
           assert(!outputs.contains(op.id))
 
-          val result = op.impl(outputs(op.input.id))
-
           loop(
             ops.tail,
-            outputs + (op.id -> result)
+            outputs + (op.id -> op.impl(outputs(op.input.id)))
           )
 
         case x => throw new RuntimeException("Unexpected op " + x)
