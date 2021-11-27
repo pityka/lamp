@@ -11,6 +11,7 @@ import org.saddle.index.RightJoin
 sealed trait Op {
   val id = UUID.randomUUID()
   def inputs: Seq[Op]
+  def neededColumns: Seq[TableColumnRef]
 
   def done = Result(this)
   def project(projectTo: ColumnFunctionWithOutputRef*) =
@@ -36,7 +37,7 @@ sealed trait Op {
   ) = Pivot(this, rowKeys, colKeys, aggregate)
 
   def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
-    done.interpret(tables: _*)
+    done.bind(tables: _*).interpret
 
 }
 trait Op0 extends Op {
@@ -46,6 +47,8 @@ trait Op1 extends Op {
   def input: Op
   def inputs = List(input)
 
+  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef]
+
   def impl(input: TableWithColumnMapping)(implicit
       scope: Scope
   ): TableWithColumnMapping
@@ -54,15 +57,27 @@ trait Op2 extends Op {
   def input1: Op
   def input2: Op
   def inputs = List(input1, input2)
+
+  def providesColumns(
+      input1: Seq[TableColumnRef],
+      input2: Seq[TableColumnRef]
+  ): Seq[TableColumnRef]
+
   def impl(input1: TableWithColumnMapping, input2: TableWithColumnMapping)(
       implicit scope: Scope
   ): TableWithColumnMapping
 }
 case class TableOp(tableRef: TableRef) extends Op0 {
   override def toString = s"TABLE($tableRef)"
+  def neededColumns = Nil
 }
 case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
     extends Op1 {
+
+  val neededColumns = projectTo.flatMap(_.function.columnRefs).distinct
+
+  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] =
+    neededColumns
 
   def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
@@ -102,26 +117,24 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 
   override def toString = s"PROJECT(${projectTo.mkString(",")})"
 }
-case class Result(input: Op, boundTables: List[(TableRef, Table)] = Nil)
+case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     extends Op {
 
   def inputs = List(input)
 
+  def neededColumns = Nil
+
   def bind(tableRef: TableRef, table: Table) =
-    copy(boundTables = (tableRef, table) :: boundTables)
-  def interpret(implicit scope: Scope): Table = 
-    interpret(boundTables: _*)
-  
-  def interpret(tables: (TableRef, Table)*)(implicit
+    copy(boundTables = (boundTables - tableRef) + ((tableRef, table)))
+  def bind(tables: (TableRef, Table)*) =
+    copy(boundTables = (boundTables -- tables.map(_._1)) ++ tables)
+
+  def interpret(implicit
       scope: Scope
   ): Table = {
-    assert(
-      tables.map(_._1).distinct.size == tables.size,
-      "Non unique table refs"
-    )
+
     RelationalAlgebra.interpret(
-      this,
-      (boundTables.toMap -- tables.map(_._1)) ++ tables
+      this
     )
   }
   override def toString = "RESULT"
@@ -141,6 +154,10 @@ case class Result(input: Op, boundTables: List[(TableRef, Table)] = Nil)
 }
 case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
   override def toString = s"FILTER($booleanExpression)"
+
+  def neededColumns = columnsReferencedByBooleanExpression(booleanExpression)
+
+  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = input
 
   override def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
@@ -165,6 +182,12 @@ case class Aggregate(
     aggregate: Seq[ColumnFunctionWithOutputRef]
 ) extends Op1 {
   override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")})"
+
+  def neededColumns =
+    (groupBy ++ aggregate.flatMap(_.function.columnRefs)).distinct
+
+  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] =
+    input ++ aggregate.map(_.outputRef)
 
   def impl(
       inputData: TableWithColumnMapping
@@ -222,6 +245,11 @@ case class Pivot(
 ) extends Op1 {
   override def toString = s"PIVOT($rowKeys x $colKeys)"
 
+  def neededColumns = (rowKeys +: colKeys +: aggregate.columnRefs).distinct
+  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = Seq(
+    rowKeys
+  )
+
   def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
   ): TableWithColumnMapping = {
@@ -265,6 +293,12 @@ case class Pivot(
 
 case class Product(input1: Op, input2: Op) extends Op2 {
   override def toString = "PRODUCT"
+
+  def neededColumns = Nil
+  def providesColumns(
+      input1: Seq[TableColumnRef],
+      input2: Seq[TableColumnRef]
+  ): Seq[TableColumnRef] = (input1 ++ input2).distinct
 
   def impl(
       inputData1: TableWithColumnMapping,
@@ -310,6 +344,12 @@ case class EquiJoin(
     joinType: JoinType
 ) extends Op2 {
   override def toString = s"EQUIJOIN($column1,$column2,$joinType)"
+
+  def neededColumns = Vector(column1, column2)
+  def providesColumns(
+      input1: Seq[TableColumnRef],
+      input2: Seq[TableColumnRef]
+  ): Seq[TableColumnRef] = (input1 ++ input2).distinct
 
   def impl(
       inputData1: TableWithColumnMapping,

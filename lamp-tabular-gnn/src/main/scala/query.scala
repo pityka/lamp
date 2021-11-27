@@ -2,6 +2,7 @@ package lamp.tgnn
 
 import java.util.UUID
 import lamp._
+import scala.collection.immutable.Queue
 
 /* Notes:
  * - relational algebra (operator tree) != relational calculus (declarative)
@@ -85,15 +86,34 @@ object RelationalAlgebra {
         .toList
         .reduce((a, b) => a.logicalAnd(b))
   }
+  def columnsReferencedByBooleanExpression(
+      factor: BooleanFactor
+  ): Seq[TableColumnRef] = factor match {
+    case ColumnFunction(columnRefs, _) =>
+      columnRefs.distinct
+    case BooleanNegation(factor) =>
+      columnsReferencedByBooleanExpression(factor)
+    case BooleanExpression(terms) =>
+      terms.toList
+        .flatMap { term =>
+          term.factors.toList.flatMap { factor =>
+            columnsReferencedByBooleanExpression(factor)
+          }.toList
+
+        }
+
+  }
 
   case class TableWithColumnMapping(
       table: Table,
       columnMap: Map[TableColumnRef, Int]
   )
-  def interpret(root: Result, tables: Map[TableRef, Table])(implicit
+  def interpret(root: Result)(implicit
       scope: Scope
   ): Table = Scope { implicit scope =>
     val sorted = topologicalSort(root).reverse
+
+    val tables = root.boundTables.toMap
 
     def makeMapping(tableRef: TableRef): TableWithColumnMapping = {
       val table = tables(tableRef)
@@ -146,6 +166,57 @@ object RelationalAlgebra {
     loop(sorted, Map.empty)
 
   }
+  def providedReferences(topoSorted: Seq[Op], tables: Map[TableRef, Table]) = {
+
+    def extractColumnRefsFromTableRef(
+        tableRef: TableRef
+    ): Seq[TableColumnRef] = {
+      val table = tables(tableRef)
+      val columnRefs =
+        extractColumnRefs(table).map(TableColumnRef(tableRef, _))
+
+      columnRefs
+    }
+
+    def loop(
+        ops: Seq[Op],
+        outputs: Map[UUID, Seq[TableColumnRef]]
+    ): Map[UUID, Seq[TableColumnRef]] = {
+      ops.head match {
+
+        case op @ TableOp(tableRef) =>
+          assert(!outputs.contains(op.id))
+          loop(
+            ops.tail,
+            outputs + (op.id -> extractColumnRefsFromTableRef(tableRef))
+          )
+
+        case op @ Result(_, _) =>
+          assert(!outputs.contains(op.id))
+          outputs
+        case op: Op2 =>
+          assert(!outputs.contains(op.id))
+
+          loop(
+            ops.tail,
+            outputs + (op.id -> op
+              .providesColumns(outputs(op.input1.id), outputs(op.input2.id)))
+          )
+        case op: Op1 =>
+          assert(!outputs.contains(op.id))
+
+          loop(
+            ops.tail,
+            outputs + (op.id -> op.providesColumns(outputs(op.input.id)))
+          )
+
+        case x => throw new RuntimeException("Unexpected op " + x)
+      }
+    }
+
+    loop(topoSorted, Map.empty)
+
+  }
 
   private def topologicalSort(root: Op): Seq[Op] = {
     type V = Op
@@ -172,6 +243,71 @@ object RelationalAlgebra {
     visit(root)
 
     order
+
+  }
+
+  sealed trait Mutation {
+    def makeChildren(parent: Result, tables: Map[TableRef, Table]): Seq[Result]
+  }
+
+  object PushDownFilters {
+
+    def swap(filter: Filter, grandChild: Op): Result = ???
+
+    def trySwap(
+        filter: Filter,
+        grandChild: Op,
+        provided: Map[UUID, Seq[TableColumnRef]]
+    ): Option[Result] = {
+      val grandChildSatisfiesDependencies =
+        (filter.neededColumns.toSet &~ provided(grandChild.id).toSet).isEmpty
+      if (grandChildSatisfiesDependencies) Some(swap(filter, grandChild))
+      else None
+    }
+
+    def tryPushFilter(
+        filter: Filter,
+        provided: Map[UUID, Seq[TableColumnRef]]
+    ): Seq[Result] = {
+      val inputInputs = filter.input.inputs
+      inputInputs.flatMap { grandChild =>
+        trySwap(
+          filter,
+          grandChild,
+          provided: Map[UUID, Seq[TableColumnRef]]
+        ).toList
+      }
+    }
+
+    def makeChildren(parent: Op, tables: Map[TableRef, Table]): Seq[Result] = {
+      val sorted = topologicalSort(parent)
+      val provided = providedReferences(sorted, tables)
+      val eligibleFilters = sorted collect { case f: Filter =>
+        f
+      }
+
+      eligibleFilters.flatMap { filter =>
+        tryPushFilter(filter, provided)
+      }
+
+    }
+  }
+
+  def depthFirstSearch(start: Result, mutations: List[Mutation]) = {
+    val tables = start.boundTables
+
+    def children(parent: Result): Seq[Result] =
+      mutations.flatMap(_.makeChildren(parent, tables)).distinct
+
+    def loop(queue: Queue[Result], visited: Vector[Result]): Vector[Result] =
+      queue.dequeueOption match {
+        case Some((head, tail)) =>
+          val ch = children(head)
+          loop(tail ++ ch, visited :+ head)
+        case None => visited
+      }
+
+    loop(Queue(start), Vector.empty)
 
   }
 

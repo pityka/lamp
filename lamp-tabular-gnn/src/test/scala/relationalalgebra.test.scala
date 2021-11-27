@@ -73,24 +73,24 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       val tref1 = Q.table("t1")
       val tref2 = Q.table("t2")
-      val noop = tref1.scan.done
-      assert(noop.interpret(tref1 -> table) == table)
-      assert(noop.interpret(tref1 -> table) != table2)
-      assert(noop.interpret(tref1 -> table2) == table2)
+      val noop = tref1.scan.done.bind(tref1 -> table)
+      assert(noop.interpret == table)
+      assert(noop.interpret != table2)
+      assert(noop.bind(tref1 -> table2).interpret == table2)
 
       val project = tref1.scan
         .project(tref1.col(0).self, tref1.col("hbool").self)
         .project(tref1.col("hbool").self)
-        .done
-      assert(project.interpret(tref1 -> table) == table.cols(3))
+        .done.bind(tref1 -> table)
+      assert(project.interpret == table.cols(3))
 
       val predicate = tref1.col("hbool") === 0
 
       val filter = tref1.scan
         .filter(predicate.negate.or(predicate))
-        .done
-      assert(filter.interpret(tref1 -> table) equalDeep table)
-      assert(filter.interpret(tref1 -> table) != table)
+        .done.bind(tref1 -> table)
+      assert(filter.interpret equalDeep table)
+      assert(filter.interpret != table)
 
       val innerJoin =
         tref1.scan
@@ -99,10 +99,10 @@ class RelationAlgebraSuite extends AnyFunSuite {
             tref2.scan,
             tref2.col("hint")
           )
-          .done
+          .done.bind(tref1 -> table, tref2 -> table2)
 
       assert(
-        innerJoin.interpret(tref1 -> table, tref2 -> table2) equalDeep table
+        innerJoin.interpret equalDeep table
           .join(0, table2, 0)
       )
 
