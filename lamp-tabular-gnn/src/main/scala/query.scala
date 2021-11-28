@@ -3,6 +3,7 @@ package lamp.tgnn
 import java.util.UUID
 import lamp._
 import scala.collection.immutable.Queue
+import org.saddle.index.InnerJoin
 
 /* Notes:
  * - relational algebra (operator tree) != relational calculus (declarative)
@@ -253,32 +254,39 @@ object RelationalAlgebra {
   object PushDownFilters {
 
     def swap(root: Result, filter: Filter, grandChild: Op): Result = {
-      val a = filter 
-      val b = filter.input 
-      val c = grandChild 
+      val a = filter
+      val b = filter.input
+      val c = grandChild
       // before c - b - a
       // after c - a - b
-      // b can have other children 
+      // b can have other children
       val acopy = a.copy(input = grandChild)
-      val bcopy = b.replace(c.id,acopy)
-      root.replace(a.id,bcopy).asInstanceOf[Result]
+      val bcopy = b.replace(c.id, acopy)
+      root.replace(a.id, bcopy).asInstanceOf[Result]
     }
 
     def trySwap(
-      root: Result,
+        root: Result,
         filter: Filter,
         grandChild: Op,
         provided: Map[UUID, Seq[TableColumnRef]]
     ): Option[Result] = {
-      println(grandChild)
+
       val grandChildSatisfiesDependencies =
         (filter.neededColumns.toSet &~ provided(grandChild.id).toSet).isEmpty
-      if (grandChildSatisfiesDependencies) Some(swap(root,filter, grandChild))
+
+      val childTypeOk = filter.input match {
+        case _: Filter | _: Projection | _: Product => true
+        case x: EquiJoin if x.joinType == InnerJoin => true
+        case _                                      => false
+      }
+
+      if (childTypeOk && grandChildSatisfiesDependencies) Some(swap(root, filter, grandChild))
       else None
     }
 
     def tryPushFilter(
-      root: Result,
+        root: Result,
         filter: Filter,
         provided: Map[UUID, Seq[TableColumnRef]]
     ): Seq[Result] = {
@@ -301,7 +309,7 @@ object RelationalAlgebra {
       }
 
       eligibleFilters.flatMap { filter =>
-        tryPushFilter(parent,filter, provided)
+        tryPushFilter(parent, filter, provided)
       }
 
     }

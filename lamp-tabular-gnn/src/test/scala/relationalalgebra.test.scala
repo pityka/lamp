@@ -188,7 +188,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
       val q1 = Q.query(table, "t1") { tref1 =>
           Q.query(table2, "t2") { tref2 =>
             tref1.scan
-              .outerEquiJoin(
+              .innerEquiJoin(
                 tref1.col("hfloat"),
                 tref2.scan,
                 tref2.col("hfloat")
