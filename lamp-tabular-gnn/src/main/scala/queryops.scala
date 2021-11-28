@@ -8,10 +8,12 @@ import lamp._
 import org.saddle.index.InnerJoin
 import org.saddle.index.RightJoin
 
-sealed trait Op {
+sealed trait Op { 
   val id = UUID.randomUUID()
   def inputs: Seq[Op]
   def neededColumns: Seq[TableColumnRef]
+
+  def replace(old: UUID, n : Op) : Op
 
   def done = Result(this)
   def project(projectTo: ColumnFunctionWithOutputRef*) =
@@ -70,9 +72,15 @@ trait Op2 extends Op {
 case class TableOp(tableRef: TableRef) extends Op0 {
   override def toString = s"TABLE($tableRef)"
   def neededColumns = Nil
+  def replace(old: UUID, n : Op)  = this
 }
 case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
     extends Op1 {
+
+      def replace(old: UUID, n : Op)  = {
+        if (input.id == old) copy(input=n)
+        else copy(input=input.replace(old,n))
+      }
 
   val neededColumns = projectTo.flatMap(_.function.columnRefs).distinct
 
@@ -120,6 +128,11 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     extends Op {
 
+        def replace(old: UUID, n : Op)  = {
+        if (input.id == old) copy(input=n)
+        else copy(input=input.replace(old,n))
+      }
+
   def inputs = List(input)
 
   def neededColumns = Nil
@@ -155,6 +168,10 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
 case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
   override def toString = s"FILTER($booleanExpression)"
 
+        def replace(old: UUID, n : Op)  = {
+        if (input.id == old) copy(input=n)
+        else copy(input=input.replace(old,n))
+      }
   def neededColumns = columnsReferencedByBooleanExpression(booleanExpression)
 
   def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = input
@@ -182,6 +199,11 @@ case class Aggregate(
     aggregate: Seq[ColumnFunctionWithOutputRef]
 ) extends Op1 {
   override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")})"
+
+        def replace(old: UUID, n : Op)  = {
+        if (input.id == old) copy(input=n)
+        else copy(input=input.replace(old,n))
+      }
 
   def neededColumns =
     (groupBy ++ aggregate.flatMap(_.function.columnRefs)).distinct
@@ -245,6 +267,11 @@ case class Pivot(
 ) extends Op1 {
   override def toString = s"PIVOT($rowKeys x $colKeys)"
 
+        def replace(old: UUID, n : Op)  = {
+        if (input.id == old) copy(input=n)
+        else copy(input=input.replace(old,n))
+      }
+
   def neededColumns = (rowKeys +: colKeys +: aggregate.columnRefs).distinct
   def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = Seq(
     rowKeys
@@ -293,6 +320,13 @@ case class Pivot(
 
 case class Product(input1: Op, input2: Op) extends Op2 {
   override def toString = "PRODUCT"
+
+        def replace(old: UUID, n : Op)  = {
+        if (input1.id == old) copy(input1=n, input2 = input2.replace(old,n))
+        else if (input2.id == old) copy(input2=n, input1 = input1.replace(old,n))
+                else copy(input1=input1.replace(old,n),input2 = input2.replace(old,n))
+
+      }
 
   def neededColumns = Nil
   def providesColumns(
@@ -346,6 +380,13 @@ case class EquiJoin(
   override def toString = s"EQUIJOIN($column1,$column2,$joinType)"
 
   def neededColumns = Vector(column1, column2)
+
+     def replace(old: UUID, n : Op)  = {
+        if (input1.id == old) copy(input1=n, input2 = input2.replace(old,n))
+        else if (input2.id == old) copy(input2=n, input1 = input1.replace(old,n))
+                else copy(input1=input1.replace(old,n),input2 = input2.replace(old,n))
+
+      }
   def providesColumns(
       input1: Seq[TableColumnRef],
       input2: Seq[TableColumnRef]

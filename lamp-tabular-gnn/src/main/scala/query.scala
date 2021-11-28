@@ -247,57 +247,70 @@ object RelationalAlgebra {
   }
 
   sealed trait Mutation {
-    def makeChildren(parent: Result, tables: Map[TableRef, Table]): Seq[Result]
+    def makeChildren(parent: Result): Seq[Result]
   }
 
   object PushDownFilters {
 
-    def swap(filter: Filter, grandChild: Op): Result = ???
+    def swap(root: Result, filter: Filter, grandChild: Op): Result = {
+      val a = filter 
+      val b = filter.input 
+      val c = grandChild 
+      // before c - b - a
+      // after c - a - b
+      // b can have other children 
+      val acopy = a.copy(input = grandChild)
+      val bcopy = b.replace(c.id,acopy)
+      root.replace(a.id,bcopy).asInstanceOf[Result]
+    }
 
     def trySwap(
+      root: Result,
         filter: Filter,
         grandChild: Op,
         provided: Map[UUID, Seq[TableColumnRef]]
     ): Option[Result] = {
+      println(grandChild)
       val grandChildSatisfiesDependencies =
         (filter.neededColumns.toSet &~ provided(grandChild.id).toSet).isEmpty
-      if (grandChildSatisfiesDependencies) Some(swap(filter, grandChild))
+      if (grandChildSatisfiesDependencies) Some(swap(root,filter, grandChild))
       else None
     }
 
     def tryPushFilter(
+      root: Result,
         filter: Filter,
         provided: Map[UUID, Seq[TableColumnRef]]
     ): Seq[Result] = {
       val inputInputs = filter.input.inputs
       inputInputs.flatMap { grandChild =>
         trySwap(
+          root,
           filter,
           grandChild,
-          provided: Map[UUID, Seq[TableColumnRef]]
+          provided
         ).toList
       }
     }
 
-    def makeChildren(parent: Op, tables: Map[TableRef, Table]): Seq[Result] = {
-      val sorted = topologicalSort(parent)
-      val provided = providedReferences(sorted, tables)
+    def makeChildren(parent: Result): Seq[Result] = {
+      val sorted = topologicalSort(parent).reverse
+      val provided = providedReferences(sorted, parent.boundTables)
       val eligibleFilters = sorted collect { case f: Filter =>
         f
       }
 
       eligibleFilters.flatMap { filter =>
-        tryPushFilter(filter, provided)
+        tryPushFilter(parent,filter, provided)
       }
 
     }
   }
 
   def depthFirstSearch(start: Result, mutations: List[Mutation]) = {
-    val tables = start.boundTables
 
     def children(parent: Result): Seq[Result] =
-      mutations.flatMap(_.makeChildren(parent, tables)).distinct
+      mutations.flatMap(_.makeChildren(parent)).distinct
 
     def loop(queue: Queue[Result], visited: Vector[Result]): Vector[Result] =
       queue.dequeueOption match {

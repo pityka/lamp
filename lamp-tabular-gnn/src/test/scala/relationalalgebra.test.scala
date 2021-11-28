@@ -185,6 +185,22 @@ class RelationAlgebraSuite extends AnyFunSuite {
           .toVec == Vec(1d, 1.5, Double.NaN)
       )
 
+      val q1 = Q.query(table, "t1") { tref1 =>
+          Q.query(table2, "t2") { tref2 =>
+            tref1.scan
+              .outerEquiJoin(
+                tref1.col("hfloat"),
+                tref2.scan,
+                tref2.col("hfloat")
+              )
+              .filter(tref1.col("hfloat") === 4.5)
+              .done
+          }
+        }
+        println(q1.stringify)
+        println(RelationalAlgebra.PushDownFilters.makeChildren(q1).head.stringify)
+        println(RelationalAlgebra.PushDownFilters.makeChildren(q1).head.stringify)
+
     }
   }
 }
