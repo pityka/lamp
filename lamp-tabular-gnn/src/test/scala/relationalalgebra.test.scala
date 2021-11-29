@@ -81,14 +81,16 @@ class RelationAlgebraSuite extends AnyFunSuite {
       val project = tref1.scan
         .project(tref1.col(0).self, tref1.col("hbool").self)
         .project(tref1.col("hbool").self)
-        .done.bind(tref1 -> table)
+        .done
+        .bind(tref1 -> table)
       assert(project.interpret == table.cols(3))
 
       val predicate = tref1.col("hbool") === 0
 
       val filter = tref1.scan
         .filter(predicate.negate.or(predicate))
-        .done.bind(tref1 -> table)
+        .done
+        .bind(tref1 -> table)
       assert(filter.interpret equalDeep table)
       assert(filter.interpret != table)
 
@@ -99,7 +101,8 @@ class RelationAlgebraSuite extends AnyFunSuite {
             tref2.scan,
             tref2.col("hint")
           )
-          .done.bind(tref1 -> table, tref2 -> table2)
+          .done
+          .bind(tref1 -> table, tref2 -> table2)
 
       assert(
         innerJoin.interpret equalDeep table
@@ -186,20 +189,20 @@ class RelationAlgebraSuite extends AnyFunSuite {
       )
 
       val q1 = Q.query(table, "t1") { tref1 =>
-          Q.query(table2, "t2") { tref2 =>
-            tref1.scan
-              .innerEquiJoin(
-                tref1.col("hfloat"),
-                tref2.scan,
-                tref2.col("hfloat")
-              )
-              .filter(tref1.col("hfloat") === 4.5)
-              .done
-          }
+        Q.query(table2, "t2") { tref2 =>
+          tref1.scan
+            .innerEquiJoin(
+              tref1.col("hfloat"),
+              tref2.scan,
+              tref2.col("hfloat")
+            )
+            .filter(tref1.col("hfloat") === 4.5)
+            .done
         }
-        println(q1.stringify)
-        println(RelationalAlgebra.PushDownFilters.makeChildren(q1).head.stringify)
-        println(RelationalAlgebra.PushDownFilters.makeChildren(q1).head.stringify)
+      }
+      val q2 = RelationalAlgebra.PushDownFilters.makeChildren(q1).head
+      val q3 = RelationalAlgebra.PushDownInnerJoin.makeChildren(q2).head
+      assert(q3 == q1)
 
     }
   }

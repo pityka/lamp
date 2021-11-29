@@ -220,12 +220,11 @@ object RelationalAlgebra {
   }
 
   private def topologicalSort(root: Op): Seq[Op] = {
-    type V = Op
-    var order = List.empty[V]
+    var order = List.empty[Op]
     var marks = Set.empty[UUID]
     var currentParents = Set.empty[UUID]
 
-    def visit(n: V): Unit =
+    def visit(n: Op): Unit =
       if (marks.contains(n.id)) ()
       else {
         if (currentParents.contains(n.id)) {
@@ -233,7 +232,7 @@ object RelationalAlgebra {
           ()
         } else {
           currentParents = currentParents + n.id
-          val children = n.inputs
+          val children = n.inputs.map(_.op)
           children.foreach(visit)
           currentParents = currentParents - n.id
           marks = marks + n.id
@@ -281,7 +280,8 @@ object RelationalAlgebra {
         case _                                      => false
       }
 
-      if (childTypeOk && grandChildSatisfiesDependencies) Some(swap(root, filter, grandChild))
+      if (childTypeOk && grandChildSatisfiesDependencies)
+        Some(swap(root, filter, grandChild))
       else None
     }
 
@@ -295,7 +295,7 @@ object RelationalAlgebra {
         trySwap(
           root,
           filter,
-          grandChild,
+          grandChild.op,
           provided
         ).toList
       }
@@ -310,6 +310,91 @@ object RelationalAlgebra {
 
       eligibleFilters.flatMap { filter =>
         tryPushFilter(parent, filter, provided)
+      }
+
+    }
+  }
+  object PushDownInnerJoin {
+
+    def swap(
+        root: Result,
+        join: EquiJoin,
+        child: Op,
+        grandChild: Op
+    ): Result = {
+      val a = join
+      val b = child
+      val c = grandChild
+      // before c - b - a
+      // after c - a - b
+      // b can have other children
+      val acopy =
+        if (a.input1.id == child.id) a.copy(input1 = grandChild)
+        else a.copy(input2 = grandChild)
+      val bcopy = b.replace(c.id, acopy)
+      root.replace(a.id, bcopy).asInstanceOf[Result]
+    }
+
+    def trySwap(
+        root: Result,
+        op: EquiJoin,
+        child: Op,
+        neededColumns: Seq[TableColumnRef],
+        grandChild: Op,
+        provided: Map[UUID, Seq[TableColumnRef]]
+    ): Option[Result] = {
+
+      val grandChildSatisfiesDependencies =
+        (neededColumns.toSet &~ provided(grandChild.id).toSet).isEmpty
+
+      val childTypeOk = child match {
+        case _: Filter | _: Projection | _: Product => true
+        case x: EquiJoin if x.joinType == InnerJoin => true
+        case _                                      => false
+      }
+
+      if (childTypeOk && grandChildSatisfiesDependencies)
+        Some(swap(root, op, child, grandChild))
+      else None
+    }
+
+    def tryPush(
+        root: Result,
+        op: EquiJoin,
+        provided: Map[UUID, Seq[TableColumnRef]]
+    ): Seq[Result] = {
+      op.input1.inputs.flatMap { grandChild =>
+        trySwap(
+          root,
+          op,
+          op.input1,
+          op.neededColumns1,
+          grandChild.op,
+          provided
+        ).toList
+      } ++
+        op.input2.inputs.flatMap { grandChild =>
+          trySwap(
+            root,
+            op,
+            op.input2,
+            op.neededColumns2,
+            grandChild.op,
+            provided
+          ).toList
+        }
+    }
+
+    def makeChildren(root: Result): Seq[Result] = {
+      val sorted = topologicalSort(root).reverse
+      val provided = providedReferences(sorted, root.boundTables)
+      val eligible = sorted collect {
+        case f: EquiJoin if f.joinType == InnerJoin =>
+          f
+      }
+
+      eligible.flatMap { op =>
+        tryPush(root, op, provided)
       }
 
     }

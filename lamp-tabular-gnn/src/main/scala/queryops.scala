@@ -8,12 +8,13 @@ import lamp._
 import org.saddle.index.InnerJoin
 import org.saddle.index.RightJoin
 
-sealed trait Op { 
-  val id = UUID.randomUUID()
-  def inputs: Seq[Op]
-  def neededColumns: Seq[TableColumnRef]
+case class InputWithNeededColumns(op: Op, neededColumns: Seq[TableColumnRef])
 
-  def replace(old: UUID, n : Op) : Op
+sealed trait Op {
+  val id = UUID.randomUUID()
+  def inputs: Seq[InputWithNeededColumns]
+
+  def replace(old: UUID, n: Op): Op
 
   def done = Result(this)
   def project(projectTo: ColumnFunctionWithOutputRef*) =
@@ -47,7 +48,8 @@ trait Op0 extends Op {
 }
 trait Op1 extends Op {
   def input: Op
-  def inputs = List(input)
+  def neededColumns: Seq[TableColumnRef]
+  def inputs = List(InputWithNeededColumns(input, neededColumns))
 
   def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef]
 
@@ -58,7 +60,12 @@ trait Op1 extends Op {
 trait Op2 extends Op {
   def input1: Op
   def input2: Op
-  def inputs = List(input1, input2)
+  def neededColumns1: Seq[TableColumnRef]
+  def neededColumns2: Seq[TableColumnRef]
+  def inputs = List(
+    InputWithNeededColumns(input1, neededColumns1),
+    InputWithNeededColumns(input2, neededColumns2)
+  )
 
   def providesColumns(
       input1: Seq[TableColumnRef],
@@ -72,15 +79,15 @@ trait Op2 extends Op {
 case class TableOp(tableRef: TableRef) extends Op0 {
   override def toString = s"TABLE($tableRef)"
   def neededColumns = Nil
-  def replace(old: UUID, n : Op)  = this
+  def replace(old: UUID, n: Op) = this
 }
 case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
     extends Op1 {
 
-      def replace(old: UUID, n : Op)  = {
-        if (input.id == old) copy(input=n)
-        else copy(input=input.replace(old,n))
-      }
+  def replace(old: UUID, n: Op) = {
+    if (input.id == old) copy(input = n)
+    else copy(input = input.replace(old, n))
+  }
 
   val neededColumns = projectTo.flatMap(_.function.columnRefs).distinct
 
@@ -128,12 +135,12 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     extends Op {
 
-        def replace(old: UUID, n : Op)  = {
-        if (input.id == old) copy(input=n)
-        else copy(input=input.replace(old,n))
-      }
+  def replace(old: UUID, n: Op) = {
+    if (input.id == old) copy(input = n)
+    else copy(input = input.replace(old, n))
+  }
 
-  def inputs = List(input)
+  def inputs = List(InputWithNeededColumns(input, Nil))
 
   def neededColumns = Nil
 
@@ -156,7 +163,7 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     def loop(head: Op, indent: Int): Vector[String] = {
       val inputs = head.inputs.toVector
       val me = head.toString
-      val kids = inputs.flatMap(k => loop(k, indent + 1))
+      val kids = inputs.flatMap(k => loop(k.op, indent + 1))
       val line = (0 until indent map (_ => "  ") mkString) + me
       kids.prepended(line)
     }
@@ -168,10 +175,10 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
 case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
   override def toString = s"FILTER($booleanExpression)"
 
-        def replace(old: UUID, n : Op)  = {
-        if (input.id == old) copy(input=n)
-        else copy(input=input.replace(old,n))
-      }
+  def replace(old: UUID, n: Op) = {
+    if (input.id == old) copy(input = n)
+    else copy(input = input.replace(old, n))
+  }
   def neededColumns = columnsReferencedByBooleanExpression(booleanExpression)
 
   def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = input
@@ -200,10 +207,10 @@ case class Aggregate(
 ) extends Op1 {
   override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")})"
 
-        def replace(old: UUID, n : Op)  = {
-        if (input.id == old) copy(input=n)
-        else copy(input=input.replace(old,n))
-      }
+  def replace(old: UUID, n: Op) = {
+    if (input.id == old) copy(input = n)
+    else copy(input = input.replace(old, n))
+  }
 
   def neededColumns =
     (groupBy ++ aggregate.flatMap(_.function.columnRefs)).distinct
@@ -267,10 +274,10 @@ case class Pivot(
 ) extends Op1 {
   override def toString = s"PIVOT($rowKeys x $colKeys)"
 
-        def replace(old: UUID, n : Op)  = {
-        if (input.id == old) copy(input=n)
-        else copy(input=input.replace(old,n))
-      }
+  def replace(old: UUID, n: Op) = {
+    if (input.id == old) copy(input = n)
+    else copy(input = input.replace(old, n))
+  }
 
   def neededColumns = (rowKeys +: colKeys +: aggregate.columnRefs).distinct
   def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = Seq(
@@ -321,14 +328,15 @@ case class Pivot(
 case class Product(input1: Op, input2: Op) extends Op2 {
   override def toString = "PRODUCT"
 
-        def replace(old: UUID, n : Op)  = {
-        if (input1.id == old) copy(input1=n, input2 = input2.replace(old,n))
-        else if (input2.id == old) copy(input2=n, input1 = input1.replace(old,n))
-                else copy(input1=input1.replace(old,n),input2 = input2.replace(old,n))
+  def replace(old: UUID, n: Op) = {
+    if (input1.id == old) copy(input1 = n, input2 = input2.replace(old, n))
+    else if (input2.id == old) copy(input2 = n, input1 = input1.replace(old, n))
+    else copy(input1 = input1.replace(old, n), input2 = input2.replace(old, n))
 
-      }
+  }
 
-  def neededColumns = Nil
+  def neededColumns1 = Nil
+  def neededColumns2 = Nil
   def providesColumns(
       input1: Seq[TableColumnRef],
       input2: Seq[TableColumnRef]
@@ -379,14 +387,15 @@ case class EquiJoin(
 ) extends Op2 {
   override def toString = s"EQUIJOIN($column1,$column2,$joinType)"
 
-  def neededColumns = Vector(column1, column2)
+  def neededColumns1 = Vector(column1)
+  def neededColumns2 = Vector(column2)
 
-     def replace(old: UUID, n : Op)  = {
-        if (input1.id == old) copy(input1=n, input2 = input2.replace(old,n))
-        else if (input2.id == old) copy(input2=n, input1 = input1.replace(old,n))
-                else copy(input1=input1.replace(old,n),input2 = input2.replace(old,n))
+  def replace(old: UUID, n: Op) = {
+    if (input1.id == old) copy(input1 = n, input2 = input2.replace(old, n))
+    else if (input2.id == old) copy(input2 = n, input1 = input1.replace(old, n))
+    else copy(input1 = input1.replace(old, n), input2 = input2.replace(old, n))
 
-      }
+  }
   def providesColumns(
       input1: Seq[TableColumnRef],
       input2: Seq[TableColumnRef]
