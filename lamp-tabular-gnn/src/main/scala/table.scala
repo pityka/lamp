@@ -560,16 +560,21 @@ object Table {
         StringIndex(Index(vec))
       case I64Column =>
         val m = Scope.leak { implicit scope =>
-          values.view(values.shape(0), -1).select(1, 0).toLongVec
+          if (values.numel == 0L) Vec.empty[Long]
+          else values.view(values.shape(0), -1).select(1, 0).toLongVec
         }
         LongIndex(Index(m))
       case F32Column =>
         val m = Scope.leak { implicit scope =>
+           if (values.numel == 0L) Vec.empty[Float]
+          else
           values.view(values.shape(0), -1).select(1, 0).toFloatVec
         }
         FloatIndex(Index(m))
       case F64Column =>
         val m = Scope.leak { implicit scope =>
+           if (values.numel == 0L) Vec.empty[Double]
+          else
           values.view(values.shape(0), -1).select(1, 0).toVec
         }
         DoubleIndex(Index(m))

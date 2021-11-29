@@ -18,10 +18,13 @@ object Q {
 
   def table(alias: String): TableRef = new TableRef(alias)
   def query(table: Table, alias: String)(
-      fun: TableRef => Result
+      fun: TableOp => Op
   ): Result = {
     val tref = Q.table(alias)
-    fun(tref).bind(tref, table)
+    (fun(tref.scan) match {
+      case x: Result => x
+      case x         => x.done
+    }).bind(tref, table)
   }
   def query(table: Table)(
       fun: TableRef => Result

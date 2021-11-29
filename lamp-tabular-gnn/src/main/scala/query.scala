@@ -109,6 +109,7 @@ object RelationalAlgebra {
       table: Table,
       columnMap: Map[TableColumnRef, Int]
   )
+
   def interpret(root: Result)(implicit
       scope: Scope
   ): Table = Scope { implicit scope =>
@@ -250,7 +251,7 @@ object RelationalAlgebra {
     def makeChildren(parent: Result): Seq[Result]
   }
 
-  object PushDownFilters {
+  object PushDownFilters extends Mutation {
 
     def swap(root: Result, filter: Filter, grandChild: Op): Result = {
       val a = filter
@@ -314,7 +315,7 @@ object RelationalAlgebra {
 
     }
   }
-  object PushDownInnerJoin {
+  object PushDownInnerJoin extends Mutation {
 
     def swap(
         root: Result,
@@ -400,20 +401,85 @@ object RelationalAlgebra {
     }
   }
 
-  def depthFirstSearch(start: Result, mutations: List[Mutation]) = {
+  def depthFirstSearch(start: Result, mutations: List[Mutation], maxDepth:Int) = {
 
     def children(parent: Result): Seq[Result] =
       mutations.flatMap(_.makeChildren(parent)).distinct
 
-    def loop(queue: Queue[Result], visited: Vector[Result]): Vector[Result] =
+    def loop(
+        depth: Int,
+        queue: Queue[Result],
+        visited: Vector[Result]
+    ): Vector[Result] =
       queue.dequeueOption match {
-        case Some((head, tail)) =>
+        case Some((head, tail)) if depth < maxDepth =>
           val ch = children(head)
-          loop(tail ++ ch, visited :+ head)
-        case None => visited
+          val nextVisited =
+            if (visited.contains(head)) visited else visited :+ head
+          loop(depth + 1, tail ++ ch, nextVisited)
+        case _ => visited
       }
 
-    loop(Queue(start), Vector.empty)
+    loop(0, Queue(start), Vector.empty)
+
+  }
+  case class TableEstimate(
+      rows: Long,
+      columns: Long
+  )
+
+  def estimate(root: Result) = {
+    val sorted = topologicalSort(root).reverse
+
+    val tables = root.boundTables.toMap
+
+    def makeTableEstimate(tableRef: TableRef): TableEstimate = {
+      val table = tables(tableRef)
+     
+      TableEstimate(table.numRows, table.numCols) 
+    }
+
+    def loop(
+        ops: Seq[Op],
+        outputs: Map[UUID, TableEstimate]
+    ): Map[UUID, TableEstimate] = {
+      ops.head match {
+
+        case op @ TableOp(tableRef) =>
+          assert(!outputs.contains(op.id))
+          loop(
+            ops.tail,
+            outputs + (op.id -> makeTableEstimate(tableRef))
+          )
+
+        case op @ Result(input, _) =>
+          assert(!outputs.contains(op.id))
+          outputs + (op.id -> outputs(input.id))
+        case op: Op2 =>
+          assert(!outputs.contains(op.id))
+
+          loop(
+            ops.tail,
+            outputs + (op.id -> op
+              .estimate(outputs(op.input1.id), outputs(op.input2.id)))
+          )
+        case op: Op1 =>
+          assert(!outputs.contains(op.id))
+
+          loop(
+            ops.tail,
+            outputs + (op.id -> op.estimate(outputs(op.input.id)))
+          )
+
+        case x => throw new RuntimeException("Unexpected op " + x)
+      }
+    }
+
+    val outputs = loop(sorted, Map.empty)
+    sorted
+      .map(v => outputs(v.id))
+      .map(estimate => estimate.columns.toDouble * estimate.rows.toDouble)
+      .sum
 
   }
 

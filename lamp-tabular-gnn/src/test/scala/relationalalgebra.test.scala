@@ -129,9 +129,9 @@ class RelationAlgebraSuite extends AnyFunSuite {
       assert(
         Q.query(table, "t1") { tref1 =>
           Q.query(table2, "t2") { tref2 =>
-            tref1.scan
+            tref1
               .product(
-                tref2.asOp
+                tref2
               )
               .done
           }
@@ -144,10 +144,10 @@ class RelationAlgebraSuite extends AnyFunSuite {
       assert(
         Q.query(table, "t1") { tref1 =>
           Q.query(table2, "t2") { tref2 =>
-            tref1.scan
+            tref1
               .outerEquiJoin(
                 tref1.col("hfloat"),
-                tref2.scan,
+                tref2,
                 tref2.col("hfloat")
               )
               .filter(tref1.col("hfloat") === 4.5)
@@ -160,7 +160,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       assert(
         Q.query(table, "t1") { tref1 =>
-          tref1.scan
+          tref1
             .aggregate(tref1.col("hint"))(
               Q.first(tref1.col("htime")) as tref1.col(
                 "htime"
@@ -169,7 +169,6 @@ class RelationAlgebraSuite extends AnyFunSuite {
                 "hfloatavg"
               )
             )
-            .done
         }.interpret
           .col("hfloatavg")
           .toVec == Vec(1.5, 2.75)
@@ -177,11 +176,10 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       assert(
         Q.query(table, "t1") { tref1 =>
-          tref1.scan
+          tref1
             .pivot(tref1.col("hint"), tref1.col("hbool"))(
               Q.avg(tref1.col("hfloat"))
             )
-            .done
         }.interpret
           .rows(0)
           .toSTen
@@ -190,20 +188,22 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       val q1 = Q.query(table, "t1") { tref1 =>
         Q.query(table2, "t2") { tref2 =>
-          tref1.scan
+          tref1
             .innerEquiJoin(
-              tref1.col("hfloat"),
-              tref2.scan,
-              tref2.col("hfloat")
+              tref1.col("hint"),
+              tref2,
+              tref2.col("hint")
             )
-            .filter(tref1.col("hfloat") === 4.5)
-            .done
+            .filter(tref1.col("hfloat") === 1.5)
         }
       }
       val q2 = RelationalAlgebra.PushDownFilters.makeChildren(q1).head
       val q3 = RelationalAlgebra.PushDownInnerJoin.makeChildren(q2).head
       assert(q3 == q1)
 
+      assert(q1.optimize() == q2)
+
+      assert(q1.optimize().interpret equalDeep q1.interpret)
     }
   }
 }

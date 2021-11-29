@@ -7,6 +7,8 @@ import java.util.UUID
 import lamp._
 import org.saddle.index.InnerJoin
 import org.saddle.index.RightJoin
+import org.saddle.index.LeftJoin
+import org.saddle.index.OuterJoin
 
 case class InputWithNeededColumns(op: Op, neededColumns: Seq[TableColumnRef])
 
@@ -53,6 +55,7 @@ trait Op1 extends Op {
 
   def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef]
 
+  def estimate(input: TableEstimate): TableEstimate
   def impl(input: TableWithColumnMapping)(implicit
       scope: Scope
   ): TableWithColumnMapping
@@ -72,6 +75,8 @@ trait Op2 extends Op {
       input2: Seq[TableColumnRef]
   ): Seq[TableColumnRef]
 
+  def estimate(input1: TableEstimate, input2: TableEstimate): TableEstimate
+
   def impl(input1: TableWithColumnMapping, input2: TableWithColumnMapping)(
       implicit scope: Scope
   ): TableWithColumnMapping
@@ -79,10 +84,16 @@ trait Op2 extends Op {
 case class TableOp(tableRef: TableRef) extends Op0 {
   override def toString = s"TABLE($tableRef)"
   def neededColumns = Nil
+
   def replace(old: UUID, n: Op) = this
+
+  def col(col: String) = tableRef.col(col)
 }
 case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
     extends Op1 {
+
+  def estimate(input: TableEstimate): TableEstimate =
+    input.copy(columns = projectTo.size.toLong)
 
   def replace(old: UUID, n: Op) = {
     if (input.id == old) copy(input = n)
@@ -135,6 +146,9 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     extends Op {
 
+
+      override def done = this
+
   def replace(old: UUID, n: Op) = {
     if (input.id == old) copy(input = n)
     else copy(input = input.replace(old, n))
@@ -171,6 +185,10 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     loop(this, 0).mkString("\n")
 
   }
+  def optimize(depth:Int = 10) : Result = {
+    val candidates = RelationalAlgebra.depthFirstSearch(this,List(PushDownFilters,PushDownInnerJoin), depth)
+    candidates.minBy(c => RelationalAlgebra.estimate(c))
+  }
 }
 case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
   override def toString = s"FILTER($booleanExpression)"
@@ -179,6 +197,7 @@ case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
     if (input.id == old) copy(input = n)
     else copy(input = input.replace(old, n))
   }
+  def estimate(input: TableEstimate): TableEstimate = input
   def neededColumns = columnsReferencedByBooleanExpression(booleanExpression)
 
   def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = input
@@ -211,6 +230,8 @@ case class Aggregate(
     if (input.id == old) copy(input = n)
     else copy(input = input.replace(old, n))
   }
+
+  def estimate(input: TableEstimate): TableEstimate = input
 
   def neededColumns =
     (groupBy ++ aggregate.flatMap(_.function.columnRefs)).distinct
@@ -274,6 +295,9 @@ case class Pivot(
 ) extends Op1 {
   override def toString = s"PIVOT($rowKeys x $colKeys)"
 
+  def estimate(input: TableEstimate): TableEstimate =
+    TableEstimate(input.rows, input.rows)
+
   def replace(old: UUID, n: Op) = {
     if (input.id == old) copy(input = n)
     else copy(input = input.replace(old, n))
@@ -335,6 +359,9 @@ case class Product(input1: Op, input2: Op) extends Op2 {
 
   }
 
+  def estimate(input1: TableEstimate, input2: TableEstimate): TableEstimate =
+    TableEstimate(input1.rows * input2.rows, input1.columns + input2.columns)
+
   def neededColumns1 = Nil
   def neededColumns2 = Nil
   def providesColumns(
@@ -386,6 +413,24 @@ case class EquiJoin(
     joinType: JoinType
 ) extends Op2 {
   override def toString = s"EQUIJOIN($column1,$column2,$joinType)"
+
+  def estimate(input1: TableEstimate, input2: TableEstimate): TableEstimate =
+    joinType match {
+      case InnerJoin =>
+        TableEstimate(
+          math.min(input1.rows, input2.rows),
+          input1.columns + input2.columns
+        )
+      case LeftJoin =>
+        TableEstimate(input1.rows, input1.columns + input2.columns)
+      case RightJoin =>
+        TableEstimate(input2.rows, input1.columns + input2.columns)
+      case OuterJoin =>
+        TableEstimate(
+          input1.rows + input2.rows,
+          input1.columns + input2.columns
+        )
+    }
 
   def neededColumns1 = Vector(column1)
   def neededColumns2 = Vector(column2)
