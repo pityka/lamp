@@ -186,7 +186,7 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
 
   }
   def optimize(depth:Int = 10) : Result = {
-    val candidates = RelationalAlgebra.depthFirstSearch(this,List(PushDownFilters,PushDownInnerJoin), depth)
+    val candidates = RelationalAlgebra.depthFirstSearch(this,Mutation.list, depth)
     candidates.minBy(c => RelationalAlgebra.estimate(c))
   }
 }
