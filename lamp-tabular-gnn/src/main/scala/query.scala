@@ -3,6 +3,7 @@ package lamp.tgnn
 import java.util.UUID
 import lamp._
 import scala.collection.immutable.Queue
+import scala.language.dynamics
 
 /* Notes:
  * - relational algebra (operator tree) != relational calculus (declarative)
@@ -36,7 +37,10 @@ object RelationalAlgebra {
   case class StringColumnRef(string: String) extends ColumnRef {
     override def toString = string
   }
-  class TableRef(val alias: String) {
+  class TableRef(val alias: String) extends Dynamic {
+
+    def selectDynamic(field:String) = col(field)
+    def selectDynamic(field:Int) = col(field)
 
     override def toString = alias
     def col(i: Int): TableColumnRef = TableColumnRef(this, IdxColumnRef(i))

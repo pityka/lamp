@@ -9,6 +9,7 @@ import org.saddle.index.InnerJoin
 import org.saddle.index.RightJoin
 import org.saddle.index.LeftJoin
 import org.saddle.index.OuterJoin
+import scala.language.dynamics
 
 case class InputWithNeededColumns(op: Op, neededColumns: Seq[TableColumnRef])
 
@@ -81,13 +82,17 @@ trait Op2 extends Op {
       implicit scope: Scope
   ): TableWithColumnMapping
 }
-case class TableOp(tableRef: TableRef) extends Op0 {
+case class TableOp(tableRef: TableRef) extends Op0 with Dynamic {
   override def toString = s"TABLE($tableRef)"
   def neededColumns = Nil
 
   def replace(old: UUID, n: Op) = this
 
   def col(col: String) = tableRef.col(col)
+  def col(col: Int) = tableRef.col(col)
+  def selectDynamic(field:String) = col(field)
+    def selectDynamic(field:Int) = col(field)
+
 }
 case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
     extends Op1 {

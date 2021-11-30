@@ -190,20 +190,18 @@ class RelationAlgebraSuite extends AnyFunSuite {
         Q.query(table2, "t2") { tref2 =>
           tref1
             .innerEquiJoin(
-              tref1.col("hint"),
+              tref1.hint,
               tref2,
-              tref2.col("hint")
+              tref2.hint
             )
-            .filter(tref1.col("hfloat") === 1.5)
-            .project(tref1.col("htext").self)
+            .filter(tref1.hfloat === 1.5)
+            .project(tref1.htext.self)
         }
       }
-      println(q1.stringify)
-      println(q1.optimize().stringify)
       val q2 = PushDownFilters.makeChildren(q1).head
-      println(q2.interpret.stringify())
       val q3 = PushDownInnerJoin.makeChildren(q2).head
       assert(q3 == q1)
+      assert(q2 != q1)
 
       // assert(q1.optimize() == q2)
 
