@@ -39,8 +39,8 @@ object RelationalAlgebra {
   }
   class TableRef(val alias: String) extends Dynamic {
 
-    def selectDynamic(field:String) = col(field)
-    def selectDynamic(field:Int) = col(field)
+    def selectDynamic(field: String) = col(field)
+    def selectDynamic(field: Int) = col(field)
 
     override def toString = alias
     def col(i: Int): TableColumnRef = TableColumnRef(this, IdxColumnRef(i))
@@ -112,11 +112,37 @@ object RelationalAlgebra {
       table: Table,
       columnMap: Map[TableColumnRef, Int]
   )
+  object TableWithColumnMapping {
+    implicit val movable: Movable[TableWithColumnMapping] =
+      Movable.by(v => v.table)
+
+  }
 
   def interpret(root: Result)(implicit
       scope: Scope
-  ): Table = Scope { implicit scope =>
+  ): Table = Scope { scope =>
     val sorted = topologicalSort(root).reverse
+
+    val sortedIds = sorted.map(_.id)
+    val parents: Map[UUID, Seq[UUID]] = sorted
+      .flatMap(op => op.inputs.map(v => v.op.id -> op.id))
+      .groupBy(_._1)
+      .map(v => (v._1, v._2.map(_._2)))
+    val releaseStepNumber = sorted
+      .map { op =>
+        (
+          op.id,
+          parents
+            .get(op.id)
+            .toList
+            .flatten
+            .map(v => sortedIds.indexOf(v))
+            .maxOption
+        )
+      }
+      .toMap
+      .filter(_._2.isDefined)
+      .map(v => (v._1, v._2.get))
 
     val tables = root.boundTables.toMap
 
@@ -133,42 +159,73 @@ object RelationalAlgebra {
     }
 
     def loop(
+        step: Int,
         ops: Seq[Op],
-        outputs: Map[UUID, TableWithColumnMapping]
+        outputs: Map[UUID, (TableWithColumnMapping, Scope)]
     ): Table = {
+      val releasable = outputs.keySet.filter(id => releaseStepNumber(id) < step)
+      releasable.foreach { id =>
+        outputs(id)._2.release()
+      }
       ops.head match {
 
         case op @ TableOp(tableRef) =>
           assert(!outputs.contains(op.id))
           loop(
+            step + 1,
             ops.tail,
-            outputs + (op.id -> makeMapping(tableRef))
+            outputs + (
+              (
+                op.id,
+                (makeMapping(tableRef), Scope.free)
+              )
+            ) -- releasable
           )
 
         case op @ Result(input, _) =>
           assert(!outputs.contains(op.id))
-          outputs(input.id).table
+          val (table, oldScope) = outputs(input.id)
+          oldScope.moveInto(scope, table)
+          oldScope.release()
+          table.table
         case op: Op2 =>
           assert(!outputs.contains(op.id))
 
+          val oldScope1 = outputs(op.input1.id)._2
+          val oldScope2 = outputs(op.input2.id)._2
+
+          val result = op.impl(
+            outputs(op.input1.id)._1,
+            outputs(op.input2.id)._1
+          )(oldScope1)
+          val newScope = Scope.free
+          oldScope1.moveInto(oldScope2, result)
+          oldScope2.moveInto(newScope, result)
+
           loop(
+            step + 1,
             ops.tail,
-            outputs + (op.id -> op
-              .impl(outputs(op.input1.id), outputs(op.input2.id)))
+            outputs + ((op.id, (result, newScope))) -- releasable
           )
         case op: Op1 =>
           assert(!outputs.contains(op.id))
 
+          val oldScope = outputs(op.input.id)._2
+          val result = op.impl(outputs(op.input.id)._1)(oldScope)
+          val newScope = Scope.free
+          oldScope.moveInto(newScope, result)
+
           loop(
+            step + 1,
             ops.tail,
-            outputs + (op.id -> op.impl(outputs(op.input.id)))
+            outputs + ((op.id, (result, newScope))) -- releasable
           )
 
         case x => throw new RuntimeException("Unexpected op " + x)
       }
     }
 
-    loop(sorted, Map.empty)
+    loop(0, sorted, Map.empty)
 
   }
   def providedReferences(topoSorted: Seq[Op], tables: Map[TableRef, Table]) = {
@@ -223,7 +280,7 @@ object RelationalAlgebra {
 
   }
 
-   def topologicalSort(root: Op): Seq[Op] = {
+  def topologicalSort(root: Op): Seq[Op] = {
     var order = List.empty[Op]
     var marks = Set.empty[UUID]
     var currentParents = Set.empty[UUID]
@@ -250,9 +307,11 @@ object RelationalAlgebra {
 
   }
 
-  
-
-  def depthFirstSearch(start: Result, mutations: List[Mutation], maxDepth:Int) = {
+  def depthFirstSearch(
+      start: Result,
+      mutations: List[Mutation],
+      maxDepth: Int
+  ) = {
 
     def children(parent: Result): Seq[Result] =
       mutations.flatMap(_.makeChildren(parent)).distinct
@@ -286,8 +345,8 @@ object RelationalAlgebra {
 
     def makeTableEstimate(tableRef: TableRef): TableEstimate = {
       val table = tables(tableRef)
-     
-      TableEstimate(table.numRows, table.numCols) 
+
+      TableEstimate(table.numRows, table.numCols)
     }
 
     def loop(

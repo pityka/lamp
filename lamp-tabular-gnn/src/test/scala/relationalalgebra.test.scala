@@ -196,6 +196,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
             )
             .filter(tref1.hfloat === 1.5)
             .project(tref1.htext.self)
+            .union(tref1.project(tref1.htext.self))
         }
       }
       val q2 = PushDownFilters.makeChildren(q1).head
@@ -203,7 +204,11 @@ class RelationAlgebraSuite extends AnyFunSuite {
       assert(q3 == q1)
       assert(q2 != q1)
 
-      // assert(q1.optimize() == q2)
+      assert(q1.optimize() == q2)
+
+      println(q1.optimize().stringify)
+      println(q1.stringify)
+      println(q1.interpret.stringify())
 
       assert(q1.optimize().interpret equalDeep q1.interpret)
     }

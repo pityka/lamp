@@ -346,6 +346,27 @@ final class Scope private {
       if (toThrow != null) throw toThrow
     }
   }
+
+  def moveInto[A: Movable](parent: Scope, last: A): Unit = {
+    val movables =
+      if (last != null) {
+        val lastResources = implicitly[Movable[A]].list(last)
+        val movableResources =
+          resources.iterator.asScala.toList.filter(r =>
+            r match {
+              case Left(r)  => lastResources.exists(v => v eq r)
+              case Right(_) => false
+            }
+          )
+        resources.removeAll(movableResources.asJava)
+        movableResources
+      } else Nil
+
+    if (parent != null) {
+      movables.foreach(a => a.fold(parent.register, parent.register))
+    }
+
+  }
 }
 
 object Scope {

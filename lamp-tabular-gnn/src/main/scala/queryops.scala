@@ -24,6 +24,7 @@ sealed trait Op {
     Projection(this, projectTo)
   def filter(expr: BooleanFactor) = Filter(this, expr)
   def product(that: Op) = Product(this, that)
+  def union(that: Op) = Union(this, that)
   def innerEquiJoin(
       thisColumn: TableColumnRef,
       that: Op,
@@ -90,8 +91,8 @@ case class TableOp(tableRef: TableRef) extends Op0 with Dynamic {
 
   def col(col: String) = tableRef.col(col)
   def col(col: Int) = tableRef.col(col)
-  def selectDynamic(field:String) = col(field)
-    def selectDynamic(field:Int) = col(field)
+  def selectDynamic(field: String) = col(field)
+  def selectDynamic(field: Int) = col(field)
 
 }
 case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
@@ -151,8 +152,7 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     extends Op {
 
-
-      override def done = this
+  override def done = this
 
   def replace(old: UUID, n: Op) = {
     if (input.id == old) copy(input = n)
@@ -190,8 +190,9 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     loop(this, 0).mkString("\n")
 
   }
-  def optimize(depth:Int = 10) : Result = {
-    val candidates = RelationalAlgebra.depthFirstSearch(this,Mutation.list, depth)
+  def optimize(depth: Int = 10): Result = {
+    val candidates =
+      RelationalAlgebra.depthFirstSearch(this, Mutation.list, depth)
     candidates.minBy(c => RelationalAlgebra.estimate(c))
   }
 }
@@ -402,6 +403,47 @@ case class Product(input1: Op, input2: Op) extends Op2 {
       val t1 = inputData1.table.rows(cartes.select(1, 0))
       val t2 = inputData2.table.rows(cartes.select(1, 1))
       t1.bind(t2)
+    }
+    val newMap = inputData1.columnMap ++ inputData2.columnMap.map(v =>
+      (v._1, v._2 + inputData1.table.numCols)
+    )
+    TableWithColumnMapping(t3, newMap)
+  }
+}
+
+case class Union(input1: Op, input2: Op) extends Op2 {
+  override def toString = "UNION"
+
+  def replace(old: UUID, n: Op) = {
+    if (input1.id == old) copy(input1 = n, input2 = input2.replace(old, n))
+    else if (input2.id == old) copy(input2 = n, input1 = input1.replace(old, n))
+    else copy(input1 = input1.replace(old, n), input2 = input2.replace(old, n))
+
+  }
+
+  def estimate(input1: TableEstimate, input2: TableEstimate): TableEstimate =
+    TableEstimate(input1.rows + input2.rows, input1.columns)
+
+  def neededColumns1 = Nil
+  def neededColumns2 = Nil
+  def providesColumns(
+      input1: Seq[TableColumnRef],
+      input2: Seq[TableColumnRef]
+  ): Seq[TableColumnRef] = (input1 ++ input2).distinct
+
+  def impl(
+      inputData1: TableWithColumnMapping,
+      inputData2: TableWithColumnMapping
+  )(implicit scope: Scope) = {
+
+    assert(inputData1.columnMap.keySet == inputData2.columnMap.keySet)
+
+    val columnOrder = inputData1.columnMap.toSeq.sortBy(_._2).map(_._1)
+
+    val t3 = Scope { implicit scope =>
+      val t1 = inputData1.table
+      val t2 = inputData2.table.cols(columnOrder.map(inputData2.columnMap): _*)
+      t1.union(t2)
     }
     val newMap = inputData1.columnMap ++ inputData2.columnMap.map(v =>
       (v._1, v._2 + inputData1.table.numCols)
