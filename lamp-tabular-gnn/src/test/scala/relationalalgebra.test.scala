@@ -157,6 +157,30 @@ class RelationAlgebraSuite extends AnyFunSuite {
           .col(1)
           .toVec == Vec(4.5)
       )
+      import lamp.tgnn.syntax._
+      println(
+        table
+          .innerEquiJoin(
+            Q.hint,
+            table2.query,
+            Q.col("hint")
+          )
+          .filter(Q.hint === 4.5)
+          .result
+          .stringify()
+      )
+      assert(
+        table
+          .innerEquiJoin(
+            Q.hint,
+            table2.query,
+            Q.col("hint")
+          )
+          .filter(Q.hint === 4.5)
+          .result
+          .col(1)
+          .toVec == Vec(4.5)
+      )
 
       assert(
         Q.query(table, "t1") { tref1 =>
@@ -184,6 +208,15 @@ class RelationAlgebraSuite extends AnyFunSuite {
           .rows(0)
           .toSTen
           .toVec == Vec(1d, 1.5, Double.NaN)
+      )
+      println(
+        Q.query(table, "t1") { tref1 =>
+          tref1
+            .pivot(tref1.col("hint"), tref1.col("hbool"))(
+              Q.avg(tref1.col("hfloat"))
+            )
+        }.interpret
+          .stringify()
       )
 
       val q1 = Q.query(table, "t1") { tref1 =>

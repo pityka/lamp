@@ -44,7 +44,9 @@ sealed trait Op {
   ) = Pivot(this, rowKeys, colKeys, aggregate)
 
   def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
-    done.bind(tables: _*).interpret
+    done.bind(tables: _*).optimize().interpret
+  def result(implicit scope: Scope) =
+    doneAndInterpret()
 
 }
 trait Op0 extends Op {
@@ -83,7 +85,9 @@ trait Op2 extends Op {
       implicit scope: Scope
   ): TableWithColumnMapping
 }
-case class TableOp(tableRef: TableRef) extends Op0 with Dynamic {
+case class TableOp(tableRef: TableRef, boundTable: Option[Table])
+    extends Op0
+    with Dynamic {
   override def toString = s"TABLE($tableRef)"
   def neededColumns = Nil
 
@@ -114,7 +118,7 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
   def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
   ): TableWithColumnMapping = {
-    val providedColumns = inputData.columnMap.keySet
+    val providedColumns = inputData.providedColumns
     val neededColumns = projectTo.flatMap(_.function.columnRefs).toSet
     val missing = neededColumns &~ providedColumns.toSet
     assert(missing.isEmpty, s"$missing columns are missing")
@@ -122,7 +126,7 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
     val inputColumnMap =
       PredicateHelper(neededColumns.toSeq.map { columnRef =>
         columnRef -> inputData.table
-          .columns(inputData.columnMap(columnRef))
+          .columns(inputData.getMatchingColumnIdx(columnRef))
       }.toMap)
 
     val projectedTable = Table(projectTo.map {
@@ -170,12 +174,9 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
 
   def interpret(implicit
       scope: Scope
-  ): Table = {
+  ): Table =
+    RelationalAlgebra.interpret(this)
 
-    RelationalAlgebra.interpret(
-      this
-    )
-  }
   override def toString = "RESULT"
   def stringify: String = {
 
@@ -211,16 +212,17 @@ case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
   override def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
   ): TableWithColumnMapping = {
+    println(inputData.table.stringify())
+    println(inputData.getColumnMapping)
     val newTable = Scope { implicit scope =>
       val booleanMask = interpretBooleanExpression(
         booleanExpression,
-        inputData.table,
-        inputData.columnMap
+        inputData
       )
       val indices = booleanMask.where.head
       inputData.table.rows(indices)
     }
-    TableWithColumnMapping(newTable, inputData.columnMap)
+    inputData.copy(table = newTable)
 
   }
 
@@ -248,11 +250,10 @@ case class Aggregate(
   def impl(
       inputData: TableWithColumnMapping
   )(implicit scope: Scope): TableWithColumnMapping = {
-    val mapping = inputData.columnMap
+    val groupByColumnIndices = groupBy.map(inputData.getMatchingColumnIdx)
     val table = inputData.table
     val aggregations = aggregate
     val newTable = Scope { implicit scope =>
-      val groupByColumnIndices = groupBy.map(mapping)
       val locations = table.groupByGroupIndices(groupByColumnIndices: _*)
       val allNeededColumnRefs =
         aggregations.flatMap(_.function.columnRefs).distinct
@@ -261,7 +262,7 @@ case class Aggregate(
         .map { locs =>
           val selectedColumns = allNeededColumnRefs.map { columnRef =>
             columnRef -> table
-              .columns(mapping(columnRef))
+              .columns(inputData.getMatchingColumnIdx(columnRef))
               .select(locs)
           }.toMap
           Table(aggregations.map {
@@ -309,7 +310,8 @@ case class Pivot(
     else copy(input = input.replace(old, n))
   }
 
-  def neededColumns = (rowKeys +: colKeys +: aggregate.columnRefs).distinct
+  def neededColumns =
+    (rowKeys +: colKeys +: aggregate.columnRefs).distinct
   def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = Seq(
     rowKeys
   )
@@ -317,34 +319,41 @@ case class Pivot(
   def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
   ): TableWithColumnMapping = {
-    val mapping = inputData.columnMap
     val table = inputData.table
     val allNeededColumnRefs =
       aggregate.columnRefs.distinct
     val newTable = Scope { implicit scope =>
-      val colIdx0 = mapping(rowKeys)
-      val colIdx1 = mapping(colKeys)
+      val colIdx0 = inputData.getMatchingColumnIdx(rowKeys)
+      val colIdx1 = inputData.getMatchingColumnIdx(colKeys)
       table.pivot(colIdx0, colIdx1)(table =>
         Table(
-          Vector(aggregate.impl(PredicateHelper(allNeededColumnRefs.map {
-            columnRef =>
-              (columnRef, table.columns(mapping(columnRef)))
-          }.toMap))(implicitly[Scope]))
+          Vector(
+            aggregate.impl(PredicateHelper(allNeededColumnRefs.map {
+              columnRef =>
+                (
+                  columnRef,
+                  table.columns(inputData.getMatchingColumnIdx(columnRef))
+                )
+            }.toMap))(implicitly[Scope])
+          )
         )
       )
 
     }
 
     val newColumnMap = {
-      val aggregateRef = aggregate.columnRefs.head
+      val tableRef = inputData.providedColumns.head.table
+
       val colnames = newTable.columns
         .drop(1)
         .zipWithIndex
         .map(v => v._1.name.getOrElse(v._2.toString))
-      Map(rowKeys -> 0) ++ colnames.zipWithIndex.map { case (name, idx) =>
+      Map(
+        inputData.getMatchingQualifiedColumnRef(rowKeys) -> 0
+      ) ++ colnames.zipWithIndex.map { case (name, idx) =>
         (
-          aggregateRef.table.col(
-            aggregateRef.column.toString + "." + name
+          tableRef.col(
+            colKeys.column.toString + "." + name
           ),
           idx + 1
         )
@@ -380,8 +389,8 @@ case class Product(input1: Op, input2: Op) extends Op2 {
       inputData2: TableWithColumnMapping
   )(implicit scope: Scope) = {
 
-    val inputTableRefs1 = inputData1.columnMap.keys.map(_.table).toSet
-    val inputTableRefs2 = inputData2.columnMap.keys.map(_.table).toSet
+    val inputTableRefs1 = inputData1.providedColumns.map(_.table)
+    val inputTableRefs2 = inputData2.providedColumns.map(_.table)
     assert(
       (inputTableRefs1 & inputTableRefs2).isEmpty,
       "Joining same tables aliases"
@@ -404,9 +413,8 @@ case class Product(input1: Op, input2: Op) extends Op2 {
       val t2 = inputData2.table.rows(cartes.select(1, 1))
       t1.bind(t2)
     }
-    val newMap = inputData1.columnMap ++ inputData2.columnMap.map(v =>
-      (v._1, v._2 + inputData1.table.numCols)
-    )
+    val newMap =
+      inputData1.mergeMaps(inputData2.shiftColumnsUp(inputData1.table.numCols))
     TableWithColumnMapping(t3, newMap)
   }
 }
@@ -436,18 +444,19 @@ case class Union(input1: Op, input2: Op) extends Op2 {
       inputData2: TableWithColumnMapping
   )(implicit scope: Scope) = {
 
-    assert(inputData1.columnMap.keySet == inputData2.columnMap.keySet)
+    assert(inputData1.providedColumns == inputData2.providedColumns)
 
-    val columnOrder = inputData1.columnMap.toSeq.sortBy(_._2).map(_._1)
+    val columnOrder = inputData1.columnOrder
 
     val t3 = Scope { implicit scope =>
       val t1 = inputData1.table
-      val t2 = inputData2.table.cols(columnOrder.map(inputData2.columnMap): _*)
+      val t2 = inputData2.table.cols(
+        columnOrder.map(inputData2.getMatchingColumnIdx): _*
+      )
       t1.union(t2)
     }
-    val newMap = inputData1.columnMap ++ inputData2.columnMap.map(v =>
-      (v._1, v._2 + inputData1.table.numCols)
-    )
+    val newMap =
+      inputData1 mergeMaps inputData2.shiftColumnsUp(inputData1.table.numCols)
     TableWithColumnMapping(t3, newMap)
   }
 }
@@ -500,40 +509,50 @@ case class EquiJoin(
     val col1 = column1
     val col2 = column2
     assert(
-      inputData1.columnMap.contains(column1),
+      inputData1.hasMatchingColumn(column1),
       s"Missing $column1 from table to join"
     )
     assert(
-      inputData2.columnMap.contains(column2),
+      inputData2.hasMatchingColumn(column2),
       s"Missing $column2 from table to join"
     )
+    println(col1)
+    println(col2)
+    println(inputData1.table.stringify())
+    println(inputData2.table.stringify())
+    println(inputData1.getMatchingColumnIdx(col1))
+    println(inputData2.getMatchingColumnIdx(col2))
     val joined = inputData1.table.join(
-      inputData1.columnMap(col1),
+      inputData1.getMatchingColumnIdx(col1),
       inputData2.table,
-      inputData2.columnMap(col2),
+      inputData2.getMatchingColumnIdx(col2),
       joinType
     )
-    val oldCol2Idx = inputData2.columnMap(col2)
-    val oldCol1Idx = inputData1.columnMap(col1)
+    val oldCol2Idx = inputData2.getMatchingColumnIdx(col2)
+    val oldCol1Idx = inputData1.getMatchingColumnIdx(col1)
 
-    val leftMapping = inputData1.columnMap
+    val leftMapping = inputData1.getColumnMapping
       .map { v =>
         val shiftback =
           if (v._2 > oldCol1Idx && joinType == RightJoin) -1
           else 0
         (v._1, v._2 + shiftback)
       }
-      .filterNot { case (ref, _) => joinType == RightJoin && ref == col1 }
-    val rightMapping = inputData2.columnMap
+      .filterNot { case (ref, _) =>
+        joinType == RightJoin && (ref matches col1)
+      }
+    val rightMapping = inputData2.getColumnMapping
       .map { v =>
         val shiftback =
           if (v._2 > oldCol2Idx && joinType != RightJoin) -1
           else 0
         (v._1, v._2 + inputData1.table.numCols + shiftback)
       }
-      .filterNot { case (ref, _) => joinType != RightJoin && ref == col2 }
+      .filterNot { case (ref, _) =>
+        joinType != RightJoin && (ref matches col2)
+      }
     val newMapping = leftMapping ++ rightMapping
-    TableWithColumnMapping(joined, newMapping)
+    TableWithColumnMapping(joined, newMapping.toMap)
   }
 
 }

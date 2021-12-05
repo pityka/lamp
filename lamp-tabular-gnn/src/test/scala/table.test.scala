@@ -354,4 +354,49 @@ test("pivot") {
 
     }
   }
+  test("equality") {
+    Scope.root { implicit scope =>
+      val channel =
+        Channels.newChannel(new ByteArrayInputStream(csvText.getBytes()))
+      val channel2 =
+        Channels.newChannel(new ByteArrayInputStream(csvText.getBytes()))
+
+      val table = Table
+        .readHeterogeneousFromCSVChannel(
+          List(
+            (0, I64Column),
+            (1, F32Column),
+            (2, DateTimeColumn()),
+            (3, BooleanColumn()),
+            (4, TextColumn(64, -1L, None))
+          ),
+          channel = channel,
+          recordSeparator = "\n",
+          header = true
+        )
+        .toOption
+        .get
+      val table2 = Table
+        .readHeterogeneousFromCSVChannel(
+          List(
+            (0, I64Column),
+            (1, F32Column),
+            (2, DateTimeColumn()),
+            (3, BooleanColumn()),
+            (4, TextColumn(64, -1L, None))
+          ),
+          channel = channel2,
+          recordSeparator = "\n",
+          header = true
+        )
+        .toOption
+        .get
+
+     assert(table == table)
+     assert(table != table2)
+     assert(table equalDeep table2)
+     assert(table equalDeep table)
+
+    }
+  }
 }

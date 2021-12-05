@@ -525,16 +525,22 @@ object Table {
         vec
       case I64Column =>
         val m = Scope.leak { implicit scope =>
+          if (values.numel == 0) Vec.empty[Long]
+          else 
           values.view(values.shape(0), -1).select(1, 0).toLongVec
         }
         m
       case F32Column =>
         val m = Scope.leak { implicit scope =>
+          if (values.numel == 0) Vec.empty[Float]
+          else 
           values.view(values.shape(0), -1).select(1, 0).toFloatVec
         }
         m
       case F64Column =>
         val m = Scope.leak { implicit scope =>
+          if (values.numel == 0) Vec.empty[Double]
+          else 
           values.view(values.shape(0), -1).select(1, 0).toVec
         }
         m

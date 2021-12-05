@@ -23,8 +23,7 @@ case class ColumnFunction(
     columnRefs: Seq[TableColumnRef],
     impl: PredicateHelper => Scope => Table.Column
 ) extends BooleanFactor {
-  def as(ref: TableColumnRef) = ColumnFunctionWithOutputRef(this, ref)
-  def asSelf = ColumnFunctionWithOutputRef(this, columnRefs.head)
+  def as(ref: QualifiedTableColumnRef) = ColumnFunctionWithOutputRef(this, ref)
   override def toString = s"[${columnRefs.mkString(",")}]"
 }
 

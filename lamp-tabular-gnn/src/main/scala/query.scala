@@ -37,26 +37,44 @@ object RelationalAlgebra {
   case class StringColumnRef(string: String) extends ColumnRef {
     override def toString = string
   }
-  class TableRef(val alias: String) extends Dynamic {
+  trait TableRef extends Dynamic {
 
     def selectDynamic(field: String) = col(field)
     def selectDynamic(field: Int) = col(field)
 
-    override def toString = alias
-    def col(i: Int): TableColumnRef = TableColumnRef(this, IdxColumnRef(i))
-    def col(s: String): TableColumnRef =
-      TableColumnRef(this, StringColumnRef(s))
+    def col(i: Int): QualifiedTableColumnRef =
+      QualifiedTableColumnRef(this, IdxColumnRef(i))
+    def col(s: String): QualifiedTableColumnRef =
+      QualifiedTableColumnRef(this, StringColumnRef(s))
 
-    def asOp = TableOp(this)
+    def asOp = TableOp(this, None)
     def scan = asOp
   }
-  case class TableColumnRef(table: TableRef, column: ColumnRef)
-      extends TableColumnRefSyntax {
-    override def toString = s"${table}.$column"
+  case class AliasTableRef(alias: String) extends TableRef {
+    override def toString = alias
   }
+  case class BoundTableRef(table: Table) extends TableRef {
+    override def toString = "T" + table.hashCode().toInt
+  }
+  sealed trait TableColumnRef extends TableColumnRefSyntax {
+    def column: ColumnRef
+    override def toString = s"*.$column"
+
+    def matches(other: TableColumnRef): Boolean = (this, other) match {
+      case (a: QualifiedTableColumnRef, b: QualifiedTableColumnRef) => a == b
+      case _ => this.column == other.column
+    }
+  }
+  case class QualifiedTableColumnRef(table: TableRef, column: ColumnRef)
+      extends TableColumnRef {
+    override def toString = s"$table.$column"
+    def self = select.as(this)
+  }
+  case class WildcardColumnRef(column: ColumnRef) extends TableColumnRef
+
   case class ColumnFunctionWithOutputRef(
       function: ColumnFunction,
-      outputRef: TableColumnRef
+      outputRef: QualifiedTableColumnRef
   ) {
     override def toString = function.toString
   }
@@ -68,21 +86,27 @@ object RelationalAlgebra {
 
   def interpretBooleanExpression[S: Sc](
       factor: BooleanFactor,
-      table: Table,
-      mapping: Map[TableColumnRef, Int]
+      table: TableWithColumnMapping
   ): STen = factor match {
     case ColumnFunction(columnRefs, impl) =>
-      val columns = columnRefs.map(c => (c, table.columns(mapping(c)))).toMap
+      val columns = columnRefs
+        .map(c =>
+          (
+            c: TableColumnRef,
+            table.table.columns(table.getMatchingColumnIdx(c))
+          )
+        )
+        .toMap
       impl(PredicateHelper(columns))(implicitly[Scope]).values
     case BooleanNegation(factor) =>
-      val t = interpretBooleanExpression(factor, table, mapping)
+      val t = interpretBooleanExpression(factor, table)
       t.logicalNot
     case BooleanExpression(terms) =>
       terms
         .map { term =>
           term.factors
             .map { factor =>
-              interpretBooleanExpression(factor, table, mapping)
+              interpretBooleanExpression(factor, table)
             }
             .toList
             .reduce((a, b) => a.logicalOr(b))
@@ -110,8 +134,50 @@ object RelationalAlgebra {
 
   case class TableWithColumnMapping(
       table: Table,
-      columnMap: Map[TableColumnRef, Int]
-  )
+      private val columnMap: Map[QualifiedTableColumnRef, Int]
+  ) {
+    def shiftColumnsUp(i: Int) =
+      copy(columnMap = columnMap.map(v => (v._1, v._2 + i)))
+    def mapColumns(
+        f: ((QualifiedTableColumnRef, Int)) => (QualifiedTableColumnRef, Int)
+    ) = copy(columnMap = columnMap.map(f))
+    def mergeMaps(other: TableWithColumnMapping) = columnMap ++ other.columnMap
+    def providedColumns = columnMap.keySet
+    def getColumnMapping = columnMap.toSeq
+    def columnOrder: Seq[QualifiedTableColumnRef] =
+      columnMap.toSeq.sortBy(_._2).map(_._1)
+    def getMatchingQualifiedColumnRef(
+        ref: TableColumnRef
+    ): QualifiedTableColumnRef = ref match {
+      case qr: QualifiedTableColumnRef if columnMap.contains(qr) => qr
+      case WildcardColumnRef(column) =>
+        val candidates = columnMap.filter(_._1.column == column)
+        require(
+          candidates.size == 1,
+          "Multiple columns match unqualified query"
+        )
+        candidates.head._1
+      case _ => throw new RuntimeException(s"Not found $ref")
+    }
+    def hasMatchingColumn(ref: TableColumnRef): Boolean = ref match {
+      case qr: QualifiedTableColumnRef => columnMap.contains(qr)
+      case WildcardColumnRef(column) =>
+        val candidates = columnMap.filter(_._1.column == column)
+        candidates.size == 1
+    }
+    def getMatchingColumnIdx(ref: TableColumnRef): Int = {
+      ref match {
+        case qr: QualifiedTableColumnRef => columnMap(qr)
+        case WildcardColumnRef(column) =>
+          val candidates = columnMap.filter(_._1.column == column)
+          require(
+            candidates.size == 1,
+            "Multiple columns match unqualified query"
+          )
+          candidates.head._2
+      }
+    }
+  }
   object TableWithColumnMapping {
     implicit val movable: Movable[TableWithColumnMapping] =
       Movable.by(v => v.table)
@@ -144,16 +210,20 @@ object RelationalAlgebra {
       .filter(_._2.isDefined)
       .map(v => (v._1, v._2.get))
 
-    val tables = root.boundTables.toMap
-
-    def makeMapping(tableRef: TableRef): TableWithColumnMapping = {
-      val table = tables(tableRef)
+    def makeMapping(
+        tableRef: TableRef,
+        boundTable: Option[Table]
+    ): TableWithColumnMapping = {
+      val tables = root.boundTables.toMap
+      val table = tables.get(tableRef).orElse(boundTable).get
       val columnRefs =
-        extractColumnRefs(table).map(TableColumnRef(tableRef, _))
-      val mapping = columnRefs.map {
-        case ref @ TableColumnRef(_, IdxColumnRef(idx)) => (ref, idx)
-        case ref @ TableColumnRef(_, StringColumnRef(string)) =>
-          (ref, table.nameToIndex(string))
+        extractColumnRefs(table).map(QualifiedTableColumnRef(tableRef, _))
+      val mapping = columnRefs.map { ref =>
+        ref.column match {
+          case IdxColumnRef(idx) => (ref, idx)
+          case StringColumnRef(string) =>
+            (ref, table.nameToIndex(string))
+        }
       }.toMap
       TableWithColumnMapping(table, mapping)
     }
@@ -169,7 +239,7 @@ object RelationalAlgebra {
       }
       ops.head match {
 
-        case op @ TableOp(tableRef) =>
+        case op @ TableOp(tableRef, boundTable) =>
           assert(!outputs.contains(op.id))
           loop(
             step + 1,
@@ -177,7 +247,7 @@ object RelationalAlgebra {
             outputs + (
               (
                 op.id,
-                (makeMapping(tableRef), Scope.free)
+                (makeMapping(tableRef, boundTable), Scope.free)
               )
             ) -- releasable
           )
@@ -231,11 +301,12 @@ object RelationalAlgebra {
   def providedReferences(topoSorted: Seq[Op], tables: Map[TableRef, Table]) = {
 
     def extractColumnRefsFromTableRef(
-        tableRef: TableRef
+        tableRef: TableRef,
+        boundTable: Option[Table]
     ): Seq[TableColumnRef] = {
-      val table = tables(tableRef)
+      val table = tables.get(tableRef).orElse(boundTable).get
       val columnRefs =
-        extractColumnRefs(table).map(TableColumnRef(tableRef, _))
+        extractColumnRefs(table).map(QualifiedTableColumnRef(tableRef, _))
 
       columnRefs
     }
@@ -246,11 +317,14 @@ object RelationalAlgebra {
     ): Map[UUID, Seq[TableColumnRef]] = {
       ops.head match {
 
-        case op @ TableOp(tableRef) =>
+        case op @ TableOp(tableRef, boundTable) =>
           assert(!outputs.contains(op.id))
           loop(
             ops.tail,
-            outputs + (op.id -> extractColumnRefsFromTableRef(tableRef))
+            outputs + (op.id -> extractColumnRefsFromTableRef(
+              tableRef,
+              boundTable
+            ))
           )
 
         case op @ Result(_, _) =>
@@ -343,8 +417,11 @@ object RelationalAlgebra {
 
     val tables = root.boundTables.toMap
 
-    def makeTableEstimate(tableRef: TableRef): TableEstimate = {
-      val table = tables(tableRef)
+    def makeTableEstimate(
+        tableRef: TableRef,
+        boundTable: Option[Table]
+    ): TableEstimate = {
+      val table = tables.get(tableRef).orElse(boundTable).get
 
       TableEstimate(table.numRows, table.numCols)
     }
@@ -355,11 +432,11 @@ object RelationalAlgebra {
     ): Map[UUID, TableEstimate] = {
       ops.head match {
 
-        case op @ TableOp(tableRef) =>
+        case op @ TableOp(tableRef, boundTable) =>
           assert(!outputs.contains(op.id))
           loop(
             ops.tail,
-            outputs + (op.id -> makeTableEstimate(tableRef))
+            outputs + (op.id -> makeTableEstimate(tableRef, boundTable))
           )
 
         case op @ Result(input, _) =>
