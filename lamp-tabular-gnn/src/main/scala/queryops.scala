@@ -44,7 +44,7 @@ sealed trait Op {
   ) = Pivot(this, rowKeys, colKeys, aggregate)
 
   def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
-    done.bind(tables: _*).optimize().interpret
+    done.bind(tables: _*).check.optimize().interpret
   def result(implicit scope: Scope) =
     doneAndInterpret()
 
@@ -57,7 +57,7 @@ trait Op1 extends Op {
   def neededColumns: Seq[TableColumnRef]
   def inputs = List(InputWithNeededColumns(input, neededColumns))
 
-  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef]
+  def providesColumns(input: ColumnSet): Either[String, ColumnSet]
 
   def estimate(input: TableEstimate): TableEstimate
   def impl(input: TableWithColumnMapping)(implicit
@@ -75,9 +75,9 @@ trait Op2 extends Op {
   )
 
   def providesColumns(
-      input1: Seq[TableColumnRef],
-      input2: Seq[TableColumnRef]
-  ): Seq[TableColumnRef]
+      input1: ColumnSet,
+      input2: ColumnSet
+  ): Either[String, ColumnSet]
 
   def estimate(input1: TableEstimate, input2: TableEstimate): TableEstimate
 
@@ -112,8 +112,18 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 
   val neededColumns = projectTo.flatMap(_.function.columnRefs).distinct
 
-  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] =
-    neededColumns
+  def providesColumns(input: ColumnSet) = {
+    if (neededColumns.forall(n => input.hasMatchingColumn(n)))
+      Right(
+        ColumnSet(
+          neededColumns.map(n => input.getMatchingQualifiedColumnRef(n)).toSet
+        )
+      )
+    else
+      Left(
+        s"Missing column ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
+      )
+  }
 
   def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
@@ -157,6 +167,13 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
     extends Op {
 
   override def done = this
+
+  def check = {
+    val sorted = RelationalAlgebra.topologicalSort(this).reverse
+    val errors = providedReferences(sorted, boundTables)
+    if (errors.isLeft) throw new RuntimeException(errors.left.toOption.get)
+    this
+  }
 
   def replace(old: UUID, n: Op) = {
     if (input.id == old) copy(input = n)
@@ -207,13 +224,26 @@ case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
   def estimate(input: TableEstimate): TableEstimate = input
   def neededColumns = columnsReferencedByBooleanExpression(booleanExpression)
 
-  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = input
+  def providesColumns(input: ColumnSet) = {
+    val expressionOK = verifyBooleanExpression(
+      booleanExpression,
+      input
+    )
+    if (neededColumns.forall(n => input.hasMatchingColumn(n)) && expressionOK)
+      Right(
+        input
+      )
+    else
+      Left(
+        s"In $this: Missing or ambiguous column(s) ${neededColumns
+          .filterNot(n => input.hasMatchingColumn(n))
+          .mkString("{", ", ", "}")} ${input.providedColumns.mkString("{", ", ", "}")}"
+      )
+  }
 
   override def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
   ): TableWithColumnMapping = {
-    println(inputData.table.stringify())
-    println(inputData.getColumnMapping)
     val newTable = Scope { implicit scope =>
       val booleanMask = interpretBooleanExpression(
         booleanExpression,
@@ -244,8 +274,20 @@ case class Aggregate(
   def neededColumns =
     (groupBy ++ aggregate.flatMap(_.function.columnRefs)).distinct
 
-  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] =
-    input ++ aggregate.map(_.outputRef)
+  def providesColumns(input: ColumnSet) =
+    // input ++ aggregate.map(_.outputRef)
+    {
+      if (neededColumns.forall(n => input.hasMatchingColumn(n)))
+        Right(
+          ColumnSet(
+            input.providedColumns ++ aggregate.map(_.outputRef)
+          )
+        )
+      else
+        Left(
+          s"Missing column ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
+        )
+    }
 
   def impl(
       inputData: TableWithColumnMapping
@@ -312,9 +354,18 @@ case class Pivot(
 
   def neededColumns =
     (rowKeys +: colKeys +: aggregate.columnRefs).distinct
-  def providesColumns(input: Seq[TableColumnRef]): Seq[TableColumnRef] = Seq(
-    rowKeys
-  )
+  def providesColumns(input: ColumnSet): Either[String, ColumnSet] = {
+    if (neededColumns.forall(n => input.hasMatchingColumn(n)))
+      Right(
+        ColumnSet(
+          Set(input.getMatchingQualifiedColumnRef(rowKeys))
+        )
+      )
+    else
+      Left(
+        s"Missing column ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
+      )
+  }
 
   def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
@@ -380,9 +431,14 @@ case class Product(input1: Op, input2: Op) extends Op2 {
   def neededColumns1 = Nil
   def neededColumns2 = Nil
   def providesColumns(
-      input1: Seq[TableColumnRef],
-      input2: Seq[TableColumnRef]
-  ): Seq[TableColumnRef] = (input1 ++ input2).distinct
+      input1: ColumnSet,
+      input2: ColumnSet
+  ) =
+    Right(
+      ColumnSet(
+        input1.providedColumns ++ input2.providedColumns
+      )
+    )
 
   def impl(
       inputData1: TableWithColumnMapping,
@@ -435,9 +491,16 @@ case class Union(input1: Op, input2: Op) extends Op2 {
   def neededColumns1 = Nil
   def neededColumns2 = Nil
   def providesColumns(
-      input1: Seq[TableColumnRef],
-      input2: Seq[TableColumnRef]
-  ): Seq[TableColumnRef] = (input1 ++ input2).distinct
+      input1: ColumnSet,
+      input2: ColumnSet
+  ) =
+    if (input1 == input2)
+      Right(
+        ColumnSet(
+          input1.providedColumns
+        )
+      )
+    else Left(s"Can't union different column sets")
 
   def impl(
       inputData1: TableWithColumnMapping,
@@ -498,9 +561,16 @@ case class EquiJoin(
 
   }
   def providesColumns(
-      input1: Seq[TableColumnRef],
-      input2: Seq[TableColumnRef]
-  ): Seq[TableColumnRef] = (input1 ++ input2).distinct
+      input1: ColumnSet,
+      input2: ColumnSet
+  ) =
+    if (input1.hasMatchingColumn(column1) && input2.hasMatchingColumn(column2))
+      Right(
+        ColumnSet(
+          input1.providedColumns ++ input2.providedColumns
+        )
+      )
+    else Left(s"Can't union different column sets")
 
   def impl(
       inputData1: TableWithColumnMapping,
@@ -516,12 +586,6 @@ case class EquiJoin(
       inputData2.hasMatchingColumn(column2),
       s"Missing $column2 from table to join"
     )
-    println(col1)
-    println(col2)
-    println(inputData1.table.stringify())
-    println(inputData2.table.stringify())
-    println(inputData1.getMatchingColumnIdx(col1))
-    println(inputData2.getMatchingColumnIdx(col2))
     val joined = inputData1.table.join(
       inputData1.getMatchingColumnIdx(col1),
       inputData2.table,

@@ -114,6 +114,28 @@ object RelationalAlgebra {
         .toList
         .reduce((a, b) => a.logicalAnd(b))
   }
+  def verifyBooleanExpression(
+      factor: BooleanFactor,
+      table: ColumnSet
+  ): Boolean = factor match {
+    case ColumnFunction(columnRefs, _) =>
+      columnRefs
+        .forall(c => table.hasMatchingColumn(c))
+    case BooleanNegation(factor) =>
+      verifyBooleanExpression(factor, table)
+    case BooleanExpression(terms) =>
+      terms
+        .map { term =>
+          term.factors
+            .map { factor =>
+              verifyBooleanExpression(factor, table)
+            }
+            .toList
+            .reduce((a, b) => a && b)
+        }
+        .toList
+        .reduce((a, b) => a && b)
+  }
   def columnsReferencedByBooleanExpression(
       factor: BooleanFactor
   ): Seq[TableColumnRef] = factor match {
@@ -132,10 +154,36 @@ object RelationalAlgebra {
 
   }
 
+  trait MatchableTableColumnRefSet {
+    def providedColumns: Set[QualifiedTableColumnRef]
+    def getMatchingQualifiedColumnRef(
+        ref: TableColumnRef
+    ): QualifiedTableColumnRef = ref match {
+      case qr: QualifiedTableColumnRef if providedColumns.contains(qr) => qr
+      case WildcardColumnRef(column) =>
+        val candidates = providedColumns.filter(_.column == column)
+        require(
+          candidates.size == 1,
+          "Multiple columns match unqualified query"
+        )
+        candidates.head
+      case _ => throw new RuntimeException(s"Not found $ref")
+    }
+    def hasMatchingColumn(ref: TableColumnRef): Boolean = ref match {
+      case qr: QualifiedTableColumnRef => providedColumns.contains(qr)
+      case WildcardColumnRef(column) =>
+        val candidates = providedColumns.filter(_.column == column)
+        candidates.size == 1
+    }
+  }
+
+  case class ColumnSet(providedColumns: Set[QualifiedTableColumnRef])
+      extends MatchableTableColumnRefSet
+
   case class TableWithColumnMapping(
       table: Table,
       private val columnMap: Map[QualifiedTableColumnRef, Int]
-  ) {
+  ) extends MatchableTableColumnRefSet {
     def shiftColumnsUp(i: Int) =
       copy(columnMap = columnMap.map(v => (v._1, v._2 + i)))
     def mapColumns(
@@ -146,25 +194,7 @@ object RelationalAlgebra {
     def getColumnMapping = columnMap.toSeq
     def columnOrder: Seq[QualifiedTableColumnRef] =
       columnMap.toSeq.sortBy(_._2).map(_._1)
-    def getMatchingQualifiedColumnRef(
-        ref: TableColumnRef
-    ): QualifiedTableColumnRef = ref match {
-      case qr: QualifiedTableColumnRef if columnMap.contains(qr) => qr
-      case WildcardColumnRef(column) =>
-        val candidates = columnMap.filter(_._1.column == column)
-        require(
-          candidates.size == 1,
-          "Multiple columns match unqualified query"
-        )
-        candidates.head._1
-      case _ => throw new RuntimeException(s"Not found $ref")
-    }
-    def hasMatchingColumn(ref: TableColumnRef): Boolean = ref match {
-      case qr: QualifiedTableColumnRef => columnMap.contains(qr)
-      case WildcardColumnRef(column) =>
-        val candidates = columnMap.filter(_._1.column == column)
-        candidates.size == 1
-    }
+
     def getMatchingColumnIdx(ref: TableColumnRef): Int = {
       ref match {
         case qr: QualifiedTableColumnRef => columnMap(qr)
@@ -298,23 +328,26 @@ object RelationalAlgebra {
     loop(0, sorted, Map.empty)
 
   }
-  def providedReferences(topoSorted: Seq[Op], tables: Map[TableRef, Table]) = {
+  def providedReferences(
+      topoSorted: Seq[Op],
+      tables: Map[TableRef, Table]
+  ): Either[String, Map[UUID, ColumnSet]] = {
 
     def extractColumnRefsFromTableRef(
         tableRef: TableRef,
         boundTable: Option[Table]
-    ): Seq[TableColumnRef] = {
+    ): ColumnSet = {
       val table = tables.get(tableRef).orElse(boundTable).get
       val columnRefs =
         extractColumnRefs(table).map(QualifiedTableColumnRef(tableRef, _))
 
-      columnRefs
+      ColumnSet(columnRefs.toSet)
     }
 
     def loop(
         ops: Seq[Op],
-        outputs: Map[UUID, Seq[TableColumnRef]]
-    ): Map[UUID, Seq[TableColumnRef]] = {
+        outputs: Map[UUID, ColumnSet]
+    ): Either[String, Map[UUID, ColumnSet]] = {
       ops.head match {
 
         case op @ TableOp(tableRef, boundTable) =>
@@ -329,22 +362,32 @@ object RelationalAlgebra {
 
         case op @ Result(_, _) =>
           assert(!outputs.contains(op.id))
-          outputs
+          Right(outputs)
         case op: Op2 =>
           assert(!outputs.contains(op.id))
+          op
+            .providesColumns(
+              outputs(op.input1.id),
+              outputs(op.input2.id)
+            ) match {
+            case Right(x) =>
+              loop(
+                ops.tail,
+                outputs + (op.id -> x)
+              )
+            case Left(error) => Left(error)
+          }
 
-          loop(
-            ops.tail,
-            outputs + (op.id -> op
-              .providesColumns(outputs(op.input1.id), outputs(op.input2.id)))
-          )
         case op: Op1 =>
           assert(!outputs.contains(op.id))
-
-          loop(
-            ops.tail,
-            outputs + (op.id -> op.providesColumns(outputs(op.input.id)))
-          )
+          op.providesColumns(outputs(op.input.id)) match {
+            case Right(x) =>
+              loop(
+                ops.tail,
+                outputs + (op.id -> x)
+              )
+            case Left(error) => Left(error)
+          }
 
         case x => throw new RuntimeException("Unexpected op " + x)
       }
@@ -388,7 +431,7 @@ object RelationalAlgebra {
   ) = {
 
     def children(parent: Result): Seq[Result] =
-      mutations.flatMap(_.makeChildren(parent)).distinct
+      mutations.flatMap(_.makeChildren(parent).toOption.toList.flatten).distinct
 
     def loop(
         depth: Int,
@@ -400,10 +443,13 @@ object RelationalAlgebra {
           val ch = children(head)
           val nextVisited =
             if (visited.contains(head)) visited else visited :+ head
-          loop(depth + 1, tail ++ ch, nextVisited)
-        case _ => visited
+          val nextQueue = tail ++ ch.filterNot(ch =>
+            tail.contains(ch) || visited.contains(ch)
+          )
+          loop(depth + 1, nextQueue, nextVisited)
+        case _ =>
+          visited
       }
-
     loop(0, Queue(start), Vector.empty)
 
   }
@@ -412,7 +458,7 @@ object RelationalAlgebra {
       columns: Long
   )
 
-  def estimate(root: Result) = {
+  def estimate(root: Result): Double = {
     val sorted = topologicalSort(root).reverse
 
     val tables = root.boundTables.toMap

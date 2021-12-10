@@ -67,9 +67,6 @@ class RelationAlgebraSuite extends AnyFunSuite {
         .toOption
         .get
 
-      println(table.stringify())
-      println(table2.stringify())
-      println(table3.stringify())
 
       val tref1 = Q.table("t1")
       val tref2 = Q.table("t2")
@@ -158,17 +155,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
           .toVec == Vec(4.5)
       )
       import lamp.tgnn.syntax._
-      println(
-        table
-          .innerEquiJoin(
-            Q.hint,
-            table2.query,
-            Q.col("hint")
-          )
-          .filter(Q.hint === 4.5)
-          .result
-          .stringify()
-      )
+  
       assert(
         table
           .innerEquiJoin(
@@ -176,10 +163,10 @@ class RelationAlgebraSuite extends AnyFunSuite {
             table2.query,
             Q.col("hint")
           )
-          .filter(Q.hint === 4.5)
+          .filter(table.ref.hfloat === 1.5)
           .result
           .col(1)
-          .toVec == Vec(4.5)
+          .toVec == Vec(1.5)
       )
 
       assert(
@@ -232,8 +219,8 @@ class RelationAlgebraSuite extends AnyFunSuite {
             .union(tref1.project(tref1.htext.self))
         }
       }
-      val q2 = PushDownFilters.makeChildren(q1).head
-      val q3 = PushDownInnerJoin.makeChildren(q2).head
+      val q2 = PushDownFilters.makeChildren(q1).toOption.get.head
+      val q3 = PushDownInnerJoin.makeChildren(q2).toOption.get.head
       assert(q3 == q1)
       assert(q2 != q1)
 
