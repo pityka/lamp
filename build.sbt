@@ -63,10 +63,10 @@ lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "3.0.2"
-val upickleVersion = "1.4.2"
+val upickleVersion = "1.4.3"
 val scalaTestVersion = "3.2.10"
-val scribeVersion = "3.6.3"
-val catsEffectVersion = "3.3.0"
+val scribeVersion = "3.6.4"
+val catsEffectVersion = "3.2.9"
 val catsCoreVersion = "2.6.0"
 
 lazy val sten = project
@@ -200,7 +200,7 @@ lazy val onnx = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "com.microsoft.onnxruntime" % "onnxruntime" % "1.9.0" % "test"
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.10.0" % "test"
     ),
     PB.targets in Compile := Seq(
       scalapb.gen() -> (sourceManaged in Compile).value / "scalapb"
@@ -322,7 +322,7 @@ lazy val example_arxiv = project
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "com.lihaoyi" %% "requests" % "0.6.7",
-      "com.lihaoyi" %% "os-lib" % "0.7.8"
+      "com.lihaoyi" %% "os-lib" % "0.8.0"
     )
   )
   .dependsOn(core, data)
