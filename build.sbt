@@ -66,7 +66,7 @@ val saddleVersion = "3.0.2"
 val upickleVersion = "1.4.3"
 val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.6.4"
-val catsEffectVersion = "3.2.9"
+val catsEffectVersion = "3.3.1"
 val catsCoreVersion = "2.6.0"
 
 lazy val sten = project
