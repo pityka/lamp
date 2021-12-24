@@ -110,15 +110,17 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
     else copy(input = input.replace(old, n))
   }
 
-  val neededColumns = projectTo.flatMap(_.function.columnRefs).distinct
+  val neededColumns = projectTo.flatMap(_.function.columnRefs)
 
   def providesColumns(input: ColumnSet) = {
     if (neededColumns.forall(n => input.hasMatchingColumn(n)))
-      Right(
-        ColumnSet(
-          neededColumns.map(n => input.getMatchingQualifiedColumnRef(n)).toSet
+      if (neededColumns.distinct.size == neededColumns.size)
+        Right(
+          ColumnSet(
+            neededColumns.map(n => input.getMatchingQualifiedColumnRef(n)).toMap
+          )
         )
-      )
+      else Left("Duplicate columns in projections")
     else
       Left(
         s"Missing column ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
@@ -128,9 +130,11 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
   def impl(inputData: TableWithColumnMapping)(implicit
       scope: Scope
   ): TableWithColumnMapping = {
-    val providedColumns = inputData.providedColumns
-    val neededColumns = projectTo.flatMap(_.function.columnRefs).toSet
-    val missing = neededColumns &~ providedColumns.toSet
+    val providedColumns: Set[QualifiedTableColumnRef] = inputData.providedColumns.keySet
+    val needed: Set[QualifiedTableColumnRef] =  neededColumns
+      .map(n => inputData.getMatchingQualifiedColumnRef(n)._1)
+      .toSet
+    val missing = needed &~ providedColumns
     assert(missing.isEmpty, s"$missing columns are missing")
 
     val inputColumnMap =
@@ -171,7 +175,8 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
   def check = {
     val sorted = RelationalAlgebra.topologicalSort(this).reverse
     val errors = providedReferences(sorted, boundTables)
-    if (errors.isLeft) throw new RuntimeException(errors.left.toOption.get)
+    if (errors.isLeft)
+      throw new RuntimeException(errors.left.toOption.get + "\n" + stringify)
     this
   }
 
@@ -275,12 +280,11 @@ case class Aggregate(
     (groupBy ++ aggregate.flatMap(_.function.columnRefs)).distinct
 
   def providesColumns(input: ColumnSet) =
-    // input ++ aggregate.map(_.outputRef)
     {
       if (neededColumns.forall(n => input.hasMatchingColumn(n)))
         Right(
           ColumnSet(
-            input.providedColumns ++ aggregate.map(_.outputRef)
+            aggregate.zipWithIndex.map(v => (v._1.outputRef , v._2)).toMap
           )
         )
       else
@@ -358,7 +362,7 @@ case class Pivot(
     if (neededColumns.forall(n => input.hasMatchingColumn(n)))
       Right(
         ColumnSet(
-          Set(input.getMatchingQualifiedColumnRef(rowKeys))
+          Map(input.getMatchingQualifiedColumnRef(rowKeys)._1 -> 0)
         )
       )
     else
@@ -393,14 +397,14 @@ case class Pivot(
     }
 
     val newColumnMap = {
-      val tableRef = inputData.providedColumns.head.table
+      val tableRef = inputData.providedColumns.head._1.table
 
       val colnames = newTable.columns
         .drop(1)
         .zipWithIndex
         .map(v => v._1.name.getOrElse(v._2.toString))
       Map(
-        inputData.getMatchingQualifiedColumnRef(rowKeys) -> 0
+        inputData.getMatchingQualifiedColumnRef(rowKeys)._1 -> 0
       ) ++ colnames.zipWithIndex.map { case (name, idx) =>
         (
           tableRef.col(
@@ -445,8 +449,8 @@ case class Product(input1: Op, input2: Op) extends Op2 {
       inputData2: TableWithColumnMapping
   )(implicit scope: Scope) = {
 
-    val inputTableRefs1 = inputData1.providedColumns.map(_.table)
-    val inputTableRefs2 = inputData2.providedColumns.map(_.table)
+    val inputTableRefs1 = inputData1.providedColumns.map(_._1.table).toSet
+    val inputTableRefs2 = inputData2.providedColumns.map(_._1.table).toSet
     assert(
       (inputTableRefs1 & inputTableRefs2).isEmpty,
       "Joining same tables aliases"
@@ -570,7 +574,15 @@ case class EquiJoin(
           input1.providedColumns ++ input2.providedColumns
         )
       )
-    else Left(s"Can't union different column sets")
+    else {
+      val missing1 =
+        if (input1.hasMatchingColumn(column1)) Nil else List(column1)
+      val missing2 =
+        if (input2.hasMatchingColumn(column2)) Nil else List(column2)
+
+      Left(s"Equijoin misses columns. Missing from left: ${missing1
+        .mkString(", ")}. Missing from right: ${missing2.mkString(", ")}. ")
+    }
 
   def impl(
       inputData1: TableWithColumnMapping,
@@ -600,21 +612,30 @@ case class EquiJoin(
         val shiftback =
           if (v._2 > oldCol1Idx && joinType == RightJoin) -1
           else 0
-        (v._1, v._2 + shiftback)
+        val newIdx =
+          if ((v._1 matches column1) && joinType == RightJoin)
+            inputData1.table.numCols + oldCol2Idx
+          else v._2 + shiftback
+        (v._1, newIdx)
       }
-      .filterNot { case (ref, _) =>
-        joinType == RightJoin && (ref matches col1)
-      }
+
     val rightMapping = inputData2.getColumnMapping
-      .map { v =>
+      .map { case (ref, idx) =>
         val shiftback =
-          if (v._2 > oldCol2Idx && joinType != RightJoin) -1
+          if (idx > oldCol2Idx && joinType != RightJoin) -1
           else 0
-        (v._1, v._2 + inputData1.table.numCols + shiftback)
+        val newIdx =
+          if ((ref matches column2) && joinType != RightJoin) oldCol1Idx
+          else idx + inputData1.table.numCols + shiftback
+        (ref, newIdx)
       }
-      .filterNot { case (ref, _) =>
-        joinType != RightJoin && (ref matches col2)
-      }
+
+    println(column1)
+    println(column2)
+    println(joined.stringify())
+    println(leftMapping)
+    println(rightMapping)
+
     val newMapping = leftMapping ++ rightMapping
     TableWithColumnMapping(joined, newMapping.toMap)
   }

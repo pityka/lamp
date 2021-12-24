@@ -155,16 +155,16 @@ object RelationalAlgebra {
   }
 
   trait MatchableTableColumnRefSet {
-    def providedColumns: Set[QualifiedTableColumnRef]
+    def providedColumns: Map[QualifiedTableColumnRef,Int]
     def getMatchingQualifiedColumnRef(
         ref: TableColumnRef
-    ): QualifiedTableColumnRef = ref match {
-      case qr: QualifiedTableColumnRef if providedColumns.contains(qr) => qr
+    ): (QualifiedTableColumnRef,Int) = ref match {
+      case qr: QualifiedTableColumnRef if providedColumns.contains(qr) => qr -> providedColumns(qr)
       case WildcardColumnRef(column) =>
-        val candidates = providedColumns.filter(_.column == column)
+        val candidates = providedColumns.toSeq.filter(_._1.column == column)
         require(
-          candidates.size == 1,
-          "Multiple columns match unqualified query"
+          candidates.map(_._2).distinct.size == 1,
+          s"Multiple columns match unqualified query ${candidates.mkString(", ")}"
         )
         candidates.head
       case _ => throw new RuntimeException(s"Not found $ref")
@@ -172,12 +172,12 @@ object RelationalAlgebra {
     def hasMatchingColumn(ref: TableColumnRef): Boolean = ref match {
       case qr: QualifiedTableColumnRef => providedColumns.contains(qr)
       case WildcardColumnRef(column) =>
-        val candidates = providedColumns.filter(_.column == column)
-        candidates.size == 1
+        val candidates = providedColumns.toSeq.filter(_._1.column == column)
+        candidates.map(_._2).distinct.size == 1
     }
   }
 
-  case class ColumnSet(providedColumns: Set[QualifiedTableColumnRef])
+  case class ColumnSet(providedColumns: Map[QualifiedTableColumnRef,Int])
       extends MatchableTableColumnRefSet
 
   case class TableWithColumnMapping(
@@ -190,7 +190,7 @@ object RelationalAlgebra {
         f: ((QualifiedTableColumnRef, Int)) => (QualifiedTableColumnRef, Int)
     ) = copy(columnMap = columnMap.map(f))
     def mergeMaps(other: TableWithColumnMapping) = columnMap ++ other.columnMap
-    def providedColumns = columnMap.keySet
+    def providedColumns = columnMap
     def getColumnMapping = columnMap.toSeq
     def columnOrder: Seq[QualifiedTableColumnRef] =
       columnMap.toSeq.sortBy(_._2).map(_._1)
@@ -201,8 +201,8 @@ object RelationalAlgebra {
         case WildcardColumnRef(column) =>
           val candidates = columnMap.filter(_._1.column == column)
           require(
-            candidates.size == 1,
-            "Multiple columns match unqualified query"
+            candidates.map(_._2).toSeq.distinct.size == 1,
+            s"Multiple columns match unqualified query: ${candidates.mkString(", ")}"
           )
           candidates.head._2
       }
@@ -339,9 +339,15 @@ object RelationalAlgebra {
     ): ColumnSet = {
       val table = tables.get(tableRef).orElse(boundTable).get
       val columnRefs =
-        extractColumnRefs(table).map(QualifiedTableColumnRef(tableRef, _))
-
-      ColumnSet(columnRefs.toSet)
+        extractColumnRefs(table)
+     val mapping = columnRefs.map { ref =>
+        ref match {
+          case IdxColumnRef(idx) => (QualifiedTableColumnRef(tableRef, ref), idx)
+          case StringColumnRef(string) =>
+            (QualifiedTableColumnRef(tableRef, ref), table.nameToIndex(string))
+        }
+      }.toMap
+      ColumnSet(mapping)
     }
 
     def loop(

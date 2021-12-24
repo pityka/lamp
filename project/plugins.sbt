@@ -11,3 +11,5 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.4")
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.6"
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.8.1")
+
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "2.0.0-M3")

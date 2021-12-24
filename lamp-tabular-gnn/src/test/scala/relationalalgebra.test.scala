@@ -40,19 +40,6 @@ class RelationAlgebraSuite extends AnyFunSuite {
         .toOption
         .get
 
-      val table3 = Table
-        .readHeterogeneousFromCSVChannel(
-          List(
-            (0, I64Column),
-            (1, F32Column)
-          ),
-          channel =
-            Channels.newChannel(new ByteArrayInputStream(csvText3.getBytes())),
-          recordSeparator = "\n",
-          header = true
-        )
-        .toOption
-        .get
       val table2 = Table
         .readHeterogeneousFromCSVChannel(
           List(
@@ -66,7 +53,6 @@ class RelationAlgebraSuite extends AnyFunSuite {
         )
         .toOption
         .get
-
 
       val tref1 = Q.table("t1")
       val tref2 = Q.table("t2")
@@ -123,6 +109,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
           .values
           .toMat == Mat(Vec(4.5))
       )
+
       assert(
         Q.query(table, "t1") { tref1 =>
           Q.query(table2, "t2") { tref2 =>
@@ -155,7 +142,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
           .toVec == Vec(4.5)
       )
       import lamp.tgnn.syntax._
-  
+
       assert(
         table
           .innerEquiJoin(
@@ -231,6 +218,38 @@ class RelationAlgebraSuite extends AnyFunSuite {
       println(q1.interpret.stringify())
 
       assert(q1.optimize().interpret equalDeep q1.interpret)
+
+      assert(
+        table
+          .innerEquiJoin(
+            Q.hint,
+            table2.query
+              .filter(Q.col("hfloat") >= 0d and Q.col("hfloat") > 0)
+              .project(
+                table2.ref.col("hfloat").self,
+                table2.ref.col("hint").self
+              ),
+            Q.col("hint")
+          )
+          .project(table.ref.col("hfloat").self)
+          .result
+          .col(0)
+          .toVec == Vec(1.5, 2.5, 2.5, 3.0, 3.0)
+      )
+      println(
+        table
+          .innerEquiJoin(
+            Q.hint,
+            table2.query,
+            Q.col("hint")
+          )
+          .innerEquiJoin(Q.hint, table.query, Q.hint)
+          .aggregate(Q.hint)(Q.avg(table.ref.hfloat).as(Q.table("aggr").col("boo")))
+          .result
+          .stringify()
+        // col(0).toVec == Vec(1.5,2.5,2.5,3.0,3.0)
+
+      )
     }
   }
 }
