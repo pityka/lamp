@@ -57,7 +57,7 @@ trait Op1 extends Op {
   def neededColumns: Seq[TableColumnRef]
   def inputs = List(InputWithNeededColumns(input, neededColumns))
 
-  def providesColumns(input: ColumnSet): Either[String, ColumnSet]
+  def analyze(input: ColumnSet): Either[String, ColumnSet]
 
   def estimate(input: TableEstimate): TableEstimate
   def impl(input: TableWithColumnMapping)(implicit
@@ -74,7 +74,7 @@ trait Op2 extends Op {
     InputWithNeededColumns(input2, neededColumns2)
   )
 
-  def providesColumns(
+  def analyze(
       input1: ColumnSet,
       input2: ColumnSet
   ): Either[String, ColumnSet]
@@ -112,7 +112,7 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 
   val neededColumns = projectTo.flatMap(_.function.columnRefs)
 
-  def providesColumns(input: ColumnSet) = {
+  def analyze(input: ColumnSet) = {
     if (neededColumns.forall(n => input.hasMatchingColumn(n)))
       if (neededColumns.distinct.size == neededColumns.size)
         Right(
@@ -174,7 +174,7 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty)
 
   def check = {
     val sorted = RelationalAlgebra.topologicalSort(this).reverse
-    val errors = providedReferences(sorted, boundTables)
+    val errors = analyzeReferences(sorted, boundTables)
     if (errors.isLeft)
       throw new RuntimeException(errors.left.toOption.get + "\n" + stringify)
     this
@@ -229,7 +229,7 @@ case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
   def estimate(input: TableEstimate): TableEstimate = input
   def neededColumns = columnsReferencedByBooleanExpression(booleanExpression)
 
-  def providesColumns(input: ColumnSet) = {
+  def analyze(input: ColumnSet) = {
     val expressionOK = verifyBooleanExpression(
       booleanExpression,
       input
@@ -279,7 +279,7 @@ case class Aggregate(
   def neededColumns =
     (groupBy ++ aggregate.flatMap(_.function.columnRefs)).distinct
 
-  def providesColumns(input: ColumnSet) =
+  def analyze(input: ColumnSet) =
     {
       if (neededColumns.forall(n => input.hasMatchingColumn(n)))
         Right(
@@ -358,7 +358,7 @@ case class Pivot(
 
   def neededColumns =
     (rowKeys +: colKeys +: aggregate.columnRefs).distinct
-  def providesColumns(input: ColumnSet): Either[String, ColumnSet] = {
+  def analyze(input: ColumnSet): Either[String, ColumnSet] = {
     if (neededColumns.forall(n => input.hasMatchingColumn(n)))
       Right(
         ColumnSet(
@@ -434,7 +434,7 @@ case class Product(input1: Op, input2: Op) extends Op2 {
 
   def neededColumns1 = Nil
   def neededColumns2 = Nil
-  def providesColumns(
+  def analyze(
       input1: ColumnSet,
       input2: ColumnSet
   ) =
@@ -494,7 +494,7 @@ case class Union(input1: Op, input2: Op) extends Op2 {
 
   def neededColumns1 = Nil
   def neededColumns2 = Nil
-  def providesColumns(
+  def analyze(
       input1: ColumnSet,
       input2: ColumnSet
   ) =
@@ -564,7 +564,7 @@ case class EquiJoin(
     else copy(input1 = input1.replace(old, n), input2 = input2.replace(old, n))
 
   }
-  def providesColumns(
+  def analyze(
       input1: ColumnSet,
       input2: ColumnSet
   ) =
@@ -629,12 +629,6 @@ case class EquiJoin(
           else idx + inputData1.table.numCols + shiftback
         (ref, newIdx)
       }
-
-    println(column1)
-    println(column2)
-    println(joined.stringify())
-    println(leftMapping)
-    println(rightMapping)
 
     val newMapping = leftMapping ++ rightMapping
     TableWithColumnMapping(joined, newMapping.toMap)

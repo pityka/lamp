@@ -328,7 +328,7 @@ object RelationalAlgebra {
     loop(0, sorted, Map.empty)
 
   }
-  def providedReferences(
+  def analyzeReferences(
       topoSorted: Seq[Op],
       tables: Map[TableRef, Table]
   ): Either[String, Map[UUID, ColumnSet]] = {
@@ -372,7 +372,7 @@ object RelationalAlgebra {
         case op: Op2 =>
           assert(!outputs.contains(op.id))
           op
-            .providesColumns(
+            .analyze(
               outputs(op.input1.id),
               outputs(op.input2.id)
             ) match {
@@ -386,7 +386,7 @@ object RelationalAlgebra {
 
         case op: Op1 =>
           assert(!outputs.contains(op.id))
-          op.providesColumns(outputs(op.input.id)) match {
+          op.analyze(outputs(op.input.id)) match {
             case Right(x) =>
               loop(
                 ops.tail,

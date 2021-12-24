@@ -5,7 +5,7 @@ import java.util.UUID
 import org.saddle.index.InnerJoin
 
 sealed trait Mutation {
-  def makeChildren(parent: Result): Either[String,Seq[Result]]
+  def makeChildren(parent: Result): Either[String, Seq[Result]]
 }
 object Mutation {
   val list = List(PushDownFilters, PushDownInnerJoin, PushDownProjection)
@@ -33,7 +33,9 @@ object PushDownProjection extends Mutation {
   ): Option[Result] = {
 
     val grandChildSatisfiesDependencies =
-      filter.neededColumns.toSet.forall(provided(grandChild.id).hasMatchingColumn)
+      filter.neededColumns.toSet.forall(
+        provided(grandChild.id).hasMatchingColumn
+      )
 
     val childDependencies = filter.input match {
       case x: Op1 => x.neededColumns
@@ -73,15 +75,15 @@ object PushDownProjection extends Mutation {
     }
   }
 
-  def makeChildren(parent: Result): Either[String,Seq[Result]] = {
+  def makeChildren(parent: Result): Either[String, Seq[Result]] = {
     val sorted = RelationalAlgebra.topologicalSort(parent).reverse
-    providedReferences(sorted, parent.boundTables).map{ provided =>
-    val eligible = sorted collect { case x: Projection => x }
+    analyzeReferences(sorted, parent.boundTables).map { provided =>
+      val eligible = sorted collect { case x: Projection => x }
 
-    eligible.flatMap { filter =>
-      tryPush(parent, filter, provided)
+      eligible.flatMap { filter =>
+        tryPush(parent, filter, provided)
+      }
     }
-  }
 
   }
 }
@@ -108,7 +110,9 @@ object PushDownFilters extends Mutation {
   ): Option[Result] = {
 
     val grandChildSatisfiesDependencies =
-      filter.neededColumns.toSet.forall(n =>  provided(grandChild.id).hasMatchingColumn(n) )
+      filter.neededColumns.toSet.forall(n =>
+        provided(grandChild.id).hasMatchingColumn(n)
+      )
 
     val childTypeOk = filter.input match {
       case _: Filter | _: Projection | _: Product => true
@@ -137,17 +141,17 @@ object PushDownFilters extends Mutation {
     }
   }
 
-  def makeChildren(parent: Result): Either[String,Seq[Result]] = {
+  def makeChildren(parent: Result): Either[String, Seq[Result]] = {
     val sorted = RelationalAlgebra.topologicalSort(parent).reverse
-    providedReferences(sorted, parent.boundTables).map{ provided =>
-    val eligibleFilters = sorted collect { case f: Filter =>
-      f
-    }
+    analyzeReferences(sorted, parent.boundTables).map { provided =>
+      val eligibleFilters = sorted collect { case f: Filter =>
+        f
+      }
 
-    eligibleFilters.flatMap { filter =>
-      tryPushFilter(parent, filter, provided)
+      eligibleFilters.flatMap { filter =>
+        tryPushFilter(parent, filter, provided)
+      }
     }
-  }
 
   }
 }
@@ -182,7 +186,9 @@ object PushDownInnerJoin extends Mutation {
   ): Option[Result] = {
 
     val grandChildSatisfiesDependencies =
-      neededColumns.toSet.forall(n =>  provided(grandChild.id).hasMatchingColumn(n) )
+      neededColumns.toSet.forall(n =>
+        provided(grandChild.id).hasMatchingColumn(n)
+      )
 
     val childTypeOk = child match {
       case _: Filter | _: Projection | _: Product => true
@@ -222,18 +228,18 @@ object PushDownInnerJoin extends Mutation {
       }
   }
 
-  def makeChildren(root: Result): Either[String,Seq[Result]] = {
+  def makeChildren(root: Result): Either[String, Seq[Result]] = {
     val sorted = topologicalSort(root).reverse
-    providedReferences(sorted, root.boundTables).map{ provided =>
-    val eligible = sorted collect {
-      case f: EquiJoin if f.joinType == InnerJoin =>
-        f
-    }
+    analyzeReferences(sorted, root.boundTables).map { provided =>
+      val eligible = sorted collect {
+        case f: EquiJoin if f.joinType == InnerJoin =>
+          f
+      }
 
-    eligible.flatMap { op =>
-      tryPush(root, op, provided)
+      eligible.flatMap { op =>
+        tryPush(root, op, provided)
+      }
     }
-  }
 
   }
 }
