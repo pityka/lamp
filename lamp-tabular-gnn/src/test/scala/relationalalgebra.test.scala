@@ -5,7 +5,7 @@ import java.nio.channels.Channels
 import Table._
 import lamp._
 import java.io.ByteArrayInputStream
-import org.saddle._
+import org.saddle.{Vec, Mat}
 class RelationAlgebraSuite extends AnyFunSuite {
   val csvText = """hint,hfloat,htime,hbool,htext
 1,1.5,2020-01-01T00:00:00Z,false,"something, something"
@@ -238,6 +238,34 @@ class RelationAlgebraSuite extends AnyFunSuite {
           .col(0)
           .toVec == Vec(1.5, 2.75)
       )
+
+      val qApi1 = table
+        .innerEquiJoin(
+          Q.hint,
+          table2.query,
+          Q.col("hint")
+        )
+        .innerEquiJoin(Q.hint, table.query, Q.hint)
+        .aggregate(Q.hint)(
+          Q.avg(table.ref.hfloat).as(Q.table("aggr").col("boo"))
+        )
+        .done
+
+      val fragment1 = table ~ table2 ~ Q.innerEquiJoin(Q.hint, Q.col("hint"))
+
+      val qApi2 =
+        (fragment1 
+          ~ table
+          ~ Q.innerEquiJoin(Q.hint, Q.hint)
+          ~ Q.aggregate(Q.col("hint"))(
+            Q.avg(table.ref.hfloat).as(Q.table("aggr").col("boo"))
+          )).compile
+
+      println(qApi1.stringify)
+      println(qApi2.stringify)
+
+      assert(qApi1 == qApi2)
+
     }
   }
 }

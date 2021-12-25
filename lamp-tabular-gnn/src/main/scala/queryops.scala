@@ -267,7 +267,7 @@ case class Aggregate(
     groupBy: Seq[TableColumnRef],
     aggregate: Seq[ColumnFunctionWithOutputRef]
 ) extends Op1 {
-  override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")})"
+  override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")}, aggregate with ${aggregate.mkString(", ")})"
 
   def replace(old: UUID, n: Op) = {
     if (input.id == old) copy(input = n)
