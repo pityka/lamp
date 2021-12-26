@@ -79,6 +79,12 @@ object RelationalAlgebra {
     override def toString = function.toString
   }
 
+  case class VariableRef(name: String) {
+    override def toString = s"?$name?"
+  }
+  sealed trait VariableValue
+  case class DoubleVariableValue(v: Double) extends VariableValue
+
   private def extractColumnRefs(table: Table): IndexedSeq[ColumnRef] =
     (0 until table.columns.size map (i =>
       IdxColumnRef(i)
@@ -86,9 +92,10 @@ object RelationalAlgebra {
 
   def interpretBooleanExpression[S: Sc](
       factor: BooleanFactor,
-      table: TableWithColumnMapping
+      table: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
   ): STen = factor match {
-    case ColumnFunction(columnRefs, impl) =>
+    case ColumnFunction(columnRefs,_, impl) =>
       val columns = columnRefs
         .map(c =>
           (
@@ -97,16 +104,16 @@ object RelationalAlgebra {
           )
         )
         .toMap
-      impl(PredicateHelper(columns))(implicitly[Scope]).values
+      impl(PredicateHelper(columns, boundVariables))(implicitly[Scope]).values
     case BooleanNegation(factor) =>
-      val t = interpretBooleanExpression(factor, table)
+      val t = interpretBooleanExpression(factor, table, boundVariables)
       t.logicalNot
     case BooleanExpression(terms) =>
       terms
         .map { term =>
           term.factors
             .map { factor =>
-              interpretBooleanExpression(factor, table)
+              interpretBooleanExpression(factor, table, boundVariables)
             }
             .toList
             .reduce((a, b) => a.logicalOr(b))
@@ -116,19 +123,21 @@ object RelationalAlgebra {
   }
   def verifyBooleanExpression(
       factor: BooleanFactor,
-      table: ColumnSet
+      table: ColumnSet,
+      boundVariables: Map[VariableRef,VariableValue]
   ): Boolean = factor match {
-    case ColumnFunction(columnRefs, _) =>
+    case ColumnFunction(columnRefs, variableRefs,_) =>
       columnRefs
-        .forall(c => table.hasMatchingColumn(c))
+        .forall(c => table.hasMatchingColumn(c)) && 
+        variableRefs.forall(c => boundVariables.contains(c))
     case BooleanNegation(factor) =>
-      verifyBooleanExpression(factor, table)
+      verifyBooleanExpression(factor, table,boundVariables)
     case BooleanExpression(terms) =>
       terms
         .map { term =>
           term.factors
             .map { factor =>
-              verifyBooleanExpression(factor, table)
+              verifyBooleanExpression(factor, table,boundVariables)
             }
             .toList
             .reduce((a, b) => a && b)
@@ -139,7 +148,7 @@ object RelationalAlgebra {
   def columnsReferencedByBooleanExpression(
       factor: BooleanFactor
   ): Seq[TableColumnRef] = factor match {
-    case ColumnFunction(columnRefs, _) =>
+    case ColumnFunction(columnRefs,_, _) =>
       columnRefs.distinct
     case BooleanNegation(factor) =>
       columnsReferencedByBooleanExpression(factor)
@@ -153,13 +162,31 @@ object RelationalAlgebra {
         }
 
   }
+  def variablesReferencedByBooleanExpression(
+      factor: BooleanFactor
+  ): Seq[VariableRef] = factor match {
+    case ColumnFunction(_,refs, _) =>
+      refs.distinct
+    case BooleanNegation(factor) =>
+      variablesReferencedByBooleanExpression(factor)
+    case BooleanExpression(terms) =>
+      terms.toList
+        .flatMap { term =>
+          term.factors.toList.flatMap { factor =>
+            variablesReferencedByBooleanExpression(factor)
+          }.toList
+
+        }
+
+  }
 
   trait MatchableTableColumnRefSet {
-    def providedColumns: Map[QualifiedTableColumnRef,Int]
+    def providedColumns: Map[QualifiedTableColumnRef, Int]
     def getMatchingQualifiedColumnRef(
         ref: TableColumnRef
-    ): (QualifiedTableColumnRef,Int) = ref match {
-      case qr: QualifiedTableColumnRef if providedColumns.contains(qr) => qr -> providedColumns(qr)
+    ): (QualifiedTableColumnRef, Int) = ref match {
+      case qr: QualifiedTableColumnRef if providedColumns.contains(qr) =>
+        qr -> providedColumns(qr)
       case WildcardColumnRef(column) =>
         val candidates = providedColumns.toSeq.filter(_._1.column == column)
         require(
@@ -177,7 +204,7 @@ object RelationalAlgebra {
     }
   }
 
-  case class ColumnSet(providedColumns: Map[QualifiedTableColumnRef,Int])
+  case class ColumnSet(providedColumns: Map[QualifiedTableColumnRef, Int])
       extends MatchableTableColumnRefSet
 
   case class TableWithColumnMapping(
@@ -282,7 +309,7 @@ object RelationalAlgebra {
             ) -- releasable
           )
 
-        case op @ Result(input, _) =>
+        case op @ Result(input, _, _) =>
           assert(!outputs.contains(op.id))
           val (table, oldScope) = outputs(input.id)
           oldScope.moveInto(scope, table)
@@ -296,7 +323,8 @@ object RelationalAlgebra {
 
           val result = op.impl(
             outputs(op.input1.id)._1,
-            outputs(op.input2.id)._1
+            outputs(op.input2.id)._1,
+            root.boundVariables
           )(oldScope1)
           val newScope = Scope.free
           oldScope1.moveInto(oldScope2, result)
@@ -311,7 +339,8 @@ object RelationalAlgebra {
           assert(!outputs.contains(op.id))
 
           val oldScope = outputs(op.input.id)._2
-          val result = op.impl(outputs(op.input.id)._1)(oldScope)
+          val result =
+            op.impl(outputs(op.input.id)._1, root.boundVariables)(oldScope)
           val newScope = Scope.free
           oldScope.moveInto(newScope, result)
 
@@ -340,9 +369,10 @@ object RelationalAlgebra {
       val table = tables.get(tableRef).orElse(boundTable).get
       val columnRefs =
         extractColumnRefs(table)
-     val mapping = columnRefs.map { ref =>
+      val mapping = columnRefs.map { ref =>
         ref match {
-          case IdxColumnRef(idx) => (QualifiedTableColumnRef(tableRef, ref), idx)
+          case IdxColumnRef(idx) =>
+            (QualifiedTableColumnRef(tableRef, ref), idx)
           case StringColumnRef(string) =>
             (QualifiedTableColumnRef(tableRef, ref), table.nameToIndex(string))
         }
@@ -366,7 +396,7 @@ object RelationalAlgebra {
             ))
           )
 
-        case op @ Result(_, _) =>
+        case op @ Result(_, _, _) =>
           assert(!outputs.contains(op.id))
           Right(outputs)
         case op: Op2 =>
@@ -374,7 +404,8 @@ object RelationalAlgebra {
           op
             .analyze(
               outputs(op.input1.id),
-              outputs(op.input2.id)
+              outputs(op.input2.id),
+              topoSorted.last.asInstanceOf[Result].boundVariables
             ) match {
             case Right(x) =>
               loop(
@@ -386,7 +417,10 @@ object RelationalAlgebra {
 
         case op: Op1 =>
           assert(!outputs.contains(op.id))
-          op.analyze(outputs(op.input.id)) match {
+          op.analyze(
+            outputs(op.input.id),
+            topoSorted.last.asInstanceOf[Result].boundVariables
+          ) match {
             case Right(x) =>
               loop(
                 ops.tail,
@@ -491,7 +525,7 @@ object RelationalAlgebra {
             outputs + (op.id -> makeTableEstimate(tableRef, boundTable))
           )
 
-        case op @ Result(input, _) =>
+        case op @ Result(input, _, _) =>
           assert(!outputs.contains(op.id))
           outputs + (op.id -> outputs(input.id))
         case op: Op2 =>

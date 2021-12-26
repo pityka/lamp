@@ -46,4 +46,42 @@ trait TableColumnRefSyntax { self: TableColumnRef =>
     Table.Column.bool(input(this).values.ge(other).castToLong)
   }
 
+  def ===(other: VariableRef) = Q.fun(this)(other) { input => implicit scope =>
+    input.variable(other) match {
+      case DoubleVariableValue(v) =>
+        Table.Column.bool(input(this).values.equ(v).castToLong)
+    }
+  }
+  def !=(other: VariableRef) = Q.fun(this)(other) { input => implicit scope =>
+    input.variable(other) match {
+      case DoubleVariableValue(v) =>
+        Table.Column.bool(input(this).values.equ(v).logicalNot.castToLong)
+    }
+  }
+
+  def <(other: VariableRef) = Q.fun(this)(other) { input => implicit scope =>
+    input.variable(other) match {
+      case DoubleVariableValue(v) =>
+        Table.Column.bool(input(this).values.lt(v).castToLong)
+    }
+  }
+  def >(other: VariableRef) = Q.fun(this)(other) { input => implicit scope =>
+    input.variable(other) match {
+      case DoubleVariableValue(v) =>
+        Table.Column.bool(input(this).values.gt(v).castToLong)
+    }
+  }
+  def <=(other: VariableRef) = Q.fun(this)(other) { input => implicit scope =>
+    input.variable(other) match {
+      case DoubleVariableValue(v) =>
+        Table.Column.bool(input(this).values.le(v).castToLong)
+    }
+  }
+  def >=(other: VariableRef) = Q.fun(this)(other) { input => implicit scope =>
+    input.variable(other) match {
+      case DoubleVariableValue(v) =>
+        Table.Column.bool(input(this).values.ge(v).castToLong)
+    }
+  }
+
 }

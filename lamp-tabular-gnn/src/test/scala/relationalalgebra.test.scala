@@ -119,7 +119,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
               )
               .done
           }
-        }.doneAndInterpret()
+        }.result
           .col(6)
           .toVec == Vec(5.5, 4.5, 6.0, 5.5, 4.5, 6.0, 5.5, 4.5, 6.0)
         // .toMat == Mat(Vec(4.5))
@@ -178,7 +178,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
             .pivot(tref1.col("hint"), tref1.col("hbool"))(
               Q.avg(tref1.col("hfloat"))
             )
-        }.doneAndInterpret()
+        }.result
           .rows(0)
           .toSTen
           .toVec == Vec(1d, 1.5, Double.NaN)
@@ -206,12 +206,13 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       assert(q1.optimize().interpret equalDeep q1.interpret)
 
+      val free1 = Q.free("z")
       assert(
         table
           .innerEquiJoin(
             Q.hint,
             table2.query
-              .filter(Q.col("hfloat") >= 0d and Q.col("hfloat") > 0)
+              .filter(Q.col("hfloat") >= free1 and Q.col("hfloat") > 0)
               .project(
                 table2.ref.col("hfloat").self,
                 table2.ref.col("hint").self
@@ -219,7 +220,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
             Q.col("hint")
           )
           .project(table.ref.col("hfloat").self)
-          .result
+          .resultWithVars(free1 -> RelationalAlgebra.DoubleVariableValue(0d))
           .col(0)
           .toVec == Vec(1.5, 2.5, 2.5, 3.0, 3.0)
       )
@@ -258,7 +259,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
           ~ table
           ~ Q.innerEquiJoin(Q.hint, Q.hint)
           ~ Q.aggregate(Q.col("hint"))(
-            Q.avg(table.ref.hfloat).as(Q.table("aggr").col("boo"))
+            Q.avg(Q.hfloat).as(Q.table("aggr").col("boo"))
           )).compile
 
       println(qApi1.stringify)

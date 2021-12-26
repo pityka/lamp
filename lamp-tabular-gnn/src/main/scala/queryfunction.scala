@@ -15,16 +15,21 @@ sealed trait BooleanFactor {
   )
 }
 
-case class PredicateHelper(map: Map[TableColumnRef, Table.Column]) {
+case class PredicateHelper(
+    map: Map[TableColumnRef, Table.Column],
+    variables: Map[VariableRef, VariableValue]
+) {
   def apply(t: TableColumnRef) = map(t)
+  def variable(ref: VariableRef) = variables(ref)
 }
 
 case class ColumnFunction(
     columnRefs: Seq[TableColumnRef],
+    variableRefs: Seq[VariableRef],
     impl: PredicateHelper => Scope => Table.Column
 ) extends BooleanFactor {
   def as(ref: QualifiedTableColumnRef) = ColumnFunctionWithOutputRef(this, ref)
-  override def toString = s"[${columnRefs.mkString(",")}]"
+  override def toString = s"[${columnRefs.mkString(",")} ${variableRefs.mkString(", ")}]"
 }
 
 case class BooleanNegation(factor: BooleanFactor) extends BooleanFactor {

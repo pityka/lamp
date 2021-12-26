@@ -36,8 +36,17 @@ case class TokenList(head: Op, list: List[StackToken]) {
   def ~(token: Table) =
     TokenList(head, list.appended(OpToken(syntax.TableSyntax(token).query)))
   def ~(token: TableRef) = TokenList(head, list.appended(OpToken(token.asOp)))
-  def doneAndInterpret(tables: (TableRef, Table)*)(implicit scope: Scope) =
-    compile.doneAndInterpret(tables: _*)
+  def doneAndInterpret(
+      tables: Seq[(TableRef, Table)],
+      variables: Seq[(VariableRef, VariableValue)]
+  )(implicit scope: Scope) =
+    compile.doneAndInterpret(tables, variables)
+  def result(implicit scope: Scope) =
+    doneAndInterpret(Nil, Nil)
+  def resultWithVars(vars: (VariableRef, VariableValue)*)(implicit
+      scope: Scope
+  ) =
+    doneAndInterpret(Nil, vars)
   def compile: Result = {
 
     def loop(stack: Stack, remaining: List[StackToken]): Result =
@@ -49,7 +58,6 @@ case class TokenList(head: Op, list: List[StackToken]) {
           val op2 = f(operand)
           loop(poppedStack.push(op2), next)
         case StackOp2Token(f) :: next =>
-          println(stack)
           val (operand2, poppedStack1) = stack.pop
           val (operand1, poppedStack2) = poppedStack1.pop
           val op2 = f(operand1, operand2)
@@ -59,7 +67,6 @@ case class TokenList(head: Op, list: List[StackToken]) {
         case immutable.Nil => stack.pop._1.done
       }
 
-    println(this)
     loop(Stack(Vector(head)), list)
 
   }
@@ -111,9 +118,13 @@ object syntax {
 }
 
 object Q extends Dynamic with StackOps {
+  def free(s:String) =  VariableRef(s)
   def apply(refs: TableColumnRef*)(
       impl: PredicateHelper => Scope => Table.Column
-  ): ColumnFunction = ColumnFunction(refs, impl)
+  ): ColumnFunction = ColumnFunction(refs, Nil,impl)
+  def fun(refs: TableColumnRef*)(vars: VariableRef*)(
+      impl: PredicateHelper => Scope => Table.Column
+  ): ColumnFunction = ColumnFunction(refs, vars,impl)
 
   def first(other: TableColumnRef) = apply(other) { input => implicit scope =>
     val col = input(other)
