@@ -21,7 +21,29 @@ class RelationAlgebraSuite extends AnyFunSuite {
 2,0.5
 3,1.5"""
 
-  test("dfs") {
+  test("argumentlist") {
+    println(
+      QueryDsl.argumentlist
+        .parseAll(
+          "(a + b (k.t1)) + c+d+ ?e,t.a :: t.b, t.a, t.b , fun(a,b),a, b, fun ( a , b ), fun(fun2(a,b))"
+        )
+    )
+
+  }
+  test("tokenlist") {
+    assert(
+      QueryDsl.program
+        .parse(
+          "let abc = name1 end name2 name3 let xyz = name4 let def = name5 name6"
+        )
+        .toOption
+        .get
+        ._2
+        .size == 4
+    )
+  }
+
+  ignore("tree") {
     Scope.root { implicit scope =>
       val table = Table
         .readHeterogeneousFromCSVChannel(
@@ -255,7 +277,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
       val fragment1 = table ~ table2 ~ Q.innerEquiJoin(Q.hint, Q.col("hint"))
 
       val qApi2 =
-        (fragment1 
+        (fragment1
           ~ table
           ~ Q.innerEquiJoin(Q.hint, Q.hint)
           ~ Q.aggregate(Q.col("hint"))(

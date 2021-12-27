@@ -1,0 +1,56 @@
+ union (
+   project(
+    filter( 
+     inner-join(
+       t1, 
+       tref2, 
+       t2, 
+       hint
+     ), 
+     t1.hfloat === 1.5
+    ),
+    t1.htext
+  ),
+  project(t1 , t1.htext)
+ )
+
+(
+  union 
+  (project (filter (inner-join t1 tref2 t2 hint) t1.hfloat == 1.5) t1.htext)
+  (project t1 t1.htext)
+)
+
+t1.inner-join(tref2, t2, hint).filter(t1.hfloat == 1.5).project(t1.htext).union(t1.project(t1.htext))
+
+(
+  (((t1 tref2 t2 hint inner-join) t1.hfloat == 1.5 filter) t1.htext project)
+  (t1 t1.htext project)
+  union
+)
+
+let name = expr
+let name2 = expr
+let name3 = expr
+t1 t2 inner-join(tref2, hint) filter(t1.hfloat == 1.5) project(t1.htext) t1 project(t1.htext) union
+
+
+program = expressionlist 
+expressionlist = expression [ expressionlist ]
+expression = ["let" name "=" ] tokenlist 
+name = 'alphanumeric or operator names'
+tokenlist = token [separator tokenlist]
+token = name ["(" argumentlist ")"]
+argumentlist =  argument ["," argumentlist]
+argument = columnref | columnfunction | booleanexpression 
+columnref = [tableref "."] name 
+tableref = name 
+booleanexpression = booleanterm ["&&" booleanterm]
+booleanterm = booleanfactor ["||" booleanfactor]
+booleanfactor = ["not"] booleanfactor | "true" | "false" | columnfunction 
+columnfunction = (prefixfunction | infixfunction) ["as" columnref]
+prefixfunction = name "(" argumentlist ")"
+infixfunction = operand name  operand 
+operand = columnref | variable 
+variable = "?" name 
+
+

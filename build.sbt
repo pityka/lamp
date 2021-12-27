@@ -163,7 +163,7 @@ lazy val tabular = project
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-parse" % "0.3.5"
     ),
-    coverageEnabled := true
+    // coverageEnabled := true
   )
   .dependsOn(data)
   .dependsOn(core % "test->test;compile->compile")

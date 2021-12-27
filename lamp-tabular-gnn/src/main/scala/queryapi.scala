@@ -5,6 +5,7 @@ import org.saddle.index.InnerJoin
 import org.saddle.index.JoinType
 import scala.language.dynamics
 import scala.collection.immutable
+
 trait StackOps {
   def project(projectTo: ColumnFunctionWithOutputRef*) =
     StackOp1Token(in => Projection(in, projectTo))
