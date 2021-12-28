@@ -5,6 +5,7 @@ trait TableColumnRefSyntax { self: TableColumnRef =>
   def select = Q(this) { input => _ =>
     input(this)
   }
+  def identity = select
 
   def ===(other: TableColumnRef) = Q(this, other) { input => implicit scope =>
     Table.Column.bool(input(this).values.equ(input(other).values).castToLong)

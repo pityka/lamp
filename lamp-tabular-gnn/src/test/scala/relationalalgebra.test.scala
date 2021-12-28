@@ -21,25 +21,74 @@ class RelationAlgebraSuite extends AnyFunSuite {
 2,0.5
 3,1.5"""
 
-  test("argumentlist") {
+  test("compile") { Scope.root{ implicit scope =>
+    println(QueryDsl.parse
+        (
+           """
+          table(?tref) filter(tref.col1 == ?whatever) project(tref1.col2) table(?tref2) product table(?tref3) inner-join(col1,col2) reference2
+          let reference2 = filter(tref.col1 == ?whatever) reference
+          let reference = reference
+          """
+        ))
     println(
-      QueryDsl.argumentlist
+      QueryDsl.liftExpressionList(QueryDsl.parse
+        (
+          """
+          table(?tref) filter(tref.col1 == ?whatever) project(tref1.col2) table(?tref2) product table(?tref3) inner-join(col1,col2) reference2
+          let reference2 = filter(tref.col1 == ?whatever) 
+          let reference = reference
+          """
+        ).toOption.get).toOption.get.result
+  
+    )
+  }
+
+  }
+  test("complete") {
+    assert(
+      QueryDsl.DslParser.program
+        .parseAll(
+          "let abc = name1 end name2 name3 let xyz = name4 let def = name5((a + b (k.t1)) + c+d+ ?e,t.a :: t.b, t.a, t.b , fun(a,b),a, b, fun ( a , b ), fun(fun2(a,b))) name6"
+        )
+        .isRight
+    )
+
+  }
+  test("argumentlist") {
+    assert(
+      QueryDsl.DslParser.argumentList
         .parseAll(
           "(a + b (k.t1)) + c+d+ ?e,t.a :: t.b, t.a, t.b , fun(a,b),a, b, fun ( a , b ), fun(fun2(a,b))"
         )
+        .toOption
+        .get
+        .toList
+        .length == 9
     )
 
   }
   test("tokenlist") {
     assert(
-      QueryDsl.program
+      QueryDsl.DslParser.program
         .parse(
           "let abc = name1 end name2 name3 let xyz = name4 let def = name5 name6"
         )
         .toOption
         .get
         ._2
+        .expressions
         .size == 4
+    )
+  }
+  test("trailing whitespace") {
+    
+    assert(
+      QueryDsl.DslParser.program
+        .parseAll(
+          "name1 "
+        )
+        .toOption
+        .isDefined
     )
   }
 

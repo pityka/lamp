@@ -366,7 +366,13 @@ object RelationalAlgebra {
         tableRef: TableRef,
         boundTable: Option[Table]
     ): ColumnSet = {
-      val table = tables.get(tableRef).orElse(boundTable).get
+      val table = {
+      val found = tables.get(tableRef).orElse(boundTable)
+      if (found.isEmpty) {
+        throw new RuntimeException(s"$tableRef is not bound")
+      }
+      found.get
+      }
       val columnRefs =
         extractColumnRefs(table)
       val mapping = columnRefs.map { ref =>

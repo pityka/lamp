@@ -8,28 +8,28 @@ import scala.collection.immutable
 
 trait StackOps {
   def project(projectTo: ColumnFunctionWithOutputRef*) =
-    StackOp1Token(in => Projection(in, projectTo))
-  def filter(expr: BooleanFactor) = StackOp1Token(in => Filter(in, expr))
-  def product = StackOp2Token((in1, in2) => Product(in1, in2))
-  def union = StackOp2Token((in1, in2) => Union(in1, in2))
+    StackOp1Token("project",in => Projection(in, projectTo))
+  def filter(expr: BooleanFactor) = StackOp1Token("filter",in => Filter(in, expr))
+  def product = StackOp2Token("product",(in1, in2) => Product(in1, in2))
+  def union = StackOp2Token("union",(in1, in2) => Union(in1, in2))
   def innerEquiJoin(
       thisColumn: TableColumnRef,
       thatColumn: TableColumnRef
-  ) = StackOp2Token((in1, in2) =>
+  ) = StackOp2Token("equijoin",(in1, in2) =>
     EquiJoin(in1, in2, thisColumn, thatColumn, InnerJoin)
   )
   def aggregate(groupBy: TableColumnRef*)(
       aggregates: ColumnFunctionWithOutputRef*
-  ) = StackOp1Token(in => Aggregate(in, groupBy, aggregates))
+  ) = StackOp1Token("aggregate",in => Aggregate(in, groupBy, aggregates))
   def pivot(rowKeys: TableColumnRef, colKeys: TableColumnRef)(
       aggregate: ColumnFunction
-  ) = StackOp1Token(in => Pivot(in, rowKeys, colKeys, aggregate))
+  ) = StackOp1Token("pivot",in => Pivot(in, rowKeys, colKeys, aggregate))
 }
 
 sealed trait StackToken
 case class OpToken(op: Op) extends StackToken
-case class StackOp1Token(stackOp1: Op => Op) extends StackToken
-case class StackOp2Token(stackOp2: (Op, Op) => Op) extends StackToken
+case class StackOp1Token(name: String, stackOp1: Op => Op) extends StackToken
+case class StackOp2Token(name: String, stackOp2: (Op, Op) => Op) extends StackToken
 case class ListToken(list: TokenList) extends StackToken
 
 case class TokenList(head: Op, list: List[StackToken]) {
@@ -54,12 +54,15 @@ case class TokenList(head: Op, list: List[StackToken]) {
       remaining match {
         case OpToken(head) :: next =>
           loop(stack.push(head), next)
-        case StackOp1Token(f) :: next =>
+        case StackOp1Token(_,f) :: next =>
           val (operand, poppedStack) = stack.pop
           val op2 = f(operand)
           loop(poppedStack.push(op2), next)
-        case StackOp2Token(f) :: next =>
+        case StackOp2Token(name, f) :: next =>
           val (operand2, poppedStack1) = stack.pop
+          if (poppedStack1.isEmpty) {
+            throw new RuntimeException(s"Operator $name needs two arguments, but stack has only one.")
+          }
           val (operand1, poppedStack2) = poppedStack1.pop
           val op2 = f(operand1, operand2)
           loop(poppedStack2.push(op2), next)
@@ -74,7 +77,7 @@ case class TokenList(head: Op, list: List[StackToken]) {
 }
 
 case class Stack(stack: Vector[Op]) {
-
+  def isEmpty = stack.isEmpty
   def push(op: Op) = copy(stack = stack.appended(op))
   def pop = (stack.last, copy(stack = stack.dropRight(1)))
 
@@ -119,13 +122,13 @@ object syntax {
 }
 
 object Q extends Dynamic with StackOps {
-  def free(s:String) =  VariableRef(s)
+  def free(s: String) = VariableRef(s)
   def apply(refs: TableColumnRef*)(
       impl: PredicateHelper => Scope => Table.Column
-  ): ColumnFunction = ColumnFunction(refs, Nil,impl)
+  ): ColumnFunction = ColumnFunction(refs, Nil, impl)
   def fun(refs: TableColumnRef*)(vars: VariableRef*)(
       impl: PredicateHelper => Scope => Table.Column
-  ): ColumnFunction = ColumnFunction(refs, vars,impl)
+  ): ColumnFunction = ColumnFunction(refs, vars, impl)
 
   def first(other: TableColumnRef) = apply(other) { input => implicit scope =>
     val col = input(other)
