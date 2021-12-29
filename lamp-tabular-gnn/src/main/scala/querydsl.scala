@@ -50,6 +50,10 @@ object QueryDsl {
 
   def liftArgument(args: SyntaxTree.Argument): LiftedArgument =
     args match {
+      case cr: ColumnRef if cr.tableRef.isEmpty && cr.columnRef.toLowerCase == "true"=>
+        LiftedBooleanFactor(BooleanAtomTrue)
+      case cr: ColumnRef if cr.tableRef.isEmpty && cr.columnRef.toLowerCase == "false"=>
+        LiftedBooleanFactor(BooleanAtomFalse)
       case cr: ColumnRef =>
         liftColumnRef(cr)
       case VariableRef(name) =>
@@ -86,9 +90,11 @@ object QueryDsl {
             LiftedBooleanFactor(args.head.asColumnRef.===(cr2))
           case LiftedVariableRef(vr2) =>
             LiftedBooleanFactor(args.head.asColumnRef.===(vr2))
-          case LiftedBooleanFactor(_) =>
-            throw new RuntimeException("wrong argument type for ==")
+          case LiftedBooleanFactor(bf) =>
+            LiftedBooleanFactor(args.head.asColumnRef.select.===(bf))
         }
+      case _ =>
+          throw new RuntimeException(s"Implementation for '$name' with args [${args.toList.mkString(", ")}] not found. Operators are left associative without precedence rules. Variables must be the right operand.")
 
     }
 

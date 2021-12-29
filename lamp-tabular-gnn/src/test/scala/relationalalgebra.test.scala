@@ -22,18 +22,35 @@ class RelationAlgebraSuite extends AnyFunSuite {
 3,1.5"""
 
   test("compile") {
-    assert(
-      QueryDsl
+    val compiled = QueryDsl
         .compile(
           """
           table(?tref) filter(tref.col1 == ?whatever) project(tref1.col2) table(?tref2) product table(?tref3) inner-join(col1,col2) reference2
-          let reference2 = filter(tref.col1 == ?whatever) 
+          let reference2 = filter((tref.col1 == ?whatever) && false) 
           let reference = reference
           """
         )
         .toOption
+    assert(
+      compiled
         .isDefined
     )
+    println(compiled.get.stringify)
+
+  }
+  test("compile bool xnor") {
+    val compiled = QueryDsl
+        .compile(
+          """
+          table(?tref) filter(tref.col1 == true) 
+          """
+        )
+        .toOption
+    assert(
+      compiled
+        .isDefined
+    )
+    println(compiled.get.stringify)
 
   }
   test("complete") {
@@ -84,7 +101,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
     )
   }
 
-  ignore("tree") {
+  test("tree") {
     Scope.root { implicit scope =>
       val table = Table
         .readHeterogeneousFromCSVChannel(
@@ -139,6 +156,18 @@ class RelationAlgebraSuite extends AnyFunSuite {
         .bind(tref1 -> table)
       assert(filter.interpret equalDeep table)
       assert(filter.interpret != table)
+
+      val filter2 = tref1.scan
+        .filter(predicate.or(BooleanAtomTrue))
+        .done
+        .bind(tref1 -> table)
+      assert(filter2.interpret equalDeep table)
+      assert(filter2.interpret != table)
+      val filter3 = tref1.scan
+        .filter(predicate.and(BooleanAtomFalse))
+        .done
+        .bind(tref1 -> table)
+      assert(filter3.interpret.numRows  == 0)
 
       val innerJoin =
         tref1.scan
@@ -328,7 +357,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
       println(qApi1.stringify)
       println(qApi2.stringify)
 
-      assert(qApi1 == qApi2)
+      assert(qApi1.toString == qApi2.toString)
 
     }
   }

@@ -95,6 +95,10 @@ object RelationalAlgebra {
       table: TableWithColumnMapping,
       boundVariables: Map[VariableRef, VariableValue]
   ): STen = factor match {
+    case BooleanAtomTrue =>
+        STen.ones(List(1),table.table.columns.head.values.options)
+    case BooleanAtomFalse =>
+        STen.zeros(List(1),table.table.columns.head.values.options)
     case ColumnFunction(columnRefs,_, impl) =>
       val columns = columnRefs
         .map(c =>
@@ -126,6 +130,7 @@ object RelationalAlgebra {
       table: ColumnSet,
       boundVariables: Map[VariableRef,VariableValue]
   ): Boolean = factor match {
+    case BooleanAtomFalse | BooleanAtomTrue => true
     case ColumnFunction(columnRefs, variableRefs,_) =>
       columnRefs
         .forall(c => table.hasMatchingColumn(c)) && 
@@ -148,6 +153,7 @@ object RelationalAlgebra {
   def columnsReferencedByBooleanExpression(
       factor: BooleanFactor
   ): Seq[TableColumnRef] = factor match {
+    case BooleanAtomFalse | BooleanAtomTrue => Nil
     case ColumnFunction(columnRefs,_, _) =>
       columnRefs.distinct
     case BooleanNegation(factor) =>
@@ -165,6 +171,7 @@ object RelationalAlgebra {
   def variablesReferencedByBooleanExpression(
       factor: BooleanFactor
   ): Seq[VariableRef] = factor match {
+    case BooleanAtomFalse | BooleanAtomTrue => Nil
     case ColumnFunction(_,refs, _) =>
       refs.distinct
     case BooleanNegation(factor) =>
