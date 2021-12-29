@@ -43,12 +43,17 @@ sealed trait Op {
       aggregate: ColumnFunction
   ) = Pivot(this, rowKeys, colKeys, aggregate)
 
-  def doneAndInterpret(tables: Seq[(TableRef, Table)], variables: Seq[(VariableRef,VariableValue)])(implicit scope: Scope) =
-    done.bind(tables: _*).bindVars(variables:_*).check.optimize().interpret
+  def doneAndInterpret(
+      tables: Seq[(TableRef, Table)],
+      variables: Seq[(VariableRef, VariableValue)]
+  )(implicit scope: Scope) =
+    done.bind(tables: _*).bindVars(variables: _*).check.optimize().interpret
   def result(implicit scope: Scope) =
-    doneAndInterpret(Nil,Nil)
-  def resultWithVars(vars: (VariableRef,VariableValue)*)(implicit scope: Scope) =
-    doneAndInterpret(Nil,vars)
+    doneAndInterpret(Nil, Nil)
+  def resultWithVars(vars: (VariableRef, VariableValue)*)(implicit
+      scope: Scope
+  ) =
+    doneAndInterpret(Nil, vars)
 
 }
 trait Op0 extends Op {
@@ -59,10 +64,16 @@ trait Op1 extends Op {
   def neededColumns: Seq[TableColumnRef]
   def inputs = List(InputWithNeededColumns(input, neededColumns))
 
-  def analyze(input: ColumnSet,boundVariables: Map[VariableRef,VariableValue]): Either[String, ColumnSet]
+  def analyze(
+      input: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
+  ): Either[String, ColumnSet]
 
   def estimate(input: TableEstimate): TableEstimate
-  def impl(input: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue])(implicit
+  def impl(
+      input: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
+  )(implicit
       scope: Scope
   ): TableWithColumnMapping
 }
@@ -78,17 +89,25 @@ trait Op2 extends Op {
 
   def analyze(
       input1: ColumnSet,
-      input2: ColumnSet,boundVariables: Map[VariableRef,VariableValue]
+      input2: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
   ): Either[String, ColumnSet]
 
   def estimate(input1: TableEstimate, input2: TableEstimate): TableEstimate
 
-  def impl(input1: TableWithColumnMapping, input2: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue])(
-      implicit scope: Scope
+  def impl(
+      input1: TableWithColumnMapping,
+      input2: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
+  )(implicit
+      scope: Scope
   ): TableWithColumnMapping
 }
-case class TableOp(tableRef: TableRef, boundTable: Option[Table])
-    extends Op0
+case class TableOp(
+    tableRef: TableRef,
+    boundTable: Option[Table],
+    schema: Option[Schema]
+) extends Op0
     with Dynamic {
   override def toString = s"TABLE($tableRef)"
   def neededColumns = Nil
@@ -114,7 +133,10 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 
   val neededColumns = projectTo.flatMap(_.function.columnRefs)
 
-  def analyze(input: ColumnSet,boundVariables: Map[VariableRef,VariableValue]) = {
+  def analyze(
+      input: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
+  ) = {
     if (neededColumns.forall(n => input.hasMatchingColumn(n)))
       if (neededColumns.distinct.size == neededColumns.size)
         Right(
@@ -125,29 +147,36 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
       else Left("Duplicate columns in projections")
     else
       Left(
-        s"Missing column ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
+        s"Missing column(s) from projection: ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
       )
   }
 
-  def impl(inputData: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue])(implicit
+  def impl(
+      inputData: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
+  )(implicit
       scope: Scope
   ): TableWithColumnMapping = {
-    val providedColumns: Set[QualifiedTableColumnRef] = inputData.providedColumns.keySet
-    val needed: Set[QualifiedTableColumnRef] =  neededColumns
+    val providedColumns: Set[QualifiedTableColumnRef] =
+      inputData.providedColumns.keySet
+    val needed: Set[QualifiedTableColumnRef] = neededColumns
       .map(n => inputData.getMatchingQualifiedColumnRef(n)._1)
       .toSet
     val missing = needed &~ providedColumns
     assert(missing.isEmpty, s"$missing columns are missing")
 
     val inputColumnMap =
-      PredicateHelper(neededColumns.toSeq.map { columnRef =>
-        columnRef -> inputData.table
-          .columns(inputData.getMatchingColumnIdx(columnRef))
-      }.toMap,boundVariables)
+      PredicateHelper(
+        neededColumns.toSeq.map { columnRef =>
+          columnRef -> inputData.table
+            .columns(inputData.getMatchingColumnIdx(columnRef))
+        }.toMap,
+        boundVariables
+      )
 
     val projectedTable = Table(projectTo.map {
       case ColumnFunctionWithOutputRef(
-            ColumnFunction(_,_, impl),
+            ColumnFunction(_, _, impl),
             newName
           ) =>
         val aggregatedColumn =
@@ -169,14 +198,17 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 
   override def toString = s"PROJECT(${projectTo.mkString(",")})"
 }
-case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty, boundVariables: Map[VariableRef,VariableValue] = Map.empty)
-    extends Op {
+case class Result(
+    input: Op,
+    boundTables: Map[TableRef, Table] = Map.empty,
+    boundVariables: Map[VariableRef, VariableValue] = Map.empty,
+    boundSchemas: Map[TableRef, Schema] = Map.empty
+) extends Op {
 
   override def done = this
 
   def check = {
-    val sorted = RelationalAlgebra.topologicalSort(this).reverse
-    val errors = analyzeReferences(sorted, boundTables)
+    val errors = analyzeReferences(this, boundTables, boundSchemas)
     if (errors.isLeft)
       throw new RuntimeException(errors.left.toOption.get + "\n" + stringify)
     this
@@ -195,10 +227,23 @@ case class Result(input: Op, boundTables: Map[TableRef, Table] = Map.empty, boun
     copy(boundTables = (boundTables - tableRef) + ((tableRef, table)))
   def bind(tables: (TableRef, Table)*) =
     copy(boundTables = (boundTables -- tables.map(_._1)) ++ tables)
+  def bindSchema(tableRef: TableRef, table: Schema) =
+    copy(boundSchemas = (boundSchemas - tableRef) + ((tableRef, table)))
+  def bindSchemas(schemas: (TableRef, Schema)*) =
+    copy(boundSchemas = (boundSchemas -- schemas.map(_._1)) ++ schemas)
   def bind(variableRef: VariableRef, value: VariableValue) =
-    copy(boundVariables = (boundVariables - variableRef) + ((variableRef, value)))
+    copy(boundVariables =
+      (boundVariables - variableRef) + ((variableRef, value))
+    )
   def bind(variableRef: VariableRef, value: Double) =
-    copy(boundVariables = (boundVariables - variableRef) + ((variableRef, DoubleVariableValue(value))))
+    copy(boundVariables =
+      (boundVariables - variableRef) + (
+        (
+          variableRef,
+          DoubleVariableValue(value)
+        )
+      )
+    )
   def bindVars(variables: (VariableRef, VariableValue)*) =
     copy(boundVariables = (boundVariables -- variables.map(_._1)) ++ variables)
 
@@ -237,30 +282,45 @@ case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
   def estimate(input: TableEstimate): TableEstimate = input
   def neededColumns = columnsReferencedByBooleanExpression(booleanExpression)
 
-  def analyze(input: ColumnSet,boundVariables: Map[VariableRef,VariableValue]) = {
+  def analyze(
+      input: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
+  ) = {
     val expressionOK = verifyBooleanExpression(
       booleanExpression,
-      input,boundVariables
+      input,
+      boundVariables
     )
+    val neededVariables = variablesReferencedByBooleanExpression(booleanExpression)
+    val missingVariables = neededVariables.toSet &~ boundVariables.keySet
     if (neededColumns.forall(n => input.hasMatchingColumn(n)) && expressionOK)
       Right(
         input
       )
-    else
-      Left(
-        s"In $this: Missing or ambiguous column(s) ${neededColumns
-          .filterNot(n => input.hasMatchingColumn(n))
-          .mkString("{", ", ", "}")} ${input.providedColumns.mkString("{", ", ", "}")}"
-      )
+    else {
+      if (missingVariables.nonEmpty)
+        Left(s"In $this, unbound variables: [${missingVariables.toSet.mkString(", ")}].")
+        else 
+        Left(
+          s"In $this: Missing or ambiguous column(s). Missing:${neededColumns
+            .filterNot(n => input.hasMatchingColumn(n))
+            .mkString("[", ", ", "]")}, provided: ${input.providedColumns
+            .mkString("[", ", ", "]")}"
+        )
+    }
   }
 
-  override def impl(inputData: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue])(implicit
+  override def impl(
+      inputData: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
+  )(implicit
       scope: Scope
   ): TableWithColumnMapping = {
     val newTable = Scope { implicit scope =>
       val booleanMask = interpretBooleanExpression(
         booleanExpression,
-        inputData,boundVariables
+        inputData,
+        boundVariables
       )
       val indices = booleanMask.where.head
       inputData.table.rows(indices)
@@ -275,7 +335,8 @@ case class Aggregate(
     groupBy: Seq[TableColumnRef],
     aggregate: Seq[ColumnFunctionWithOutputRef]
 ) extends Op1 {
-  override def toString = s"AGGREGATE(group by ${groupBy.mkString(",")}, aggregate with ${aggregate.mkString(", ")})"
+  override def toString =
+    s"AGGREGATE(group by ${groupBy.mkString(",")}, aggregate with ${aggregate.mkString(", ")})"
 
   def replace(old: UUID, n: Op) = {
     if (input.id == old) copy(input = n)
@@ -287,22 +348,25 @@ case class Aggregate(
   def neededColumns =
     (groupBy ++ aggregate.flatMap(_.function.columnRefs)).distinct
 
-  def analyze(input: ColumnSet,boundVariables: Map[VariableRef,VariableValue]) =
-    {
-      if (neededColumns.forall(n => input.hasMatchingColumn(n)))
-        Right(
-          ColumnSet(
-            aggregate.zipWithIndex.map(v => (v._1.outputRef , v._2)).toMap
-          )
+  def analyze(
+      input: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
+  ) = {
+    if (neededColumns.forall(n => input.hasMatchingColumn(n)))
+      Right(
+        ColumnSet(
+          aggregate.zipWithIndex.map(v => (v._1.outputRef, v._2)).toMap
         )
-      else
-        Left(
-          s"Missing column ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
-        )
-    }
+      )
+    else
+      Left(
+        s"Missing column ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
+      )
+  }
 
   def impl(
-      inputData: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue]
+      inputData: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
   )(implicit scope: Scope): TableWithColumnMapping = {
     val groupByColumnIndices = groupBy.map(inputData.getMatchingColumnIdx)
     val table = inputData.table
@@ -321,11 +385,11 @@ case class Aggregate(
           }.toMap
           Table(aggregations.map {
             case ColumnFunctionWithOutputRef(
-                  ColumnFunction(_, _,impl),
+                  ColumnFunction(_, _, impl),
                   newName
                 ) =>
               val aggregatedColumn =
-                impl(PredicateHelper(selectedColumns,boundVariables))(
+                impl(PredicateHelper(selectedColumns, boundVariables))(
                   implicitly[Scope]
                 ).withName(newName.column match {
                   case IdxColumnRef(_)         => None
@@ -366,7 +430,10 @@ case class Pivot(
 
   def neededColumns =
     (rowKeys +: colKeys +: aggregate.columnRefs).distinct
-  def analyze(input: ColumnSet,boundVariables: Map[VariableRef,VariableValue]): Either[String, ColumnSet] = {
+  def analyze(
+      input: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
+  ): Either[String, ColumnSet] = {
     if (neededColumns.forall(n => input.hasMatchingColumn(n)))
       Right(
         ColumnSet(
@@ -379,7 +446,10 @@ case class Pivot(
       )
   }
 
-  def impl(inputData: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue])(implicit
+  def impl(
+      inputData: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
+  )(implicit
       scope: Scope
   ): TableWithColumnMapping = {
     val table = inputData.table
@@ -391,13 +461,17 @@ case class Pivot(
       table.pivot(colIdx0, colIdx1)(table =>
         Table(
           Vector(
-            aggregate.impl(PredicateHelper(allNeededColumnRefs.map {
-              columnRef =>
-                (
-                  columnRef,
-                  table.columns(inputData.getMatchingColumnIdx(columnRef))
-                )
-            }.toMap,boundVariables))(implicitly[Scope])
+            aggregate.impl(
+              PredicateHelper(
+                allNeededColumnRefs.map { columnRef =>
+                  (
+                    columnRef,
+                    table.columns(inputData.getMatchingColumnIdx(columnRef))
+                  )
+                }.toMap,
+                boundVariables
+              )
+            )(implicitly[Scope])
           )
         )
       )
@@ -444,7 +518,8 @@ case class Product(input1: Op, input2: Op) extends Op2 {
   def neededColumns2 = Nil
   def analyze(
       input1: ColumnSet,
-      input2: ColumnSet,boundVariables: Map[VariableRef,VariableValue]
+      input2: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
   ) =
     Right(
       ColumnSet(
@@ -454,7 +529,8 @@ case class Product(input1: Op, input2: Op) extends Op2 {
 
   def impl(
       inputData1: TableWithColumnMapping,
-      inputData2: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue]
+      inputData2: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
   )(implicit scope: Scope) = {
 
     val inputTableRefs1 = inputData1.providedColumns.map(_._1.table).toSet
@@ -504,7 +580,8 @@ case class Union(input1: Op, input2: Op) extends Op2 {
   def neededColumns2 = Nil
   def analyze(
       input1: ColumnSet,
-      input2: ColumnSet,boundVariables: Map[VariableRef,VariableValue]
+      input2: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
   ) =
     if (input1 == input2)
       Right(
@@ -516,7 +593,8 @@ case class Union(input1: Op, input2: Op) extends Op2 {
 
   def impl(
       inputData1: TableWithColumnMapping,
-      inputData2: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue]
+      inputData2: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
   )(implicit scope: Scope) = {
 
     assert(inputData1.providedColumns == inputData2.providedColumns)
@@ -574,7 +652,8 @@ case class EquiJoin(
   }
   def analyze(
       input1: ColumnSet,
-      input2: ColumnSet,boundVariables: Map[VariableRef,VariableValue]
+      input2: ColumnSet,
+      boundVariables: Map[VariableRef, VariableValue]
   ) =
     if (input1.hasMatchingColumn(column1) && input2.hasMatchingColumn(column2))
       Right(
@@ -594,7 +673,8 @@ case class EquiJoin(
 
   def impl(
       inputData1: TableWithColumnMapping,
-      inputData2: TableWithColumnMapping,boundVariables: Map[VariableRef,VariableValue]
+      inputData2: TableWithColumnMapping,
+      boundVariables: Map[VariableRef, VariableValue]
   )(implicit scope: Scope): TableWithColumnMapping = {
     val col1 = column1
     val col2 = column2

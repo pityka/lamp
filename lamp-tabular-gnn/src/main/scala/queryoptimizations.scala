@@ -77,7 +77,7 @@ object PushDownProjection extends Mutation {
 
   def makeChildren(parent: Result): Either[String, Seq[Result]] = {
     val sorted = RelationalAlgebra.topologicalSort(parent).reverse
-    analyzeReferences(sorted, parent.boundTables).map { provided =>
+    analyzeReferences(sorted, parent.boundTables, parent.boundSchemas).map { provided =>
       val eligible = sorted collect { case x: Projection => x }
 
       eligible.flatMap { filter =>
@@ -143,7 +143,7 @@ object PushDownFilters extends Mutation {
 
   def makeChildren(parent: Result): Either[String, Seq[Result]] = {
     val sorted = RelationalAlgebra.topologicalSort(parent).reverse
-    analyzeReferences(sorted, parent.boundTables).map { provided =>
+    analyzeReferences(sorted, parent.boundTables, parent.boundSchemas).map { provided =>
       val eligibleFilters = sorted collect { case f: Filter =>
         f
       }
@@ -230,7 +230,7 @@ object PushDownInnerJoin extends Mutation {
 
   def makeChildren(root: Result): Either[String, Seq[Result]] = {
     val sorted = topologicalSort(root).reverse
-    analyzeReferences(sorted, root.boundTables).map { provided =>
+    analyzeReferences(sorted, root.boundTables, root.boundSchemas).map { provided =>
       val eligible = sorted collect {
         case f: EquiJoin if f.joinType == InnerJoin =>
           f

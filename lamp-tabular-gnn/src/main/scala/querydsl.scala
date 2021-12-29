@@ -8,6 +8,7 @@ import org.saddle.index.InnerJoin
 import org.saddle.index.RightJoin
 import org.saddle.index.OuterJoin
 import org.saddle.index.LeftJoin
+import lamp.tgnn.QueryDsl.SyntaxTree.ColumnRef
 
 object QueryDsl {
 
@@ -225,12 +226,26 @@ object QueryDsl {
           case SyntaxTree.VariableRef(name) => name
           case _ =>
             throw new RuntimeException(
-              "table/scan/query expects a single variable argument"
+              "the first argument of table/scan/query must be a variable"
             )
+        }
+        val schema = {
+          val args = lexicalToken.arguments.get.tail.map(_ match {
+            case ColumnRef(None, columnRef) => columnRef
+            case _ =>
+              throw new RuntimeException(
+                "the tail arguments of table/scan/query must be simple identifiers"
+              )
+          })
+          RelationalAlgebra.Schema(args.map(Some(_)))
         }
         Vector(
           OpToken(
-            TableOp(RelationalAlgebra.AliasTableRef(variable), None)
+            TableOp(
+              RelationalAlgebra.AliasTableRef(variable),
+              None,
+              Some(schema)
+            )
           )
         )
       case other
@@ -302,7 +317,7 @@ object QueryDsl {
         val stackTokens =
           liftExpression(root, namedExpressions.toMap, definedFunctions)
         val head = stackTokens.head match {
-          case OpToken(op @ TableOp(_, _)) => op
+          case OpToken(op: TableOp) => op
           case _ =>
             throw new RuntimeException(
               "first token in the root expression must be a table/scan/query"
@@ -312,7 +327,17 @@ object QueryDsl {
         Right(TokenList(head, stackTokens.toList.drop(1)))
       }
     }
-    tokens.map(_.compile)
+    val schemas = parsed.schemas.map{ case SyntaxTree.Schema(name,args) =>
+      val liftedArgs = args.map{
+        case ColumnRef(None, columnRef) => Option(columnRef)
+        case _ => throw new RuntimeException("arguments of schemas must be simple identifiers")
+      }
+      (RelationalAlgebra.AliasTableRef(name),RelationalAlgebra.Schema(liftedArgs.toList))
+    }
+    
+    tokens.map{ tokenList =>
+      tokenList.compile.bindSchemas(schemas:_*)
+    }
   }
 
   private[tgnn] object SyntaxTree {
@@ -346,19 +371,28 @@ object QueryDsl {
         s"$name${arguments.map(arg => s"(${arg.toList.mkString(", ")})").getOrElse("")}"
     }
 
+    sealed trait SchemaOrExpression
+
+    case class Schema(name: String, arguments: NonEmptyList[Argument])
+        extends SchemaOrExpression {
+          override def toString = s"schema $name (${arguments.toList.mkString(", ")})"
+        }
+
     case class Expression(
         boundToName: Option[String],
         tokenList: NonEmptyList[Token]
-    ) {
+    ) extends SchemaOrExpression {
       override def toString =
         s"${boundToName.map(s => s"let $s = ").getOrElse("")}${tokenList.toList.mkString(" ")} end"
     }
 
-    case class ExpressionList(expressions: NonEmptyList[Expression]) {
-      override def toString = expressions.toList.mkString("\n")
+    case class ExpressionList(
+        expressions: NonEmptyList[Expression],
+        schemas: List[Schema]
+    ) {
+      override def toString = (expressions.toList ++ schemas).mkString("\n")
     }
   }
-  
 
   /** grammar:
     * ~~~
@@ -379,9 +413,9 @@ object QueryDsl {
     * ~~~
     */
   object DslParser {
-import SyntaxTree._
-    val identifierStart = Rfc5234.alpha
+    import SyntaxTree._
     val underscore = Parser.charIn('_')
+    val identifierStart = Rfc5234.alpha | underscore
     val hyphen = Parser.charIn('-')
     val identifierPart = Rfc5234.alpha | Rfc5234.digit
 
@@ -526,35 +560,53 @@ import SyntaxTree._
     }
 
     val tableref = name
-    val tokenname = name.filter(n => n != "let" && n != "end")
+    val tokenname = name.filter(n => n != "let" && n != "end" && n != "schema")
     val token =
       (tokenname.backtrack ~ ((optionalWh ~ open).backtrack ~ optionalWh *> argumentList <* optionalWh ~ close).?)
         .map { case (name, args) => Token(name, args) }
     val tokenlist = token.repSep(wh) <* (wh ~ Parser.string("end")).backtrack.?
     val letin =
       Parser.string("let") ~ wh *> tokenname <* optionalWh ~ Parser.string("=")
+    val schema =
+      ((Parser.string(
+        "schema"
+      ) ~ wh *> identifier <* optionalWh) ~ (open *> argumentList <* close) <* (wh ~ Parser
+        .string("end")).backtrack.?).map { case (tableName, schemaArgument) =>
+        Schema(tableName, schemaArgument)
+      }
     val expressionWithLet = (((letin <* optionalWh).?).with1 ~ tokenlist)
       .withContext("named expression")
+      .map { case (name, tokens) => Expression(name, tokens) }
     val expressionWithoutLet = tokenlist
       .map(s => Option.empty[String] -> s)
       .withContext("anonymous expression")
-    val expression = (expressionWithLet.backtrack | expressionWithoutLet)
-      .map { case (letName, tokenList) =>
-        Expression(letName, tokenList)
-      }
-      .withContext("expression")
-    val expressionlist = Parser.recursive[NonEmptyList[Expression]](recurse =>
-      (expression ~ (wh *> recurse <* optionalWh).backtrack.?).map {
-        case ((head, tail)) =>
-          tail match {
-            case Some(tail) => NonEmptyList(head, tail.toList)
-            case None       => NonEmptyList(head, Nil)
-          }
-      }
-    )
+      .map { case (name, tokens) => Expression(name, tokens) }
+    val expression =
+      (expressionWithLet.backtrack | schema.backtrack | expressionWithoutLet)
+        .withContext("expression")
+    val expressionlist =
+      Parser.recursive[NonEmptyList[SchemaOrExpression]](recurse =>
+        (expression ~ (wh *> recurse <* optionalWh).backtrack.?).map {
+          case ((head, tail)) =>
+            tail match {
+              case Some(tail) => NonEmptyList(head, tail.toList)
+              case None       => NonEmptyList(head, Nil)
+            }
+        }
+      )
     val program =
-      optionalWh *> expressionlist.map(ExpressionList(_)) <* optionalWh
+      optionalWh *> expressionlist.map { schemasOrExpressions =>
+        val schemas = schemasOrExpressions.collect { case s: Schema =>
+          s
+        }
+        val expressions = schemasOrExpressions.collect { case e: Expression =>
+          e
+        }
+        ExpressionList(
+          NonEmptyList(expressions.head, expressions.tail),
+          schemas
+        )
+      } <* optionalWh
   }
 
 }
-

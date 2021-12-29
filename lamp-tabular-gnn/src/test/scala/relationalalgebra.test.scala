@@ -64,6 +64,21 @@ class RelationAlgebraSuite extends AnyFunSuite {
     )
 
   }
+  test("compile and analyze references") {
+    val compiled = QueryDsl
+      .compile(
+        """
+          table(?tref1) filter(tref1.col1 == ?whatever) project(tref1.col1) table(?tref2) product table(?tref3) inner-join(col1,col2) reference2
+          let reference2 = filter((tref1.col1 == ?whatever) && false) 
+          let reference = reference
+          schema tref1(col1,col2)
+          schema tref3(col2)
+          """
+      )()
+      .toOption
+      compiled.get.bind(Q.free("whatever"),0.0).check
+
+  }
   test("compile bool xnor") {
     assert(
       QueryDsl
@@ -171,12 +186,12 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       val tref1 = Q.table("t1")
       val tref2 = Q.table("t2")
-      val noop = tref1.scan.done.bind(tref1 -> table)
+      val noop = tref1.scan().done.bind(tref1 -> table)
       assert(noop.interpret == table)
       assert(noop.interpret != table2)
       assert(noop.bind(tref1 -> table2).interpret == table2)
 
-      val project = tref1.scan
+      val project = tref1.scan()
         .project(tref1.col(0).self, tref1.col("hbool").self)
         .project(tref1.col("hbool").self)
         .done
@@ -185,30 +200,30 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
       val predicate = tref1.col("hbool") === 0
 
-      val filter = tref1.scan
+      val filter = tref1.scan()
         .filter(predicate.negate.or(predicate))
         .done
         .bind(tref1 -> table)
       assert(filter.interpret equalDeep table)
       assert(filter.interpret != table)
 
-      val filter2 = tref1.scan
+      val filter2 = tref1.scan()
         .filter(predicate.or(BooleanAtomTrue))
         .done
         .bind(tref1 -> table)
       assert(filter2.interpret equalDeep table)
       assert(filter2.interpret != table)
-      val filter3 = tref1.scan
+      val filter3 = tref1.scan()
         .filter(predicate.and(BooleanAtomFalse))
         .done
         .bind(tref1 -> table)
       assert(filter3.interpret.numRows == 0)
 
       val innerJoin =
-        tref1.scan
+        tref1.scan()
           .innerEquiJoin(
             tref1.col("hint"),
-            tref2.scan,
+            tref2.scan(),
             tref2.col("hint")
           )
           .done
@@ -222,10 +237,10 @@ class RelationAlgebraSuite extends AnyFunSuite {
       assert(
         Q.query(table) { tref1 =>
           Q.query(table2) { tref2 =>
-            tref1.scan
+            tref1.scan()
               .innerEquiJoin(
                 tref1.col("hint"),
-                tref2.scan,
+                tref2.scan(),
                 tref2.col("hint")
               )
               .filter(tref2.col("hfloat") === 4.5)

@@ -47,8 +47,9 @@ object RelationalAlgebra {
     def col(s: String): QualifiedTableColumnRef =
       QualifiedTableColumnRef(this, StringColumnRef(s))
 
-    def asOp = TableOp(this, None)
-    def scan = asOp
+    def asOp(schema: Option[Schema] = None) = TableOp(this, None,schema)
+    def scan(schema: Option[Schema] = None) = asOp(schema)
+    
   }
   case class AliasTableRef(alias: String) extends TableRef {
     override def toString = alias
@@ -91,6 +92,18 @@ object RelationalAlgebra {
   ) {
     def apply(t: TableColumnRef) = map(t)
     def variable(ref: VariableRef) = variables(ref)
+  }
+
+  case class Schema(columnNames: Seq[Option[String]]) {
+    val nameToIndex: Map[String, Int] = columnNames.zipWithIndex
+      .map(v => v._1 -> v._2)
+      .collect { case (Some(value), idx) => (value, idx) }
+      .toMap
+
+    def extractColumnRefs: IndexedSeq[ColumnRef] =
+      (0 until columnNames.size map (i =>
+        IdxColumnRef(i)
+      )) ++ nameToIndex.keySet.toSeq.map(s => StringColumnRef(s))
   }
 
   private def extractColumnRefs(table: Table): IndexedSeq[ColumnRef] =
@@ -311,7 +324,7 @@ object RelationalAlgebra {
       }
       ops.head match {
 
-        case op @ TableOp(tableRef, boundTable) =>
+        case op @ TableOp(tableRef, boundTable,_) =>
           assert(!outputs.contains(op.id))
           loop(
             step + 1,
@@ -324,7 +337,7 @@ object RelationalAlgebra {
             ) -- releasable
           )
 
-        case op @ Result(input, _, _) =>
+        case op @ Result(input, _, _,_) =>
           assert(!outputs.contains(op.id))
           val (table, oldScope) = outputs(input.id)
           oldScope.moveInto(scope, table)
@@ -373,29 +386,48 @@ object RelationalAlgebra {
 
   }
   def analyzeReferences(
+      root: Op,
+      tables: Map[TableRef, Table],
+      schemas: Map[TableRef, Schema]
+  ): Either[String, Map[UUID, ColumnSet]] =
+    analyzeReferences(topologicalSort(root).reverse, tables, schemas)
+
+  def analyzeReferences(
       topoSorted: Seq[Op],
-      tables: Map[TableRef, Table]
+      tables: Map[TableRef, Table],
+      schemas: Map[TableRef, Schema]
   ): Either[String, Map[UUID, ColumnSet]] = {
 
     def extractColumnRefsFromTableRef(
         tableRef: TableRef,
-        boundTable: Option[Table]
+        boundTable: Option[Table],
+        schema: Option[Schema]
     ): ColumnSet = {
-      val table = {
-        val found = tables.get(tableRef).orElse(boundTable)
-        if (found.isEmpty) {
-          throw new RuntimeException(s"$tableRef is not bound")
-        }
-        found.get
+      val foundTable = tables.get(tableRef).orElse(boundTable)
+      val foundSchema = schemas.get(tableRef).orElse(schema)
+
+      if (foundTable.isEmpty && foundSchema.isEmpty) {
+        throw new RuntimeException(
+          s"No bound table or schema for $tableRef. Analysis fails."
+        )
       }
+
       val columnRefs =
-        extractColumnRefs(table)
+        foundTable match {
+          case Some(table) => extractColumnRefs(table)
+          case None        => foundSchema.get.extractColumnRefs
+        }
       val mapping = columnRefs.map { ref =>
         ref match {
           case IdxColumnRef(idx) =>
             (QualifiedTableColumnRef(tableRef, ref), idx)
           case StringColumnRef(string) =>
-            (QualifiedTableColumnRef(tableRef, ref), table.nameToIndex(string))
+            (
+              QualifiedTableColumnRef(tableRef, ref),
+              foundTable
+                .map(_.nameToIndex(string))
+                .getOrElse(foundSchema.get.nameToIndex(string))
+            )
         }
       }.toMap
       ColumnSet(mapping)
@@ -407,17 +439,18 @@ object RelationalAlgebra {
     ): Either[String, Map[UUID, ColumnSet]] = {
       ops.head match {
 
-        case op @ TableOp(tableRef, boundTable) =>
+        case op @ TableOp(tableRef, boundTable, schema) =>
           assert(!outputs.contains(op.id))
           loop(
             ops.tail,
             outputs + (op.id -> extractColumnRefsFromTableRef(
               tableRef,
-              boundTable
+              boundTable,
+              schema
             ))
           )
 
-        case op @ Result(_, _, _) =>
+        case op @ Result(_, _, _,_) =>
           assert(!outputs.contains(op.id))
           Right(outputs)
         case op: Op2 =>
@@ -539,14 +572,14 @@ object RelationalAlgebra {
     ): Map[UUID, TableEstimate] = {
       ops.head match {
 
-        case op @ TableOp(tableRef, boundTable) =>
+        case op @ TableOp(tableRef, boundTable, _) =>
           assert(!outputs.contains(op.id))
           loop(
             ops.tail,
             outputs + (op.id -> makeTableEstimate(tableRef, boundTable))
           )
 
-        case op @ Result(input, _, _) =>
+        case op @ Result(input, _, _,_) =>
           assert(!outputs.contains(op.id))
           outputs + (op.id -> outputs(input.id))
         case op: Op2 =>

@@ -36,7 +36,7 @@ case class TokenList(head: Op, list: List[StackToken]) {
   def ~(token: StackToken) = TokenList(head, list.appended(token))
   def ~(token: Table) =
     TokenList(head, list.appended(OpToken(syntax.TableSyntax(token).query)))
-  def ~(token: TableRef) = TokenList(head, list.appended(OpToken(token.asOp)))
+  def ~(token: TableRef) = TokenList(head, list.appended(OpToken(token.asOp(schema=None))))
   def doneAndInterpret(
       tables: Seq[(TableRef, Table)],
       variables: Seq[(VariableRef, VariableValue)]
@@ -88,7 +88,7 @@ object syntax {
   implicit class TableSyntax(table: Table) {
     def ref: TableRef = BoundTableRef(table)
     def query: TableOp = {
-      TableOp(table.ref, Some(table))
+      TableOp(table.ref, Some(table),None)
     }
     def ~(that: Op) = TokenList(table.query, List(OpToken(that)))
     def ~(that: Table) = TokenList(table.query, List(OpToken(that.query)))
@@ -144,7 +144,7 @@ object Q extends Dynamic with StackOps {
       fun: TableOp => Op
   ): Result = {
     val tref = Q.table(alias)
-    (fun(tref.scan) match {
+    (fun(tref.scan(schema=None)) match {
       case x: Result => x
       case x         => x.done
     }).bind(tref, table)
