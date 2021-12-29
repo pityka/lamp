@@ -21,27 +21,19 @@ class RelationAlgebraSuite extends AnyFunSuite {
 2,0.5
 3,1.5"""
 
-  test("compile") { Scope.root{ implicit scope =>
-    println(QueryDsl.parse
-        (
-           """
-          table(?tref) filter(tref.col1 == ?whatever) project(tref1.col2) table(?tref2) product table(?tref3) inner-join(col1,col2) reference2
-          let reference2 = filter(tref.col1 == ?whatever) reference
-          let reference = reference
-          """
-        ))
-    println(
-      QueryDsl.liftExpressionList(QueryDsl.parse
-        (
+  test("compile") {
+    assert(
+      QueryDsl
+        .compile(
           """
           table(?tref) filter(tref.col1 == ?whatever) project(tref1.col2) table(?tref2) product table(?tref3) inner-join(col1,col2) reference2
           let reference2 = filter(tref.col1 == ?whatever) 
           let reference = reference
           """
-        ).toOption.get).toOption.get.result
-  
+        )
+        .toOption
+        .isDefined
     )
-  }
 
   }
   test("complete") {
@@ -81,7 +73,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
     )
   }
   test("trailing whitespace") {
-    
+
     assert(
       QueryDsl.DslParser.program
         .parseAll(
