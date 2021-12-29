@@ -34,6 +34,11 @@ class TableSuite extends AnyFunSuite {
 3,"d","v7"
 """
 
+ val csvText5 = """hint,hfloat,htime,hbool,htext
+1,1.5,2020-01-01T00:00:00Z,false,"something, something"
+NA,NA,NA,NA,NA
+2,3.0,2021-01-01T00:00:00Z,true,"a,""""
+
 test("pivot") {
     Scope.root { implicit scope =>
       val channel =
@@ -396,6 +401,38 @@ test("pivot") {
      assert(table != table2)
      assert(table equalDeep table2)
      assert(table equalDeep table)
+
+    }
+  }
+  test("missingness") {
+    Scope.root { implicit scope =>
+      val channel =
+        Channels.newChannel(new ByteArrayInputStream(csvText5.getBytes()))
+      
+
+      val table = Table
+        .readHeterogeneousFromCSVChannel(
+          List(
+            (0, I64Column),
+            (1, F32Column),
+            (2, DateTimeColumn()),
+            (3, BooleanColumn()),
+            (4, TextColumn(64, -1L, None))
+          ),
+          channel = channel,
+          recordSeparator = "\n",
+          header = true
+        )
+        .toOption
+        .get
+
+      assert(table.col(0).missingnessMask.castToLong.toLongVec == Vec(0L,1L,0L))
+      assert(table.col(1).missingnessMask.castToLong.toLongVec == Vec(0L,1L,0L))
+      assert(table.col(2).missingnessMask.castToLong.toLongVec == Vec(0L,1L,0L))
+      assert(table.col(3).missingnessMask.castToLong.toLongVec == Vec(0L,1L,0L))
+      assert(table.col(4).missingnessMask.castToLong.toLongVec == Vec(0L,1L,0L))
+
+    
 
     }
   }

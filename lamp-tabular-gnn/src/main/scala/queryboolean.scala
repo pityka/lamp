@@ -23,14 +23,6 @@ sealed trait BooleanFactor {
   )
 }
 
-case class PredicateHelper(
-    map: Map[TableColumnRef, Table.Column],
-    variables: Map[VariableRef, VariableValue]
-) {
-  def apply(t: TableColumnRef) = map(t)
-  def variable(ref: VariableRef) = variables(ref)
-}
-
 case class ColumnFunction(
     columnRefs: Seq[TableColumnRef],
     variableRefs: Seq[VariableRef],

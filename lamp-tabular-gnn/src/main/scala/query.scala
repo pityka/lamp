@@ -85,6 +85,14 @@ object RelationalAlgebra {
   sealed trait VariableValue
   case class DoubleVariableValue(v: Double) extends VariableValue
 
+  case class PredicateHelper(
+      map: Map[TableColumnRef, Table.Column],
+      variables: Map[VariableRef, VariableValue]
+  ) {
+    def apply(t: TableColumnRef) = map(t)
+    def variable(ref: VariableRef) = variables(ref)
+  }
+
   private def extractColumnRefs(table: Table): IndexedSeq[ColumnRef] =
     (0 until table.columns.size map (i =>
       IdxColumnRef(i)
@@ -96,10 +104,10 @@ object RelationalAlgebra {
       boundVariables: Map[VariableRef, VariableValue]
   ): STen = factor match {
     case BooleanAtomTrue =>
-        STen.ones(List(1),table.table.columns.head.values.options)
+      STen.ones(List(1), table.table.columns.head.values.options)
     case BooleanAtomFalse =>
-        STen.zeros(List(1),table.table.columns.head.values.options)
-    case ColumnFunction(columnRefs,_, impl) =>
+      STen.zeros(List(1), table.table.columns.head.values.options)
+    case ColumnFunction(columnRefs, _, impl) =>
       val columns = columnRefs
         .map(c =>
           (
@@ -128,21 +136,21 @@ object RelationalAlgebra {
   def verifyBooleanExpression(
       factor: BooleanFactor,
       table: ColumnSet,
-      boundVariables: Map[VariableRef,VariableValue]
+      boundVariables: Map[VariableRef, VariableValue]
   ): Boolean = factor match {
     case BooleanAtomFalse | BooleanAtomTrue => true
-    case ColumnFunction(columnRefs, variableRefs,_) =>
+    case ColumnFunction(columnRefs, variableRefs, _) =>
       columnRefs
-        .forall(c => table.hasMatchingColumn(c)) && 
+        .forall(c => table.hasMatchingColumn(c)) &&
         variableRefs.forall(c => boundVariables.contains(c))
     case BooleanNegation(factor) =>
-      verifyBooleanExpression(factor, table,boundVariables)
+      verifyBooleanExpression(factor, table, boundVariables)
     case BooleanExpression(terms) =>
       terms
         .map { term =>
           term.factors
             .map { factor =>
-              verifyBooleanExpression(factor, table,boundVariables)
+              verifyBooleanExpression(factor, table, boundVariables)
             }
             .toList
             .reduce((a, b) => a && b)
@@ -154,7 +162,7 @@ object RelationalAlgebra {
       factor: BooleanFactor
   ): Seq[TableColumnRef] = factor match {
     case BooleanAtomFalse | BooleanAtomTrue => Nil
-    case ColumnFunction(columnRefs,_, _) =>
+    case ColumnFunction(columnRefs, _, _) =>
       columnRefs.distinct
     case BooleanNegation(factor) =>
       columnsReferencedByBooleanExpression(factor)
@@ -172,7 +180,7 @@ object RelationalAlgebra {
       factor: BooleanFactor
   ): Seq[VariableRef] = factor match {
     case BooleanAtomFalse | BooleanAtomTrue => Nil
-    case ColumnFunction(_,refs, _) =>
+    case ColumnFunction(_, refs, _) =>
       refs.distinct
     case BooleanNegation(factor) =>
       variablesReferencedByBooleanExpression(factor)
@@ -374,11 +382,11 @@ object RelationalAlgebra {
         boundTable: Option[Table]
     ): ColumnSet = {
       val table = {
-      val found = tables.get(tableRef).orElse(boundTable)
-      if (found.isEmpty) {
-        throw new RuntimeException(s"$tableRef is not bound")
-      }
-      found.get
+        val found = tables.get(tableRef).orElse(boundTable)
+        if (found.isEmpty) {
+          throw new RuntimeException(s"$tableRef is not bound")
+        }
+        found.get
       }
       val columnRefs =
         extractColumnRefs(table)

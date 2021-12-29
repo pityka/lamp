@@ -85,7 +85,7 @@ case class Table(
               case TextColumn(_, pad, vocabulary) =>
                 val reverseVocabulary = vocabulary.map(_.map(_.swap))
                 Frame(name -> column.values.toLongMat.rows.map { row =>
-                  if (row.countif(ScalarTagLong.isMissing) > 0) null
+                  if (row.count == 0) null
                   else
                     row
                       .filter(_ != pad)
@@ -132,7 +132,9 @@ case class Table(
 
   def numCols: Int = columns.length
 
-  def numRows: Long = columns.headOption.map(_.values.shape.headOption.getOrElse(1L)).getOrElse(0L)
+  def numRows: Long = columns.headOption
+    .map(_.values.shape.headOption.getOrElse(1L))
+    .getOrElse(0L)
 
   def colNames: Vector[Option[String]] = columns.map(_.name)
 
@@ -494,6 +496,18 @@ object Table {
       index: Option[ColumnIndex[_]]
   ) {
 
+    def missingnessMask[S: Sc]: STen = {
+      tpe match {
+        case _: BooleanColumn | _: DateTimeColumn | I64Column =>
+          values.equ(ScalarTagLong.missing)
+        case _: TextColumn =>
+          values.equ(ScalarTagLong.missing).sum(1, false).gt(0d)
+        case F32Column | F64Column =>
+          values.isnan
+      }
+      
+    }
+
     def select[S: Sc](idx: STen): Column =
       Table.Column(values.indexSelect(dim = 0, index = idx), name, tpe, None)
 
@@ -501,8 +515,8 @@ object Table {
 
     def withIndex = if (index.isDefined) this else copy(index = Some(makeIndex))
 
-    def withName(s:String) = copy(name = Some(s))
-    def withName(s:Option[String]) = copy(name = s)
+    def withName(s: String) = copy(name = Some(s))
+    def withName(s: Option[String]) = copy(name = s)
 
     def toVec: Vec[_] = tpe match {
       case DateTimeColumn(_) =>
@@ -514,7 +528,7 @@ object Table {
       case TextColumn(_, pad, vocabulary) =>
         val reverseVocabulary = vocabulary.map(_.map(_.swap))
         val vec = values.toLongMat.rows.map { row =>
-          if ( row.count == 0) null
+          if (row.count == 0) null
           else
             row
               .filter(_ != pad)
@@ -526,22 +540,22 @@ object Table {
       case I64Column =>
         val m = Scope.leak { implicit scope =>
           if (values.numel == 0) Vec.empty[Long]
-          else 
-          values.view(values.shape(0), -1).select(1, 0).toLongVec
+          else
+            values.view(values.shape(0), -1).select(1, 0).toLongVec
         }
         m
       case F32Column =>
         val m = Scope.leak { implicit scope =>
           if (values.numel == 0) Vec.empty[Float]
-          else 
-          values.view(values.shape(0), -1).select(1, 0).toFloatVec
+          else
+            values.view(values.shape(0), -1).select(1, 0).toFloatVec
         }
         m
       case F64Column =>
         val m = Scope.leak { implicit scope =>
           if (values.numel == 0) Vec.empty[Double]
-          else 
-          values.view(values.shape(0), -1).select(1, 0).toVec
+          else
+            values.view(values.shape(0), -1).select(1, 0).toVec
         }
         m
     }
@@ -555,7 +569,7 @@ object Table {
       case TextColumn(_, pad, vocabulary) =>
         val reverseVocabulary = vocabulary.map(_.map(_.swap))
         val vec = values.toLongMat.rows.map { row =>
-          if (row.countif(ScalarTagLong.isMissing) > 0) null
+          if (row.count == 0) null
           else
             row
               .filter(_ != pad)
@@ -572,23 +586,23 @@ object Table {
         LongIndex(Index(m))
       case F32Column =>
         val m = Scope.leak { implicit scope =>
-           if (values.numel == 0L) Vec.empty[Float]
+          if (values.numel == 0L) Vec.empty[Float]
           else
-          values.view(values.shape(0), -1).select(1, 0).toFloatVec
+            values.view(values.shape(0), -1).select(1, 0).toFloatVec
         }
         FloatIndex(Index(m))
       case F64Column =>
         val m = Scope.leak { implicit scope =>
-           if (values.numel == 0L) Vec.empty[Double]
+          if (values.numel == 0L) Vec.empty[Double]
           else
-          values.view(values.shape(0), -1).select(1, 0).toVec
+            values.view(values.shape(0), -1).select(1, 0).toVec
         }
         DoubleIndex(Index(m))
     }
   }
   object Column {
     implicit val movable: Movable[Column] = Movable.by(_.values)
-    def bool(s:STen) = Column(s,None,BooleanColumn(),None)
+    def bool(s: STen) = Column(s, None, BooleanColumn(), None)
   }
 
   sealed trait ColumnDataType {
@@ -604,7 +618,8 @@ object Table {
     type Buf = Buffer[Long]
     def allocateBuffer() = Buffer.empty[Long](1024)
     def parseIntoBuffer(string: String, buffer: Buf): Unit =
-      buffer.+=(parse(string))
+      if (string == "na" || string == "NA") buffer.+=(ScalarTagLong.missing)
+      else buffer.+=(parse(string))
 
     def copyBufferToSTen(buf: Buffer[Long])(implicit scope: Scope): STen =
       STen.cat(
@@ -628,7 +643,8 @@ object Table {
     type Buf = Buffer[Long]
     def allocateBuffer() = Buffer.empty[Long](1024)
     def parseIntoBuffer(string: String, buffer: Buf): Unit =
-      buffer.+=(if (isTrue(string)) 1L else 0L)
+      if (string == "na" || string == "NA") buffer.+=(ScalarTagLong.missing)
+      else buffer.+=(if (isTrue(string)) 1L else 0L)
 
     def copyBufferToSTen(buf: Buffer[Long])(implicit scope: Scope): STen =
       STen.cat(
@@ -660,11 +676,15 @@ object Table {
       .take(maxLength)
       .padTo(maxLength, pad)
 
+    val missing = Array.ofDim[Long](maxLength).map(_ => ScalarTagLong.missing)
+
     /* (tokens, mask) */
     type Buf = Buffer[Array[Long]]
     def allocateBuffer() = Buffer.empty[Array[Long]](1024)
     def parseIntoBuffer(string: String, buffer: Buf): Unit =
-      buffer.+=(tokenize(string))
+      if (string == "na" || string == "NA") buffer.+=(missing)
+      else
+        buffer.+=(tokenize(string))
 
     def copyBufferToSTen(
         buf: Buffer[Array[Long]]
@@ -839,8 +859,7 @@ object Table {
 
   }
 
-    def union[S: Sc](tables: Table*): Table = 
-      tables.head.union(tables.tail:_*)
-  
+  def union[S: Sc](tables: Table*): Table =
+    tables.head.union(tables.tail: _*)
 
 }
