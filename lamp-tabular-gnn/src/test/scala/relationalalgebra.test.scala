@@ -69,10 +69,15 @@ class RelationAlgebraSuite extends AnyFunSuite {
     val compiled = QueryDsl
       .compile(
         """
-          table(?tref1) filter(tref1.col1 == ?whatever) project(tref1.col1 as whatever, tref1.col2) table(?tref2) product table(?tref3) inner-join(whatever,col2) reference2
-          let reference2 = filter((tref1.whatever == ?whatever) && false) 
+          table(?tref1 as mytablename) 
+            filter(mytablename.col1 == ?whatever) 
+            project(mytablename.col1 as whatever, mytablename.col2) 
+          table(?tref2) product 
+          table(?tref3) inner-join(whatever,col2) 
+          reference2
+          let reference2 = filter((mytablename.whatever == ?whatever) && false) 
           let reference = reference
-          schema tref1(col1,col2)
+          schema mytablename(col1,col2)
           schema tref3(col2)
           """
       )()
