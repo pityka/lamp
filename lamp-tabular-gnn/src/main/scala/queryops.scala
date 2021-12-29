@@ -141,13 +141,17 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
       if (neededColumns.distinct.size == neededColumns.size)
         Right(
           ColumnSet(
-            neededColumns.map(n => input.getMatchingQualifiedColumnRef(n)).toMap
+            projectTo.zipWithIndex.map {
+              case (columnFunctionWithOutputRef, idx) =>
+                columnFunctionWithOutputRef.outputRef -> idx
+            }.toMap
           )
         )
       else Left("Duplicate columns in projections")
     else
       Left(
-        s"Missing column(s) from projection: ${neededColumns.filterNot(n => input.hasMatchingColumn(n))}"
+        s"Missing column(s) from projection: ${neededColumns
+          .filterNot(n => input.hasMatchingColumn(n))}"
       )
   }
 
@@ -176,7 +180,7 @@ case class Projection(input: Op, projectTo: Seq[ColumnFunctionWithOutputRef])
 
     val projectedTable = Table(projectTo.map {
       case ColumnFunctionWithOutputRef(
-            ColumnFunction(_, _, impl),
+            ColumnFunction(_, _, _, impl),
             newName
           ) =>
         val aggregatedColumn =
@@ -291,7 +295,9 @@ case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
       input,
       boundVariables
     )
-    val neededVariables = variablesReferencedByBooleanExpression(booleanExpression)
+    val neededVariables = variablesReferencedByBooleanExpression(
+      booleanExpression
+    )
     val missingVariables = neededVariables.toSet &~ boundVariables.keySet
     if (neededColumns.forall(n => input.hasMatchingColumn(n)) && expressionOK)
       Right(
@@ -299,8 +305,10 @@ case class Filter(input: Op, booleanExpression: BooleanFactor) extends Op1 {
       )
     else {
       if (missingVariables.nonEmpty)
-        Left(s"In $this, unbound variables: [${missingVariables.toSet.mkString(", ")}].")
-        else 
+        Left(
+          s"In $this, unbound variables: [${missingVariables.toSet.mkString(", ")}]."
+        )
+      else
         Left(
           s"In $this: Missing or ambiguous column(s). Missing:${neededColumns
             .filterNot(n => input.hasMatchingColumn(n))
@@ -385,7 +393,7 @@ case class Aggregate(
           }.toMap
           Table(aggregations.map {
             case ColumnFunctionWithOutputRef(
-                  ColumnFunction(_, _, impl),
+                  ColumnFunction(_, _, _, impl),
                   newName
                 ) =>
               val aggregatedColumn =

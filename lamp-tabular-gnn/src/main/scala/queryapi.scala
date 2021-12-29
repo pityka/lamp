@@ -123,18 +123,18 @@ object syntax {
 
 object Q extends Dynamic with StackOps {
   def free(s: String) = VariableRef(s)
-  def apply(refs: TableColumnRef*)(
+  def apply(name: String)(refs: TableColumnRef*)(
       impl: PredicateHelper => Scope => Table.Column
-  ): ColumnFunction = ColumnFunction(refs, Nil, impl)
-  def fun(refs: TableColumnRef*)(vars: VariableRef*)(
+  ): ColumnFunction = ColumnFunction(name,refs, Nil, impl)
+  def fun(name: String)(refs: TableColumnRef*)(vars: VariableRef*)(
       impl: PredicateHelper => Scope => Table.Column
-  ): ColumnFunction = ColumnFunction(refs, vars, impl)
+  ): ColumnFunction = ColumnFunction(name,refs, vars, impl)
 
-  def first(other: TableColumnRef) = apply(other) { input => implicit scope =>
+  def first(other: TableColumnRef) = apply("first")(other) { input => implicit scope =>
     val col = input(other)
     Table.Column(col.values.select(0, 0).view(1), None, col.tpe, None)
   }
-  def avg(other: TableColumnRef) = apply(other) { input => implicit scope =>
+  def avg(other: TableColumnRef) = apply("avg")(other) { input => implicit scope =>
     val col = input(other)
     Table.Column(col.values.mean(0, true).view(1), None, col.tpe, None)
   }

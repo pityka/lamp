@@ -77,7 +77,7 @@ object RelationalAlgebra {
       function: ColumnFunction,
       outputRef: QualifiedTableColumnRef
   ) {
-    override def toString = function.toString
+    override def toString = s"${function.toString} as $outputRef"
   }
 
   case class VariableRef(name: String) {
@@ -120,7 +120,7 @@ object RelationalAlgebra {
       STen.ones(List(1), table.table.columns.head.values.options)
     case BooleanAtomFalse =>
       STen.zeros(List(1), table.table.columns.head.values.options)
-    case ColumnFunction(columnRefs, _, impl) =>
+    case ColumnFunction(_,columnRefs, _, impl) =>
       val columns = columnRefs
         .map(c =>
           (
@@ -152,7 +152,7 @@ object RelationalAlgebra {
       boundVariables: Map[VariableRef, VariableValue]
   ): Boolean = factor match {
     case BooleanAtomFalse | BooleanAtomTrue => true
-    case ColumnFunction(columnRefs, variableRefs, _) =>
+    case ColumnFunction(_,columnRefs, variableRefs, _) =>
       columnRefs
         .forall(c => table.hasMatchingColumn(c)) &&
         variableRefs.forall(c => boundVariables.contains(c))
@@ -175,7 +175,7 @@ object RelationalAlgebra {
       factor: BooleanFactor
   ): Seq[TableColumnRef] = factor match {
     case BooleanAtomFalse | BooleanAtomTrue => Nil
-    case ColumnFunction(columnRefs, _, _) =>
+    case ColumnFunction(_,columnRefs, _, _) =>
       columnRefs.distinct
     case BooleanNegation(factor) =>
       columnsReferencedByBooleanExpression(factor)
@@ -193,7 +193,7 @@ object RelationalAlgebra {
       factor: BooleanFactor
   ): Seq[VariableRef] = factor match {
     case BooleanAtomFalse | BooleanAtomTrue => Nil
-    case ColumnFunction(_, refs, _) =>
+    case ColumnFunction(_,_, refs, _) =>
       refs.distinct
     case BooleanNegation(factor) =>
       variablesReferencedByBooleanExpression(factor)

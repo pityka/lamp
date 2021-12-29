@@ -24,13 +24,14 @@ sealed trait BooleanFactor {
 }
 
 case class ColumnFunction(
+    name: String,
     columnRefs: Seq[TableColumnRef],
     variableRefs: Seq[VariableRef],
     impl: PredicateHelper => Scope => Table.Column
 ) extends BooleanFactor {
   def as(ref: QualifiedTableColumnRef) = ColumnFunctionWithOutputRef(this, ref)
   override def toString =
-    s"[${columnRefs.mkString(",")} ${variableRefs.mkString(", ")}]"
+    s"$name[${columnRefs.mkString(",")}${variableRefs.mkString(" ",", ","")}]"
 }
 
 case object BooleanAtomTrue extends BooleanFactor {

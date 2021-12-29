@@ -156,7 +156,7 @@ object QueryDsl {
     lexicalToken.name.toLowerCase match {
       case "filter" =>
         val filterExpression = liftArgument(
-          lexicalToken.arguments.get.head,
+          lexicalToken.arguments.get.args.head,
           definedFunctions
         ) match {
           case LiftedColumnRef(cr) => cr.select
@@ -168,18 +168,46 @@ object QueryDsl {
         }
         Vector(StackOp1Token("filter", in => Filter(in, filterExpression)))
       case "project" =>
-        val arguments = lexicalToken.arguments.get.map(arg =>
+        val arguments = lexicalToken.arguments.get.args.map(arg =>
           liftArgument(arg, definedFunctions) match {
             case LiftedColumnRef(
                   cr: RelationalAlgebra.QualifiedTableColumnRef
                 ) =>
-              cr.select.as(cr)
+              val alias = lexicalToken.arguments.get.alias
+                .map(liftColumnRef)
+                .collect {
+                  case LiftedColumnRef(
+                        x: RelationalAlgebra.QualifiedTableColumnRef
+                      ) =>
+                    x
+                  case LiftedColumnRef(
+                        x: RelationalAlgebra.WildcardColumnRef
+                      ) =>
+                    RelationalAlgebra
+                      .QualifiedTableColumnRef(cr.table, x.column)
+                }
+                .getOrElse(cr)
+              cr.select.as(alias)
             case LiftedVariableRef(_) =>
               throw new RuntimeException(
                 "project's argument can't be a variable"
               )
             case LiftedBooleanFactor(booleanFactor: ColumnFunction) =>
-              booleanFactor.as(Q.table("boo").col("boo"))
+              val alias = lexicalToken.arguments.get.alias
+                .map(liftColumnRef)
+                .collect {
+                  case LiftedColumnRef(
+                        x: RelationalAlgebra.QualifiedTableColumnRef
+                      ) =>
+                    x
+                  case LiftedColumnRef(
+                        x: RelationalAlgebra.WildcardColumnRef
+                      ) =>
+                    RelationalAlgebra
+                      .QualifiedTableColumnRef(Q.table("derived"), x.column)
+                }
+                .getOrElse(Q.table("derived").col(booleanFactor.name))
+              booleanFactor.as(alias)
             case _ =>
               throw new RuntimeException(
                 s"Unexpected type for projection argument $arg"
@@ -191,10 +219,10 @@ object QueryDsl {
         )
       case "inner-join" | "outer-join" | "left-join" | "right-join" =>
         require(
-          lexicalToken.arguments.get.size == 2,
+          lexicalToken.arguments.get.args.size == 2,
           "join needs 2 arguments: join column 1, join column 2"
         )
-        val arguments = lexicalToken.arguments.get.map(arg =>
+        val arguments = lexicalToken.arguments.get.args.map(arg =>
           liftArgument(arg, definedFunctions) match {
             case LiftedColumnRef(
                   cr
@@ -222,15 +250,20 @@ object QueryDsl {
       case "product" =>
         Vector(StackOp2Token("product", (in1, in2) => Product(in1, in2)))
       case "table" | "scan" | "query" =>
-        val variable = lexicalToken.arguments.get.head match {
+        val variable = lexicalToken.arguments.get.args.head match {
           case SyntaxTree.VariableRef(name) => name
           case _ =>
             throw new RuntimeException(
               "the first argument of table/scan/query must be a variable"
             )
         }
+        val tableReference = lexicalToken.arguments.get.alias
+          .collect { case ColumnRef(None, columnRef) =>
+            columnRef
+          }
+          .getOrElse(variable)
         val schema = {
-          val args = lexicalToken.arguments.get.tail.map(_ match {
+          val args = lexicalToken.arguments.get.args.tail.map(_ match {
             case ColumnRef(None, columnRef) => columnRef
             case _ =>
               throw new RuntimeException(
@@ -242,7 +275,7 @@ object QueryDsl {
         Vector(
           OpToken(
             TableOp(
-              RelationalAlgebra.AliasTableRef(variable),
+              RelationalAlgebra.AliasTableRef(tableReference),
               None,
               Some(schema)
             )
@@ -327,16 +360,22 @@ object QueryDsl {
         Right(TokenList(head, stackTokens.toList.drop(1)))
       }
     }
-    val schemas = parsed.schemas.map{ case SyntaxTree.Schema(name,args) =>
-      val liftedArgs = args.map{
+    val schemas = parsed.schemas.map { case SyntaxTree.Schema(name, args) =>
+      val liftedArgs = args.map {
         case ColumnRef(None, columnRef) => Option(columnRef)
-        case _ => throw new RuntimeException("arguments of schemas must be simple identifiers")
+        case _ =>
+          throw new RuntimeException(
+            "arguments of schemas must be simple identifiers"
+          )
       }
-      (RelationalAlgebra.AliasTableRef(name),RelationalAlgebra.Schema(liftedArgs.toList))
+      (
+        RelationalAlgebra.AliasTableRef(name),
+        RelationalAlgebra.Schema(liftedArgs.toList)
+      )
     }
-    
-    tokens.map{ tokenList =>
-      tokenList.compile.bindSchemas(schemas:_*)
+
+    tokens.map { tokenList =>
+      tokenList.compile.bindSchemas(schemas: _*)
     }
   }
 
@@ -363,20 +402,26 @@ object QueryDsl {
       else s"$name(${args.toList.mkString(", ")})"
     }
 
+    case class ArgumentListWithAlias(
+        args: NonEmptyList[Argument],
+        alias: Option[ColumnRef]
+    )
+
     case class Token(
         name: String,
-        arguments: Option[NonEmptyList[Argument]]
+        arguments: Option[ArgumentListWithAlias]
     ) {
       override def toString =
-        s"$name${arguments.map(arg => s"(${arg.toList.mkString(", ")})").getOrElse("")}"
+        s"$name${arguments.map(args => s"(${args.args.toList.mkString(", ")}${args.alias.map(al => s" as $al").getOrElse("")})").getOrElse("")}"
     }
 
     sealed trait SchemaOrExpression
 
     case class Schema(name: String, arguments: NonEmptyList[Argument])
         extends SchemaOrExpression {
-          override def toString = s"schema $name (${arguments.toList.mkString(", ")})"
-        }
+      override def toString =
+        s"schema $name (${arguments.toList.mkString(", ")})"
+    }
 
     case class Expression(
         boundToName: Option[String],
@@ -548,7 +593,7 @@ object QueryDsl {
 
               }
 
-          optionalWh.with1 *> (infix3.backtrack | infix2.backtrack | simpleInParens.backtrack | recurseInParens.backtrack | simple) <* optionalWh
+          (optionalWh.with1 *> (infix3.backtrack | infix2.backtrack | simpleInParens.backtrack | recurseInParens.backtrack | simple) <* optionalWh)
 
         }
 
@@ -559,11 +604,20 @@ object QueryDsl {
 
     }
 
+    // .map{ case (arg,alias) => ArgumentWithAlias(arg,alias)}
+    val asAlias = (Parser.string("as") ~ wh) *> columnRef
     val tableref = name
     val tokenname = name.filter(n => n != "let" && n != "end" && n != "schema")
     val token =
-      (tokenname.backtrack ~ ((optionalWh ~ open).backtrack ~ optionalWh *> argumentList <* optionalWh ~ close).?)
-        .map { case (name, args) => Token(name, args) }
+      (tokenname.backtrack ~ ((optionalWh ~ open).backtrack ~ optionalWh *> argumentList ~ (asAlias).backtrack.? <* optionalWh ~ close).?)
+        .map { case (name, args) =>
+          Token(
+            name,
+            args.map { case (args, alias) =>
+              ArgumentListWithAlias(args, alias)
+            }
+          )
+        }
     val tokenlist = token.repSep(wh) <* (wh ~ Parser.string("end")).backtrack.?
     val letin =
       Parser.string("let") ~ wh *> tokenname <* optionalWh ~ Parser.string("=")

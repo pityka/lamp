@@ -68,8 +68,8 @@ class RelationAlgebraSuite extends AnyFunSuite {
     val compiled = QueryDsl
       .compile(
         """
-          table(?tref1) filter(tref1.col1 == ?whatever) project(tref1.col1) table(?tref2) product table(?tref3) inner-join(col1,col2) reference2
-          let reference2 = filter((tref1.col1 == ?whatever) && false) 
+          table(?tref1) filter(tref1.col1 == ?whatever) project(tref1.col1 as whatever) table(?tref2) product table(?tref3) inner-join(whatever,col2) reference2
+          let reference2 = filter((tref1.whatever == ?whatever) && false) 
           let reference = reference
           schema tref1(col1,col2)
           schema tref3(col2)
@@ -80,16 +80,17 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
   }
   test("compile bool xnor") {
+   
     assert(
       QueryDsl
         .parse(
           """
-          table(?tref) filter(tref.col1 == true && isna(tref.col2)) 
+          table(?tref as whatever) filter(tref.col1 == true && isna(tref.col2)) 
           """
         )
         .toOption
         .get
-        .toString() == "table(?tref) filter(((tref.col1 == true) && isna(tref.col2))) end"
+        .toString() == "table(?tref as whatever) filter(((tref.col1 == true) && isna(tref.col2))) end"
     )
     val compiled = QueryDsl
       .compile(
