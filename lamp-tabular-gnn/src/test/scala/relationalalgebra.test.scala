@@ -65,10 +65,11 @@ class RelationAlgebraSuite extends AnyFunSuite {
 
   }
   test("compile and analyze references") {
+   
     val compiled = QueryDsl
       .compile(
         """
-          table(?tref1) filter(tref1.col1 == ?whatever) project(tref1.col1 as whatever) table(?tref2) product table(?tref3) inner-join(whatever,col2) reference2
+          table(?tref1) filter(tref1.col1 == ?whatever) project(tref1.col1 as whatever, tref1.col2) table(?tref2) product table(?tref3) inner-join(whatever,col2) reference2
           let reference2 = filter((tref1.whatever == ?whatever) && false) 
           let reference = reference
           schema tref1(col1,col2)
@@ -76,6 +77,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
           """
       )()
       .toOption
+      
       compiled.get.bind(Q.free("whatever"),0.0).check
 
   }

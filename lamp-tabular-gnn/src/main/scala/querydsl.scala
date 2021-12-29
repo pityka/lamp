@@ -156,7 +156,7 @@ object QueryDsl {
     lexicalToken.name.toLowerCase match {
       case "filter" =>
         val filterExpression = liftArgument(
-          lexicalToken.arguments.get.args.head,
+          lexicalToken.arguments.get.args.head.arg,
           definedFunctions
         ) match {
           case LiftedColumnRef(cr) => cr.select
@@ -168,12 +168,12 @@ object QueryDsl {
         }
         Vector(StackOp1Token("filter", in => Filter(in, filterExpression)))
       case "project" =>
-        val arguments = lexicalToken.arguments.get.args.map(arg =>
+        val arguments = lexicalToken.arguments.get.args.map{ case SyntaxTree.ArgumentWithAlias(arg,alias0) =>
           liftArgument(arg, definedFunctions) match {
             case LiftedColumnRef(
                   cr: RelationalAlgebra.QualifiedTableColumnRef
                 ) =>
-              val alias = lexicalToken.arguments.get.alias
+              val alias = alias0
                 .map(liftColumnRef)
                 .collect {
                   case LiftedColumnRef(
@@ -193,7 +193,7 @@ object QueryDsl {
                 "project's argument can't be a variable"
               )
             case LiftedBooleanFactor(booleanFactor: ColumnFunction) =>
-              val alias = lexicalToken.arguments.get.alias
+              val alias = alias0
                 .map(liftColumnRef)
                 .collect {
                   case LiftedColumnRef(
@@ -213,7 +213,7 @@ object QueryDsl {
                 s"Unexpected type for projection argument $arg"
               )
           }
-        )
+        }
         Vector(
           StackOp1Token("projection", in => Projection(in, arguments.toList))
         )
@@ -222,7 +222,7 @@ object QueryDsl {
           lexicalToken.arguments.get.args.size == 2,
           "join needs 2 arguments: join column 1, join column 2"
         )
-        val arguments = lexicalToken.arguments.get.args.map(arg =>
+        val arguments = lexicalToken.arguments.get.args.map(_.arg).map(arg =>
           liftArgument(arg, definedFunctions) match {
             case LiftedColumnRef(
                   cr
@@ -250,20 +250,20 @@ object QueryDsl {
       case "product" =>
         Vector(StackOp2Token("product", (in1, in2) => Product(in1, in2)))
       case "table" | "scan" | "query" =>
-        val variable = lexicalToken.arguments.get.args.head match {
+        val variable = lexicalToken.arguments.get.args.head.arg match {
           case SyntaxTree.VariableRef(name) => name
           case _ =>
             throw new RuntimeException(
               "the first argument of table/scan/query must be a variable"
             )
         }
-        val tableReference = lexicalToken.arguments.get.alias
+        val tableReference = lexicalToken.arguments.get.args.head.alias
           .collect { case ColumnRef(None, columnRef) =>
             columnRef
           }
           .getOrElse(variable)
         val schema = {
-          val args = lexicalToken.arguments.get.args.tail.map(_ match {
+          val args = lexicalToken.arguments.get.args.tail.map(_.arg).map(_ match {
             case ColumnRef(None, columnRef) => columnRef
             case _ =>
               throw new RuntimeException(
@@ -402,17 +402,24 @@ object QueryDsl {
       else s"$name(${args.toList.mkString(", ")})"
     }
 
-    case class ArgumentListWithAlias(
-        args: NonEmptyList[Argument],
-        alias: Option[ColumnRef]
-    )
+    case class ArgumentWithAlias(
+      arg: Argument,
+      alias:  Option[ColumnRef]
+    ) {
+      override def toString = s"$arg${alias.map(al => s" as $al").getOrElse("")}"
+    }
+    case class ArgumentList(
+        args: NonEmptyList[ArgumentWithAlias]
+    ) {
+      override def toString = s"${args.toList.mkString(", ")}"
+    }
 
     case class Token(
         name: String,
-        arguments: Option[ArgumentListWithAlias]
+        arguments: Option[ArgumentList]
     ) {
       override def toString =
-        s"$name${arguments.map(args => s"(${args.args.toList.mkString(", ")}${args.alias.map(al => s" as $al").getOrElse("")})").getOrElse("")}"
+        s"$name${arguments.map(args => s"(${args.args.toList.mkString(", ")})").getOrElse("")}"
     }
 
     sealed trait SchemaOrExpression
@@ -526,12 +533,15 @@ object QueryDsl {
       )
     }
 
-    val argumentList = Parser.recursive[NonEmptyList[Argument]] {
+    // .map{ case (arg,alias) => ArgumentWithAlias(arg,alias)}
+    val asAlias = (Parser.string("as") ~ wh) *> columnRef
+
+    val argumentList = Parser.recursive[NonEmptyList[ArgumentWithAlias]] {
       recursiveArgumentList =>
         val prefixfunction =
           ((name.soft ~ (optionalWh ~ open ~ optionalWh).void) ~ recursiveArgumentList <* optionalWh ~ close)
             .map { case ((name, _), args) =>
-              FunctionWithArgs(name, args)
+              FunctionWithArgs(name, args.map(_.arg))
             }
             .withContext("function")
 
@@ -598,23 +608,22 @@ object QueryDsl {
         }
 
         val argument =
-          (optionalWh.with1 *> expression <* optionalWh)
+          ((optionalWh.with1 *> expression <* optionalWh) ~ asAlias.backtrack.?).map{ case (a,b) => ArgumentWithAlias(a,b)}
 
         argument.repSep(comma)
 
     }
 
-    // .map{ case (arg,alias) => ArgumentWithAlias(arg,alias)}
-    val asAlias = (Parser.string("as") ~ wh) *> columnRef
+    
     val tableref = name
     val tokenname = name.filter(n => n != "let" && n != "end" && n != "schema")
     val token =
-      (tokenname.backtrack ~ ((optionalWh ~ open).backtrack ~ optionalWh *> argumentList ~ (asAlias).backtrack.? <* optionalWh ~ close).?)
+      (tokenname.backtrack ~ ((optionalWh ~ open).backtrack ~ optionalWh *> argumentList  <* optionalWh ~ close).?)
         .map { case (name, args) =>
           Token(
             name,
-            args.map { case (args, alias) =>
-              ArgumentListWithAlias(args, alias)
+            args.map { case args =>
+              ArgumentList(args)
             }
           )
         }
@@ -626,7 +635,7 @@ object QueryDsl {
         "schema"
       ) ~ wh *> identifier <* optionalWh) ~ (open *> argumentList <* close) <* (wh ~ Parser
         .string("end")).backtrack.?).map { case (tableName, schemaArgument) =>
-        Schema(tableName, schemaArgument)
+        Schema(tableName, schemaArgument.map(_.arg))
       }
     val expressionWithLet = (((letin <* optionalWh).?).with1 ~ tokenlist)
       .withContext("named expression")
