@@ -50,9 +50,11 @@ object QueryDsl {
 
   def liftArgument(args: SyntaxTree.Argument): LiftedArgument =
     args match {
-      case cr: ColumnRef if cr.tableRef.isEmpty && cr.columnRef.toLowerCase == "true"=>
+      case cr: ColumnRef
+          if cr.tableRef.isEmpty && cr.columnRef.toLowerCase == "true" =>
         LiftedBooleanFactor(BooleanAtomTrue)
-      case cr: ColumnRef if cr.tableRef.isEmpty && cr.columnRef.toLowerCase == "false"=>
+      case cr: ColumnRef
+          if cr.tableRef.isEmpty && cr.columnRef.toLowerCase == "false" =>
         LiftedBooleanFactor(BooleanAtomFalse)
       case cr: ColumnRef =>
         liftColumnRef(cr)
@@ -84,6 +86,10 @@ object QueryDsl {
         LiftedBooleanFactor(args.head.asBooleanFactor.negate)
       case "identity" | "select" if args.head.isColumnRef =>
         LiftedBooleanFactor(args.head.asColumnRef.select)
+      case "isna" | "ismissing" | "missing" if args.head.isColumnRef =>
+        LiftedBooleanFactor(args.head.asColumnRef.isMissing)
+      case "notna" | "isnotna" | "nonmissing" if args.head.isColumnRef =>
+        LiftedBooleanFactor(args.head.asColumnRef.isNotMissing)
       case "==" if args.size == 2 && args.head.isColumnRef =>
         args.tail.head match {
           case LiftedColumnRef(cr2) =>
@@ -94,7 +100,9 @@ object QueryDsl {
             LiftedBooleanFactor(args.head.asColumnRef.select.===(bf))
         }
       case _ =>
-          throw new RuntimeException(s"Implementation for '$name' with args [${args.toList.mkString(", ")}] not found. Operators are left associative without precedence rules. Variables must be the right operand.")
+        throw new RuntimeException(
+          s"Implementation for '$name' with args [${args.toList.mkString(", ")}] not found. Operators are left associative without precedence rules. Variables must be the right operand."
+        )
 
     }
 
@@ -220,7 +228,9 @@ object QueryDsl {
     loop(expression.tokenList.toList, Vector.empty)
   }
 
-  def liftExpressionList(parsed: SyntaxTree.ExpressionList): Either[String, Result] = {
+  def liftExpressionList(
+      parsed: SyntaxTree.ExpressionList
+  ): Either[String, Result] = {
     val tokens = {
       val unnameds = parsed.expressions.filter(_.boundToName.isEmpty)
       if (unnameds.size != 1) Left("Needs exactly 1 anonymous expression")
@@ -251,7 +261,8 @@ object QueryDsl {
     tokens.map(_.compile)
   }
 
-  def compile(s:String) = parse(s).left.map(_.toString).flatMap(liftExpressionList)
+  def compile(s: String) =
+    parse(s).left.map(_.toString).flatMap(liftExpressionList)
 
   object SyntaxTree {
     sealed trait Argument
@@ -270,7 +281,9 @@ object QueryDsl {
         name: String,
         args: NonEmptyList[Argument]
     ) extends Argument {
-      override def toString = if ("+-=&|%/".contains(name.head) && args.size == 2) s"(${args.head} $name ${args.tail.head})"
+      override def toString = if (
+        DslParser.opCharList.contains(name.head) && args.size == 2
+      ) s"(${args.head} $name ${args.tail.head})"
       else s"$name(${args.toList.mkString(", ")})"
     }
 
@@ -322,19 +335,25 @@ object QueryDsl {
       (identifierStart ~ (underscore | hyphen | identifierPart).rep0).map {
         case (s, l) => (s :: l).mkString
       }
+    val opCharList = "+-:/*&|%<>!=^"
     val opChars = Parser
       .charIn(
-        "+-:/*&|%<>!="
+        opCharList
       )
     val operatorIdentifier =
       (opChars.rep).map {
         _.toList.mkString
       }
 
-      val sp = Parser.char(' ') 
-      val htab = Parser.char('\t')
-      val nl = Parser.char('\n')
-      val wsp = sp | htab | nl
+    def operatorStartingWith(s: String) =
+      (Parser.charIn(s) ~ opChars.rep0).map { case (x, xs) =>
+        (x :: xs).mkString
+      }
+
+    val sp = Parser.char(' ')
+    val htab = Parser.char('\t')
+    val nl = Parser.char('\n')
+    val wsp = sp | htab | nl
     val wh = wsp.rep.void
     val optionalWh = wsp.rep0.void
     val period = Parser.char('.')
@@ -351,6 +370,27 @@ object QueryDsl {
     val columnRef = qualifiedIdentifier.withContext("column ref").map {
       case (tableRef, columnRef) =>
         ColumnRef(tableRef, columnRef)
+    }
+
+    val precedences = List(
+      List('*', '/', '%') -> 0,
+      List('+', '-') -> 1,
+      List(':') -> 2,
+      List('=', '!') -> 3,
+      List('<', '>') -> 4,
+      List('&') -> 5,
+      List('^') -> 6,
+      List('|') -> 7
+    )
+
+    def higherPrecedenceOperator(c: Char) = {
+      val current = precedences
+        .find(_._1.contains(c))
+        .map(_._2)
+        .getOrElse(precedences.map(_._2).max + 1)
+      operatorStartingWith(
+        precedences.filter(_._2 < current).flatMap(_._1).mkString
+      )
     }
 
     val argumentList = Parser.recursive[NonEmptyList[Argument]] {
@@ -375,17 +415,52 @@ object QueryDsl {
           val recurseInParens =
             ((open ~ optionalWh) *> expression <* (optionalWh ~ close))
 
-          val operand0 =
-            expression | simple.backtrack | simpleInParens.backtrack | recurseInParens.backtrack
-          val operand1 =
+          val operandRecursiveParens =
             simple.backtrack | simpleInParens.backtrack | recurseInParens.backtrack
-          val infix =
-            ((operand1 <* optionalWh) ~ operatorName ~ (optionalWh *> operand0))
+          val operandRecursive =
+            expression | simple.backtrack | simpleInParens.backtrack | recurseInParens.backtrack
+          val operandNonRecursive =
+            simple.backtrack | simpleInParens.backtrack | recurseInParens.backtrack
+
+          val infix2 =
+            ((operandNonRecursive <* optionalWh) ~ operatorName ~ (optionalWh *> operandRecursive))
               .map { case ((arg1, opName), arg2) =>
                 FunctionWithArgs(opName, NonEmptyList(arg1, List(arg2)))
               }
+          val infix3: Parser[FunctionWithArgs] =
+            ((operandNonRecursive <* optionalWh) ~ operatorName <* optionalWh)
+              .flatMap { case (arg1, op1) =>
+                // arg1 op1 arg2
+                val parseHigher =
+                  (operandRecursiveParens ~ (optionalWh *> higherPrecedenceOperator(
+                    op1.head
+                  ))).peek.flatMap { _ =>
+                    expression.map { arg2 =>
+                      FunctionWithArgs(op1, NonEmptyList(arg1, List(arg2)))
+                    }
+                  }
 
-          infix.backtrack | simpleInParens.backtrack | recurseInParens.backtrack | simple
+                // (arg1 op1 arg2) op2 arg3)
+                val parseAny =
+                  ((optionalWh *> operandRecursiveParens) ~ (optionalWh *> operatorName) ~ (optionalWh *> operandRecursive))
+                    .map { case ((arg2, op2), arg3) =>
+                      FunctionWithArgs(
+                        op2,
+                        NonEmptyList(
+                          FunctionWithArgs(
+                            op1,
+                            NonEmptyList(arg1, List(arg2))
+                          ),
+                          List(arg3)
+                        )
+                      )
+                    }
+
+                parseHigher.backtrack | parseAny
+
+              }
+
+          optionalWh.with1 *> (infix3.backtrack | infix2.backtrack | simpleInParens.backtrack | recurseInParens.backtrack | simple) <* optionalWh
 
         }
 
@@ -404,21 +479,27 @@ object QueryDsl {
     val tokenlist = token.repSep(wh) <* (wh ~ Parser.string("end")).backtrack.?
     val letin =
       Parser.string("let") ~ wh *> tokenname <* optionalWh ~ Parser.string("=")
-    val expressionWithLet = (((letin <* optionalWh).?).with1 ~ tokenlist).withContext("named expression")
-    val expressionWithoutLet = tokenlist.map(s => Option.empty[String] -> s).withContext("anonymous expression")
-    val expression = (expressionWithLet.backtrack | expressionWithoutLet).map {
-      case (letName, tokenList) =>
+    val expressionWithLet = (((letin <* optionalWh).?).with1 ~ tokenlist)
+      .withContext("named expression")
+    val expressionWithoutLet = tokenlist
+      .map(s => Option.empty[String] -> s)
+      .withContext("anonymous expression")
+    val expression = (expressionWithLet.backtrack | expressionWithoutLet)
+      .map { case (letName, tokenList) =>
         Expression(letName, tokenList)
-    }.withContext("expression")
+      }
+      .withContext("expression")
     val expressionlist = Parser.recursive[NonEmptyList[Expression]](recurse =>
-      (expression ~ (wh *> recurse <* optionalWh).backtrack.?).map { case ((head, tail)) =>
-        tail match {
-          case Some(tail) => NonEmptyList(head, tail.toList)
-          case None       => NonEmptyList(head, Nil)
-        }
+      (expression ~ (wh *> recurse <* optionalWh).backtrack.?).map {
+        case ((head, tail)) =>
+          tail match {
+            case Some(tail) => NonEmptyList(head, tail.toList)
+            case None       => NonEmptyList(head, Nil)
+          }
       }
     )
-    val program = optionalWh *> expressionlist.map(ExpressionList(_)) <* optionalWh
+    val program =
+      optionalWh *> expressionlist.map(ExpressionList(_)) <* optionalWh
   }
 
 }

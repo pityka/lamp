@@ -7,6 +7,12 @@ trait TableColumnRefSyntax { self: TableColumnRef =>
   }
   def identity = select
 
+  def isMissing = Q(this) { input => implicit scope =>
+    Table.Column.bool(input(this).missingnessMask.castToLong)
+  }
+  def isNotMissing = Q(this) { input => implicit scope =>
+    Table.Column.bool(input(this).missingnessMask.logicalNot.castToLong)
+  }
   def ===(other: TableColumnRef) = Q(this, other) { input => implicit scope =>
     Table.Column.bool(input(this).values.equ(input(other).values).castToLong)
   }

@@ -21,6 +21,24 @@ class RelationAlgebraSuite extends AnyFunSuite {
 2,0.5
 3,1.5"""
 
+  test("argument precendence") {
+    assert(
+      QueryDsl.DslParser.argumentList
+        .parse(
+          "a+b*c+fun(d)"
+        ).toOption.get._2.head.toString == 
+          "(a + ((b * c) + fun(d)))"
+    )
+    assert(
+      QueryDsl.DslParser.argumentList
+        .parse(
+          "fun(a)+b*c+fun(d)"
+        ).toOption.get._2.head.toString == 
+          "(fun(a) + ((b * c) + fun(d)))"
+    )
+
+  }
+
   test("compile") {
     val compiled = QueryDsl
         .compile(
@@ -35,14 +53,19 @@ class RelationAlgebraSuite extends AnyFunSuite {
       compiled
         .isDefined
     )
-    println(compiled.get.stringify)
 
   }
   test("compile bool xnor") {
+    println(QueryDsl
+        .parse(
+          """
+          table(?tref) filter(tref.col1 == true && isna(tref.col2)) 
+          """
+        ))
     val compiled = QueryDsl
         .compile(
           """
-          table(?tref) filter(tref.col1 == true) 
+          table(?tref) filter((tref.col1 == true) && isna(tref.col2)) 
           """
         )
         .toOption
@@ -354,8 +377,8 @@ class RelationAlgebraSuite extends AnyFunSuite {
             Q.avg(Q.hfloat).as(Q.table("aggr").col("boo"))
           )).compile
 
-      println(qApi1.stringify)
-      println(qApi2.stringify)
+      // println(qApi1.stringify)
+      // println(qApi2.stringify)
 
       assert(qApi1.toString == qApi2.toString)
 
