@@ -4,9 +4,6 @@ import cats.parse.Rfc5234
 import cats.parse.Parser
 import cats.data.NonEmptyList
 import scala.collection.immutable
-import lamp.tgnn.QueryDsl.SyntaxTree.ColumnRef
-import lamp.tgnn.QueryDsl.SyntaxTree.VariableRef
-import lamp.tgnn.QueryDsl.SyntaxTree.FunctionWithArgs
 import org.saddle.index.InnerJoin
 import org.saddle.index.RightJoin
 import org.saddle.index.OuterJoin
@@ -14,7 +11,70 @@ import org.saddle.index.LeftJoin
 
 object QueryDsl {
 
-  def parse(s: String): Either[Parser.Error, SyntaxTree.ExpressionList] =
+  def compile(
+      s: String
+  )(userDefinedFuntions: List[LiftFunction] = Nil): Either[String, Result] =
+    parse(s).left
+      .map(_.toString)
+      .flatMap(liftExpressionList(_, builtInFunctions ++ userDefinedFuntions))
+
+  trait LiftFunction {
+    def tryLift(
+        name: String,
+        args: NonEmptyList[LiftedArgument]
+    ): Option[LiftedArgument]
+  }
+  object LiftFunction {
+    def apply(
+        fun: PartialFunction[
+          (String, NonEmptyList[LiftedArgument]),
+          LiftedArgument
+        ]
+    ) = new LiftFunction {
+      def tryLift(
+          name: String,
+          args: NonEmptyList[LiftedArgument]
+      ): Option[LiftedArgument] =
+        fun.lift((name, args))
+    }
+  }
+
+  val builtInFunctions = List(
+    LiftFunction {
+      case ("||", args)
+          if args.head.isBooleanFactor && args.size == 2 && args.tail.head.isBooleanFactor =>
+        LiftedBooleanFactor(
+          args.head.asBooleanFactor.or(args.tail.head.asBooleanFactor)
+        )
+      case ("&&", args)
+          if args.head.isBooleanFactor && args.size == 2 && args.tail.head.isBooleanFactor =>
+        LiftedBooleanFactor(
+          args.head.asBooleanFactor.and(args.tail.head.asBooleanFactor)
+        )
+      case ("not", args) if args.head.isBooleanFactor && args.size == 1 =>
+        LiftedBooleanFactor(args.head.asBooleanFactor.negate)
+      case ("identity" | "select", args) if args.head.isColumnRef =>
+        LiftedBooleanFactor(args.head.asColumnRef.select)
+      case ("isna" | "ismissing" | "missing", args) if args.head.isColumnRef =>
+        LiftedBooleanFactor(args.head.asColumnRef.isMissing)
+      case ("notna" | "isnotna" | "nonmissing", args)
+          if args.head.isColumnRef =>
+        LiftedBooleanFactor(args.head.asColumnRef.isNotMissing)
+      case ("==", args) if args.size == 2 && args.head.isColumnRef =>
+        args.tail.head match {
+          case LiftedColumnRef(cr2) =>
+            LiftedBooleanFactor(args.head.asColumnRef.===(cr2))
+          case LiftedVariableRef(vr2) =>
+            LiftedBooleanFactor(args.head.asColumnRef.===(vr2))
+          case LiftedBooleanFactor(bf) =>
+            LiftedBooleanFactor(args.head.asColumnRef.select.===(bf))
+        }
+    }
+  )
+
+  private[tgnn] def parse(
+      s: String
+  ): Either[Parser.Error, SyntaxTree.ExpressionList] =
     DslParser.program.parseAll(s)
 
   sealed trait LiftedArgument { this: LiftedArgument =>
@@ -33,7 +93,7 @@ object QueryDsl {
   case class LiftedBooleanFactor(booleanFactor: BooleanFactor)
       extends LiftedArgument
 
-  def liftColumnRef(cr: ColumnRef): LiftedColumnRef =
+  private def liftColumnRef(cr: SyntaxTree.ColumnRef): LiftedColumnRef =
     if (cr.tableRef.isEmpty)
       LiftedColumnRef(
         RelationalAlgebra.WildcardColumnRef(
@@ -48,73 +108,55 @@ object QueryDsl {
         )
       )
 
-  def liftArgument(args: SyntaxTree.Argument): LiftedArgument =
+  private def liftArgument(
+      args: SyntaxTree.Argument,
+      definedFunctions: List[LiftFunction]
+  ): LiftedArgument =
     args match {
-      case cr: ColumnRef
+      case cr: SyntaxTree.ColumnRef
           if cr.tableRef.isEmpty && cr.columnRef.toLowerCase == "true" =>
         LiftedBooleanFactor(BooleanAtomTrue)
-      case cr: ColumnRef
+      case cr: SyntaxTree.ColumnRef
           if cr.tableRef.isEmpty && cr.columnRef.toLowerCase == "false" =>
         LiftedBooleanFactor(BooleanAtomFalse)
-      case cr: ColumnRef =>
+      case cr: SyntaxTree.ColumnRef =>
         liftColumnRef(cr)
-      case VariableRef(name) =>
+      case SyntaxTree.VariableRef(name) =>
         LiftedVariableRef(RelationalAlgebra.VariableRef(name))
-      case FunctionWithArgs(name, args) =>
-        val liftedArgs = args.map(liftArgument)
+      case SyntaxTree.FunctionWithArgs(name, args) =>
+        val liftedArgs = args.map(liftArgument(_, definedFunctions))
 
-        typeAndLiftFunction(name, liftedArgs)
+        typeAndLiftFunction(name, liftedArgs, definedFunctions) match {
+          case Right(x) => x
+          case Left(s)  => throw new RuntimeException(s)
+        }
 
     }
 
-  def typeAndLiftFunction(
+  private def typeAndLiftFunction(
       name: String,
-      args: NonEmptyList[LiftedArgument]
-  ): LiftedArgument =
-    name match {
-      case "||"
-          if args.head.isBooleanFactor && args.size == 2 && args.tail.head.isBooleanFactor =>
-        LiftedBooleanFactor(
-          args.head.asBooleanFactor.or(args.tail.head.asBooleanFactor)
-        )
-      case "&&"
-          if args.head.isBooleanFactor && args.size == 2 && args.tail.head.isBooleanFactor =>
-        LiftedBooleanFactor(
-          args.head.asBooleanFactor.and(args.tail.head.asBooleanFactor)
-        )
-      case "not" if args.head.isBooleanFactor && args.size == 1 =>
-        LiftedBooleanFactor(args.head.asBooleanFactor.negate)
-      case "identity" | "select" if args.head.isColumnRef =>
-        LiftedBooleanFactor(args.head.asColumnRef.select)
-      case "isna" | "ismissing" | "missing" if args.head.isColumnRef =>
-        LiftedBooleanFactor(args.head.asColumnRef.isMissing)
-      case "notna" | "isnotna" | "nonmissing" if args.head.isColumnRef =>
-        LiftedBooleanFactor(args.head.asColumnRef.isNotMissing)
-      case "==" if args.size == 2 && args.head.isColumnRef =>
-        args.tail.head match {
-          case LiftedColumnRef(cr2) =>
-            LiftedBooleanFactor(args.head.asColumnRef.===(cr2))
-          case LiftedVariableRef(vr2) =>
-            LiftedBooleanFactor(args.head.asColumnRef.===(vr2))
-          case LiftedBooleanFactor(bf) =>
-            LiftedBooleanFactor(args.head.asColumnRef.select.===(bf))
-        }
-      case _ =>
-        throw new RuntimeException(
+      args: NonEmptyList[LiftedArgument],
+      candidates: List[LiftFunction]
+  ): Either[String, LiftedArgument] =
+    candidates.map(_.tryLift(name, args)).find(_.isDefined).flatten match {
+      case Some(value) => Right(value)
+      case None =>
+        Left(
           s"Implementation for '$name' with args [${args.toList.mkString(", ")}] not found. Operators are left associative without precedence rules. Variables must be the right operand."
         )
-
     }
 
-  def resolveToken(
+  private def resolveToken(
       lexicalToken: SyntaxTree.Token,
       namedExpressions: Map[String, SyntaxTree.Expression],
-      currentExpressionName: Option[String]
+      currentExpressionName: Option[String],
+      definedFunctions: List[LiftFunction]
   ): Vector[StackToken] = {
     lexicalToken.name.toLowerCase match {
       case "filter" =>
         val filterExpression = liftArgument(
-          lexicalToken.arguments.get.head
+          lexicalToken.arguments.get.head,
+          definedFunctions
         ) match {
           case LiftedColumnRef(cr) => cr.select
           case LiftedVariableRef(_) =>
@@ -126,7 +168,7 @@ object QueryDsl {
         Vector(StackOp1Token("filter", in => Filter(in, filterExpression)))
       case "project" =>
         val arguments = lexicalToken.arguments.get.map(arg =>
-          liftArgument(arg) match {
+          liftArgument(arg, definedFunctions) match {
             case LiftedColumnRef(
                   cr: RelationalAlgebra.QualifiedTableColumnRef
                 ) =>
@@ -152,7 +194,7 @@ object QueryDsl {
           "join needs 2 arguments: join column 1, join column 2"
         )
         val arguments = lexicalToken.arguments.get.map(arg =>
-          liftArgument(arg) match {
+          liftArgument(arg, definedFunctions) match {
             case LiftedColumnRef(
                   cr
                 ) =>
@@ -180,7 +222,7 @@ object QueryDsl {
         Vector(StackOp2Token("product", (in1, in2) => Product(in1, in2)))
       case "table" | "scan" | "query" =>
         val variable = lexicalToken.arguments.get.head match {
-          case VariableRef(name) => name
+          case SyntaxTree.VariableRef(name) => name
           case _ =>
             throw new RuntimeException(
               "table/scan/query expects a single variable argument"
@@ -201,15 +243,20 @@ object QueryDsl {
           lexicalToken.arguments.isEmpty,
           "referenced expression token must not have an argument list"
         )
-        val lifted = liftExpression(namedExpressions(other), namedExpressions)
+        val lifted = liftExpression(
+          namedExpressions(other),
+          namedExpressions,
+          definedFunctions
+        )
         lifted
 
     }
   }
 
-  def liftExpression(
+  private def liftExpression(
       expression: SyntaxTree.Expression,
-      namedExpressions: Map[String, SyntaxTree.Expression]
+      namedExpressions: Map[String, SyntaxTree.Expression],
+      definedFunctions: List[LiftFunction]
   ) = {
 
     def loop(
@@ -220,7 +267,12 @@ object QueryDsl {
         case head :: next =>
           loop(
             next,
-            acc ++ resolveToken(head, namedExpressions, expression.boundToName)
+            acc ++ resolveToken(
+              head,
+              namedExpressions,
+              expression.boundToName,
+              definedFunctions
+            )
           )
         case immutable.Nil => acc
       }
@@ -228,8 +280,9 @@ object QueryDsl {
     loop(expression.tokenList.toList, Vector.empty)
   }
 
-  def liftExpressionList(
-      parsed: SyntaxTree.ExpressionList
+  private def liftExpressionList(
+      parsed: SyntaxTree.ExpressionList,
+      definedFunctions: List[LiftFunction]
   ): Either[String, Result] = {
     val tokens = {
       val unnameds = parsed.expressions.filter(_.boundToName.isEmpty)
@@ -246,7 +299,8 @@ object QueryDsl {
           )
         }
 
-        val stackTokens = liftExpression(root, namedExpressions.toMap)
+        val stackTokens =
+          liftExpression(root, namedExpressions.toMap, definedFunctions)
         val head = stackTokens.head match {
           case OpToken(op @ TableOp(_, _)) => op
           case _ =>
@@ -261,10 +315,7 @@ object QueryDsl {
     tokens.map(_.compile)
   }
 
-  def compile(s: String) =
-    parse(s).left.map(_.toString).flatMap(liftExpressionList)
-
-  object SyntaxTree {
+  private[tgnn] object SyntaxTree {
     sealed trait Argument
 
     case class ColumnRef(tableRef: Option[String], columnRef: String)
@@ -307,25 +358,28 @@ object QueryDsl {
       override def toString = expressions.toList.mkString("\n")
     }
   }
-  import SyntaxTree._
+  
 
+  /** grammar:
+    * ~~~
+    * program = expressionlist
+    * expressionlist = expression [ expressionlist ]
+    * expression = ["let" name "=" ] tokenlist
+    * name = 'alphanumeric or operator names'
+    * tokenlist = token [separator tokenlist]
+    * token = name ["(" argumentlist ")"]
+    * argumentlist =  argument ["," argumentlist]
+    * tableref = name
+    * variable = "?" name
+    * columnref = [tableref "."] name
+    * argument = infix
+    * prefixfunction = name "(" argumentlist ")"
+    * operand = infix | columnref | variable | prefixfunction | (infix)
+    * infix = operand name operand
+    * ~~~
+    */
   object DslParser {
-
-// program = expressionlist
-// expressionlist = expression [ expressionlist ]
-// expression = ["let" name "=" ] tokenlist
-// name = 'alphanumeric or operator names'
-// tokenlist = token [separator tokenlist]
-// token = name ["(" argumentlist ")"]
-// argumentlist =  argument ["," argumentlist]
-// tableref = name
-// variable = "?" name
-// columnref = [tableref "."] name
-// argument = expression
-// prefixfunction = name "(" argumentlist ")"
-// operand = expression | columnref | variable
-// infixfunction = operand name operand
-
+import SyntaxTree._
     val identifierStart = Rfc5234.alpha
     val underscore = Parser.charIn('_')
     val hyphen = Parser.charIn('-')
@@ -503,26 +557,4 @@ object QueryDsl {
   }
 
 }
-// val columnfunction =
-//   (prefixfunction | infixfunction)
-// val booleanExpression = Parser
-//   .recursive[BooleanExpression] { recurse =>
-//     val booleanFactor: Parser[BooleanFactor] =
-//       (open ~ optionalWh *> recurse <* optionalWh.soft ~ close).backtrack |
-//         bTrue.map(_ => BTrue) | bFalse.map(_ =>
-//           BFalse
-//         ) | columnfunction | (not ~ optionalWh *> recurse).map(expr =>
-//           BNot(expr)
-//         )
 
-//     val booleanTerm =
-//       (booleanFactor ~ (wh.soft *> or ~ wh ~ booleanFactor).rep0).map {
-//         case (head, tail) =>
-//           BooleanTerm(head :: tail.map { case ((_, tail)) => tail })
-//       }
-
-//     (booleanTerm ~ (wh.soft *> and ~ wh ~ booleanTerm).rep0).map {
-//       case (head, tail) =>
-//         BooleanExpression(head :: tail.map { case ((_, tail)) => tail })
-//     }
-//   }

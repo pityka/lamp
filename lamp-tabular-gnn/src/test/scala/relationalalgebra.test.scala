@@ -21,59 +21,71 @@ class RelationAlgebraSuite extends AnyFunSuite {
 2,0.5
 3,1.5"""
 
-  test("argument precendence") {
+  test("argument precedence") {
     assert(
       QueryDsl.DslParser.argumentList
         .parse(
           "a+b*c+fun(d)"
-        ).toOption.get._2.head.toString == 
-          "(a + ((b * c) + fun(d)))"
+        )
+        .toOption
+        .get
+        ._2
+        .head
+        .toString ==
+        "(a + ((b * c) + fun(d)))"
     )
     assert(
       QueryDsl.DslParser.argumentList
         .parse(
           "fun(a)+b*c+fun(d)"
-        ).toOption.get._2.head.toString == 
-          "(fun(a) + ((b * c) + fun(d)))"
+        )
+        .toOption
+        .get
+        ._2
+        .head
+        .toString ==
+        "(fun(a) + ((b * c) + fun(d)))"
     )
 
   }
 
   test("compile") {
     val compiled = QueryDsl
-        .compile(
-          """
+      .compile(
+        """
           table(?tref) filter(tref.col1 == ?whatever) project(tref1.col2) table(?tref2) product table(?tref3) inner-join(col1,col2) reference2
           let reference2 = filter((tref.col1 == ?whatever) && false) 
           let reference = reference
           """
-        )
-        .toOption
+      )()
+      .toOption
     assert(
-      compiled
-        .isDefined
+      compiled.isDefined
     )
 
   }
   test("compile bool xnor") {
-    println(QueryDsl
+    assert(
+      QueryDsl
         .parse(
           """
           table(?tref) filter(tref.col1 == true && isna(tref.col2)) 
           """
-        ))
-    val compiled = QueryDsl
-        .compile(
-          """
-          table(?tref) filter((tref.col1 == true) && isna(tref.col2)) 
-          """
         )
         .toOption
-    assert(
-      compiled
-        .isDefined
+        .get
+        .toString() == "table(?tref) filter(((tref.col1 == true) && isna(tref.col2))) end"
     )
-    println(compiled.get.stringify)
+    val compiled = QueryDsl
+      .compile(
+        """
+          table(?tref) filter((tref.col1 == true) && isna(tref.col2)) 
+          """
+      )()
+      .toOption
+    assert(
+      compiled.isDefined
+    )
 
   }
   test("complete") {
@@ -190,7 +202,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
         .filter(predicate.and(BooleanAtomFalse))
         .done
         .bind(tref1 -> table)
-      assert(filter3.interpret.numRows  == 0)
+      assert(filter3.interpret.numRows == 0)
 
       val innerJoin =
         tref1.scan
