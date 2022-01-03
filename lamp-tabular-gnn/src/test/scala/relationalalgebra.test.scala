@@ -71,7 +71,7 @@ class RelationAlgebraSuite extends AnyFunSuite {
         """
           table(?tref1 as mytablename) 
             filter(mytablename.col1 == ?whatever) 
-            project(mytablename.col1 as whatever, mytablename.col2) 
+            project(mytablename.col1 as whatever, tref1.col2) 
           table(?tref2) product 
           table(?tref3) inner-join(whatever,col2) 
           reference2
