@@ -65,8 +65,8 @@ lazy val AllTest = config("alltest").extend(Test)
 val saddleVersion = "3.0.2"
 val upickleVersion = "1.4.3"
 val scalaTestVersion = "3.2.10"
-val scribeVersion = "3.6.7"
-val catsEffectVersion = "3.2.9"
+val scribeVersion = "3.6.4"
+val catsEffectVersion = "3.3.4"
 val catsCoreVersion = "2.6.0"
 
 lazy val sten = project
