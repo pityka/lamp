@@ -62,11 +62,11 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "3.0.2"
+val saddleVersion = "3.1.0"
 val upickleVersion = "1.4.4"
 val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.6.9"
-val catsEffectVersion = "3.3.5"
+val catsEffectVersion = "3.3.6"
 val catsCoreVersion = "2.6.0"
 
 lazy val sten = project
@@ -115,8 +115,8 @@ lazy val data = project
     name := "lamp-data",
     libraryDependencies ++= Seq(
       "com.outr" %% "scribe" % scribeVersion,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.12.1",
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.12.1" % "compile-internal"
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.12.4",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.12.4" % "compile-internal"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
@@ -178,8 +178,8 @@ lazy val umap = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "io.github.pityka" %% "saddle-linalg" % saddleVersion,
-      "io.github.pityka" %% "nspl-awt" % "0.1.0" % "test",
-      "io.github.pityka" %% "nspl-saddle" % "0.1.0" % "test"
+      "io.github.pityka" %% "nspl-awt" % "0.3.0" % "test",
+      "io.github.pityka" %% "nspl-saddle" % "0.3.0" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
@@ -322,7 +322,7 @@ lazy val example_arxiv = project
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "com.lihaoyi" %% "requests" % "0.6.7",
-      "com.lihaoyi" %% "os-lib" % "0.8.0"
+      "com.lihaoyi" %% "os-lib" % "0.8.1"
     )
   )
   .dependsOn(core, data)
