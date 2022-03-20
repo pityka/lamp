@@ -36,7 +36,7 @@ It provides neural networks components:
 This repository also hosts some other loosely related libraries. 
 
 - a fast GPU compatible implementation of UMAP ([see](https://arxiv.org/abs/1802.03426))
-- an implementation of extratrees ([see](https://hal.archives-ouvertes.fr/hal-00341932)). This is a JVM implementation with no further dependencies.
+- an implementation of extratrees ([see](https://hal.archives-ouvertes.fr/hal-00341932)) with sparsity aware splits. This is a JVM implementation with no further dependencies.
 
 # Platforms
 

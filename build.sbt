@@ -66,7 +66,7 @@ val saddleVersion = "3.1.0"
 val upickleVersion = "1.4.4"
 val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.6.9"
-val catsEffectVersion = "3.3.7"
+val catsEffectVersion = "3.3.8"
 val catsCoreVersion = "2.6.0"
 
 lazy val sten = project
@@ -329,7 +329,7 @@ lazy val example_arxiv = project
 
 lazy val docs = project
   .in(file("lamp-docs"))
-  .dependsOn(core % "compile->test;compile->compile", data)
+  .dependsOn(core % "compile->test;compile->compile", data, forest)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
