@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>Extratrees - Lamp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="icon" href="https://pityka.github.io/lamp/favicon.png">
+
+  
+  
+  <link rel="stylesheet" href="/lamp/css/style.min.ab49f0da65a9bb2e51b43f76fb24346d416717d3205cbd8e2e0bd70b9c811f6c.css">
+  
+
+  
+
+</head>
+
+<body class='page page-default-single'>
+  <div id="main-menu-mobile" class="main-menu-mobile">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+  <div class="wrapper">
+    <div class='header'>
+  <div class="container">
+    
+    
+    <div id="main-menu" class="main-menu">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+    <button id="toggle-main-menu-mobile" class="hamburger hamburger--slider" type="button">
+  <span class="hamburger-box">
+    <span class="hamburger-inner"></span>
+  </span>
+</button>
+  </div>
+</div>
+
+    <div class="container pt-2 pt-md-6 pb-3 pb-md-6">
+      <div class="row">
+        <div class="col-12 col-md-3 mb-3">
+          <div class="sidebar">
+            
+<div class="docs-menu">
+  <h4>Docs</h4>
+  <ul>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/getting_started/">Getting started</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/usage_overview/">How to build and train a model</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/memory_management/">Memory management</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/modules/">Defining modules</a>
+    </li>
+    
+    <li class="active ">
+      <a href="https://pityka.github.io/lamp/docs/extratrees/">Extratrees</a>
+    </li>
+    
+  </ul>
+</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-9">
+          
+<h1 class="title">Extratrees</h1>
+<div class="content anchor-link-enabled">
+  
+
+<p>The <code>lamp-forest</code> artifact contains an implementation of the Extremely Randomized Trees algorithm.
+This implementation is stand alone, it has no dependencies on other lamp modules (neither native dependencies).</p>
+
+<p>Extremely Randomized Trees (extratrees) is a decision tree based regression or classification method similar
+to random forests, (<a href="https://hal.archives-ouvertes.fr/hal-00341932">see</a>).</p>
+
+<h3 id="handling-of-missing-values">Handling of missing values</h3>
+
+<p>Missing feature values (Double.NaNs) are detected and in each split the samples with the missing
+feature values are grouped either to the left or to the right group depending on which one has a better fit.</p>
+
+<h3 id="example">Example</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp.extratrees._
+<span style="color:#66d9ef">import</span> org.saddle._
+
+<span style="color:#66d9ef">val</span> features <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">Mat</span><span style="color:#f92672">(</span><span style="color:#a6e22e">Vec</span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">1</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">1</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">1</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">2</span>d<span style="color:#f92672">,</span><span style="color:#ae81ff">2</span>d<span style="color:#f92672">,</span><span style="color:#ae81ff">2</span>d<span style="color:#f92672">))</span>
+<span style="color:#75715e">// features: Mat[Double] = [7 x 1]
+</span><span style="color:#75715e">// 1.0000 
+</span><span style="color:#75715e">// 1.0000 
+</span><span style="color:#75715e">// 1.0000 
+</span><span style="color:#75715e">// 1.0000 
+</span><span style="color:#75715e">// 2.0000 
+</span><span style="color:#75715e">// 2.0000 
+</span><span style="color:#75715e">// 2.0000 
+</span><span style="color:#75715e">// 
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> target <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">Vec</span><span style="color:#f92672">(</span><span style="color:#ae81ff">1</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">1</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">1</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">1</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">0</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">0</span>d<span style="color:#f92672">,</span> <span style="color:#ae81ff">0</span>d<span style="color:#f92672">)</span>
+<span style="color:#75715e">// target: Vec[Double] = [7 x 1]
+</span><span style="color:#75715e">// 1.0000
+</span><span style="color:#75715e">// 1.0000
+</span><span style="color:#75715e">// 1.0000
+</span><span style="color:#75715e">// 1.0000
+</span><span style="color:#75715e">// 0.0000
+</span><span style="color:#75715e">// 0.0000
+</span><span style="color:#75715e">// 0.0000
+</span><span style="color:#75715e">// 
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> trees <span style="color:#66d9ef">=</span> buildForestRegression<span style="color:#f92672">(</span>
+  data <span style="color:#66d9ef">=</span> features<span style="color:#f92672">,</span> <span style="color:#75715e">// feature matrix
+</span><span style="color:#75715e"></span>  target <span style="color:#66d9ef">=</span> target<span style="color:#f92672">,</span> <span style="color:#75715e">// regression target
+</span><span style="color:#75715e"></span>  nMin <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">,</span> <span style="color:#75715e">// minimum node size before splitting
+</span><span style="color:#75715e"></span>  k <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">,</span> <span style="color:#75715e">// number of features to consider splitting 
+</span><span style="color:#75715e"></span>  m <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">100</span><span style="color:#f92672">,</span> <span style="color:#75715e">// number of trees
+</span><span style="color:#75715e"></span>  parallelism <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">1</span>
+<span style="color:#f92672">)</span>
+<span style="color:#75715e">// trees: Seq[RegressionTree] = Vector(
+</span><span style="color:#75715e">//   RegressionNonLeaf(
+</span><span style="color:#75715e">//     left = RegressionLeaf(targetMean = 1.0),
+</span><span style="color:#75715e">//     right = RegressionLeaf(targetMean = 0.0),
+</span><span style="color:#75715e">//     splitFeature = 0,
+</span><span style="color:#75715e">//     cutpoint = 1.180679125598552,
+</span><span style="color:#75715e">//     splitMissingIsLess = false
+</span><span style="color:#75715e">//   ),
+</span><span style="color:#75715e">//   RegressionNonLeaf(
+</span><span style="color:#75715e">//     left = RegressionLeaf(targetMean = 1.0),
+</span><span style="color:#75715e">//     right = RegressionLeaf(targetMean = 0.0),
+</span><span style="color:#75715e">//     splitFeature = 0,
+</span><span style="color:#75715e">//     cutpoint = 1.2461588736361415,
+</span><span style="color:#75715e">//     splitMissingIsLess = false
+</span><span style="color:#75715e">//   ),
+</span><span style="color:#75715e">//   RegressionNonLeaf(
+</span><span style="color:#75715e">//     left = RegressionLeaf(targetMean = 1.0),
+</span><span style="color:#75715e">//     right = RegressionLeaf(targetMean = 0.0),
+</span><span style="color:#75715e">//     splitFeature = 0,
+</span><span style="color:#75715e">//     cutpoint = 1.9394645277232005,
+</span><span style="color:#75715e">//     splitMissingIsLess = false
+</span><span style="color:#75715e">//   ),
+</span><span style="color:#75715e">//   RegressionNonLeaf(
+</span><span style="color:#75715e">//     left = RegressionLeaf(targetMean = 1.0),
+</span><span style="color:#75715e">//     right = RegressionLeaf(targetMean = 0.0),
+</span><span style="color:#75715e">//     splitFeature = 0,
+</span><span style="color:#75715e">//     cutpoint = 1.9597843257479362,
+</span><span style="color:#75715e">//     splitMissingIsLess = false
+</span><span style="color:#75715e">//   ),
+</span><span style="color:#75715e">//   RegressionNonLeaf(
+</span><span style="color:#75715e">//     left = RegressionLeaf(targetMean = 1.0),
+</span><span style="color:#75715e">//     right = RegressionLeaf(targetMean = 0.0),
+</span><span style="color:#75715e">//     splitFeature = 0,
+</span><span style="color:#75715e">//     cutpoint = 1.3255300056970198,
+</span><span style="color:#75715e">//     splitMissingIsLess = false
+</span><span style="color:#75715e">//   ),
+</span><span style="color:#75715e">//   RegressionNonLeaf(
+</span><span style="color:#75715e">//     left = RegressionLeaf(targetMean = 1.0),
+</span><span style="color:#75715e">//     right = RegressionLeaf(targetMean = 0.0),
+</span><span style="color:#75715e">//     splitFeature = 0,
+</span><span style="color:#75715e">//     cutpoint = 1.3050208611159766,
+</span><span style="color:#75715e">//     splitMissingIsLess = false
+</span><span style="color:#75715e">//   ),
+</span><span style="color:#75715e">//   RegressionNonLeaf(
+</span><span style="color:#75715e">//     left = RegressionLeaf(targetMean = 1.0),
+</span><span style="color:#75715e">//     right = RegressionLeaf(targetMean = 0.0),
+</span><span style="color:#75715e">//     splitFeature = 0,
+</span><span style="color:#75715e">//     cutpoint = 1.595708920072353,
+</span><span style="color:#75715e">//     splitMissingIsLess = false
+</span><span style="color:#75715e">// ...
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">val</span> output <span style="color:#66d9ef">=</span> predictRegression<span style="color:#f92672">(</span>trees<span style="color:#f92672">,</span> features<span style="color:#f92672">)</span>
+<span style="color:#75715e">// output: Vec[Double] = [7 x 1]
+</span><span style="color:#75715e">// 1.0000
+</span><span style="color:#75715e">// 1.0000
+</span><span style="color:#75715e">// 1.0000
+</span><span style="color:#75715e">// 1.0000
+</span><span style="color:#75715e">// 0.0000
+</span><span style="color:#75715e">// 0.0000
+</span><span style="color:#75715e">// 0.0000
+</span><span style="color:#75715e"></span><span style="color:#f92672">//</span></code></pre></div>
+</div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/lamp/js/scripts.min.1237ff71925bb8625c97a9af8db4c54525258bedfd7c47493daaff723bea755e.js"></script>
+  
+
+  
+  
+  
+    
+  
+
+
+</body>
+
+</html>
