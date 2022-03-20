@@ -84,7 +84,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       targetAtSubset = Vec(0d, 0.1d, 100d, 100.1, 100.2),
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(r == ((0, 3.424021023861243, 0,false)))
+    assert(r == ((0, 3.424021023861243, 0, false)))
   }
   test("splitClassification 1") {
     val attr = Array(0, 1)
@@ -100,7 +100,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(attr.toVector == Vector(1, 0))
-    assert(r == ((0, 3.424021023861243, 0,false)))
+    assert(r == ((0, 3.424021023861243, 0, false)))
   }
   test("splitClassification 1 weighted") {
     val attr = Array(0, 1)
@@ -116,7 +116,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
     assert(attr.toVector == Vector(1, 0))
-    assert(r == ((0, 3.424021023861243, 0,false)))
+    assert(r == ((0, 3.424021023861243, 0, false)))
   }
   test("splitClassification 1 0-weighted") {
     val attr = Array(0, 1)
@@ -147,7 +147,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(r == ((1, 97.54668482609304, 1,false)))
+    assert(r == ((1, 97.54668482609304, 1, false)))
     assert(attr.toVector == Vector(0, 1))
   }
   test("splitClassification 3") {
@@ -167,7 +167,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(r == ((2, 97.54668482609304, 2,false)))
+    assert(r == ((2, 97.54668482609304, 2, false)))
     assert(attr.toVector == Vector(0, 1, 2))
   }
   test("splitClassification 4") {
@@ -187,7 +187,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
     )
-    assert(r == ((2, 97.54668482609304, 1,false)))
+    assert(r == ((2, 97.54668482609304, 1, false)))
     assert(attr.toVector == Vector(1, 0, 2))
   }
   test("splitClassification 5") {
@@ -207,7 +207,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(1L)
     )
-    assert(r == ((2, 97.84900936098786, 1,false)))
+    assert(r == ((2, 97.84900936098786, 1, false)))
     assert(attr.toVector == Vector(0, 1, 2))
   }
   test("splitClassification 6") {
@@ -227,7 +227,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(123L)
     )
-    assert(r == ((2, 96.07259095141863, 2,false)))
+    assert(r == ((2, 96.07259095141863, 2, false)))
     assert(attr.toVector == Vector(0, 1, 2))
   }
   test("splitClassification 7") {
@@ -247,7 +247,7 @@ class ExtraTreesSuite extends AnyFunSuite {
       weightsAtSubset = None,
       rng = org.saddle.spire.random.rng.Cmwc5.fromTime(123L)
     )
-    assert(r == ((2, 96.07259095141863, 2,false)))
+    assert(r == ((2, 96.07259095141863, 2, false)))
     assert(attr.toVector == Vector(1, 0, 2))
   }
 
@@ -417,8 +417,8 @@ class ExtraTreesSuite extends AnyFunSuite {
   }
 
   test("with missing - regression ") {
-        val features = Mat(Vec(1d,1d,1d,1d,Double.NaN,Double.NaN,Double.NaN))
-        val target = Vec(1d,1d,1d,1d,0d,0d,0d)
+    val features = Mat(Vec(1d, 1d, 1d, 1d, Double.NaN, Double.NaN, Double.NaN))
+    val target = Vec(1d, 1d, 1d, 1d, 0d, 0d, 0d)
     val trees = buildForestRegression(
       data = features,
       target = target,
@@ -429,20 +429,18 @@ class ExtraTreesSuite extends AnyFunSuite {
     )
     val output = predictRegression(trees, features)
     val correct =
-      output.zipMap(target)((a, b) =>
-        if (a == b) 1d else 0d
-      )
+      output.zipMap(target)((a, b) => if (a == b) 1d else 0d)
     val accuracy = correct.mean2
     assert(accuracy == 1.0)
   }
   test("with missing - classification") {
-        val features = Mat(Vec(1d,1d,1d,1d,Double.NaN,Double.NaN,Double.NaN))
-        val target = Vec(1d,1d,1d,1d,0d,0d,0d).map(_.toInt)
+    val features = Mat(Vec(1d, 1d, 1d, 1d, Double.NaN, Double.NaN, Double.NaN))
+    val target = Vec(1d, 1d, 1d, 1d, 0d, 0d, 0d).map(_.toInt)
     val trees = buildForestClassification(
       data = features,
       target = target,
       sampleWeights = None,
-      numClasses=2,
+      numClasses = 2,
       nMin = 1,
       k = 1,
       m = 100,
@@ -450,9 +448,7 @@ class ExtraTreesSuite extends AnyFunSuite {
     )
     val output = predictClassification(trees, features).col(1)
     val correct =
-      output.zipMap(target)((a, b) =>
-        if (a == b) 1d else 0d
-      )
+      output.zipMap(target)((a, b) => if (a == b) 1d else 0d)
     val accuracy = correct.mean2
     assert(accuracy == 1.0)
   }

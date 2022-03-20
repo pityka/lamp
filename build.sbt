@@ -329,7 +329,7 @@ lazy val example_arxiv = project
 
 lazy val docs = project
   .in(file("lamp-docs"))
-  .dependsOn(core % "compile->test;compile->compile", data)
+  .dependsOn(core % "compile->test;compile->compile", data, forest)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
