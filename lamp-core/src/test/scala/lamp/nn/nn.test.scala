@@ -23,7 +23,7 @@ import lamp.STenOptions
 object CudaTest extends Tag("cuda")
 object SlowTest extends Tag("slow")
 
-class NNSuite extends AnyFunSuite {
+final class NNSuite extends AnyFunSuite {
   aten.Tensor.manual_seed(13223L)
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
