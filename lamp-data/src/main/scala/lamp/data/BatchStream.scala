@@ -141,7 +141,7 @@ object BatchStream {
 
     }
 
-  def scopeInResource =
+  private[lamp] def scopeInResource =
     Resource.make(IO {
       Scope.free
     })(scope => IO { scope.release() })
@@ -197,7 +197,7 @@ object BatchStream {
 
   object StagedLoader {
 
-    def updateBuckets[A, B](
+    private def updateBuckets[A, B](
         buckets: Vector[BucketState[A, B]],
         idx: Int,
         open1: Option[Opened[A, B]],
@@ -210,9 +210,8 @@ object BatchStream {
       s2
     }
 
-    sealed trait BucketState[+A, +B]
-    // case object Closed extends BucketState[Nothing, Nothing]
-    case class NotYetOpen[A, B](
+     sealed trait BucketState[+A, +B]
+     case class NotYetOpen[A, B](
         indices: BucketIndices,
         fn: Array[Int] => Resource[IO, B]
     ) extends BucketState[A, B] {
@@ -232,7 +231,7 @@ object BatchStream {
         } yield Opened(d, latch, refCompleted)
     }
 
-    case class Opened[A, B](
+     case class Opened[A, B](
         deferred: Deferred[IO, OpenedBucketState[B]],
         latch: CountDownLatch[IO],
         isClosed: Ref[IO, Boolean]
@@ -279,12 +278,12 @@ object BatchStream {
       }
     }
 
-    case class OpenedBucketState[B](
+    private[lamp] case class OpenedBucketState[B](
         indices: BucketIndices,
         b: B
     )
 
-    case class State[A, B](
+    private[lamp] case class State[A, B](
         bucketSize: Int,
         buckets: Vector[BucketState[A, B]],
         batchIdx: Int
@@ -360,12 +359,12 @@ object BatchStream {
       }
     }
 
-    case class BucketIndices(
+   private[lamp] case class BucketIndices(
         instancesWithOriginalIndices: Vec[Int],
         bucketSpecificIndices: Vec[Vec[Int]]
     )
 
-    def init[A, B](
+    private[lamp] def init[A, B](
         bucketSize: Int,
         bucketIndices: Vector[BucketIndices],
         loadInstancesToStaging: Array[Int] => Resource[IO, B]
@@ -392,7 +391,7 @@ object BatchStream {
   ) =
     new BatchStream[A, StagedLoader.State[A, B]] {
 
-      val bucketIndices: Vec[StagedLoader.BucketIndices] =
+      private val bucketIndices: Vec[StagedLoader.BucketIndices] =
         indices.grouped(bucketSize).toSeq.toVec.map { originalIndices =>
           val instancesWithOriginalIndices =
             originalIndices.flatten.distinct.sorted.toVec

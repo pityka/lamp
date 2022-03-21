@@ -27,7 +27,7 @@ package object onnx {
     }
   }
 
-  def tensorAsByteString(t: STen): ByteString = Scope.leak { implicit scope =>
+  private[lamp] def tensorAsByteString(t: STen): ByteString = Scope.leak { implicit scope =>
     t.options.scalarTypeByte match {
       case 4 =>
         val array = t.toLongVec.toArray
@@ -227,5 +227,4 @@ package object onnx {
       )
     )
   }
-  val a = ox.ModelProto()
 }
