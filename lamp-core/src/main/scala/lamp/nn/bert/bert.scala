@@ -11,16 +11,11 @@ import lamp.STenOptions
 
 import lamp.autograd.Mean
 
-//
-// todo in data: tokenization, masking,
-
 case class BertLossInput(
     input: BertPretrainInput,
     maskedLanguageModelTarget: STen,
     wholeSentenceTarget: STen
 )
-
-object BertLossInput {}
 
 case class BertLoss(
     pretrain: BertPretrainModule,
