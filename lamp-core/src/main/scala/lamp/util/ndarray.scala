@@ -10,7 +10,7 @@ import lamp.STenOptions
   *
   * used in tests and for debugging
   */
-case class NDArray[@specialized(Long, Double, Float) T](
+private[lamp] case class NDArray[@specialized(Long, Double, Float) T](
     data: Array[T],
     shape: List[Int]
 ) {
@@ -67,7 +67,7 @@ case class NDArray[@specialized(Long, Double, Float) T](
   }
 }
 
-object NDArray {
+private[lamp] object NDArray {
   def zeros(shape: List[Int]) =
     NDArray(Array.ofDim[Double](shape.foldLeft(1)(_ * _)), shape)
   def tensorFromNDArray(m: NDArray[Double], cuda: Boolean = false) = {

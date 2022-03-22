@@ -49,7 +49,7 @@ object Umap {
     }
   }
 
-  private[lamp] def edgeWeights(
+  def edgeWeights(
       knnDistances: Mat[Double],
       knn: Mat[Int]
   ): Mat[Double] = {

@@ -69,7 +69,7 @@ class GradientSuite extends AnyFunSuite {
     }
 
   }
-  def diffND(
+  private[lamp] def diffND(
       m: NDArray[Double]
   )(f: NDArray[Double] => Double): NDArray[Double] = {
     val eps = 1e-6
@@ -119,7 +119,7 @@ class GradientSuite extends AnyFunSuite {
       assert(diffAuto(m).roundTo(4) == diffNum(m).roundTo(4))
     }
   }
-  def testGradientAndValueND(
+  private[lamp] def testGradientAndValueND(
       id: String,
       cuda: Boolean = true,
       cpu: Boolean = true
