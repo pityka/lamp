@@ -1567,7 +1567,7 @@ object AutoLoop {
         logger.foreach(
           _.info(
             s"Selected models with losses: [${validationLosses
-              .mkString(", ")}]. ____ Rejected: ${rejected.map(_._1)}"
+                .mkString(", ")}]. ____ Rejected: ${rejected.map(_._1)}"
           )
         )
 

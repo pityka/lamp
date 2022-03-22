@@ -221,7 +221,7 @@ object Train extends App {
 
             println(
               s"D-loss: ${totalDLoss.toMat.raw(0) / instances}, G-loss: ${totalGLoss.toMat
-                .raw(0) / instances}"
+                  .raw(0) / instances}"
             )
 
             // updateWindow(
