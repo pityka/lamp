@@ -115,8 +115,8 @@ lazy val data = project
     name := "lamp-data",
     libraryDependencies ++= Seq(
       "com.outr" %% "scribe" % scribeVersion,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.12.4",
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.12.4" % "compile-internal"
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.13.8",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.13.8" % "compile-internal"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
