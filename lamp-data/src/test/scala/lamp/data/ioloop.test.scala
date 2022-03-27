@@ -51,9 +51,9 @@ class IOLoopSuite extends AnyFunSuite {
           1
         )
       val x =
-        STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
+        lamp.saddle.fromMat(data.filterIx(_ != "label").toMat, cuda)
       val target =
-        STen
+        lamp.saddle
           .fromLongMat(
             Mat(data.firstCol("label").toVec.map(_.toLong)),
             cuda
@@ -102,7 +102,7 @@ class IOLoopSuite extends AnyFunSuite {
             acc,
             true
           )
-      val loss = acc.toMat.raw(0) / n
+      val loss = acc.toDoubleArray.head / n
       tensorLogger.cancel()
 
       assert(epoch == 25)
@@ -128,9 +128,9 @@ class IOLoopSuite extends AnyFunSuite {
         .toOption
         .get
       val x =
-        STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
+        lamp.saddle.fromMat(data.filterIx(_ != "label").toMat, cuda)
       val target =
-        STen
+        lamp.saddle
           .fromLongMat(
             Mat(data.firstCol("label").toVec.map(_.toLong)),
             cuda
@@ -148,7 +148,7 @@ class IOLoopSuite extends AnyFunSuite {
         LossFunctions.NLL(10, classWeights)
       )
 
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+      val rng = new scala.util.Random()
 
       val (_, trainedModel, _, _, _) = IOLoops
         .epochs(
@@ -179,7 +179,7 @@ class IOLoopSuite extends AnyFunSuite {
           acc,
           true
         )
-      val loss = acc.toMat.raw(0) / n
+      val loss = acc.toDoubleArray.head / n
       assert(loss < 50)
     }
   }
@@ -198,9 +198,9 @@ class IOLoopSuite extends AnyFunSuite {
         .toOption
         .get
       val x =
-        STen.fromMat(data.filterIx(_ != "label").toMat, cuda)
+        lamp.saddle.fromMat(data.filterIx(_ != "label").toMat, cuda)
       val target =
-        STen
+        lamp.saddle
           .fromLongMat(
             Mat(data.firstCol("label").toVec.map(_.toLong)),
             cuda
@@ -218,7 +218,7 @@ class IOLoopSuite extends AnyFunSuite {
         LossFunctions.NLL(10, classWeights)
       )
 
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+      val rng = new scala.util.Random()
 
       val (_, trainedModel, _, _, _) = IOLoops
         .epochs(
@@ -250,7 +250,7 @@ class IOLoopSuite extends AnyFunSuite {
           acc,
           true
         )
-      val loss = acc.toMat.raw(0) / n
+      val loss = acc.toDoubleArray.head / n
       assert(loss < 50)
     }
   }

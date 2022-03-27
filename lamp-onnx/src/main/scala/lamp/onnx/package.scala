@@ -30,7 +30,7 @@ package object onnx {
   private[lamp] def tensorAsByteString(t: STen): ByteString = Scope.leak { implicit scope =>
     t.options.scalarTypeByte match {
       case 4 =>
-        val array = t.toLongVec.toArray
+        val array = t.toLongArray
         val bb = ByteBuffer
           .allocate(array.length * 8)
           .order(java.nio.ByteOrder.LITTLE_ENDIAN)
@@ -43,7 +43,7 @@ package object onnx {
         bb.rewind()
         ByteString.copyFrom(bb)
       case 7 =>
-        val array = t.toVec.toArray
+        val array = t.toDoubleArray
         val bb = ByteBuffer
           .allocate(array.length * 8)
           .order(java.nio.ByteOrder.LITTLE_ENDIAN)
@@ -56,7 +56,7 @@ package object onnx {
         bb.rewind()
         ByteString.copyFrom(bb)
       case 6 =>
-        val array = t.toFloatVec.toArray
+        val array = t.toFloatArray
         val bb = ByteBuffer
           .allocate(array.length * 4)
           .order(java.nio.ByteOrder.LITTLE_ENDIAN)

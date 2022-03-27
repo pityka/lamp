@@ -4,7 +4,6 @@ import java.io.File
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import org.saddle._
-import lamp.TensorHelpers
 import aten.ATen
 import cats.effect.IO
 import lamp.CudaDevice
@@ -14,7 +13,7 @@ import lamp.autograd.const
 import lamp.nn.AdamW
 import lamp.nn.simple
 import lamp.data.BufferedImageHelper
-
+import lamp.saddle._
 import lamp.FloatingPointPrecision
 import lamp.SinglePrecision
 import lamp.Scope
@@ -51,7 +50,7 @@ object GAN {
           val green = Mat(vec.slice(1024, 2 * 1024).copy).reshape(32, 32)
           val blue = Mat(vec.slice(2 * 1024, 3 * 1024).copy).reshape(32, 32)
 
-          val tensor = TensorHelpers.fromMatList(
+          val tensor = SaddleTensorHelpers.fromMatList(
             List(red, green, blue),
             device = CPU,
             precision = precision
@@ -59,7 +58,7 @@ object GAN {
           (label1, label2, tensor)
         }
       val labels =
-        TensorHelpers.fromLongVec(tensors.map(_._2.toLong).toVec, false)
+        SaddleTensorHelpers.fromLongVec(tensors.map(_._2.toLong).toVec, false)
       val fullBatch = {
         val tmp = ATen.cat(tensors.map(_._3).toArray, 0)
         val f = ATen._unsafe_view(tmp, Array(-1, 3, 32, 32))
@@ -132,7 +131,8 @@ object Train extends App {
         scribe.info(
           s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
         )
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+                val rng = new scala.util.Random
+
         val trainEpochs = () =>
           BatchStream.minibatchesFromFull(
             config.trainBatchSize,

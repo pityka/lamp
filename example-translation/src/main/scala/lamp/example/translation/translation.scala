@@ -261,7 +261,7 @@ object Train extends App {
               .SequenceNLL(vocabularSize, classWeights, ignore = vocab('#'))
           )
         }
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+        val rng = new scala.util.Random
         val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           Text
             .minibatchesForSeq2Seq(

@@ -1,8 +1,8 @@
 package lamp.data
 
-import org.saddle._
 import lamp.autograd.{const}
 import lamp._
+import scala.collection.immutable.ArraySeq
 
 object GraphBatchStream {
 
@@ -28,13 +28,13 @@ object GraphBatchStream {
     */
   def smallGraphStream(
       minibatchSize: Int,
-      graphNodesAndEdges: Vec[Graph],
+      graphNodesAndEdges: Array[Graph],
       targetPerGraph: STen,
-      rng: Option[org.saddle.spire.random.Generator]
+      rng: Option[scala.util.Random]
   ): BatchStream[lamp.nn.graph.Graph, Int] = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       Scope.inResource.map { implicit scope =>
-        val selectedGraphs = graphNodesAndEdges.take(idx).toSeq
+        val selectedGraphs = idx.map(graphNodesAndEdges)
         val (
           _,
           _,
@@ -80,14 +80,20 @@ object GraphBatchStream {
           }
         val nodesV = {
           val t = Scope { implicit scope =>
-            val c = STen.cat(selectedGraphs.map(_.nodeFeatures), 0)
+            val c = STen.cat(
+              ArraySeq.unsafeWrapArray(selectedGraphs.map(_.nodeFeatures)),
+              0
+            )
             device.to(c)
           }
           const(t)
         }
         val edgesV = {
           val t = Scope { implicit scope =>
-            val c = STen.cat(selectedGraphs.map(_.edgeFeatures), 0)
+            val c = STen.cat(
+              ArraySeq.unsafeWrapArray(selectedGraphs.map(_.edgeFeatures)),
+              0
+            )
             device.to(c)
           }
           const(t)
@@ -105,7 +111,11 @@ object GraphBatchStream {
           }
 
         val selectedTargetOnDevice = Scope { implicit scope =>
-          val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
+          val idxT = STen.fromLongArray(
+            idx.map(_.toLong),
+            List(idx.length),
+            targetPerGraph.device
+          )
           val selectedTarget = targetPerGraph.index(idxT)
           device.to(selectedTarget)
         }
@@ -128,13 +138,14 @@ object GraphBatchStream {
     val idx =
       rng
         .map(rng =>
-          array
-            .shuffle(array.range(0, graphNodesAndEdges.length), rng)
+          rng
+            .shuffle(Array.range(0, graphNodesAndEdges.length))
             .grouped(minibatchSize)
+            .map(_.toArray)
             .toList
         )
         .getOrElse(
-          array
+          Array
             .range(0, graphNodesAndEdges.length)
             .grouped(minibatchSize)
             .toList

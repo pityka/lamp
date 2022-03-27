@@ -5,6 +5,7 @@ import org.saddle._
 import java.awt.image.BufferedImage
 import lamp.util.NDArray
 import java.awt.Color
+import lamp.autograd.NDArraySyntax._
 
 class BufferedImageHelperSuite extends AnyFunSuite {
   test("to tensor") {
