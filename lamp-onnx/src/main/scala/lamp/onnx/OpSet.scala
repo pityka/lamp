@@ -25,7 +25,7 @@ case class Converted(
 }
 
 object Ops {
-  val ComMicrosoft = "com.microsoft"
+  private[lamp] val ComMicrosoft = "com.microsoft"
   def apply(
       output: VariableNonConstant,
       opType: String,

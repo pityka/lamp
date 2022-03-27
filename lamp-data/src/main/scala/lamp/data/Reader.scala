@@ -13,7 +13,7 @@ import java.nio.ByteBuffer
 
 object Reader {
 
-  def readTensorListDescriptorFromChannel(
+ private[lamp]  def readTensorListDescriptorFromChannel(
       channel: ReadableByteChannel
   ): schemas.TensorList = {
     val is = Channels.newInputStream(channel)
@@ -21,7 +21,7 @@ object Reader {
       .readFromStream[schemas.TensorList](is)
   }
 
-  def readTensorListDescriptorFromFile(
+ private[lamp]  def readTensorListDescriptorFromFile(
       file: File
   ): schemas.TensorList = {
     val fis = new FileInputStream(file)
@@ -32,7 +32,7 @@ object Reader {
     }
   }
 
-  def readTensorData(
+  private[lamp] def readTensorData(
       descriptor: schemas.TensorList,
       pathOfDescriptor: File,
       device: Device,
@@ -58,7 +58,7 @@ object Reader {
 
   }
 
-  def readTensorsFromFile(
+ private[lamp]  def readTensorsFromFile(
       file: File,
       device: Device,
       pin: Boolean
@@ -88,7 +88,7 @@ object Reader {
 
   }
 
-  def readFully(bb: ByteBuffer, channel: ReadableByteChannel) = {
+ private[lamp]  def readFully(bb: ByteBuffer, channel: ReadableByteChannel) = {
     bb.clear
     var i = 0
     while (bb.hasRemaining && i >= 0) {

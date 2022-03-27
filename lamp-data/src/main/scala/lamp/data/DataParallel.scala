@@ -365,7 +365,7 @@ object DataParallel {
     } yield trainingLoss
   }
 
-  def makeMultipleBatches[A, S](
+  private[lamp] def makeMultipleBatches[A, S](
       devices: List[Device],
       makeOne: (Device, S) => IO[(S, Resource[IO, StreamControl[A]])]
   ): S => IO[
