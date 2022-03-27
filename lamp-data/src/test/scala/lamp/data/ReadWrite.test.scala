@@ -9,6 +9,7 @@ import lamp.Scope
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
 import lamp.STen
+import lamp.autograd.NDArraySyntax._ 
 
 class ReadWriteSuite extends AnyFunSuite {
 

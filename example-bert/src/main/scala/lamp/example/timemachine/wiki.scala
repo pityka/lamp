@@ -29,7 +29,6 @@ import java.nio.charset.Charset
 import cats.effect.unsafe.implicits.global
 import java.io.FileInputStream
 import java.util.zip.ZipInputStream
-import org.saddle._
 import lamp.data
 import java.io.File
 
@@ -106,7 +105,7 @@ object Train extends App {
       .map { paragraph =>
         paragraph.map { sentence =>
           val words = sentence.split(' ')
-          words.map(v => vocab.getOrElse(v, unknown)).toVec
+          words.map(v => vocab.getOrElse(v, unknown)).toArray
         }.toVector
       }
       .toVector
@@ -179,7 +178,7 @@ object Train extends App {
 
         scribe.info("Learnable parameters: " + net.learnableParameters)
 
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+        val rng = new scala.util.Random
         val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           lamp.data.bert.minibatchesFromFull(
             config.trainBatchSize,

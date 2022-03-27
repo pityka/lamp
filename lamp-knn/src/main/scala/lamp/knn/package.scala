@@ -1,8 +1,8 @@
 package lamp
 
 import org.saddle._
+import lamp.saddle._
 import org.saddle.macros.BinOps._
-
 package object knn {
 
   trait DistanceFunction {
@@ -105,8 +105,8 @@ package object knn {
       minibatchSize: Int
   ): Mat[Int] = {
     Scope.leak { implicit scope =>
-      val featuresOnDevice = STen.fromMat(features, device, precision)
-      val queryOnDevice = STen.fromMat(query, device, precision)
+      val featuresOnDevice = lamp.saddle.fromMat(features, device, precision)
+      val queryOnDevice = lamp.saddle.fromMat(query, device, precision)
       val indices = knnMinibatched(
         featuresOnDevice,
         queryOnDevice,
@@ -114,6 +114,7 @@ package object knn {
         distance,
         minibatchSize
       )
+
       val indicesJvm = indices.toLongMat.map(_.toInt)
       indicesJvm
     }

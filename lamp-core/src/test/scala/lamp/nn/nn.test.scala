@@ -2,7 +2,9 @@ package lamp.nn
 
 import org.saddle._
 import org.saddle.ops.BinOps._
+import lamp.saddle._
 import org.scalatest.funsuite.AnyFunSuite
+import lamp.autograd.NDArraySyntax._
 import aten.ATen
 import lamp.autograd.{
   Conv2D => _,
@@ -13,7 +15,6 @@ import lamp.autograd.{
   _
 }
 import org.scalatest.Tag
-import lamp.TensorHelpers
 import lamp.Scope
 import lamp.Sc
 import lamp.util.NDArray
@@ -43,7 +44,7 @@ final class NNSuite extends AnyFunSuite {
     ) {
 
       Scope.root { implicit scope =>
-        val d = const(STen.fromMat(m, cuda))
+        val d = const(lamp.saddle.fromMat(m, cuda))
         val module = moduleF(scope)
 
         {
@@ -64,13 +65,13 @@ final class NNSuite extends AnyFunSuite {
 
         val output = module.forward(d)
         val sum = output.sum
-        val value = sum.toMat.raw(0)
+        val value = sum.value.toMat.raw(0)
         val gradAuto = module.gradients(sum).map(_.get).map(_.toMat)
         val gradNum = module.parameters.map { case (paramT, _) =>
           val oldparam = paramT.value.cloneTensor
-          val param = paramT.toMat
+          val param = paramT.value.toMat
           def f(p: Mat[Double]) = {
-            val p2 = STen.fromMat(p, cuda)
+            val p2 = lamp.saddle.fromMat(p, cuda)
             paramT.value.zero_()
             ATen.add_out(
               paramT.value.value,
@@ -337,7 +338,7 @@ final class NNSuite extends AnyFunSuite {
               p2,
               1d
             )
-            TensorHelpers
+            SaddleTensorHelpers
               .toMat(module.forward((d, st))._1.sum.value.value)
               .raw(0)
           }
@@ -378,7 +379,7 @@ final class NNSuite extends AnyFunSuite {
   test("linear") {
     Scope.root { implicit scope =>
       val linear = Linear(3, 1, STenOptions.d)
-      val output = linear.forward(const(STen.fromMat(mat2x3)))
+      val output = linear.forward(const(lamp.saddle.fromMat(mat2x3)))
       val sum = output.sum
       assert(output.value.sizes.toList == List(2, 1))
       val grad = linear.gradients(sum)
@@ -421,7 +422,7 @@ final class NNSuite extends AnyFunSuite {
   testGradientAndValue("Logistic 1")(
     mat3x2,
     implicit pool =>
-      LogisticRegression1(2, 3, const(STen.fromMat(mat.ident(3))))(
+      LogisticRegression1(2, 3, const(lamp.saddle.fromMat(mat.ident(3))))(
         pool
       ),
     151.0000008318073
@@ -429,7 +430,7 @@ final class NNSuite extends AnyFunSuite {
   testGradientAndValue("Logistic 2")(
     mat3x2,
     implicit pool =>
-      LogisticRegression2(2, 3, const(STen.fromMat(mat.ident(3))))(
+      LogisticRegression2(2, 3, const(lamp.saddle.fromMat(mat.ident(3))))(
         pool
       ),
     12.295836866004327
@@ -440,7 +441,7 @@ final class NNSuite extends AnyFunSuite {
       LogisticRegression2(
         2,
         3,
-        const(STen.fromMat(mat.ident(3), cuda = true))
+        const(lamp.saddle.fromMat(mat.ident(3), cuda = true))
       )(pool),
     12.295836866004326
   )
@@ -450,7 +451,7 @@ final class NNSuite extends AnyFunSuite {
       Mlp1(
         2,
         3,
-        const(STen.fromMat(mat.ident(3), cuda = false))
+        const(lamp.saddle.fromMat(mat.ident(3), cuda = false))
       )(pool),
     192.08796576929555
   )
@@ -460,7 +461,7 @@ final class NNSuite extends AnyFunSuite {
       Mlp1(
         2,
         3,
-        const(STen.fromMat(mat.ident(3), cuda = true))
+        const(lamp.saddle.fromMat(mat.ident(3), cuda = true))
       )(pool),
     192.08796576929555
   )
@@ -631,7 +632,7 @@ final class NNSuite extends AnyFunSuite {
         .value
       assert(output.shape == List(2, 3, 4))
       val target =
-        STen.owned(TensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong)))
+        STen.owned(SaddleTensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong)))
       val loss = LossFunctions
         .SequenceNLL(
           4,
@@ -639,7 +640,7 @@ final class NNSuite extends AnyFunSuite {
         )(const(output), target)
         ._1
         .value
-      assert(TensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507)
+      assert(SaddleTensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507)
       ()
     }
   }
@@ -832,7 +833,7 @@ case class LogisticRegression1(dim: Int, k: Int, y: Variable)(
     pool: Scope
 ) extends Module {
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
-  val w = param(STen.fromMat(mat2x3_2)(pool))(pool)
+  val w = param(lamp.saddle.fromMat(mat2x3_2)(pool))(pool)
 
   def forward[S: Sc](x: Variable): Variable =
     ((x.mm(w)).logSoftMax(dim = 1).crossEntropy(y).sum + w.squaredFrobenius)

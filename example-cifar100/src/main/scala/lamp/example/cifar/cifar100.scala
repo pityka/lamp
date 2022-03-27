@@ -191,7 +191,7 @@ object Train extends App {
         scribe.info(
           s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
         )
-        val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+        val rng = new scala.util.Random
         val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           BatchStream.minibatchesFromFull(
             config.trainBatchSize,

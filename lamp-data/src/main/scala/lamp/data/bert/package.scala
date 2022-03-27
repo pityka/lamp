@@ -1,6 +1,5 @@
 package lamp.data
 
-import org.saddle._
 import lamp._
 import lamp.nn.bert.{BertPretrainInput, BertLossInput}
 import lamp.data.BatchStream.scopeInResource
@@ -8,61 +7,60 @@ import lamp.autograd.const
 
 package object bert {
 
-  def pad(v: Vec[Int], paddedLength: Int, padElem: Int) = {
-    val t = v.concat(Array.fill(paddedLength - v.length)(padElem).toVec)
+  def pad(v: Array[Int], paddedLength: Int, padElem: Int) = {
+    val t = v.concat(Array.fill(paddedLength - v.length)(padElem))
     assert(t.length == paddedLength)
     t
   }
 
   def makeMaskForMaskedLanguageModel(
-      bertTokens: Vec[Int],
+      bertTokens: Array[Int],
       maximumTokenId: Int,
       clsToken: Int,
       sepToken: Int,
       maskToken: Int,
-      rng: org.saddle.spire.random.Generator
+      rng: scala.util.Random
   ) = {
-    val mlmPositions = array
+    val mlmPositions = rng
       .shuffle(
-        vec
+        Array
           .range(0, bertTokens.length)
           .filter(i => bertTokens(i) != clsToken && bertTokens(i) != sepToken)
-          .toArray,
-        rng
+          
+        
       )
-      .toVec
-      .head(math.max(1, (bertTokens.length * 0.15).toInt))
+      .take(math.max(1, (bertTokens.length * 0.15).toInt))
 
     val mlmMaskedInput = mlmPositions.map { idx =>
       val target = bertTokens(idx)
       val r = rng.nextDouble()
       val input =
         if (r < 0.8) maskToken
-        else if (r < 0.9) rng.nextInt(0, maximumTokenId)
+        else if (r < 0.9) rng.nextInt( maximumTokenId)
         else target
       input
     }
-    val mlmTarget = bertTokens.take(mlmPositions.toArray)
+    val mlmTarget = mlmPositions.map(bertTokens)
 
-    val mlmPositionsI = Index(mlmPositions)
-    val maskedBertTokens = bertTokens.zipMapIdx((token, idx) =>
+    val mlmPositionsI = mlmPositions.zipWithIndex.toMap
+    val maskedBertTokens = bertTokens.zipWithIndex.map{ case (token, idx) =>
       if (mlmPositionsI.contains(idx))
-        mlmMaskedInput(mlmPositionsI.getFirst(idx))
+        mlmMaskedInput(mlmPositionsI(idx))
       else token
-    )
+    }
 
-    (mlmPositions, mlmTarget, maskedBertTokens)
+    (mlmPositions.toArray, mlmTarget.toArray, maskedBertTokens)
   }
 
   def prepareParagraph[S: Sc](
-      paragraph: Vector[Vec[Int]],
+      paragraph: Vector[Array[Int]],
       maximumTokenId: Int,
       clsToken: Int,
       sepToken: Int,
       padToken: Int,
       maskToken: Int,
       maxLength: Int,
-      rng: org.saddle.spire.random.Generator
+      rng: scala.util.Random
   ) = {
 
     val maxNumPredictionPositions = (maxLength * 0.15).toInt
@@ -79,11 +77,11 @@ package object bert {
         if (sentence.length + nextSentence.length + 3 > maxLength) None
         else {
 
-          val bertTokens = Vec(clsToken)
+          val bertTokens = Array(clsToken)
             .concat(sentence)
-            .concat(Vec(sepToken))
+            .concat(Array(sepToken))
             .concat(nextSentence)
-            .concat(Vec(sepToken))
+            .concat(Array(sepToken))
 
           val (mlmPositions, mlmTarget, maskedBertTokens) =
             makeMaskForMaskedLanguageModel(
@@ -95,13 +93,13 @@ package object bert {
               rng = rng
             )
 
-          val bertSegments = Vec(0)
+          val bertSegments = Array(0)
             .concat(sentence.map(_ => 0))
-            .concat(Vec(0))
+            .concat(Array(0))
             .concat(nextSentence.map(_ => 1))
-            .concat(Vec(1))
+            .concat(Array(1))
 
-          def to(v: Vec[Int]) = STen.fromLongVec(v.map(_.toLong))
+          def to(v: Array[Int]) = STen.fromLongArray(v.map(_.toLong), List(v.length), CPU)
 
           Some(
             (
@@ -120,14 +118,14 @@ package object bert {
 
   }
   def prepareFullDatasetFromTokenizedParagraphs[S: Sc](
-      paragraphs: Vector[Vector[Vec[Int]]],
+      paragraphs: Vector[Vector[Array[Int]]],
       maximumTokenId: Int,
       clsToken: Int,
       sepToken: Int,
       padToken: Int,
       maskToken: Int,
       maxLength: Int,
-      rng: org.saddle.spire.random.Generator
+      rng: scala.util.Random
   ) = {
     val ps = paragraphs.flatMap { paragraph =>
       prepareParagraph(
@@ -142,7 +140,7 @@ package object bert {
       )
     }
     val nextSentenceTarget =
-      STen.fromLongVec(ps.map(v => if (v._1) 1L else 0L).toVec).castToFloat
+      STen.fromLongArray(ps.map(v => if (v._1) 1L else 0L).toArray, List(ps.length),CPU).castToFloat
     val maskedBertTokens = STen.stack(dim = 0, tensors = ps.map(_._2))
     val bertSegments = STen.stack(dim = 0, tensors = ps.map(_._3))
     val mlmPositions = STen.stack(dim = 0, tensors = ps.map(_._4))
@@ -162,13 +160,17 @@ package object bert {
       minibatchSize: Int,
       dropLast: Boolean,
       fullData: BertData,
-      rng: org.saddle.spire.random.Generator
+      rng: scala.util.Random
   ) = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       scopeInResource.map { implicit scope =>
         val (tokens, segments, positions, mlmTargets, nsTargets) = Scope {
           implicit scope =>
-            val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
+            val idxT = STen.fromLongArray(
+              idx.map(_.toLong),
+              List(idx.length),
+              fullData.maskedTokens.device
+            )
 
             val tokens = fullData.maskedTokens.index(idxT)
             val segments = fullData.segments.index(idxT)
@@ -206,9 +208,10 @@ package object bert {
     }
 
     val idx = {
-      val t = array
-        .shuffle(array.range(0, fullData.maskedTokens.shape(0).toInt), rng)
+      val t = rng
+        .shuffle(Array.range(0, fullData.maskedTokens.shape(0).toInt))
         .grouped(minibatchSize)
+        .map(_.toArray)
         .toList
       if (dropLast) t.dropRight(1)
       else t

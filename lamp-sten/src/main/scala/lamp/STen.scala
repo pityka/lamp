@@ -2,7 +2,6 @@ package lamp
 
 import aten.Tensor
 import aten.ATen
-import org.saddle._
 
 /** Companion object of [[lamp.STen]]
   *
@@ -27,67 +26,12 @@ object STen {
   }
 
   /** Returns a tensor with the given content and shape on the given device */
-  def fromMat[S: Sc](
-      m: Mat[Double],
-      cuda: Boolean = false
-  ) = owned(TensorHelpers.fromMat(m, cuda))
-
-  /** Returns a tensor with the given content and shape on the given device */
-  def fromMat[S: Sc](
-      m: Mat[Double],
-      device: Device,
-      precision: FloatingPointPrecision
-  ) = owned(TensorHelpers.fromMat(m, device, precision))
-
-  /** Returns a tensor with the given content and shape on the given device */
-  def fromFloatMat[S: Sc](
-      m: Mat[Float],
-      device: Device
-  ) = owned(TensorHelpers.fromFloatMat(m, device))
-
-  /** Returns a tensor with the given content and shape on the given device */
-  def fromVec[S: Sc](
-      m: Vec[Double],
-      cuda: Boolean = false
-  ) = owned(TensorHelpers.fromVec(m, cuda))
-
-  /** Returns a tensor with the given content and shape on the given device */
-  def fromVec[S: Sc](
-      m: Vec[Double],
-      device: Device,
-      precision: FloatingPointPrecision
-  ) = if (m.isEmpty) STen.zeros(List(0), device.options(precision))
-  else owned(TensorHelpers.fromVec(m, device, precision))
-
-  /** Returns a tensor with the given content and shape on the given device */
-  def fromLongMat[S: Sc](
-      m: Mat[Long],
-      device: Device
-  ) = owned(TensorHelpers.fromLongMat(m, device))
-
-  /** Returns a tensor with the given content and shape on the given device */
-  def fromLongMat[S: Sc](
-      m: Mat[Long],
-      cuda: Boolean = false
-  ) = owned(TensorHelpers.fromLongMat(m, cuda))
-
-  /** Returns a tensor with the given content and shape on the given device */
-  def fromLongVec[S: Sc](
-      m: Vec[Long],
-      device: Device
-  ) = if (m.isEmpty) STen.zeros(List(0), device.to(STenOptions.l))
-  else owned(TensorHelpers.fromLongVec(m, device))
-
-  /** Returns a tensor with the given content and shape on the given device */
-  def fromLongVec[S: Sc](
-      m: Vec[Long],
-      cuda: Boolean = false
-  ) = owned(TensorHelpers.fromLongVec(m, cuda))
-
-  /** Returns a tensor with the given content and shape on the given device */
   def fromLongArray[S: Sc](ar: Array[Long], dim: Seq[Long], device: Device) =
     if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.l))
     else TensorHelpers.fromLongArray(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
+  def fromLongArray[S: Sc](ar: Array[Long]) : STen = fromLongArray(ar,List(ar.length),CPU)
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromDoubleArray[S: Sc](
@@ -206,9 +150,6 @@ object STen {
     * Memory may leak.
     */
   def free(value: Tensor) = STen(value)
-
-  /** Returns a 1D tensor containing the given values */
-  def apply[S: Sc](vs: Double*) = fromVec(Vec(vs: _*))
 
   /** Wraps an aten.Tensor and registering it to the given scope */
   def owned(
@@ -665,46 +606,6 @@ case class STen private (
   def elementSize: Long = value.elementSize
 
   def numBytes: Long = numel * elementSize
-
-  /** Converts to a Mat[Double].
-    *
-    * Copies to CPU if needed. Fails if dtype is not float or double. Fails if
-    * shape does not conform a matrix.
-    */
-  def toMat = TensorHelpers.toMat(value)
-
-  /** Converts to a Mat[Float].
-    *
-    * Copies to CPU if needed. Fails if dtype is not float. Fails if shape does
-    * not conform a matrix.
-    */
-  def toFloatMat = TensorHelpers.toFloatMat(value)
-
-  /** Converts to a Mat[Long].
-    *
-    * Copies to CPU if needed. Fails if dtype is not long. Fails if shape does
-    * not conform a matrix.
-    */
-  def toLongMat = TensorHelpers.toLongMat(value)
-
-  /** Converts to a Vec[Double].
-    *
-    * Copies to CPU if needed. Fails if dtype is not float or double. Flattens
-    * the shape.
-    */
-  def toVec = TensorHelpers.toVec(value)
-
-  /** Converts to a Vec[Float].
-    *
-    * Copies to CPU if needed. Fails if dtype is not float. Flattens the shape.
-    */
-  def toFloatVec = TensorHelpers.toFloatVec(value)
-
-  /** Converts to a Vec[Long].
-    *
-    * Copies to CPU if needed. Fails if dtype is not long. Flattens the shape.
-    */
-  def toLongVec = TensorHelpers.toLongVec(value)
 
   /** Returns the shape of the tensor */
   def shape = value.sizes.toList
@@ -1649,5 +1550,9 @@ case class STen private (
   def tril[S: Sc](diagonal: Int = 0) = ATen.tril(value, diagonal.toLong).owned
   def diagonalView[S: Sc](offset: Int = 0, dim1: Int = 0, dim2: Int = 1) =
     ATen.diagonal(value, offset, dim1, dim2).owned
+
+  def toDoubleArray = TensorHelpers.toDoubleArray(value)
+  def toFloatArray = TensorHelpers.toFloatArray(value)
+  def toLongArray = TensorHelpers.toLongArray(value)
 
 }
