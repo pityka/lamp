@@ -8,6 +8,7 @@ import lamp.Scope
 import lamp.STen
 import lamp.Movable
 import cats.effect.std.CountDownLatch
+import scala.collection.compat.immutable.ArraySeq
 
 sealed trait StreamControl[+I] {
   def map[B](f: I => B): StreamControl[B]
@@ -172,7 +173,7 @@ object BatchStream {
     }
 
     val idx = {
-      val t = rng.shuffle(Array.range(0, features.sizes.head.toInt))
+      val t = rng.shuffle(ArraySeq.unsafeWrapArray(Array.range(0, features.sizes.head.toInt)))
         .grouped(minibatchSize)
         .toList.map(_.toArray)
       if (dropLast) t.dropRight(1)

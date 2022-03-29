@@ -1,7 +1,6 @@
 package lamp
 
 import org.saddle._
-import lamp._
 import lamp.STen._
 
 package object saddle {
