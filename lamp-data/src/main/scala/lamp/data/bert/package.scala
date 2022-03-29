@@ -4,11 +4,13 @@ import lamp._
 import lamp.nn.bert.{BertPretrainInput, BertLossInput}
 import lamp.data.BatchStream.scopeInResource
 import lamp.autograd.const
+import scala.collection.compat.immutable.ArraySeq
+
 
 package object bert {
 
   def pad(v: Array[Int], paddedLength: Int, padElem: Int) = {
-    val t = v.concat(Array.fill(paddedLength - v.length)(padElem))
+    val t = v.++(Array.fill(paddedLength - v.length)(padElem))
     assert(t.length == paddedLength)
     t
   }
@@ -23,10 +25,10 @@ package object bert {
   ) = {
     val mlmPositions = rng
       .shuffle(
-        Array
+        ArraySeq.unsafeWrapArray(Array
           .range(0, bertTokens.length)
           .filter(i => bertTokens(i) != clsToken && bertTokens(i) != sepToken)
-          
+        )
         
       )
       .take(math.max(1, (bertTokens.length * 0.15).toInt))
@@ -78,10 +80,10 @@ package object bert {
         else {
 
           val bertTokens = Array(clsToken)
-            .concat(sentence)
-            .concat(Array(sepToken))
-            .concat(nextSentence)
-            .concat(Array(sepToken))
+            .++(sentence)
+            .++(Array(sepToken))
+            .++(nextSentence)
+            .++(Array(sepToken))
 
           val (mlmPositions, mlmTarget, maskedBertTokens) =
             makeMaskForMaskedLanguageModel(
@@ -94,10 +96,10 @@ package object bert {
             )
 
           val bertSegments = Array(0)
-            .concat(sentence.map(_ => 0))
-            .concat(Array(0))
-            .concat(nextSentence.map(_ => 1))
-            .concat(Array(1))
+            .++(sentence.map(_ => 0))
+            .++(Array(0))
+            .++(nextSentence.map(_ => 1))
+            .++(Array(1))
 
           def to(v: Array[Int]) = STen.fromLongArray(v.map(_.toLong), List(v.length), CPU)
 
@@ -209,7 +211,7 @@ package object bert {
 
     val idx = {
       val t = rng
-        .shuffle(Array.range(0, fullData.maskedTokens.shape(0).toInt))
+        .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, fullData.maskedTokens.shape(0).toInt)))
         .grouped(minibatchSize)
         .map(_.toArray)
         .toList

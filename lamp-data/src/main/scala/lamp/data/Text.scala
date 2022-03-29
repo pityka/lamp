@@ -11,6 +11,7 @@ import lamp.nn.InitState
 import lamp.nn.FreeRunningRNN
 import lamp.Scope
 import lamp.STen
+import scala.collection.compat.immutable.ArraySeq
 
 object Text {
   def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
@@ -271,7 +272,7 @@ object Text {
     val dropped = text.drop(scala.util.Random.nextInt(timeSteps))
     val numSamples = (dropped.size - 1) / timeSteps
     val idx = rng
-      .shuffle(Array.range(0, numSamples * timeSteps, timeSteps))
+      .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, numSamples * timeSteps, timeSteps)))
       .grouped(minibatchSize)
       .toList.map(_.toArray)
       .dropRight(1)
@@ -374,7 +375,7 @@ object Text {
       }
 
     val idx = rng
-      .shuffle(Array.range(0, text.size))
+      .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, text.size)))
       .grouped(minibatchSize)
       .toList.map(_.toArray)
       .dropRight(1)

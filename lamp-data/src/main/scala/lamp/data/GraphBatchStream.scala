@@ -2,7 +2,7 @@ package lamp.data
 
 import lamp.autograd.{const}
 import lamp._
-import scala.collection.immutable.ArraySeq
+import scala.collection.compat.immutable.ArraySeq
 
 object GraphBatchStream {
 
@@ -139,7 +139,7 @@ object GraphBatchStream {
       rng
         .map(rng =>
           rng
-            .shuffle(Array.range(0, graphNodesAndEdges.length))
+            .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, graphNodesAndEdges.length)))
             .grouped(minibatchSize)
             .map(_.toArray)
             .toList
