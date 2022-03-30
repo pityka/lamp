@@ -399,7 +399,7 @@ object BatchStream {
             instancesWithOriginalIndices = instancesWithOriginalIndices,
             bucketSpecificIndices = originalIndices.map { minibatch =>
               minibatch
-                .map(i => instancesWithOriginalIndices.find(_ == i).getOrElse(-1))
+                .map(i => instancesWithOriginalIndices.indexWhere(_ == i))
                 
             }
           )
