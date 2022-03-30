@@ -22,7 +22,7 @@ case class TensorList(
   assert(
     tensors.forall(t => t.byteOffset + t.byteLength <= byteLength),
     s"Some tensor offset+length is out of bound ${tensors
-      .map(v => (v.byteOffset, v.byteLength))} total: $byteLength"
+        .map(v => (v.byteOffset, v.byteLength))} total: $byteLength"
   )
 }
 

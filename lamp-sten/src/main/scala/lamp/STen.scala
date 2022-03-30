@@ -31,7 +31,8 @@ object STen {
     else TensorHelpers.fromLongArray(ar, dim, device).owned
 
   /** Returns a tensor with the given content and shape on the given device */
-  def fromLongArray[S: Sc](ar: Array[Long]) : STen = fromLongArray(ar,List(ar.length),CPU)
+  def fromLongArray[S: Sc](ar: Array[Long]): STen =
+    fromLongArray(ar, List(ar.length), CPU)
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromDoubleArray[S: Sc](
