@@ -9,7 +9,15 @@ import lamp.Scope
 import lamp.util.NDArray
 import lamp.STen
 import lamp.STenOptions
+import lamp.saddle._
 
+object NDArraySyntax {
+  implicit class syntax[T](value: NDArray[T]) {
+    def toVec(implicit st: ST[T]) = Vec(value.data)
+  }
+}
+
+import NDArraySyntax._
 class GradientSuite extends AnyFunSuite {
   val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
     4d, 5d, 6d)
@@ -53,7 +61,7 @@ class GradientSuite extends AnyFunSuite {
   val mat3x1 = Mat(Vec(1d, 2d, 3d))
   val mat1x3 = Mat(Vec(1d, 2d, 3d)).T
   val mat3x1_2 = Mat(Vec(2d, 3d, 4d))
-  def t2x3 = STen.fromMat(mat2x3)(Scope.free)
+  def t2x3 = lamp.saddle.fromMat(mat2x3)(Scope.free)
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
   def t3x2 = t2x3.transpose(0, 1)(Scope.free)
 
@@ -189,7 +197,7 @@ class GradientSuite extends AnyFunSuite {
 
   testGradientAndValue("sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.sum
       if (doBackprop) {
         L.backprop()
@@ -202,7 +210,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("colSum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.colSum.sum
       if (doBackprop) {
         L.backprop()
@@ -215,7 +223,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("rowSum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.rowSum.sum
       if (doBackprop) {
         L.backprop()
@@ -228,8 +236,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("assign - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.assign(x1).sum
       if (doBackprop) {
         L.backprop()
@@ -242,8 +250,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("assign - left")(mat2x3, 42d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x2 = param(STen.fromMat(m, cuda))
-      val x1 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x2 = param(lamp.saddle.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.assign(x1).sum
       if (doBackprop) {
         L.backprop()
@@ -257,8 +265,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("add broadcasted - left")(Mat(Vec(1d)), 48d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = (x1.+(x2)).sum
         if (doBackprop) {
           L.backprop()
@@ -271,8 +279,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("add - left")(mat2x3, 63d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1.+(x2).sum
       if (doBackprop) {
         L.backprop()
@@ -286,8 +294,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("add broadcasted - right")(Mat(Vec(1d)), 48d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = (x2.+(x1)).sum
         if (doBackprop) {
           L.backprop()
@@ -300,8 +308,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("add - right")(mat2x3, 63d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.+(x1).sum
       if (doBackprop) {
         L.backprop()
@@ -314,8 +322,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("minus - left")(mat2x3, -21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1.-(x2).sum
       if (doBackprop) {
         L.backprop()
@@ -329,8 +337,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("minus broadcasted - left")(mat1x1, -36d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x1.-(x2).sum
         if (doBackprop) {
           L.backprop()
@@ -344,8 +352,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("minus broadcasted - right")(mat1x1, 36d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x2.-(x1).sum
         if (doBackprop) {
           L.backprop()
@@ -358,8 +366,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("minus - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.-(x1).sum
       if (doBackprop) {
         L.backprop()
@@ -372,7 +380,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("constmult")(mat2x3, 42d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.*(2d).sum
       if (doBackprop) {
         L.backprop()
@@ -386,7 +394,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("cast to float")(mat2x3, 21d, 1e-2) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.cast(lamp.SinglePrecision).sum
         if (doBackprop) {
           L.backprop()
@@ -399,7 +407,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("constadd")(mat2x3, 33d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.+(2d).sum
       if (doBackprop) {
         L.backprop()
@@ -413,8 +421,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("mult broadcasted - left")(mat1x1, 42d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x1.*(x2).sum
         if (doBackprop) {
           L.backprop()
@@ -428,8 +436,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("mult broadcasted - right")(mat1x1, 42d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x2.*(x1).sum
         if (doBackprop) {
           L.backprop()
@@ -442,8 +450,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("mult - right")(mat2x3, 182d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.*(x1).sum
       if (doBackprop) {
         L.backprop()
@@ -457,8 +465,8 @@ class GradientSuite extends AnyFunSuite {
 
   testGradientAndValue("div - left")(mat2x3, 3d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1./(x2).sum
       if (doBackprop) {
         L.backprop()
@@ -472,8 +480,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("div broadcasted - left")(mat1x1, 1.225d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x1./(x2).sum
         if (doBackprop) {
           L.backprop()
@@ -486,8 +494,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("div - right")(mat2x3, 12d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2./(x1).sum
       if (doBackprop) {
         L.backprop()
@@ -500,8 +508,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("min - left")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1.minimum(x2).sum
 
       if (doBackprop) {
@@ -515,8 +523,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("min - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
 
       val L = x2.minimum(x1).sum
       if (doBackprop) {
@@ -530,8 +538,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("max - left")(mat2x3, 42d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1.maximum(x2).sum
 
       if (doBackprop) {
@@ -545,8 +553,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("max - right")(mat2x3, 42d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
 
       val L = x2.maximum(x1).sum
       if (doBackprop) {
@@ -561,8 +569,8 @@ class GradientSuite extends AnyFunSuite {
 
   testGradientAndValue("mm - left")(mat2x3, 358d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat3x2 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat3x2 * 2, cuda))
       val L = x1.mm(x2).sum
       if (doBackprop) {
         L.backprop()
@@ -575,12 +583,12 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("diag")(mat3x1, 6d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val values = param(STen.fromMat(m, cuda))
+      val values = param(lamp.saddle.fromMat(m, cuda))
 
       val d = values.view(List(-1)).diag(0L)
 
-      assert(d.toMat.numCols == 3)
-      assert(d.toMat.numRows == 3)
+      assert(d.value.toMat.numCols == 3)
+      assert(d.value.toMat.numRows == 3)
 
       val L = d.sum
       if (doBackprop) {
@@ -594,10 +602,10 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("inv")(mat2x2, -0.5) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val values = param(STen.fromMat(m, cuda))
+      val values = param(lamp.saddle.fromMat(m, cuda))
 
       val i = values.inv
-      assert(i.toMat.roundTo(4) == m.invert.roundTo(4))
+      assert(i.value.toMat.roundTo(4) == m.invert.roundTo(4))
       val L = i.sum
       if (doBackprop) {
         L.backprop()
@@ -610,10 +618,10 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("inv2")(mat3x3, 2d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val values = param(STen.fromMat(m, cuda))
+      val values = param(lamp.saddle.fromMat(m, cuda))
 
       val i = values.inv
-      assert(i.toMat.roundTo(4) == m.invert.roundTo(4))
+      assert(i.value.toMat.roundTo(4) == m.invert.roundTo(4))
       val L = i.sum
       if (doBackprop) {
         L.backprop()
@@ -626,7 +634,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("pinv")(mat3x3, 2d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val values = param(STen.fromMat(m, cuda))
+      val values = param(lamp.saddle.fromMat(m, cuda))
 
       val i = values.pinv()
       val L = i.sum
@@ -641,7 +649,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("pinv batch ")(mat3x3, 2d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val t1 = STen.fromMat(m, cuda)
+      val t1 = lamp.saddle.fromMat(m, cuda)
       val values = param(STen.stack(List(t1, t1), 0))
 
       val i = values.pinv().select(0, 0)
@@ -673,10 +681,10 @@ class GradientSuite extends AnyFunSuite {
 
   testGradientAndValue("sparse to dense")(mat3x1, 6d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val values = param(STen.fromMat(m, cuda))
+      val values = param(lamp.saddle.fromMat(m, cuda))
 
       val idx =
-        STen.fromLongMat(Mat(Vec(1L, 0L, 1L), Vec(0L, 1L, 1L)).T, cuda)
+        lamp.saddle.fromLongMat(Mat(Vec(1L, 0L, 1L), Vec(0L, 1L, 1L)).T, cuda)
 
       val dim = List(3L, 2L)
 
@@ -689,7 +697,7 @@ class GradientSuite extends AnyFunSuite {
         .toDense
 
       assert(
-        dense.toMat.roundTo(4) == Mat(
+        dense.value.toMat.roundTo(4) == Mat(
           Vec(0d, mat3x1.raw(0), 0d),
           Vec(mat3x1.raw(1), mat3x1.raw(2), 0d)
         ).roundTo(4)
@@ -708,11 +716,11 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("sparse mm - right")(mat2x3, 54d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = {
           val idx =
-            STen.fromLongMat(Mat(Vec(1L, 0L), Vec(0L, 1L)), cuda)
-          val values = STen.fromVec(Vec(2d, 3d), cuda)
+            lamp.saddle.fromLongMat(Mat(Vec(1L, 0L), Vec(0L, 1L)), cuda)
+          val values = lamp.saddle.fromVec(Vec(2d, 3d), cuda)
           val topt = if (cuda) STenOptions.d.cudaIndex(0) else STenOptions.d
           val sp = STen.sparse_coo(idx, values, List(3, 2), topt)
           const(sp)
@@ -729,8 +737,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("mm - right")(mat2x3, 450d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat3x2 * 2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat3x2 * 2, cuda))
       val L = x2.mm(x1).sum
       if (doBackprop) {
         L.backprop()
@@ -744,8 +752,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("crossentropy - left")(mat2x3, -182.0) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
 
         val L = x1.crossEntropy(x2).sum
         if (doBackprop) {
@@ -760,8 +768,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("crossentropy - right")(mat2x3, -182.0) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3 * 2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x2.crossEntropy(x1).sum
         if (doBackprop) {
           L.backprop()
@@ -775,7 +783,7 @@ class GradientSuite extends AnyFunSuite {
 
   testGradientAndValue("leakyrelu")(mat2x3_2, 13.5) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.leakyRelu(0.5).sum
       if (doBackprop) {
         L.backprop()
@@ -788,7 +796,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("relu")(mat2x3_2, 16d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.relu.sum
       if (doBackprop) {
         L.backprop()
@@ -801,7 +809,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("gelu")(mat2x3_2, 15.7917) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.gelu.sum
       if (doBackprop) {
         L.backprop()
@@ -814,7 +822,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("sigmoid")(mat2x3_2, 4.1111) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.sigmoid.sum
       if (doBackprop) {
         L.backprop()
@@ -828,7 +836,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("exp")(mat2x3_2, 579.7027406974902) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.exp.sum
         if (doBackprop) {
           L.backprop()
@@ -841,7 +849,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("logdet")(mat2x2PD, 1.3863) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.logdet.sum
       if (doBackprop) {
         L.backprop()
@@ -855,7 +863,7 @@ class GradientSuite extends AnyFunSuite {
   // won't pass because the grad is symmetrized
   // testGradientAndValue("cholesky")(mat2x2PD, 9.7073) { (m, doBackprop, cuda) =>
   //   Scope.leak { implicit scope =>
-  //     val x1 = param(STen.fromMat(m, cuda))
+  //     val x1 = param(lamp.saddle.fromMat(m, cuda))
   //     val L = x1.cholesky().sum
   //     if (doBackprop) {
   //       L.backprop()
@@ -869,8 +877,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("cholesky solve, b")(mat2x2, 58.2500) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val l = param(STen.fromMat(mat2x2PD).choleskyLower)
-        val x1 = param(STen.fromMat(m, cuda))
+        val l = param(lamp.saddle.fromMat(mat2x2PD).choleskyLower)
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.choleskySolve(l, false).sum
         if (doBackprop) {
           L.backprop()
@@ -885,7 +893,7 @@ class GradientSuite extends AnyFunSuite {
   // testGradientAndValue("cholesky solve, f")(mat2x2PDCholeskyFactor, 6.25d) {
   //   (m, doBackprop, cuda) =>
   //     Scope.leak { implicit scope =>
-  //       val x1 = param(STen.fromMat(m, cuda))
+  //       val x1 = param(lamp.saddle.fromMat(m, cuda))
   //       val b = param(STen.eye(2))
   //       val L = b.choleskySolve(x1, false).sum
   //       if (doBackprop) {
@@ -900,7 +908,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("log")(mat2x3, 6.579251212010101) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.log.sum
         if (doBackprop) {
           L.backprop()
@@ -913,7 +921,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("log1p")(mat2x3, 8.5252) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.log1p.sum
       if (doBackprop) {
         L.backprop()
@@ -926,7 +934,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("softplus")(mat2x3, 21.0000) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.softplus(beta = 2d, threshold = 0d).sum
       if (doBackprop) {
         L.backprop()
@@ -939,8 +947,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("cross left")(mat2x3, 28.0000) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = const(STen.fromMat(mat2x3_2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = const(lamp.saddle.fromMat(mat2x3_2, cuda))
       val L = x1.cross(x2, 1).sum
       if (doBackprop) {
         L.backprop()
@@ -954,8 +962,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("cross right")(mat2x3, -28.0000) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = const(STen.fromMat(mat2x3_2, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = const(lamp.saddle.fromMat(mat2x3_2, cuda))
         val L = x2.cross(x1, 1).sum
         if (doBackprop) {
           L.backprop()
@@ -969,7 +977,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("sin")(mat2x3_2, -0.27259082747648367) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.sin.sum
         if (doBackprop) {
           L.backprop()
@@ -983,7 +991,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("cos")(mat2x3_2, -0.2756481760294678) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.cos.sum
         if (doBackprop) {
           L.backprop()
@@ -997,7 +1005,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("tan")(mat2x3_2, -8.71433661097161) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.tan.sum
         if (doBackprop) {
           L.backprop()
@@ -1012,7 +1020,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("atan")(mat2x3_2, 3.02402707945215) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.atan.sum
         if (doBackprop) {
           L.backprop()
@@ -1025,10 +1033,10 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("capped exp")(mat3x1, 2.6065) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val out = new CappedShiftedNegativeExponential(scope, x1, 2.5d).value
       assert(
-        out.toMat.roundTo(4) == Mat(Vec(1d, 1d, math.exp(-0.5))).roundTo(4)
+        out.value.toMat.roundTo(4) == Mat(Vec(1d, 1d, math.exp(-0.5))).roundTo(4)
       )
       val L = out.sum
       if (doBackprop) {
@@ -1042,7 +1050,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("pow")(mat2x3_2, 91d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.pow(2d).sum
       if (doBackprop) {
         L.backprop()
@@ -1056,11 +1064,11 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("euclidean distance wrt a")(mat2x3_2, 10d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val out =
-          x1.euclideanDistance(const(STen.fromMat(mat2x3, cuda)), 1)
+          x1.euclideanDistance(const(lamp.saddle.fromMat(mat2x3, cuda)), 1)
         assert(out.shape == List(2, 1))
-        assert(out.toMat.roundTo(4) == Mat(Vec(2d, 8d)))
+        assert(out.value.toMat.roundTo(4) == Mat(Vec(2d, 8d)))
         val L = out.sum
         if (doBackprop) {
           L.backprop()
@@ -1074,11 +1082,11 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("euclidean distance wrt b")(mat2x3_2, 10d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val out =
-          const(STen.fromMat(mat2x3, cuda)).euclideanDistance(x1, 1)
+          const(lamp.saddle.fromMat(mat2x3, cuda)).euclideanDistance(x1, 1)
         assert(out.shape == List(2, 1))
-        assert(out.toMat.roundTo(4) == Mat(Vec(2d, 8d)))
+        assert(out.value.toMat.roundTo(4) == Mat(Vec(2d, 8d)))
         val L = out.sum
         if (doBackprop) {
           L.backprop()
@@ -1091,8 +1099,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("pow  2")(mat1x1, 11d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = param(STen.fromMat(mat2x3_2, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = param(lamp.saddle.fromMat(mat2x3_2, cuda))
       val L = x2.pow(x1).sum
       if (doBackprop) {
         L.backprop()
@@ -1105,7 +1113,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("tanh")(mat2x3_2, 2.1981) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.tanh.sum
       if (doBackprop) {
         L.backprop()
@@ -1119,9 +1127,9 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("where true branch")(mat2x3_2, 21d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
-        val x2 = param(STen.fromMat(mat2x3, cuda))
-        val L = Variable.where(STen.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
+        val x2 = param(lamp.saddle.fromMat(mat2x3, cuda))
+        val L = Variable.where(lamp.saddle.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
         if (doBackprop) {
           L.backprop()
         }
@@ -1134,9 +1142,9 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("where false branch")(mat2x3, 21d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(mat2x3_2, cuda))
-        val x2 = param(STen.fromMat(m, cuda))
-        val L = Variable.where(STen.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
+        val x1 = param(lamp.saddle.fromMat(mat2x3_2, cuda))
+        val x2 = param(lamp.saddle.fromMat(m, cuda))
+        val L = Variable.where(lamp.saddle.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
         if (doBackprop) {
           L.backprop()
         }
@@ -1149,7 +1157,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("softmax")(mat2x3_2, -22.441910257332836) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.logSoftMax(dim = 1).sum
         if (doBackprop) {
           L.backprop()
@@ -1163,7 +1171,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("squaredFrobenius")(mat2x3_2, 91d) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val x1 = param(STen.fromMat(m, cuda))
+        val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.squaredFrobenius.sum
         if (doBackprop) {
           L.backprop()
@@ -1176,7 +1184,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("transpose")(mat2x3_2, 11d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.t.sum
       if (doBackprop) {
         L.backprop()
@@ -1189,7 +1197,7 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("mean")(mat2x3_2, 1.8333d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.mean(List(0, 1))
       if (doBackprop) {
         L.backprop()
@@ -1202,8 +1210,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("mse loss")(mat3x1, 1d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = STen.fromMat(mat3x1_2, cuda)
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = lamp.saddle.fromMat(mat3x1_2, cuda)
       val L = x1.mseLoss(x2.squeeze).sum
       if (doBackprop) {
         L.backprop()
@@ -1216,8 +1224,8 @@ class GradientSuite extends AnyFunSuite {
   }
   testGradientAndValue("l1 loss")(mat3x1, 1d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
-      val x1 = param(STen.fromMat(m, cuda))
-      val x2 = STen.fromMat(mat3x1_2, cuda)
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x2 = lamp.saddle.fromMat(mat3x1_2, cuda)
       val L = x1.l1Loss(x2.squeeze).sum
       if (doBackprop) {
         L.backprop()
@@ -1233,9 +1241,9 @@ class GradientSuite extends AnyFunSuite {
     151.0000008318073
   ) { (m, doBackprop, _) =>
     Scope.leak { implicit scope =>
-      val w = param(STen.fromMat(m))
-      val data = const(STen.fromMat(mat3x2))
-      val y = const(STen.fromMat(mat.ident(3)))
+      val w = param(lamp.saddle.fromMat(m))
+      val data = const(lamp.saddle.fromMat(mat3x2))
+      val y = const(lamp.saddle.fromMat(mat.ident(3)))
       val L =
         ((data
           .mm(w))
@@ -1256,10 +1264,10 @@ class GradientSuite extends AnyFunSuite {
     54.5067
   ) { (m, doBackprop, _) =>
     Scope.leak { implicit scope =>
-      val w = param(STen.fromMat(m))
-      val data = const(STen.fromMat(mat3x2))
+      val w = param(lamp.saddle.fromMat(m))
+      val data = const(lamp.saddle.fromMat(mat3x2))
       val y =
-        const(STen.fromMat(Mat(Vec(0d, 1d, 0.5d), Vec(0d, 0.5, 1d))))
+        const(lamp.saddle.fromMat(Mat(Vec(0d, 1d, 0.5d), Vec(0d, 0.5, 1d))))
       val classWeights = STen.ones(List(1, 2), w.value.options)
       val L =
         ((data
@@ -1279,10 +1287,10 @@ class GradientSuite extends AnyFunSuite {
     151.0000008318073
   ) { (m, doBackprop, _) =>
     Scope.leak { implicit scope =>
-      val w = param(STen.fromMat(m))
-      val data = const(STen.fromMat(mat3x2))
+      val w = param(lamp.saddle.fromMat(m))
+      val data = const(lamp.saddle.fromMat(mat3x2))
       val y =
-        const(STen.fromLongMat(Mat(Vec(0L, 1L, 2L))).squeeze)
+        const(lamp.saddle.fromLongMat(Mat(Vec(0L, 1L, 2L))).squeeze)
       val classWeights = STen.ones(List(3), w.value.options)
       val L =
         ((data
@@ -1303,10 +1311,10 @@ class GradientSuite extends AnyFunSuite {
     151.0000008318073
   ) { (m, doBackprop, _) =>
     Scope.leak { implicit scope =>
-      val w = param(STen.fromMat(m))
-      val data = const(STen.fromMat(mat3x2))
+      val w = param(lamp.saddle.fromMat(m))
+      val data = const(lamp.saddle.fromMat(mat3x2))
       val y =
-        const(STen.fromLongMat(Mat(Vec(0L, 1L, 2L))).squeeze)
+        const(lamp.saddle.fromLongMat(Mat(Vec(0L, 1L, 2L))).squeeze)
       val classWeights = STen.ones(List(3), w.value.options)
       val L =
         ((data
@@ -1326,8 +1334,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("weight norm - wrt g")(mat2x3.row(Array(0)), 12.7279) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val v = param(STen.fromMat(mat.ones(2, 3), cuda))
-        val g = param(STen.fromMat(m, cuda))
+        val v = param(lamp.saddle.fromMat(mat.ones(2, 3), cuda))
+        val g = param(lamp.saddle.fromMat(m, cuda))
         val L = new WeightNorm(scope, v, g, 0).value.sum
         if (doBackprop) {
           L.backprop()
@@ -1341,8 +1349,8 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("weight norm - wrt v")(mat2x3, 4.1500) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
-        val v = param(STen.fromMat(m, cuda))
-        val g = param(STen.fromMat(mat.ones(1, 3), cuda))
+        val v = param(lamp.saddle.fromMat(m, cuda))
+        val g = param(lamp.saddle.fromMat(mat.ones(1, 3), cuda))
         val L = new WeightNorm(scope, v, g, 0).value.sum
         if (doBackprop) {
           L.backprop()
@@ -1460,7 +1468,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("scatter sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val input =
-        param(STen.fromMat(m, cuda))
+        param(lamp.saddle.fromMat(m, cuda))
       val index =
         param(
           STen.owned(
@@ -1488,7 +1496,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("variance")(mat2x3, 8d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val input =
-        param(STen.fromMat(m, cuda))
+        param(lamp.saddle.fromMat(m, cuda))
 
       val output = input.variance(List(1))
       val L = output.sum
@@ -1504,7 +1512,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("index sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val input =
-        param(STen.fromMat(m, cuda))
+        param(lamp.saddle.fromMat(m, cuda))
       val index =
         param(
           STen.owned(
@@ -1519,7 +1527,7 @@ class GradientSuite extends AnyFunSuite {
         )
       val output = input.indexAdd(index, 0, 2)
       assert(
-        output.toMat.roundTo(4) == Mat(Vec(0d, 0d, 0d), Vec(3d, 7d, 11d)).T
+        output.value.toMat.roundTo(4) == Mat(Vec(0d, 0d, 0d), Vec(3d, 7d, 11d)).T
       )
       val L = output.sum
       if (doBackprop) {
@@ -1535,8 +1543,8 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(m, cuda))
-        val src = param(STen.fromMat(mat3x1.T, cuda))
+          param(lamp.saddle.fromMat(m, cuda))
+        val src = param(lamp.saddle.fromMat(mat3x1.T, cuda))
         val index =
           param(
             STen.owned(
@@ -1551,7 +1559,7 @@ class GradientSuite extends AnyFunSuite {
           )
         val output = input.indexAddFromSource(index, 0, src)
         assert(
-          output.toMat.roundTo(4) == Mat(Vec(2d, 5d, 8d), Vec(2d, 4d, 6d)).T
+          output.value.toMat.roundTo(4) == Mat(Vec(2d, 5d, 8d), Vec(2d, 4d, 6d)).T
         )
         val L = output.sum
         if (doBackprop) {
@@ -1567,8 +1575,8 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(mat2x3, cuda))
-        val src = param(STen.fromMat(m, cuda))
+          param(lamp.saddle.fromMat(mat2x3, cuda))
+        val src = param(lamp.saddle.fromMat(m, cuda))
         val index =
           param(
             STen.owned(
@@ -1583,7 +1591,7 @@ class GradientSuite extends AnyFunSuite {
           )
         val output = input.indexAddFromSource(index, 0, src)
         assert(
-          output.toMat.roundTo(4) == Mat(Vec(2d, 5d, 8d), Vec(2d, 4d, 6d)).T
+          output.value.toMat.roundTo(4) == Mat(Vec(2d, 5d, 8d), Vec(2d, 4d, 6d)).T
         )
         val L = output.sum
         if (doBackprop) {
@@ -1599,7 +1607,7 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(m, cuda))
+          param(lamp.saddle.fromMat(m, cuda))
         val index =
           param(
             STen.owned(
@@ -1614,7 +1622,7 @@ class GradientSuite extends AnyFunSuite {
           )
         val output = input.repeatInterleave(index, 0)
         assert(
-          output.toMat.roundTo(4) == Mat(
+          output.value.toMat.roundTo(4) == Mat(
             Vec(1d, 1d, 2d, 2d, 2d),
             Vec(3d, 3d, 4d, 4d, 4d),
             Vec.apply[Double](5d, 5d, 6d, 6d, 6d)
@@ -1661,7 +1669,7 @@ class GradientSuite extends AnyFunSuite {
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3, cuda)))
         val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv1D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
@@ -1682,7 +1690,7 @@ class GradientSuite extends AnyFunSuite {
           param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
         val weight = param(STen.owned(NDArray.tensorFromNDArray(nd1x2x2, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv1D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
@@ -1704,7 +1712,7 @@ class GradientSuite extends AnyFunSuite {
         val weight =
           param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv1D(scope, input, weight, bias, 1L, 1L, 1L, 1L).value
 
@@ -1725,7 +1733,7 @@ class GradientSuite extends AnyFunSuite {
           param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
         val weight = param(STen.owned(NDArray.tensorFromNDArray(nd1x2x2, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv1D(scope, input, weight, bias, 1, 1, 1, 1L).value
 
@@ -1746,7 +1754,7 @@ class GradientSuite extends AnyFunSuite {
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3, cuda)))
         val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv1D(scope, input, weight, bias, 2L, 1L, 1L, 1L).value
 
@@ -1767,7 +1775,7 @@ class GradientSuite extends AnyFunSuite {
           param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
         val weight = param(STen.owned(NDArray.tensorFromNDArray(nd1x2x2, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv1D(scope, input, weight, bias, 2, 1, 1, 1L).value
 
@@ -1809,7 +1817,7 @@ class GradientSuite extends AnyFunSuite {
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
         val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv2D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
@@ -1832,7 +1840,7 @@ class GradientSuite extends AnyFunSuite {
         param(STen.owned(NDArray.tensorFromNDArray(nd1x4x3x3, cuda)))
       val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-      val bias = param(STen.fromVec(vec.ones(2), cuda))
+      val bias = param(lamp.saddle.fromVec(vec.ones(2), cuda))
       val output =
         new Conv2D(scope, input, weight, bias, 1, 0, 1, 2L).value
 
@@ -1854,7 +1862,7 @@ class GradientSuite extends AnyFunSuite {
         val weight =
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x2x2, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv2D(scope, input, weight, bias, 1, 0, 1, 1L).value
 
@@ -1876,7 +1884,7 @@ class GradientSuite extends AnyFunSuite {
         val weight =
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x2x2, cuda)))
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv2D(scope, input, weight, bias, 1, 1, 1, 1L).value
 
@@ -2030,12 +2038,12 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(m, cuda))
-        val weight = param(STen.fromVec(Vec(1d, 2d, 3d), cuda))
+          param(lamp.saddle.fromMat(m, cuda))
+        val weight = param(lamp.saddle.fromVec(Vec(1d, 2d, 3d), cuda))
 
-        val bias = param(STen.fromVec(vec.zeros(3), cuda))
-        val runningMean = STen.fromVec(vec.ones(3), cuda)
-        val runningVar = STen.fromVec(vec.ones(3), cuda)
+        val bias = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
+        val runningMean = lamp.saddle.fromVec(vec.ones(3), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(3), cuda)
 
         val output =
           new BatchNorm(
@@ -2064,12 +2072,12 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(mat2x3, cuda))
+          param(lamp.saddle.fromMat(mat2x3, cuda))
         val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-        val bias = param(STen.fromVec(vec.zeros(3), cuda))
-        val runningMean = STen.fromVec(vec.ones(3), cuda)
-        val runningVar = STen.fromVec(vec.ones(3), cuda)
+        val bias = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
+        val runningMean = lamp.saddle.fromVec(vec.ones(3), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(3), cuda)
 
         val output =
           new BatchNorm(
@@ -2098,12 +2106,12 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(mat2x3, cuda))
+          param(lamp.saddle.fromMat(mat2x3, cuda))
         val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-        val weight = param(STen.fromVec(vec.zeros(3), cuda))
-        val runningMean = STen.fromVec(vec.ones(3), cuda)
-        val runningVar = STen.fromVec(vec.ones(3), cuda)
+        val weight = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
+        val runningMean = lamp.saddle.fromVec(vec.ones(3), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(3), cuda)
 
         val output =
           new BatchNorm(
@@ -2133,10 +2141,10 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(m, cuda))
-        val weight = param(STen.fromVec(Vec(1d, 2d, 3d), cuda))
+          param(lamp.saddle.fromMat(m, cuda))
+        val weight = param(lamp.saddle.fromVec(Vec(1d, 2d, 3d), cuda))
 
-        val bias = param(STen.fromVec(vec.zeros(3), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
 
         val output =
           new LayerNormOp(
@@ -2162,10 +2170,10 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(mat2x3, cuda))
+          param(lamp.saddle.fromMat(mat2x3, cuda))
         val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-        val bias = param(STen.fromVec(vec.zeros(3), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
 
         val output =
           new LayerNormOp(
@@ -2191,10 +2199,10 @@ class GradientSuite extends AnyFunSuite {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
         val input =
-          param(STen.fromMat(mat2x3, cuda))
+          param(lamp.saddle.fromMat(mat2x3, cuda))
         val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-        val weight = param(STen.fromVec(vec.zeros(3), cuda))
+        val weight = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
 
         val output =
           new LayerNormOp(
@@ -2257,11 +2265,11 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val input =
           param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val bias = param(STen.fromVec(vec.ones(6), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(6), cuda))
 
-        val weight = param(STen.fromVec(vec.ones(6), cuda))
-        val runningMean = STen.fromVec(vec.ones(6), cuda)
-        val runningVar = STen.fromVec(vec.ones(6), cuda)
+        val weight = param(lamp.saddle.fromVec(vec.ones(6), cuda))
+        val runningMean = lamp.saddle.fromVec(vec.ones(6), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(6), cuda)
 
         val output =
           new BatchNorm(
@@ -2291,11 +2299,11 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val input =
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3, cuda)))
-        val bias = param(STen.fromVec(vec.ones(6), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(6), cuda))
 
         val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val runningMean = STen.fromVec(vec.ones(6), cuda)
-        val runningVar = STen.fromVec(vec.ones(6), cuda)
+        val runningMean = lamp.saddle.fromVec(vec.ones(6), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(6), cuda)
 
         val output =
           new BatchNorm(
@@ -2325,11 +2333,11 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val input =
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3, cuda)))
-        val weight = param(STen.fromVec(vec.ones(6), cuda))
+        val weight = param(lamp.saddle.fromVec(vec.ones(6), cuda))
 
         val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val runningMean = STen.fromVec(vec.ones(6), cuda)
-        val runningVar = STen.fromVec(vec.ones(6), cuda)
+        val runningMean = lamp.saddle.fromVec(vec.ones(6), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(6), cuda)
 
         val output =
           new BatchNorm(
@@ -2359,11 +2367,11 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val input =
           param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val bias = param(STen.fromVec(vec.ones(18), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(18), cuda))
 
-        val weight = param(STen.fromVec(vec.ones(18), cuda))
-        val runningMean = STen.fromVec(vec.ones(18), cuda)
-        val runningVar = STen.fromVec(vec.ones(18), cuda)
+        val weight = param(lamp.saddle.fromVec(vec.ones(18), cuda))
+        val runningMean = lamp.saddle.fromVec(vec.ones(18), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(18), cuda)
 
         val output =
           new BatchNorm(
@@ -2393,11 +2401,11 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val input =
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
-        val bias = param(STen.fromVec(vec.ones(18), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(18), cuda))
 
         val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val runningMean = STen.fromVec(vec.ones(18), cuda)
-        val runningVar = STen.fromVec(vec.ones(18), cuda)
+        val runningMean = lamp.saddle.fromVec(vec.ones(18), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(18), cuda)
 
         val output =
           new BatchNorm(
@@ -2427,11 +2435,11 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val input =
           param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
-        val weights = param(STen.fromVec(vec.ones(18), cuda))
+        val weights = param(lamp.saddle.fromVec(vec.ones(18), cuda))
 
         val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val runningMean = STen.fromVec(vec.ones(18), cuda)
-        val runningVar = STen.fromVec(vec.ones(18), cuda)
+        val runningMean = lamp.saddle.fromVec(vec.ones(18), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.ones(18), cuda)
 
         val output =
           new BatchNorm(
@@ -2461,11 +2469,11 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val input =
           param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val weights = param(STen.fromVec(vec.ones(2), cuda))
+        val weights = param(lamp.saddle.fromVec(vec.ones(2), cuda))
 
         val bias = param(STen.owned(NDArray.tensorFromNDArray(ndx2, cuda)))
-        val runningMean = STen.fromVec(vec.zeros(2), cuda)
-        val runningVar = STen.fromVec(vec.zeros(2), cuda)
+        val runningMean = lamp.saddle.fromVec(vec.zeros(2), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.zeros(2), cuda)
 
         val output =
           new BatchNorm2D(
@@ -2498,8 +2506,8 @@ class GradientSuite extends AnyFunSuite {
         val weights = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
         val bias = param(STen.owned(NDArray.tensorFromNDArray(ndx2, cuda)))
-        val runningMean = STen.fromVec(vec.zeros(2), cuda)
-        val runningVar = STen.fromVec(vec.zeros(2), cuda)
+        val runningMean = lamp.saddle.fromVec(vec.zeros(2), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.zeros(2), cuda)
 
         val output =
           new BatchNorm2D(
@@ -2532,8 +2540,8 @@ class GradientSuite extends AnyFunSuite {
         val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
         val weights = param(STen.owned(NDArray.tensorFromNDArray(ndx2, cuda)))
-        val runningMean = STen.fromVec(vec.zeros(2), cuda)
-        val runningVar = STen.fromVec(vec.zeros(2), cuda)
+        val runningMean = lamp.saddle.fromVec(vec.zeros(2), cuda)
+        val runningVar = lamp.saddle.fromVec(vec.zeros(2), cuda)
 
         val output =
           new BatchNorm2D(
@@ -2765,9 +2773,9 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("embedding ")(mat2x3, 240d) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val weight =
-        param(STen.fromMat(m, cuda))
+        param(lamp.saddle.fromMat(m, cuda))
       val input =
-        param(STen.fromLongMat(mat.ones(4, 5).map(_.toLong), cuda))
+        param(lamp.saddle.fromLongMat(mat.ones(4, 5).map(_.toLong), cuda))
 
       val output = new Embedding(scope, input, weight).value
 
@@ -2796,7 +2804,7 @@ class GradientSuite extends AnyFunSuite {
               .transpose(0, 1)
           )
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv2DTransposed(scope, input, weight, bias, 1, 0, 1).value
 
@@ -2825,7 +2833,7 @@ class GradientSuite extends AnyFunSuite {
             .transpose(0, 1)
         )
 
-      val bias = param(STen.fromVec(vec.ones(1), cuda))
+      val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
       val output =
         new Conv2DTransposed(scope, input, weight, bias, 1, 1, 1).value
 
@@ -2852,7 +2860,7 @@ class GradientSuite extends AnyFunSuite {
               .transpose(0, 1)
           )
 
-        val bias = param(STen.fromVec(vec.ones(1), cuda))
+        val bias = param(lamp.saddle.fromVec(vec.ones(1), cuda))
         val output =
           new Conv2DTransposed(scope, input, weight, bias, 1, 0, 1).value
 

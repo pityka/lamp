@@ -467,8 +467,9 @@ sealed trait Variable {
     (this.minimum(max)).maximum(min)
   def debug[S: Sc](fun: (STen, Boolean, Boolean) => Unit) =
     new Debug(extractScope, this, fun).value
-  def toMat = value.toMat
-  def toLongMat = value.toLongMat
+
+  def toDoubleArray = value.toDoubleArray
+  def toLongArray = value.toLongArray
 }
 
 object Autograd {

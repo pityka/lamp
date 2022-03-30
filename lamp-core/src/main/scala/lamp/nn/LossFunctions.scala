@@ -85,7 +85,7 @@ object LossFunctions {
         val t1 = STen.owned(ATen.select(target.value, 0, t))
         val ignored = ATen.eq_1(t1.value, ignoreScalar)
         val sumT = ATen.sum_0(ignored)
-        val ignoredCount = sumT.toLongMat.raw(0)
+        val ignoredCount = sumT.toLongArray.apply(0)
         val count = batches - ignoredCount
         Tensor.releaseAll(Array(sumT, ignored))
         val v = out

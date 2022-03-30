@@ -877,7 +877,7 @@ case class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val exp = exponent.toMat.raw(0)
+        val exp = exponent.toDoubleArray.apply(0)
         val tmp1 = a.value.pow(exp - 1)
         out.addcmulSelf(p, tmp1, exp)
       }
@@ -885,7 +885,7 @@ case class Pow(scope: Scope, a: Variable, exponent: Variable) extends Op {
     },
     exponent.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val exp = exponent.toMat.raw(0)
+        val exp = exponent.toDoubleArray.apply(0)
         val tmp1 = a.value.pow(exp)
         val tmp2 = a.value.log
         val tmp3 = tmp1 * tmp2
@@ -2394,8 +2394,8 @@ case class Embedding(scope: Scope, input: Variable, weight: Variable)
     } catch {
       case e: Throwable =>
         println(weight.shape)
-        println(input.value.toLongMat.toVec.min)
-        println(input.value.toLongMat.toVec.max)
+        println(input.value.toLongArray.min)
+        println(input.value.toLongArray.max)
         throw e
     }
 }
@@ -2565,8 +2565,8 @@ case class Debug(
   val params = List(
     a.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val hasna = p.isnan.any.castToLong.toLongMat.raw(0) == 1
-        val hasbig = p.ge(1e6).any.castToLong.toLongMat.raw(0) == 1
+        val hasna = p.isnan.any.castToLong.toLongArray.apply(0) == 1
+        val hasbig = p.ge(1e6).any.castToLong.toLongArray.apply(0) == 1
         callback(p, hasna, hasbig)
 
       }

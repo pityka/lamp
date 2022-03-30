@@ -54,7 +54,7 @@ case class AdamW(
     state.zip(tensors).foreach { case (current, incoming) =>
       current.copyFrom(incoming)
     }
-    stepCount = stepCountSTen.toMat.raw(0).toLong
+    stepCount = stepCountSTen.toDoubleArray.apply(0).toLong
 
   }
 

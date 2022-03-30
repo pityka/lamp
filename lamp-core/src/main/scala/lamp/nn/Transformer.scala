@@ -569,23 +569,24 @@ object PositionalEmbedding {
       device: Device,
       precision: FloatingPointPrecision
   ) = {
-    val m = org.saddle.mat.zeros(sequenceLength, dimension)
+    val m = Array.ofDim[Double](sequenceLength * dimension)
     var i = 0
     var j = 0
+    val N = dimension / 2
     while (i < sequenceLength) {
-      while (j < dimension / 2) {
+      while (j < N) {
         val v1 = math.sin(i / math.pow(10000d, (2d * j) / dimension))
         val v2 = math.cos(i / math.pow(10000d, (2d * j) / dimension))
-        m.mutateSetCell(i, 2 * j, v1)
+        m(i * dimension + 2 * j) = v1
         if (2 * j + 1 < dimension) {
-          m.mutateSetCell(i, 2 * j + 1, v2)
+          m(i * dimension + 2 * j + 1) = v2
         }
         j += 1
       }
       j = 0
       i += 1
     }
-    STen.fromMat(m, device, precision)
+    STen.fromDoubleArray(m, List(sequenceLength, dimension), device, precision)
   }
 
   /** p(i,j) = min(maxDist,abs(i-j)) returns the first `dimension` left singular
@@ -600,20 +601,25 @@ object PositionalEmbedding {
   )(implicit
       scope: Scope
   ) = {
-    val m = org.saddle.mat.zeros(sequenceLength, sequenceLength)
+    val m = Array.ofDim[Double](sequenceLength * sequenceLength)
     var i = 0
     var j = 0
     while (i < sequenceLength) {
       while (j < sequenceLength) {
         val v = math.min(maxDistance, math.abs(j - i))
-        m.mutateSetCell(i, j, v)
+        m(i * sequenceLength + j) = v
         j += 1
       }
       j = 0
       i += 1
     }
     lamp.Scope { implicit scope =>
-      val t = STen.fromMat(m, device, precision)
+      val t = STen.fromDoubleArray(
+        m,
+        List(sequenceLength, sequenceLength),
+        device,
+        precision
+      )
       val len = (t * t).sum(dim = 1, keepDim = false).sqrt
       val normed = t / len.view(-1, 1)
       val (u, s, _) = normed.svd()

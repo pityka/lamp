@@ -76,7 +76,7 @@ package object nn {
     val norm = math.sqrt((gradients.map {
       case Some(g) =>
         Scope.leak { implicit scope =>
-          g.pow(2d).sum.toMat.raw(0)
+          g.pow(2d).sum.toDoubleArray.apply(0)
         }
       case None => 0d
     }: Seq[Double]).sum)

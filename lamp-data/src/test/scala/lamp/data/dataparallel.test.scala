@@ -39,9 +39,9 @@ class DataParallelLoopSuite extends AnyFunSuite {
         .toOption
         .get
       val x =
-        STen.fromMat(data.filterIx(_ != "label").toMat)
+        lamp.saddle.fromMat(data.filterIx(_ != "label").toMat)
       val target =
-        STen
+        lamp.saddle
           .fromLongMat(
             Mat(data.firstCol("label").toVec.map(_.toLong))
           )
@@ -66,7 +66,7 @@ class DataParallelLoopSuite extends AnyFunSuite {
         LossFunctions.NLL(10, device2.to(classWeights))
       )
 
-      val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(2342L)
+      val rng = new scala.util.Random(3123)
 
       val (_, trainedModel, _, _, _) = IOLoops
         .epochs(
@@ -96,7 +96,7 @@ class DataParallelLoopSuite extends AnyFunSuite {
           acc,
           true
         )
-      val loss = acc.toMat.raw(0) / n
+      val loss = acc.toDoubleArray.head / n
       println(loss)
       assert(loss < 1.5)
     }

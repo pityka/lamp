@@ -6,10 +6,9 @@ import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.DoublePrecision
 import lamp.CPU
-
+import lamp.saddle._
 import lamp.nn.CudaTest
 import lamp.CudaDevice
-import lamp.STen
 import lamp.Scope
 
 class KnnSuite extends AnyFunSuite {
@@ -21,7 +20,7 @@ class KnnSuite extends AnyFunSuite {
   test1("euclidean") { cuda =>
     Scope.root { implicit scope =>
       val m3x2 = Mat(Vec(0d, 2d, 3d), Vec(1d, 0d, 1d))
-      val t = STen.fromMat(m3x2, cuda)
+      val t = lamp.saddle.fromMat(m3x2, cuda)
       val d = squaredEuclideanDistance(t, t).toMat
       assert(d.toVec == m3x2.rows.flatMap { rowi =>
         m3x2.rows.map { rowj =>
@@ -34,7 +33,7 @@ class KnnSuite extends AnyFunSuite {
   test1("jaccard") { cuda =>
     Scope.root { implicit scope =>
       val m2x2 = Mat(Vec(0d, 1d), Vec(1d, 1d))
-      val t = STen.fromMat(m2x2, cuda)
+      val t = lamp.saddle.fromMat(m2x2, cuda)
       val d = jaccardDistance(t, t).toMat
       assert(d.toVec == m2x2.rows.flatMap { rowi =>
         m2x2.rows.map { rowj =>

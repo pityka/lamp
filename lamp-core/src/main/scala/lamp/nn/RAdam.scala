@@ -53,7 +53,7 @@ case class RAdam(
     state.zip(tensors).foreach { case (current, incoming) =>
       current.copyFrom(incoming)
     }
-    stepCount = stepCountSTen.toMat.raw(0).toLong
+    stepCount = stepCountSTen.toDoubleArray.apply(0).toLong
   }
   def release() = {
     scope.release()

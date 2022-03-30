@@ -708,7 +708,7 @@ object IOLoops {
         else simpleLoop(lossAcc, 0L, 0L, trainBatches.init)
 
       loopDone.map { numInstances =>
-        val totalLoss = lossAcc.toMat.raw(0)
+        val totalLoss = lossAcc.toDoubleArray.apply(0)
         (totalLoss, numInstances)
       }
     }
@@ -794,7 +794,7 @@ object IOLoops {
         0L,
         validationBatches.init
       ).flatMap { case (totalLoss, totalExamples) =>
-        val validationLoss = totalLoss.toMat.raw(0) / totalExamples
+        val validationLoss = totalLoss.toDoubleArray.apply(0) / totalExamples
         for {
           _ <- IO {
             logger.foreach(

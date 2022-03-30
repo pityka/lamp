@@ -2,7 +2,7 @@ package lamp.nn
 
 import org.saddle._
 import org.scalatest.funsuite.AnyFunSuite
-import lamp.STen
+import lamp.saddle._
 import lamp.Scope
 
 class AdamWSuite extends AnyFunSuite {
@@ -15,8 +15,8 @@ class AdamWSuite extends AnyFunSuite {
   test1("AdamW without weight decay") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
+      val params = lamp.saddle.fromMat(initParams, cuda)
+      val gradients = lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
       val opt = AdamW(
         parameters = List((params, NoTag)),
         learningRate = simple(0.1d),
@@ -40,8 +40,8 @@ class AdamWSuite extends AnyFunSuite {
   test1("RAdam without weight decay") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
+      val params = lamp.saddle.fromMat(initParams, cuda)
+      val gradients = lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
       val opt = RAdam(
         parameters = List((params, NoTag)),
         learningRate = simple(0.1d),
@@ -65,8 +65,8 @@ class AdamWSuite extends AnyFunSuite {
   test1("AdamW") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
+      val params = lamp.saddle.fromMat(initParams, cuda)
+      val gradients = lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
       val opt = AdamW(
         parameters = List((params, NoTag)),
         learningRate = simple(0.1d),
@@ -93,8 +93,8 @@ class AdamWSuite extends AnyFunSuite {
   test1("Yogi") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
+      val params = lamp.saddle.fromMat(initParams, cuda)
+      val gradients = lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
       val opt = Yogi(
         parameters = List((params, NoTag)),
         learningRate = simple(1d),

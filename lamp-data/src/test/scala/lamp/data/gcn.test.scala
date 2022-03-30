@@ -10,8 +10,8 @@ import lamp.{CPU, CudaDevice, DoublePrecision}
 import aten.ATen
 import lamp.SinglePrecision
 import lamp.Scope
-import lamp.TensorHelpers
 import lamp.STen
+import lamp.saddle._
 import cats.effect.unsafe.implicits.global
 
 class GCNSuite extends AnyFunSuite {
@@ -25,7 +25,7 @@ class GCNSuite extends AnyFunSuite {
       val device = if (cuda) CudaDevice(0) else CPU
       val precision = DoublePrecision
       val nodesM = mat.rand(4, 4)
-      val nodes = const(STen.fromMat(nodesM, device, precision))
+      val nodes = const(lamp.saddle.fromMat(nodesM, device, precision))
       val adj = Mat(
         Vec(0d, 1d, 1d, 1d),
         Vec(1d, 0d, 0d, 0d),
@@ -33,7 +33,7 @@ class GCNSuite extends AnyFunSuite {
         Vec(1d, 0d, 0d, 0d)
       )
       val edges =
-        STen.fromLongMat(
+        lamp.saddle.fromLongMat(
           Mat(
             Vec(0L, 1L),
             Vec(0L, 2L),
@@ -45,7 +45,7 @@ class GCNSuite extends AnyFunSuite {
       val aggregated =
         GCN.gcnAggregation(nodes, edges.select(1, 0), edges.select(1, 1))
 
-      val output = aggregated.toMat
+      val output = aggregated.value.toMat
 
       val expected = {
         import org.saddle.linalg._
@@ -66,7 +66,7 @@ class GCNSuite extends AnyFunSuite {
       val precision = DoublePrecision
       val tOpt = device.options(precision)
       val nodesM = mat.ident(4)
-      val nodes = const(STen.fromMat(nodesM, device, precision))
+      val nodes = const(lamp.saddle.fromMat(nodesM, device, precision))
       val adj = Mat(
         Vec(0d, 1d, 1d, 1d),
         Vec(1d, 0d, 0d, 0d),
@@ -74,7 +74,7 @@ class GCNSuite extends AnyFunSuite {
         Vec(1d, 0d, 0d, 0d)
       )
       val edges = const(
-        STen.fromLongMat(
+        lamp.saddle.fromLongMat(
           Mat(
             Vec(0L, 1L),
             Vec(0L, 2L),
@@ -105,7 +105,7 @@ class GCNSuite extends AnyFunSuite {
       )
 
       val nodeStates = module.forward(graph).nodeFeatures
-      val output = nodeStates.toMat
+      val output = nodeStates.value.toMat
 
       val expected = {
         import org.saddle.linalg._
@@ -166,9 +166,9 @@ class GCNSuite extends AnyFunSuite {
         }
         val nodeIndex = frame.rowIx.map(_._1)
 
-        val featureT = STen.fromMat(features, device, precision)
+        val featureT = lamp.saddle.fromMat(features, device, precision)
         val labelsT =
-          STen.fromLongVec(labelIntMasked.map(_.toLong), device)
+          lamp.saddle.fromLongVec(labelIntMasked.map(_.toLong), device)
         (featureT, labelsT, nodeIndex, labelInt)
       }
       val edges = {
@@ -185,7 +185,7 @@ class GCNSuite extends AnyFunSuite {
             .toList: _*
         ).T
 
-        STen.fromLongMat(mat.map(_.toLong), device)
+        lamp.saddle.fromLongMat(mat.map(_.toLong), device)
 
       }
       val graph = GraphBatchStream.Graph(
@@ -268,7 +268,7 @@ class GCNSuite extends AnyFunSuite {
 
         val prediction = {
           val argm = ATen.argmax(output.value.value, 1, false)
-          val r = TensorHelpers.toLongMat(argm).toVec
+          val r = lamp.saddle.SaddleTensorHelpers.toLongMat(argm).toVec
           argm.release
           r
         }
@@ -291,8 +291,8 @@ class GCNSuite extends AnyFunSuite {
       val precision = DoublePrecision
       val graphs = Seq(
         (
-          STen.fromMat(mat.ones(5, 2), device, precision),
-          STen.fromLongMat(
+          lamp.saddle.fromMat(mat.ones(5, 2), device, precision),
+          lamp.saddle.fromLongMat(
             Mat(
               Vec(0L, 1L),
               Vec(0L, 2L),
@@ -304,8 +304,8 @@ class GCNSuite extends AnyFunSuite {
           )
         ),
         (
-          STen.fromMat(mat.zeros(5, 2), device, precision),
-          STen.fromLongMat(
+          lamp.saddle.fromMat(mat.zeros(5, 2), device, precision),
+          lamp.saddle.fromLongMat(
             Mat(
               Vec(0L, 1L),
               Vec(0L, 2L),
@@ -324,10 +324,10 @@ class GCNSuite extends AnyFunSuite {
           edgeJ = edges.select(1, 1)
         )
       }
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
-      val targets = STen.fromVec(Vec(0d, 1d), device, precision)
+      val rng = new scala.util.Random()
+      val targets = lamp.saddle.fromVec(Vec(0d, 1d), device, precision)
       val (batch, _) = GraphBatchStream
-        .smallGraphStream(2, graphs.toVec, targets, Some(rng))
+        .smallGraphStream(2, graphs.toArray, targets, Some(rng))
         .nextBatch(device, 0)
         .flatMap(_._2.allocated)
         .unsafeRunSync()
@@ -349,9 +349,9 @@ class GCNSuite extends AnyFunSuite {
       val precision = DoublePrecision
       val tOpt = device.options(precision)
       val nodes =
-        const(STen.fromMat(mat.ones(10, 2), device, precision))
+        const(lamp.saddle.fromMat(mat.ones(10, 2), device, precision))
       val edges = const(
-        STen.fromLongMat(
+        lamp.saddle.fromLongMat(
           Mat(
             Vec(0L, 1L),
             Vec(0L, 2L),
@@ -367,7 +367,7 @@ class GCNSuite extends AnyFunSuite {
         )
       )
       val graphIndices =
-        STen.fromLongVec(
+        lamp.saddle.fromLongVec(
           Vec(0L, 0L, 0L, 0L, 0L, 1L, 1L, 1L, 1L, 1L),
           device
         )
@@ -393,19 +393,19 @@ class GCNSuite extends AnyFunSuite {
 
       val graph2 = module.forward(graph)
       val nodeStates = graph2.nodeFeatures
-      assert(nodeStates.toMat.numRows == 10)
-      assert(nodeStates.toMat.numCols == 3)
+      assert(nodeStates.value.toMat.numRows == 10)
+      assert(nodeStates.value.toMat.numCols == 3)
       nodeStates.sum.backprop()
       assert(
         module.transform.transform.m1.weights.partialDerivative.isDefined
       )
 
-      val nodesStatesM = nodeStates.toMat
+      val nodesStatesM = nodeStates.value.toMat
       val graphStates = VertexPooling.apply(graph2, VertexPooling.Mean)
 
-      val graphStatesM = graphStates.toMat
+      val graphStatesM = graphStates.value.toMat
 
-      assert(graphStates.toMat.numRows == 2)
+      assert(graphStates.value.toMat.numRows == 2)
       assert(
         graphStatesM == Mat(
           nodesStatesM.row(0, 1, 2, 3, 4).reduceCols((v, _) => v.mean),

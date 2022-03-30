@@ -11,11 +11,10 @@ object VertexPooling {
       x: Graph,
       pooling: PoolType
   ): Variable = {
-    import lamp.util.syntax
 
     val max = ATen.max_1(x.vertexPoolingIndices.value)
 
-    val maxi = max.toLongMat.raw(0) + 1
+    val maxi = lamp.TensorHelpers.toLongArray(max).apply(0) + 1
     max.release
     val sum = x.nodeFeatures.indexAdd(const(x.vertexPoolingIndices), 0, maxi)
     pooling match {

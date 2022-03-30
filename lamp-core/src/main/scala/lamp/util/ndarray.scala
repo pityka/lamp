@@ -1,7 +1,7 @@
 package lamp.util
 
 import scala.reflect.ClassTag
-import org.saddle._
+// import org.saddle._
 import aten.ATen
 import aten.Tensor
 import lamp.STenOptions
@@ -25,7 +25,7 @@ private[lamp] case class NDArray[@specialized(Long, Double, Float) T](
   }
   def shapeOffsets = shape.drop(1).reverse.scanLeft(1)(_ * _).reverse
   def toArray = data
-  def toVec(implicit st: ST[T]) = Vec(data)
+  
   override def toString = s"NDArray(${data.toVector},$shape)"
   def mapWithIndex[@specialized(Long, Double, Float) B: ClassTag](
       f: (T, List[Int]) => B
@@ -49,7 +49,7 @@ private[lamp] case class NDArray[@specialized(Long, Double, Float) T](
   }
   def +(
       other: NDArray[T]
-  )(implicit num: NUM[T], ct: ClassTag[T]): NDArray[T] = {
+  )(implicit num: Numeric[T], ct: ClassTag[T]): NDArray[T] = {
     assert(other.shape == this.shape) // no broadcasting
     NDArray(
       data.zip(other.data).map { case (a, b) => num.plus(a, b) } toArray,
@@ -58,7 +58,7 @@ private[lamp] case class NDArray[@specialized(Long, Double, Float) T](
   }
   def -(
       other: NDArray[T]
-  )(implicit num: NUM[T], ct: ClassTag[T]): NDArray[T] = {
+  )(implicit num: Numeric[T], ct: ClassTag[T]): NDArray[T] = {
     assert(other.shape == this.shape) // no broadcasting
     NDArray(
       data.zip(other.data).map { case (a, b) => num.minus(a, b) } toArray,

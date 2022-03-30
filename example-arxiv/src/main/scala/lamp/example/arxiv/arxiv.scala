@@ -7,6 +7,7 @@ import lamp.nn._
 import lamp.nn.graph._
 import lamp.data._
 import cats.effect.unsafe.implicits.global
+import lamp.saddle._
 
 case class CliConfig(
     folder: String = "",
@@ -52,7 +53,7 @@ object Train extends App {
         val precision = SinglePrecision
 
         val nodesT =
-          STen.fromFloatMat(
+          lamp.saddle.fromFloatMat(
             nodeFeatures,
             device
           )
@@ -60,14 +61,14 @@ object Train extends App {
         val edgesT = {
           val m2 = edges.map(_.toLong)
 
-          STen.fromLongMat(
+          lamp.saddle.fromLongMat(
             m2,
             device
           )
         }
 
         def mask(idx: Index[Int]) =
-          STen.fromLongVec(
+          lamp.saddle.fromLongVec(
             nodeLabels
               .map(_.toLong)
               .col(0)

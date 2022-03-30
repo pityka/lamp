@@ -22,13 +22,13 @@ class OnnxSuite extends AnyFunSuite {
     def stenToORT(t: STen) = {
       t.scalarTypeByte match {
         case 4 =>
-          val buffer = LongBuffer.wrap(t.toLongVec.toArray)
+          val buffer = LongBuffer.wrap(t.toLongArray)
           OnnxTensor.createTensor(env, buffer, t.shape.toArray)
         case 6 =>
-          val buffer = FloatBuffer.wrap(t.toFloatVec.toArray)
+          val buffer = FloatBuffer.wrap(t.toFloatArray)
           OnnxTensor.createTensor(env, buffer, t.shape.toArray)
         case 7 =>
-          val buffer = DoubleBuffer.wrap(t.toVec.toArray)
+          val buffer = DoubleBuffer.wrap(t.toDoubleArray)
           OnnxTensor.createTensor(env, buffer, t.shape.toArray)
       }
     }

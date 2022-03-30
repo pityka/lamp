@@ -4,7 +4,7 @@ import org.saddle._
 import org.saddle.ops.BinOps._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.Scope
-import lamp.STen
+import lamp.saddle._
 
 class SGDSuite extends AnyFunSuite {
 
@@ -16,8 +16,8 @@ class SGDSuite extends AnyFunSuite {
   test1("SGD noop") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(mat.zeros(1, 2), cuda)
+      val params = lamp.saddle.fromMat(initParams, cuda)
+      val gradients = lamp.saddle.fromMat(mat.zeros(1, 2), cuda)
       SGDW(
         parameters = List((params, NoTag)),
         learningRate = simple(1d),
@@ -31,8 +31,8 @@ class SGDSuite extends AnyFunSuite {
   test1("SGD without momentum, without weight decay") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(mat.ones(1, 2) * 0.5, cuda)
+      val params = lamp.saddle.fromMat(initParams, cuda)
+      val gradients = lamp.saddle.fromMat(mat.ones(1, 2) * 0.5, cuda)
       SGDW(
         parameters = List((params, NoTag)),
         learningRate = simple(1d),
@@ -46,8 +46,8 @@ class SGDSuite extends AnyFunSuite {
   test1("SGD without momentum") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(mat.ones(1, 2) * 0.5, cuda)
+      val params = lamp.saddle.fromMat(initParams, cuda)
+      val gradients = lamp.saddle.fromMat(mat.ones(1, 2) * 0.5, cuda)
       SGDW(
         parameters = List((params, NoTag)),
         learningRate = simple(1d),
@@ -61,8 +61,8 @@ class SGDSuite extends AnyFunSuite {
   test1("SGD") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
-      val params = STen.fromMat(initParams, cuda)
-      val gradients = STen.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
+      val params = lamp.saddle.fromMat(initParams, cuda)
+      val gradients = lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
       val optim = SGDW(
         parameters = List((params, NoTag)),
         learningRate = simple(1d),

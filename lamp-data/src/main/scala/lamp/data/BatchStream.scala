@@ -1,7 +1,6 @@
 package lamp.data
 
 import cats.effect._
-import org.saddle._
 import lamp.autograd.{const}
 import lamp.Device
 import lamp.autograd.Variable
@@ -9,6 +8,7 @@ import lamp.Scope
 import lamp.STen
 import lamp.Movable
 import cats.effect.std.CountDownLatch
+import scala.collection.compat.immutable.ArraySeq
 
 sealed trait StreamControl[+I] {
   def map[B](f: I => B): StreamControl[B]
@@ -151,12 +151,12 @@ object BatchStream {
       dropLast: Boolean,
       features: STen,
       target: STen,
-      rng: org.saddle.spire.random.Generator
+      rng: scala.util.Random
   ) = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       scopeInResource.map { implicit scope =>
         val (d1, d2) = Scope { implicit scope =>
-          val idxT = STen.fromLongVec(idx.toVec.map(_.toLong))
+          val idxT = STen.fromLongArray(idx.map(_.toLong), List(idx.length),features.device)
           val xcl = features.index(idxT)
           val tcl = target.index(idxT)
           val (d1, d2) =
@@ -173,10 +173,9 @@ object BatchStream {
     }
 
     val idx = {
-      val t = array
-        .shuffle(array.range(0, features.sizes.head.toInt), rng)
+      val t = rng.shuffle(ArraySeq.unsafeWrapArray(Array.range(0, features.sizes.head.toInt)))
         .grouped(minibatchSize)
-        .toList
+        .toList.map(_.toArray)
       if (dropLast) t.dropRight(1)
       else t
     }
@@ -360,8 +359,8 @@ object BatchStream {
     }
 
    private[lamp] case class BucketIndices(
-        instancesWithOriginalIndices: Vec[Int],
-        bucketSpecificIndices: Vec[Vec[Int]]
+        instancesWithOriginalIndices: Array[Int],
+        bucketSpecificIndices: Array[Array[Int]]
     )
 
     private[lamp] def init[A, B](
@@ -391,18 +390,18 @@ object BatchStream {
   ) =
     new BatchStream[A, StagedLoader.State[A, B]] {
 
-      private val bucketIndices: Vec[StagedLoader.BucketIndices] =
-        indices.grouped(bucketSize).toSeq.toVec.map { originalIndices =>
+      private val bucketIndices: Vector[StagedLoader.BucketIndices] =
+        indices.grouped(bucketSize).toVector.map { originalIndices =>
           val instancesWithOriginalIndices =
-            originalIndices.flatten.distinct.sorted.toVec
+            originalIndices.flatten.distinct.sorted
 
           StagedLoader.BucketIndices(
             instancesWithOriginalIndices = instancesWithOriginalIndices,
             bucketSpecificIndices = originalIndices.map { minibatch =>
               minibatch
-                .map(i => instancesWithOriginalIndices.findOne(_ == i))
-                .toVec
-            }.toVec
+                .map(i => instancesWithOriginalIndices.indexWhere(_ == i))
+                
+            }
           )
 
         }
