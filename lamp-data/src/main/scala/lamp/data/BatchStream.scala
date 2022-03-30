@@ -210,8 +210,8 @@ object BatchStream {
       s2
     }
 
-    sealed trait BucketState[+A, +B]
-    case class NotYetOpen[A, B](
+     sealed trait BucketState[+A, +B]
+     case class NotYetOpen[A, B](
         indices: BucketIndices,
         fn: Array[Int] => Resource[IO, B]
     ) extends BucketState[A, B] {
@@ -231,7 +231,7 @@ object BatchStream {
         } yield Opened(d, latch, refCompleted)
     }
 
-    case class Opened[A, B](
+     case class Opened[A, B](
         deferred: Deferred[IO, OpenedBucketState[B]],
         latch: CountDownLatch[IO],
         isClosed: Ref[IO, Boolean]
@@ -359,7 +359,7 @@ object BatchStream {
       }
     }
 
-    private[lamp] case class BucketIndices(
+   private[lamp] case class BucketIndices(
         instancesWithOriginalIndices: Vec[Int],
         bucketSpecificIndices: Vec[Vec[Int]]
     )

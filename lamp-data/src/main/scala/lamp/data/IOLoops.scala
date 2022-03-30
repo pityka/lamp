@@ -725,7 +725,7 @@ object IOLoops {
         logger.foreach(
           _.info(
             s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${throughput
-                .formatted("%.2f")} instances/sec)"
+              .formatted("%.2f")} instances/sec)"
           )
         )
       }
