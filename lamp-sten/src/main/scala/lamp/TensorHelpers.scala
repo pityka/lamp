@@ -86,8 +86,8 @@ object TensorHelpers {
   def fromLongArray(
       arr: Array[Long],
       device: Device
-  ) : Tensor = fromLongArray(arr,List(arr.length),device)
-  
+  ): Tensor = fromLongArray(arr, List(arr.length), device)
+
   def fromLongArray(
       arr: Array[Long],
       dim: Seq[Long],
@@ -102,6 +102,37 @@ object TensorHelpers {
       STenOptions.l.value
     )
     assert(t.copyFromLongArray(arr))
+    if (device != CPU) {
+      val t2 = device.to(t)
+      t.release
+      t2
+    } else t
+  }
+
+  def fromLongArrayOfArrays(
+      arr: Array[Array[Long]],
+      dim: Seq[Long],
+      device: Device
+  ) = {
+    require(
+      arr.map(_.length.toLong).sum == dim.foldLeft(1L)(_ * _).toInt,
+      s"incorrect dimensions $dim got ${arr.length} elements."
+    )
+    val t = ATen.zeros(
+      dim.toArray,
+      STenOptions.l.value
+    )
+    var i = 0
+    var offset = 0L
+    while (i < arr.length) {
+      val ar = arr(i)
+      if (ar.length != 0) {
+        assert(t.copyFromLongArrayAtOffset(ar, offset))
+        offset += ar.length
+      }
+      i += 1
+    }
+
     if (device != CPU) {
       val t2 = device.to(t)
       t.release

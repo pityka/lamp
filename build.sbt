@@ -194,6 +194,26 @@ lazy val e2etest = project
   .dependsOn(forest, saddlecompat)
   .dependsOn(core % "test->test;compile->compile")
 
+lazy val table = project
+  .in(file("lamp-table"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-table",
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    testOptions in Test += Tests.Argument("-l", "cuda slow"),
+    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
+    testOptions in AllTest := Nil,
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-parse" % "0.3.5"
+    ),
+    // coverageEnabled := true
+  )
+  .dependsOn(data)
+  .dependsOn(core % "test->test;compile->compile", saddlecompat)
+
 lazy val umap = project
   .in(file("lamp-umap"))
   .configs(Cuda)
@@ -422,6 +442,7 @@ lazy val root = project
     akkacommunicator,
     core,
     data,
+    table,
     knn,
     forest,
     umap,
