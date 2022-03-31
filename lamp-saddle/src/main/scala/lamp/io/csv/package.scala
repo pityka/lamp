@@ -4,7 +4,7 @@ import java.nio.channels.ReadableByteChannel
 import lamp.Device
 import java.nio.charset.CharsetDecoder
 import org.saddle.scalar.ScalarTagDouble
-import lamp.STen
+import lamp.{STen, Sc}
 import lamp.DoublePrecision
 import lamp.CPU
 import lamp.Scope
@@ -220,41 +220,7 @@ package object csv {
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] = {
-    val (append, allocBuffer, copy) = scalarType match {
-      case 4 =>
-        val copy = (ar: Array[_]) =>
-          STen
-            .fromLongArray(ar.asInstanceOf[Array[Long]], List(ar.length), CPU)
-        val allocBuffer = () => Buffer.empty[Long](1024)
-        val parse = (s: String, buffer: Buffer[_]) => {
-          buffer.asInstanceOf[Buffer[Long]].+=(ScalarTagLong.parse(s))
-        }
-        (parse, allocBuffer, copy)
-      case 6 =>
-        val copy = (ar: Array[_]) =>
-          STen
-            .fromFloatArray(ar.asInstanceOf[Array[Float]], List(ar.length), CPU)
-        val allocBuffer = () => Buffer.empty[Float](1024)
-        val parse = (s: String, buffer: Buffer[_]) => {
-          buffer.asInstanceOf[Buffer[Float]].+=(ScalarTagFloat.parse(s))
-        }
-        (parse, allocBuffer, copy)
-      case 7 =>
-        val copy = (ar: Array[_]) =>
-          STen
-            .fromDoubleArray(
-              ar.asInstanceOf[Array[Double]],
-              List(ar.length),
-              CPU,
-              DoublePrecision
-            )
-        val allocBuffer = () => Buffer.empty[Double](1024)
-        val parse = (s: String, buffer: Buffer[_]) => {
-          buffer.asInstanceOf[Buffer[Double]].+=(ScalarTagDouble.parse(s))
-        }
-        (parse, allocBuffer, copy)
-
-    }
+    val (append, allocBuffer, copy) = typeSpecificLambdas(scalarType)
     val source = org.saddle.io.csv
       .readChannel(channel, bufferSize = 65536, charset = charset)
 
@@ -300,4 +266,41 @@ package object csv {
     }
 
   }
+
+  def typeSpecificLambdas[S: Sc](scalarType: Byte) = scalarType match {
+    case 4 =>
+      val copy = (ar: Array[_]) =>
+        STen
+          .fromLongArray(ar.asInstanceOf[Array[Long]], List(ar.length), CPU)
+      val allocBuffer = () => Buffer.empty[Long](1024)
+      val parse = (s: String, buffer: Buffer[_]) => {
+        buffer.asInstanceOf[Buffer[Long]].+=(ScalarTagLong.parse(s))
+      }
+      (parse, allocBuffer, copy)
+    case 6 =>
+      val copy = (ar: Array[_]) =>
+        STen
+          .fromFloatArray(ar.asInstanceOf[Array[Float]], List(ar.length), CPU)
+      val allocBuffer = () => Buffer.empty[Float](1024)
+      val parse = (s: String, buffer: Buffer[_]) => {
+        buffer.asInstanceOf[Buffer[Float]].+=(ScalarTagFloat.parse(s))
+      }
+      (parse, allocBuffer, copy)
+    case 7 =>
+      val copy = (ar: Array[_]) =>
+        STen
+          .fromDoubleArray(
+            ar.asInstanceOf[Array[Double]],
+            List(ar.length),
+            CPU,
+            DoublePrecision
+          )
+      val allocBuffer = () => Buffer.empty[Double](1024)
+      val parse = (s: String, buffer: Buffer[_]) => {
+        buffer.asInstanceOf[Buffer[Double]].+=(ScalarTagDouble.parse(s))
+      }
+      (parse, allocBuffer, copy)
+
+  }
+ 
 }

@@ -39,6 +39,14 @@ object STen {
   def fromLongArray[S: Sc](ar: Array[Long]): STen =
     fromLongArray(ar, List(ar.length), CPU)
 
+  def fromLongArrayOfArrays[S: Sc](
+      ar: Array[Array[Long]],
+      dim: Seq[Long],
+      device: Device
+  ) =
+    if (ar.isEmpty || ar.map(_.length).sum == 0) STen.zeros(dim, device.to(STenOptions.l))
+    else TensorHelpers.fromLongArrayOfArrays(ar, dim, device).owned
+
   /** Returns a tensor with the given content and shape on the given device */
   def fromDoubleArray[S: Sc](
       ar: Array[Double],
@@ -528,6 +536,9 @@ object STen {
     )
   }
 
+  def cartesianProduct[S: Sc](list: List[STen]) =
+    ATen.cartesian_prod(list.map(_.value).toArray).owned
+
 }
 
 case class STenOptions(value: aten.TensorOptions) {
@@ -824,6 +835,12 @@ case class STen private (
     */
   def maskFill[S: Sc](mask: STen, fill: Double) =
     owned(ATen.masked_fill_0(value, mask.value, fill))
+    
+  /** Fills the tensor with the given `fill` value in the locations indicated by
+    * the `mask` boolean mask.
+    */
+  def maskFill[S: Sc](mask: STen, fill: Long) =
+    owned(ATen.masked_fill_0_l(value, mask.value, fill))
 
   /** Returns a boolean tensors of the same shape, indicating equality with the
     * other tensor.
@@ -911,6 +928,8 @@ case class STen private (
 
   /** Casts to half */
   def castToHalf[S: Sc] = owned(ATen._cast_Half(value, true))
+  /** Casts to bool */
+  def castToBool[S: Sc] = this.equ(STen.scalarDouble(0d,options)).logicalNot
 
   /** Adds to tensors. */
   def +[S: Sc](other: STen) =
@@ -956,6 +975,10 @@ case class STen private (
   def -[S: Sc](other: STen) =
     owned(ATen.sub_0(value, other.value, 1d))
 
+  /** Subtracts other. */
+  def sub_l[S: Sc](other: STen) =
+    owned(ATen.sub_0_l(value, other.value, 1L))
+
   /** Subtracts other in place. */
   def -=(other: STen): Unit =
     ATen.sub_out(value, value, other.value, 1d)
@@ -973,6 +996,9 @@ case class STen private (
     owned(ATen.mul_0(value, other.value))
 
   def multiply[S: Sc](other: Long) =
+    owned(ATen.mul_1_l(value, other))
+
+  def *[S: Sc](other: Long) =
     owned(ATen.mul_1_l(value, other))
 
   /** Multiplication */
@@ -1006,6 +1032,9 @@ case class STen private (
   /** Division. */
   def /[S: Sc](other: Double) =
     owned(ATen.div_2(value, other))
+  /** Division. */
+  def /[S: Sc](other: Long) =
+    owned(ATen.div_2_l(value, other))
 
   /** In place division. */
   def /=(other: STen): Unit =
@@ -1409,6 +1438,22 @@ case class STen private (
   def gt[S: Sc](other: Double) =
     ATen.gt_0(value, other).owned
 
+  /** Return a boolean tensor with element-wise logical and. */
+  def logicalAnd[S: Sc](other: STen) =
+    ATen.logical_and(value, other.value).owned
+
+  /** Return a boolean tensor with element-wise logical or. */
+  def logicalOr[S: Sc](other: STen) =
+    ATen.logical_or(value, other.value).owned
+
+  /** Return a boolean tensor with element-wise logical xor. */
+  def logicalXor[S: Sc](other: STen) =
+    ATen.logical_xor(value, other.value).owned
+
+  /** Return a boolean tensor with element-wise logical not. */
+  def logicalNot[S: Sc] =
+    ATen.logical_not(value).owned
+
   /** Return a boolean tensor indicating element-wise less-than. */
   def lt[S: Sc](other: STen) =
     ATen.lt_1(value, other.value).owned
@@ -1441,11 +1486,11 @@ case class STen private (
   def ne[S: Sc](other: Double) =
     ATen.ne_0(value, other).owned
 
-  /** Returns the negation (not for Boolean). */
+  /** Returns the negation (not applicable for Boolean). */
   def neg[S: Sc] =
     ATen.neg(value).owned
 
-  /** Returns the logical negation ( for Boolean). */
+  /** Returns the logical negation (applicable for Boolean). */
   def not[S: Sc] =
     ATen.logical_not(value).owned
 
