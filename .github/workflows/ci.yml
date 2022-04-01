@@ -19,4 +19,4 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Compile
-      run: sbt -mem 3000 clean +test
+      run: sbt -mem 3000 clean +test docs/mdoc docs/unidoc
