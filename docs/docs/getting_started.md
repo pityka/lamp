@@ -10,7 +10,7 @@ libraryDependencies += "io.github.pityka" %% "lamp-data" % "VERSION" // look at 
 ```
 
 ### Dependencies
-- `lamp-core` depends on [saddle-core](https://github.com/pityka/saddle), [cats-effect](https://github.com/typelevel/cats-effect) and [aten-scala](https://github.com/pityka/aten-scala)
+- `lamp-core` depends on [cats-effect](https://github.com/typelevel/cats-effect) and [aten-scala](https://github.com/pityka/aten-scala)
 - `lamp-data` in addition depends on [scribe](https://github.com/outr/scribe) and [ujson](https://github.com/lihaoyi/upickle)
 
 Lamp depends on aten-scala is a JNI binding to libtorch. It has has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.8.0 shared libraries in its linker path.

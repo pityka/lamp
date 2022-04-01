@@ -48,7 +48,7 @@ On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/bl
 # Dependencies
 
 In addition to the libtorch shared libraries:
-- `lamp-core` depends on [saddle-core](https://github.com/pityka/saddle), [cats-effect](https://github.com/typelevel/cats-effect) and [aten-scala](https://github.com/pityka/aten-scala)
+- `lamp-core` depends on [cats-effect](https://github.com/typelevel/cats-effect) and [aten-scala](https://github.com/pityka/aten-scala)
 - `lamp-data` further depends on [scribe](https://github.com/outr/scribe) and [jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala)
 
 # Completeness
@@ -68,6 +68,18 @@ Add to build.sbt:
 libraryDependencies += "io.github.pityka" %% "lamp-data" % "VERSION" // look at the github page for version
 ```
 
+# Maven artifacts
+
+The following artifacts to Maven Central from this repository:
+- `"io.github.pityka" %% "lamp-sten"` - provides the native tensor data type
+- `"io.github.pityka" %% "lamp-core"` - provides autograd and neural network components
+- `"io.github.pityka" %% "lamp-data"` - provides training loops and data loading facilities
+- `"io.github.pityka" %% "lamp-saddle"` - provides integration with [saddle](https://github.com/pityka/saddle)
+- `"io.github.pityka" %% "lamp-knn"` - provides k nearest neighbor
+- `"io.github.pityka" %% "lamp-umap"` - UMAP implementation
+- `"io.github.pityka" %% "extratrees"` - extremely randomized trees implementation
+
+All artifacts are published for scala 2.12 and 2.13. 
 
 ## Running tests
 
