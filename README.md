@@ -70,7 +70,7 @@ libraryDependencies += "io.github.pityka" %% "lamp-data" % "VERSION" // look at 
 
 # Maven artifacts
 
-The following artifacts to Maven Central from this repository:
+The following artifacts are published to Maven Central from this repository:
 - `"io.github.pityka" %% "lamp-sten"` - provides the native tensor data type
 - `"io.github.pityka" %% "lamp-core"` - provides autograd and neural network components
 - `"io.github.pityka" %% "lamp-data"` - provides training loops and data loading facilities
