@@ -17,46 +17,60 @@ inThisBuild(
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.13.8",
-  crossScalaVersions := Seq("2.13.8", "2.12.15"),
-  parallelExecution in Test := false,
-  scalacOptions ++= (Seq(
-    "-opt-warnings",
-    "-deprecation", // Emit warning and location for usages of deprecated APIs.
-    "-encoding",
-    "utf-8", // Specify character encoding used by source files.
-    "-feature", // Emit warning and location for usages of features that should be imported explicitly.
-    "-language:postfixOps",
-    "-language:existentials",
-    "-unchecked", // Enable additional warnings where generated code depends on assumptions.
-    "-Xfatal-warnings", // Fail the compilation if there are any warnings.
-    "-Xlint:adapted-args", // Warn if an argument list is modified to match the receiver.
-    "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
-    "-Xlint:delayedinit-select", // Selecting member of DelayedInit.
-    "-Xlint:doc-detached", // A Scaladoc comment appears to be detached from its element.
-    "-Xlint:inaccessible", // Warn about inaccessible types in method signatures.
-    "-Xlint:infer-any", // Warn when a type argument is inferred to be `Any`.
-    "-Xlint:missing-interpolator", // A string literal appears to be missing an interpolator id.
-    "-Xlint:nullary-unit", // Warn when nullary methods return Unit.
-    "-Xlint:option-implicit", // Option.apply used implicit view.
-    "-Xlint:poly-implicit-overload", // Parameterized overloaded implicit methods are not visible as view bounds.
-    "-Xlint:private-shadow", // A private field (or class parameter) shadows a superclass field.
-    "-Xlint:stars-align", // Pattern sequence wildcard must align with sequence component.
-    "-Xlint:type-parameter-shadow", // A local type parameter shadows a type already in scope.
-    // "-Ywarn-dead-code", // Warn when dead code is identified.
-    // "-Ywarn-numeric-widen", // Warn when numerics are widened.
-    "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
-    "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
-    "-Ywarn-unused:locals", // Warn if a local definition is unused.
-    "-Ywarn-unused:params", // Warn if a value parameter is unused.
-    "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
-    "-Ywarn-unused:privates" // Warn if a private member is unused.
-  ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, scalaMajor)) if scalaMajor == 12 =>
-      List("-Ypartial-unification")
-    case _ => Nil
-  })),
-  scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings")),
-  scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings"))
+  crossScalaVersions := Seq("2.13.8", "3.1.1"),
+  Test / parallelExecution := false,
+  scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((3, _)) =>
+      Seq(
+        "-deprecation", // Emit warning and location for usages of deprecated APIs.
+        "-encoding",
+        "utf-8", // Specify character encoding used by source files.
+        "-feature", // Emit warning and location for usages of features that should be imported explicitly.
+        "-language:postfixOps",
+        "-language:existentials",
+        "-unchecked", // Enable additional warnings where generated code depends on assumptions.
+        "-Xfatal-warnings" // Fail the compilation if there are any warnings.
+      )
+    case Some((2, _)) =>
+      Seq(
+        "-opt:l:method",
+        "-opt:l:inline",
+        "-opt-inline-from:org.saddle.**",
+        "-opt-warnings",
+        "-deprecation", // Emit warning and location for usages of deprecated APIs.
+        "-encoding",
+        "utf-8", // Specify character encoding used by source files.
+        "-feature", // Emit warning and location for usages of features that should be imported explicitly.
+        "-language:postfixOps",
+        "-language:existentials",
+        "-unchecked", // Enable additional warnings where generated code depends on assumptions.
+        "-Xfatal-warnings", // Fail the compilation if there are any warnings.
+        "-Xlint:adapted-args", // Warn if an argument list is modified to match the receiver.
+        "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
+        "-Xlint:delayedinit-select", // Selecting member of DelayedInit.
+        "-Xlint:doc-detached", // A Scaladoc comment appears to be detached from its element.
+        "-Xlint:inaccessible", // Warn about inaccessible types in method signatures.
+        "-Xlint:infer-any", // Warn when a type argument is inferred to be `Any`.
+        "-Xlint:missing-interpolator", // A string literal appears to be missing an interpolator id.
+        "-Xlint:nullary-unit", // Warn when nullary methods return Unit.
+        "-Xlint:option-implicit", // Option.apply used implicit view.
+        "-Xlint:poly-implicit-overload", // Parameterized overloaded implicit methods are not visible as view bounds.
+        "-Xlint:private-shadow", // A private field (or class parameter) shadows a superclass field.
+        "-Xlint:stars-align", // Pattern sequence wildcard must align with sequence component.
+        "-Xlint:type-parameter-shadow", // A local type parameter shadows a type already in scope.
+        // "-Ywarn-dead-code", // Warn when dead code is identified.
+        // "-Ywarn-numeric-widen", // Warn when numerics are widened.
+        "-Ywarn-unused:implicits", // Warn if an implicit parameter is unused.
+        "-Ywarn-unused:imports", // Warn if an import selector is not referenced.
+        "-Ywarn-unused:locals", // Warn if a local definition is unused.
+        "-Ywarn-unused:params", // Warn if a value parameter is unused.
+        "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
+        "-Ywarn-unused:privates" // Warn if a private member is unused.
+      )
+    case _ => ???
+  }),
+  Compile / console / scalacOptions ~= (_ filterNot (_ == "-Xfatal-warnings")),
+  Compile / doc / scalacOptions ~= (_ filterNot (_ == "-Xfatal-warnings"))
 ) ++ Seq(
   fork := true,
   run / javaOptions += "-Xmx12G",
@@ -71,7 +85,7 @@ val upickleVersion = "1.6.0"
 val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.8.2"
 val catsEffectVersion = "3.3.11"
-val catsCoreVersion = "2.6.0"
+val catsCoreVersion = "2.7.0"
 val jsoniterscalaVersion = "2.13.13"
 
 lazy val saddlecompat = project
@@ -96,16 +110,16 @@ lazy val sten = project
     name := "lamp-sten",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0",
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+99-1d12bfdd",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+100-1c26c370",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil
   )
 
 lazy val core = project
@@ -117,14 +131,14 @@ lazy val core = project
     name := "lamp-core",
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil,
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil,
     libraryDependencies ++= List(
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test"
     )
   )
-  .dependsOn(sten % "test->test;compile->compile", saddlecompat % "test->test")
+  .dependsOn(sten % "test->test;compile->compile")//saddlecompat % "test->test")
 
 lazy val data = project
   .in(file("lamp-data"))
@@ -140,9 +154,9 @@ lazy val data = project
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil
   )
   .dependsOn(core % "test->test;compile->compile", onnx % "test")
 
@@ -156,13 +170,13 @@ lazy val e2etest = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
-    skip in publish := true,
+    publish / skip := true,
     publishArtifact := false,
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil
   )
   .dependsOn(data)
   .dependsOn(forest, saddlecompat)
@@ -183,9 +197,9 @@ lazy val umap = project
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil
   )
   .dependsOn(data, knn)
   .dependsOn(core % "test->test;compile->compile")
@@ -202,14 +216,14 @@ lazy val onnx = project
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
       "com.microsoft.onnxruntime" % "onnxruntime" % "1.11.0" % "test"
     ),
-    PB.targets in Compile := Seq(
-      scalapb.gen() -> (sourceManaged in Compile).value / "scalapb"
+    Compile / PB.targets := Seq(
+      scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil
   )
   .dependsOn(core % "test->test;compile->compile")
 
@@ -240,9 +254,9 @@ lazy val knn = project
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil
   )
   .dependsOn(core, saddlecompat)
   .dependsOn(core % "test->test;compile->compile")
@@ -252,7 +266,7 @@ lazy val example_cifar100 = project
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
@@ -267,7 +281,7 @@ lazy val example_gan = project
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
@@ -280,7 +294,7 @@ lazy val example_timemachine = project
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
@@ -293,7 +307,7 @@ lazy val example_bert = project
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
@@ -307,7 +321,7 @@ lazy val example_translation = project
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
@@ -321,7 +335,7 @@ lazy val example_arxiv = project
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion,
@@ -348,8 +362,8 @@ lazy val docs = project
     mdocVariables := Map(
       "VERSION" -> version.value
     ),
-    target in (ScalaUnidoc, unidoc) := (baseDirectory in LocalRootProject).value / "website" / "static" / "api",
-    cleanFiles += (target in (ScalaUnidoc, unidoc)).value
+    ScalaUnidoc / unidoc / target := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
+    cleanFiles += (ScalaUnidoc / unidoc / target).value
   )
   .enablePlugins(MdocPlugin, ScalaUnidocPlugin)
 
@@ -358,7 +372,7 @@ lazy val root = project
   .settings(
     crossScalaVersions := Nil,
     publishArtifact := false,
-    skip in publish := true
+    publish / skip := true
   )
   .aggregate(
     sten,

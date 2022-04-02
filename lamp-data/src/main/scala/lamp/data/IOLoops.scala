@@ -164,7 +164,7 @@ object IOLoops {
     )
   }
 
-  import scala.reflect.runtime.universe._
+  // import scala.reflect.runtime.universe._
 
   def withSWA[I, M <: GenericModule[
     I,
@@ -283,7 +283,7 @@ object IOLoops {
         accumulateGradientOverNBatches,
         swaLearningRateScheduleInitState match {
           case Some(x) => Some(x)
-          case None if typeTag[LRState] == typeTag[LRStateSWA] =>
+          case None if swaLearningRateSchedule.init.getClass == warmupLRState.getClass =>
             Some(warmupLRState.asInstanceOf[LRStateSWA])
           case _ => None
         },
