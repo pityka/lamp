@@ -39,11 +39,11 @@ case class BatchNorm2D(
 }
 
 object BatchNorm2D {
-  implicit val trainingMode = TrainingMode.make[BatchNorm2D](
+  implicit val trainingMode : TrainingMode[BatchNorm2D] = TrainingMode.make[BatchNorm2D](
     asEval1 = m => m.copy(training = false),
     asTraining1 = m => m.copy(training = true)
   )
-  implicit val load = Load.make[BatchNorm2D](m =>
+  implicit val load : Load[BatchNorm2D] = Load.make[BatchNorm2D](m =>
     tensors => {
       m.weight.value.copyFrom(tensors.head)
       m.bias.value.copyFrom(tensors(1))
