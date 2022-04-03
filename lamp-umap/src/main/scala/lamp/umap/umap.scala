@@ -2,8 +2,6 @@ package lamp.umap
 
 import lamp._
 import org.saddle._
-import org.saddle.linalg._
-import org.saddle.macros.BinOps._
 import lamp.autograd._
 import lamp.nn.AdamW
 import lamp.nn.simple
@@ -385,8 +383,21 @@ object Umap {
       val row1 = data.row(rowIdx)
       row.map { idx2 =>
         val row2 = data.row(idx2)
-        val d = row1 - row2
-        math.sqrt(d vv d)
+
+        val d = {
+          var i = 0
+          val l = row1.length
+          var s = 0d
+          val r1a = row1.toArray
+          val r2a = row2.toArray
+          while (i < l) {
+            val d = r1a(i) - r2a(i)
+            s += d * d
+            i += 1
+          }
+          s
+        }
+        math.sqrt(d)
       }
     }
 

@@ -79,7 +79,7 @@ package object npy {
   )(implicit
       scope: Scope
   ) = {
-    val (dtype, topt, copy) = scalarType match {
+    val (descriptor, iterator, topt, copy) = scalarType match {
       case 4 =>
         val dtype = org.saddle.io.npy.LongType
         val topt = STenOptions.l.value
@@ -87,7 +87,12 @@ package object npy {
           assert(
             t.copyFromLongArrayAtOffset(ar.asInstanceOf[Array[Long]], offset)
           )
-        (dtype, topt, copy)
+        val (descriptor, iterator) =
+          org.saddle.io.npy
+            .readFromChannel(dtype, channel)
+            .toOption
+            .get
+        (descriptor, iterator, topt, copy)
       case 6 =>
         val dtype = org.saddle.io.npy.FloatType
         val topt = STenOptions.f.value
@@ -95,7 +100,12 @@ package object npy {
           assert(
             t.copyFromFloatArrayAtOffset(ar.asInstanceOf[Array[Float]], offset)
           )
-        (dtype, topt, copy)
+        val (descriptor, iterator) =
+          org.saddle.io.npy
+            .readFromChannel(dtype, channel)
+            .toOption
+            .get
+        (descriptor, iterator, topt, copy)
       case 7 =>
         val dtype = org.saddle.io.npy.DoubleType
         val topt = STenOptions.d.value
@@ -106,13 +116,14 @@ package object npy {
               offset
             )
           )
-        (dtype, topt, copy)
+        val (descriptor, iterator) =
+          org.saddle.io.npy
+            .readFromChannel(dtype, channel)
+            .toOption
+            .get
+        (descriptor, iterator, topt, copy)
     }
-    val (descriptor, iterator) =
-      org.saddle.io.npy
-        .readFromChannel(dtype, channel)
-        .toOption
-        .get
+
     assert(!descriptor.fortran, "Fortran (column-wise) layout not supported")
     val dim = descriptor.shape
     val t = ATen.zeros(
