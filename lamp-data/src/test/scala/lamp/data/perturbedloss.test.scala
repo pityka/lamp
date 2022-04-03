@@ -77,15 +77,16 @@ class PerturbedLossSuite extends AnyFunSuite {
       )
 
       val rng = new scala.util.Random
-      val makeValidationBatch = (_: IOLoops.TrainingLoopContext) =>
+      val makeValidationBatch = {
+      (_: IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           200,
           true,
           testDataTensor,
           testTarget,
           rng
-        )
-      val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
+        )}
+      val makeTrainingBatch ={ (_: IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           200,
           true,
@@ -93,6 +94,7 @@ class PerturbedLossSuite extends AnyFunSuite {
           trainTarget,
           rng
         )
+      }
 
         scribe.info("Start training loop")
 

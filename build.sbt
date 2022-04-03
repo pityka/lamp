@@ -80,7 +80,7 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "3.3.0"
+val saddleVersion = "3.1.0+24-b1e8dd43-SNAPSHOT"
 val upickleVersion = "1.6.0"
 val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.8.2"
@@ -138,7 +138,7 @@ lazy val core = project
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test"
     )
   )
-  .dependsOn(sten % "test->test;compile->compile")//saddlecompat % "test->test")
+  .dependsOn(sten % "test->test;compile->compile", saddlecompat % "test->test")
 
 lazy val data = project
   .in(file("lamp-data"))
@@ -191,9 +191,6 @@ lazy val umap = project
     name := "lamp-umap",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
-      "io.github.pityka" %% "saddle-linalg" % saddleVersion,
-      "io.github.pityka" %% "nspl-awt" % "0.3.0" % "test",
-      "io.github.pityka" %% "nspl-saddle" % "0.3.0" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
@@ -201,7 +198,7 @@ lazy val umap = project
     Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
     AllTest / testOptions := Nil
   )
-  .dependsOn(data, knn)
+  .dependsOn(data, knn, saddlecompat % "test")
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val onnx = project
@@ -236,7 +233,7 @@ lazy val forest = project
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
-      "io.github.pityka" %% "saddle-linalg" % saddleVersion
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
     )
   )
   .dependsOn(core % "test->test")
@@ -341,7 +338,7 @@ lazy val example_arxiv = project
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.lihaoyi" %% "requests" % "0.6.7",
+      "com.lihaoyi" %% "requests" % "0.6.9",
       "com.lihaoyi" %% "os-lib" % "0.8.1"
     )
   )

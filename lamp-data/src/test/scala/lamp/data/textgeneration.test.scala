@@ -20,6 +20,8 @@ import lamp.nn.statefulSequence
 import lamp.Scope
 import lamp.STen
 import cats.effect.unsafe.implicits.global
+import lamp.nn.ToLift
+import lamp.nn.ToUnlift
 
 class TextGenerationSuite extends AnyFunSuite {
   val asciiSilentCharsetDecoder = Charset
