@@ -2,7 +2,6 @@ package lamp.data
 
 import lamp.autograd.{const}
 import lamp.TensorHelpers
-import org.saddle._
 import aten.ATen
 import aten.Tensor
 import lamp.Device
@@ -12,6 +11,7 @@ import lamp.nn.InitState
 import lamp.nn.FreeRunningRNN
 import lamp.Scope
 import lamp.STen
+import scala.collection.compat.immutable.ArraySeq
 
 object Text {
   def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
@@ -88,7 +88,7 @@ object Text {
                   Tensor.scalarLong(i.toLong, selected.options.toLong.value)
                 val index = ATen._unsafe_view(tmp, Array(1L, 1L))
                 tmp.release
-                val logProb = selected.toMat.raw(0)
+                val logProb = selected.toDoubleArray.apply(0)
                 (
                   sequence,
                   selected.assign(const(STen.owned(index))),
@@ -142,16 +142,16 @@ object Text {
     convertIntegersToText(tensor.argmax(2, false), vocab)
   }
 
-  /** Convert back to text. Tensor shape: time x batch x dim
+  /** Convert back to text. Tensor shape: time x batch 
     */
   def convertIntegersToText(
       tensor: STen,
       vocab: Map[Int, Char]
   ): Seq[String] = {
-
-    val r = tensor.toLongMat.T
-    r.rows.map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
-
+    Scope.leak{ implicit scope =>
+    val r = tensor.t.toLongArray
+    r.grouped(tensor.shape(1).toInt).toVector.map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
+    }
   }
   def charsToIntegers(text: String) = {
     val chars = text.toSeq
@@ -203,7 +203,7 @@ object Text {
   )(implicit scope: Scope): Variable = {
     val tensor = Scope { implicit scope =>
       val flattenedFeature =
-        STen.fromLongVec(examples.flatMap(identity).toVec)
+        STen.fromLongArray(examples.flatMap(identity).toArray)
       val viewedFeature =
         flattenedFeature.view(
           examples.size.toLong,
@@ -222,7 +222,7 @@ object Text {
       text: Vector[Int],
       minibatchSize: Int,
       timeSteps: Int,
-      rng: org.saddle.spire.random.Generator
+      rng: scala.util.Random
   ) = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) =
       BatchStream.scopeInResource.map { implicit scope =>
@@ -239,9 +239,9 @@ object Text {
 
         val flattenedFeature =
           TensorHelpers
-            .fromLongVec(pairs.flatMap(_._1).toVec, device)
+            .fromLongArray(pairs.flatMap(_._1).toArray, device)
         val flattenedTarget =
-          TensorHelpers.fromLongVec(pairs.flatMap(_._2).toVec, device)
+          TensorHelpers.fromLongArray(pairs.flatMap(_._2).toArray, device)
         val viewedFeature = ATen._unsafe_view(
           flattenedFeature,
           Array(idx.size.toLong, timeSteps.toLong)
@@ -271,10 +271,10 @@ object Text {
 
     val dropped = text.drop(scala.util.Random.nextInt(timeSteps))
     val numSamples = (dropped.size - 1) / timeSteps
-    val idx = array
-      .shuffle(array.range(0, numSamples * timeSteps, timeSteps), rng)
+    val idx = rng
+      .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, numSamples * timeSteps, timeSteps)))
       .grouped(minibatchSize)
-      .toList
+      .toList.map(_.toArray)
       .dropRight(1)
 
     scribe.info(
@@ -294,7 +294,7 @@ object Text {
       minibatchSize: Int,
       timeSteps: Int,
       pad: Long,
-      rng: org.saddle.spire.random.Generator
+      rng: scala.util.Random
   ): BatchStream[(Variable, Variable), Int] = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) =
       BatchStream.scopeInResource.map { implicit scope =>
@@ -327,7 +327,7 @@ object Text {
 
         val flattenedSource =
           TensorHelpers
-            .fromLongVec(pairs.flatMap(_._1).toVec, device)
+            .fromLongArray(pairs.flatMap(_._1).toArray, device)
         val viewedSource = ATen._unsafe_view(
           flattenedSource,
           Array(idx.size.toLong, timeSteps.toLong)
@@ -336,7 +336,7 @@ object Text {
           ATen.transpose(viewedSource, 0, 1)
         val flattenedDest =
           TensorHelpers
-            .fromLongVec(pairs.flatMap(_._2).toVec, device)
+            .fromLongArray(pairs.flatMap(_._2).toArray, device)
         val viewedDest = ATen._unsafe_view(
           flattenedDest,
           Array(idx.size.toLong, timeSteps.toLong)
@@ -344,7 +344,7 @@ object Text {
         val transposedDest =
           ATen.transpose(viewedDest, 0, 1)
         val flattenedTarget =
-          TensorHelpers.fromLongVec(pairs.flatMap(_._3).toVec, device)
+          TensorHelpers.fromLongArray(pairs.flatMap(_._3).toArray, device)
         val viewedTarget = ATen._unsafe_view(
           flattenedTarget,
           Array(idx.size.toLong, timeSteps.toLong)
@@ -374,10 +374,10 @@ object Text {
 
       }
 
-    val idx = array
-      .shuffle(array.range(0, text.size), rng)
+    val idx = rng
+      .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, text.size)))
       .grouped(minibatchSize)
-      .toList
+      .toList.map(_.toArray)
       .dropRight(1)
 
     scribe.info(
@@ -393,9 +393,9 @@ object Text {
       maxLength: Int,
       pad: Int,
       vocabulary: Map[Char, Int]
-  ): Mat[Int] = {
-    Mat(sentences.map { s =>
-      s.map(vocabulary).toArray.take(maxLength).padTo(maxLength, pad).toVec
-    }: _*).T
+  ): Seq[Array[Int]] = {
+    sentences.map { s =>
+      s.map(vocabulary).toArray.take(maxLength).padTo(maxLength, pad).toArray
+    }
   }
 }

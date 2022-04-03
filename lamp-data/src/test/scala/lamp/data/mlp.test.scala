@@ -41,9 +41,9 @@ class MLPSuite extends AnyFunSuite {
         .toOption
         .get
       val testDataTensor =
-        STen.fromMat(testData.filterIx(_ != "label").toMat, cuda)
+        lamp.saddle.fromMat(testData.filterIx(_ != "label").toMat, cuda)
       val testTarget =
-        STen
+        lamp.saddle
           .fromLongMat(
             Mat(testData.firstCol("label").toVec.map(_.toLong)),
             cuda
@@ -62,8 +62,8 @@ class MLPSuite extends AnyFunSuite {
         .toOption
         .get
       val trainDataTensor =
-        STen.fromMat(trainData.filterIx(_ != "label").toMat, cuda)
-      val trainTarget = STen
+        lamp.saddle.fromMat(trainData.filterIx(_ != "label").toMat, cuda)
+      val trainTarget = lamp.saddle
         .fromLongMat(
           Mat(trainData.firstCol("label").toVec.map(_.toLong)),
           cuda
@@ -77,7 +77,7 @@ class MLPSuite extends AnyFunSuite {
         AdversarialTraining(2d)
       )
 
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+      val rng = new scala.util.Random
       val makeValidationBatch = (_: IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           200,
@@ -160,7 +160,7 @@ class MLPSuite extends AnyFunSuite {
           acc,
           true
         )
-      val loss = acc.toMat.raw(0) / numExamples
+      val loss = acc.toDoubleArray.head / numExamples
       assert(loss < 0.8)
 
       {

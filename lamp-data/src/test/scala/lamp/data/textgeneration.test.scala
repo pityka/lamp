@@ -68,7 +68,7 @@ class TextGenerationSuite extends AnyFunSuite {
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+      val rng = new scala.util.Random()
       val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
         Text
           .minibatchesFromText(
@@ -146,7 +146,7 @@ class TextGenerationSuite extends AnyFunSuite {
           LossFunctions.SequenceNLL(vocabularSize, classWeights)
         )
       }
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+      val rng = new scala.util.Random
       val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
         Text
           .minibatchesFromText(

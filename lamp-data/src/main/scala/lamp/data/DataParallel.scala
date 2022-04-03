@@ -99,7 +99,7 @@ object DataParallel {
         validationBatches.init
       ).flatMap { case (totalLossPerModel, totalExamples) =>
         val validationLoss =
-          totalLossPerModel.map(_.toMat.raw(0)).sum / totalExamples
+          totalLossPerModel.map(_.toDoubleArray.apply(0)).sum / totalExamples
         for {
           _ <- IO {
             logger.foreach(
@@ -337,7 +337,7 @@ object DataParallel {
         loop(lossAcc)
 
       loopDone.map { numInstances =>
-        val totalLoss = lossAcc.map(_.toMat.raw(0)).sum
+        val totalLoss = lossAcc.map(_.toDoubleArray.apply(0)).sum
         (totalLoss, numInstances)
       }
     }
@@ -365,7 +365,7 @@ object DataParallel {
     } yield trainingLoss
   }
 
-  def makeMultipleBatches[A, S](
+  private[lamp] def makeMultipleBatches[A, S](
       devices: List[Device],
       makeOne: (Device, S) => IO[(S, Resource[IO, StreamControl[A]])]
   ): S => IO[

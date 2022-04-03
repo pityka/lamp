@@ -10,6 +10,7 @@ import lamp.nn.GenericModule
 import lamp.STen
 import lamp.Scope
 import java.nio.channels.Channels
+import lamp.data.schemas.TensorList
 
 /** Serializes tensors
   *
@@ -17,7 +18,8 @@ import java.nio.channels.Channels
   * it uses JSON rather then protobuf.
   *
   * Format specification
-  * ==================== Sequences of tensors are serialized into a JSON
+  * ==================== 
+  * Sequences of tensors are serialized into a JSON
   * descriptor and a data blob. The schema of the descriptor is the case class
   * lamp.data.schemas.TensorList. The location field in this schema holds a path
   * to the data blob. If this the location a relative POSIX then it is relative
@@ -33,13 +35,13 @@ import java.nio.channels.Channels
   */
 object Writer {
 
-  def writeTensorDataAndMakeDescriptor(
+  private[lamp] def writeTensorDataAndMakeDescriptor(
       tensors: Seq[STen],
       location: String,
       dataChannel: WritableByteChannel,
       initialByteOffset: Long,
       bufferSize: Int
-  ) = {
+  ): Either[String,TensorList] = {
     writeTensorDataIntoChannel(tensors, dataChannel, bufferSize).map {
       offsets =>
         val tensorDescriptors =

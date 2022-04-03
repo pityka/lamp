@@ -10,7 +10,6 @@ import lamp.autograd.Variable
 import lamp.autograd.const
 import lamp.STen
 import scala.io.Codec
-import lamp.TensorHelpers
 import cats.effect.unsafe.implicits.global
 
 class TransformerSuite extends AnyFunSuite {
@@ -38,12 +37,12 @@ class TransformerSuite extends AnyFunSuite {
 
     val (vocab, _) = Text.charsToIntegers((positives ++ negatives).mkString)
 
-    val all = Text.sentencesToPaddedMatrix(
+    val all = Mat(Text.sentencesToPaddedMatrix(
       positives ++ negatives,
       maxLength = 15,
       pad = vocab.size,
       vocabulary = vocab
-    )
+    ).map(_.toVec):_*).T
     val target = vec.ones(positives.size) concat vec.zeros(negatives.size)
     val shuffle =
       scala.util.Random.shuffle(0 until all.numRows toVector).toArray
@@ -57,13 +56,13 @@ class TransformerSuite extends AnyFunSuite {
     val trainTarget = shuffledT.take(trainIdx)
     val trainF = shuffledF.row(trainIdx)
 
-    val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+    val rng = new scala.util.Random
 
     Scope.root { implicit scope =>
       val tOpt = device.options(precision)
-      val trainFT = STen.fromLongMat(trainF.map(_.toLong), CPU)
-      val trainTargetT = STen.fromLongVec(trainTarget.map(_.toLong), CPU)
-      val testFT = STen.fromLongMat(testF.map(_.toLong), device)
+      val trainFT = lamp.saddle.fromLongMat(trainF.map(_.toLong), CPU)
+      val trainTargetT = lamp.saddle.fromLongVec(trainTarget.map(_.toLong), CPU)
+      val testFT = lamp.saddle.fromLongMat(testF.map(_.toLong), device)
 
       val trainedModel = Scope { implicit scope =>
         val makeTrainingBatch =
@@ -135,7 +134,7 @@ class TransformerSuite extends AnyFunSuite {
           trainedModel.asEval.forward(lamp.autograd.const(testFT))
         val prediction = {
           val argm = aten.ATen.argmax(output.value.value, 1, false)
-          val r = TensorHelpers.toLongMat(argm).toVec
+          val r = lamp.saddle.SaddleTensorHelpers.toLongMat(argm).toVec
           argm.release
           r
         }

@@ -1,9 +1,9 @@
-package lamp
+package lamp.saddle
 
 import org.saddle._
 import org.saddle.linalg._
 import org.saddle.ops.BinOps._
-
+import lamp._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.compatible.Assertion
 
@@ -29,7 +29,7 @@ class STenSuite extends AnyFunSuite {
   test("unique 1") {
     Scope.root { implicit scope =>
       val t =
-        STen.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
+        lamp.saddle.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
       val (un, _) = t.unique(sorted = false, returnInverse = false)
       assert(un.toLongVec.sorted == Vec(1, 3, 8, 9))
     }
@@ -37,7 +37,7 @@ class STenSuite extends AnyFunSuite {
   test("unique 3") {
     Scope.root { implicit scope =>
       val t =
-        STen.fromLongVec(Vec(1, 1, 2, 3, 4, 4).map(_.toLong), false)
+        lamp.saddle.fromLongVec(Vec(1, 1, 2, 3, 4, 4).map(_.toLong), false)
       val (un, _) = t.unique(sorted = true, returnInverse = false)
       assert(un.toLongVec == Vec(1, 2, 3, 4))
     }
@@ -45,7 +45,7 @@ class STenSuite extends AnyFunSuite {
   test("unique 4") {
     Scope.root { implicit scope =>
       val t =
-        STen.fromLongVec(Vec(1, 1, 2, 3, 4, 4).map(_.toLong), false)
+        lamp.saddle.fromLongVec(Vec(1, 1, 2, 3, 4, 4).map(_.toLong), false)
       val (un, _, _) = t.uniqueConsecutive(dim = 0, returnInverse = false)
       assert(un.toLongVec == Vec(1, 2, 3, 4))
     }
@@ -53,7 +53,7 @@ class STenSuite extends AnyFunSuite {
   test("unique 2") {
     Scope.root { implicit scope =>
       val t =
-        STen.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
+        lamp.saddle.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
       val (un, inv, count) = t.unique(
         sorted = false,
         returnInverse = true,
@@ -99,7 +99,7 @@ class STenSuite extends AnyFunSuite {
     Scope.root { implicit scope =>
       val t1 = STen.ones(List(3, 2, 4), STenOptions.d)
       assert(
-        t1.indexSelect(0, STen.fromLongVec(Vec(0L, 1L), false)).shape == List(
+        t1.indexSelect(0, lamp.saddle.fromLongVec(Vec(0L, 1L), false)).shape == List(
           2,
           2,
           4

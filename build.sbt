@@ -62,12 +62,25 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "3.1.0"
+val saddleVersion = "3.2.0"
 val upickleVersion = "1.4.4"
 val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.6.9"
-val catsEffectVersion = "3.3.6"
+val catsEffectVersion = "3.3.9"
 val catsCoreVersion = "2.6.0"
+
+lazy val saddlecompat = project
+  .in(file("lamp-saddle"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-saddle",
+    libraryDependencies ++= Seq(
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
+      "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
+    )
+  )
+  .dependsOn(sten)
 
 lazy val sten = project
   .in(file("lamp-sten"))
@@ -77,9 +90,8 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0",
       "io.github.pityka" %% "aten-scala-core" % "0.0.0+99-1d12bfdd",
-      "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
@@ -102,9 +114,12 @@ lazy val core = project
     inConfig(AllTest)(Defaults.testTasks),
     testOptions in Test += Tests.Argument("-l", "cuda slow"),
     testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
+    testOptions in AllTest := Nil,
+    libraryDependencies ++= List(
+      "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test"
+    )
   )
-  .dependsOn(sten % "test->test;compile->compile")
+  .dependsOn(sten % "test->test;compile->compile", saddlecompat % "test->test")
 
 lazy val data = project
   .in(file("lamp-data"))
@@ -145,27 +160,7 @@ lazy val e2etest = project
     testOptions in AllTest := Nil
   )
   .dependsOn(data)
-  .dependsOn(forest)
-  .dependsOn(core % "test->test;compile->compile")
-
-lazy val tabular = project
-  .in(file("lamp-tabular"))
-  .configs(Cuda)
-  .configs(AllTest)
-  .settings(commonSettings: _*)
-  .settings(
-    name := "lamp-tabular",
-    libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % upickleVersion,
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
-    ),
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil
-  )
-  .dependsOn(data, knn, forest)
+  .dependsOn(forest, saddlecompat)
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val umap = project
@@ -200,7 +195,7 @@ lazy val onnx = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "com.microsoft.onnxruntime" % "onnxruntime" % "1.10.0" % "test"
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.11.0" % "test"
     ),
     PB.targets in Compile := Seq(
       scalapb.gen() -> (sourceManaged in Compile).value / "scalapb"
@@ -244,7 +239,7 @@ lazy val knn = project
     testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil
   )
-  .dependsOn(core)
+  .dependsOn(core, saddlecompat)
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val example_cifar100 = project
@@ -255,10 +250,11 @@ lazy val example_cifar100 = project
     skip in publish := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
   )
-  .dependsOn(core, data, onnx)
+  .dependsOn(core, data, onnx, saddlecompat)
   .enablePlugins(JavaAppPackaging)
 
 lazy val example_gan = project
@@ -269,10 +265,11 @@ lazy val example_gan = project
     skip in publish := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
   )
-  .dependsOn(core, data, onnx)
+  .dependsOn(core, data, onnx, saddlecompat)
 lazy val example_timemachine = project
   .in(file("example-timemachine"))
   .settings(commonSettings: _*)
@@ -281,10 +278,11 @@ lazy val example_timemachine = project
     skip in publish := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
   )
-  .dependsOn(core, data)
+  .dependsOn(core, data, saddlecompat)
 lazy val example_bert = project
   .in(file("example-bert"))
   .settings(commonSettings: _*)
@@ -293,10 +291,11 @@ lazy val example_bert = project
     skip in publish := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
   )
-  .dependsOn(core, data)
+  .dependsOn(core, data, saddlecompat)
 
 lazy val example_translation = project
   .in(file("example-translation"))
@@ -306,10 +305,11 @@ lazy val example_translation = project
     skip in publish := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
   )
-  .dependsOn(core, data)
+  .dependsOn(core, data, saddlecompat)
 
 lazy val example_arxiv = project
   .in(file("example-arxiv"))
@@ -321,15 +321,21 @@ lazy val example_arxiv = project
       "com.github.scopt" %% "scopt" % "4.0.1",
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.lihaoyi" %% "requests" % "0.6.7",
       "com.lihaoyi" %% "os-lib" % "0.8.1"
     )
   )
-  .dependsOn(core, data)
+  .dependsOn(core, data, saddlecompat)
 
 lazy val docs = project
   .in(file("lamp-docs"))
-  .dependsOn(core % "compile->test;compile->compile", data)
+  .dependsOn(
+    core % "compile->test;compile->compile",
+    data,
+    forest,
+    saddlecompat
+  )
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
@@ -351,9 +357,9 @@ lazy val root = project
   )
   .aggregate(
     sten,
+    saddlecompat,
     core,
     data,
-    tabular,
     knn,
     forest,
     umap,

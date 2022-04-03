@@ -9,9 +9,34 @@ import cats.effect.unsafe.implicits.global
 
 package object extratrees {
 
-  def minmax(self: Vec[Double]) = {
+  private[lamp] def lessThanCutpoint(
+      v: Vec[Double],
+      cutpoint: Double,
+      missingIsLess: Boolean
+  ) = {
+    val l = v.length
+    val ar = new Array[Boolean](l)
+    var i = 0
+    if (missingIsLess) {
+      while (i < l) {
+        val x = v.raw(i)
+        ar(i) = x.isNaN || x < cutpoint
+        i += 1
+      }
+    } else {
+      while (i < l) {
+        val x = v.raw(i)
+        ar(i) = x < cutpoint
+        i += 1
+      }
+    }
+    Vec(ar)
+  }
+
+  private[lamp] def minmax(self: Vec[Double]) = {
     var sMin = Double.MaxValue
     var sMax = Double.MinValue
+    var hasMissing = false
     var i = 0
     val n = self.length
     while (i < n) {
@@ -22,12 +47,15 @@ package object extratrees {
       if (v > sMax) {
         sMax = v
       }
+      if (v.isNaN && !hasMissing) {
+        hasMissing = true
+      }
       i += 1
     }
-    (sMin, sMax)
+    (sMin, sMax, hasMissing)
   }
 
-  def splitClassification(
+  private[lamp] def splitClassification(
       data: Mat[Double],
       subset: Vec[Int],
       attributes: Array[Int],
@@ -54,34 +82,60 @@ package object extratrees {
     var bestScore = Double.NegativeInfinity
     var bestFeature = -1
     var bestCutpoint = Double.NaN
+    var bestMissingIsLess = false
     var visited = 0
     while (N - high < k && high - low > 0) {
       val r = rng.nextInt(low, high - 1)
       val attr = attributes(r)
-      val (min, max) = minmax(takeCol(data, subset, attr))
-      if (max <= min) {
+      val (min, max, hasMissing) = minmax(takeCol(data, subset, attr))
+      if (max <= min && !hasMissing) {
         swap(r, low)
         low += 1
       } else {
         val cutpoint = rng.nextDouble(min, max)
 
-        val take = takeCol(data, subset, attr) < cutpoint
+        val col = takeCol(data, subset, attr)
+        val takeMissingIsLess =
+          if (!hasMissing) null
+          else
+            lessThanCutpoint(col, cutpoint, true)
+        val takeMissingIsNotLess =
+          lessThanCutpoint(col, cutpoint, false)
 
-        val score = giniScore(
+        val scoreMissingIsLess =
+          if (!hasMissing) Double.NaN
+          else
+            giniScore(
+              targetAtSubset,
+              weightsAtSubset,
+              takeMissingIsLess,
+              giniTotal,
+              numClasses,
+              buf1,
+              buf2
+            )
+        val scoreMissingIsNotLess = giniScore(
           targetAtSubset,
           weightsAtSubset,
-          take,
+          takeMissingIsNotLess,
           giniTotal,
           numClasses,
           buf1,
           buf2
         )
-        if (score > bestScore) {
-          bestScore = score
+
+        val chosenMissingIsLess =
+          (!scoreMissingIsLess.isNaN && (scoreMissingIsLess > scoreMissingIsNotLess || scoreMissingIsNotLess.isNaN))
+        val chosenScore =
+          if (chosenMissingIsLess) scoreMissingIsLess else scoreMissingIsNotLess
+
+        if (chosenScore > bestScore) {
+          bestScore = chosenScore
           bestFeature = attr
           bestCutpoint = cutpoint
+          bestMissingIsLess = chosenMissingIsLess
         }
-        if (score.isNaN) {
+        if (chosenScore.isNaN) {
           swap(r, low)
           low += 1
         } else {
@@ -91,11 +145,12 @@ package object extratrees {
         }
       }
     }
-    if (visited == 0) (-1, bestCutpoint, low)
+    if (visited == 0 || bestCutpoint.isNaN)
+      (-1, bestCutpoint, low, bestMissingIsLess)
     else
-      (bestFeature, bestCutpoint, low)
+      (bestFeature, bestCutpoint, low, bestMissingIsLess)
   }
-  def splitRegression(
+  private[lamp] def splitRegression(
       data: Mat[Double],
       subset: Vec[Int],
       attributes: Array[Int],
@@ -119,47 +174,86 @@ package object extratrees {
     var bestScore = Double.NegativeInfinity
     var bestFeature = -1
     var bestCutpoint = Double.NaN
+    var bestMissingIsLess = false
     var visited = 0
     while (N - high < k && high - low > 0) {
       val r = rng.nextInt(low, high - 1)
       val attr = attributes(r)
-      val (min, max) = minmax(takeCol(data, subset, attr))
-      if (max <= min) {
+      val (min, max, hasMissing) = minmax(takeCol(data, subset, attr))
+      if (max <= min && !hasMissing) {
         swap(r, low)
         low += 1
       } else {
         val cutpoint = rng.nextDouble(min, max)
+        val col = takeCol(data, subset, attr)
+        val takeMissingIsLess =
+          if (!hasMissing) null
+          else
+            lessThanCutpoint(col, cutpoint, true)
+        val takeMissingIsNotLess =
+          lessThanCutpoint(col, cutpoint, false)
 
-        val take = takeCol(data, subset, attr) < cutpoint
-        visited += 1
-        val score = computeVarianceReduction(
+        val scoreMissingIsLess =
+          if (!hasMissing) Double.NaN
+          else
+            computeVarianceReduction(
+              targetAtSubset,
+              takeMissingIsLess,
+              varianceNoSplit
+            )
+        val scoreMissingIsNotLess = computeVarianceReduction(
           targetAtSubset,
-          take,
+          takeMissingIsNotLess,
           varianceNoSplit
         )
 
-        if (score > bestScore) {
-          bestScore = score
+        val chosenMissingIsLess =
+          (!scoreMissingIsLess.isNaN && (scoreMissingIsLess > scoreMissingIsNotLess || scoreMissingIsNotLess.isNaN))
+        val chosenScore =
+          if (chosenMissingIsLess) scoreMissingIsLess else scoreMissingIsNotLess
+
+        if (chosenScore > bestScore) {
+          bestScore = chosenScore
           bestFeature = attr
           bestCutpoint = cutpoint
+          bestMissingIsLess = chosenMissingIsLess
         }
-        swap(r, high - 1)
-        high -= 1
+        if (chosenScore.isNaN) {
+          swap(r, low)
+          low += 1
+        } else {
+          visited += 1
+          swap(r, high - 1)
+          high -= 1
+        }
+
       }
     }
-    if (visited == 0) (-1, bestCutpoint, low)
+    if (visited == 0 || bestCutpoint.isNaN)
+      (-1, bestCutpoint, low, bestMissingIsLess)
     else
-      (bestFeature, bestCutpoint, low)
+      (bestFeature, bestCutpoint, low, bestMissingIsLess)
+
   }
 
-  def predictClassification(
+  private[lamp] def predictClassification(
       root: ClassificationTree,
       sample: Vec[Double]
   ): Vec[Double] = {
     def traverse(root: ClassificationTree): Vec[Double] = root match {
       case ClassificationLeaf(targetDistribution) => targetDistribution.toVec
-      case ClassificationNonLeaf(left, right, splitFeature, cutpoint) =>
-        if (sample.raw(splitFeature) < cutpoint) traverse(left)
+      case ClassificationNonLeaf(
+            left,
+            right,
+            splitFeature,
+            cutpoint,
+            missingIsLess
+          ) =>
+        if (
+          sample.raw(splitFeature) < cutpoint || (missingIsLess && sample
+            .raw(splitFeature)
+            .isNaN)
+        ) traverse(left)
         else traverse(right)
     }
 
@@ -176,14 +270,25 @@ package object extratrees {
       Mat(preditionsOfTrees: _*).reduceRows((row, _) => row.mean2)
     }: _*).T
   }
-  def predictRegression(
+
+  private[lamp] def predictRegression(
       root: RegressionTree,
       sample: Vec[Double]
   ): Double = {
     def traverse(root: RegressionTree): Double = root match {
       case RegressionLeaf(mean) => mean
-      case RegressionNonLeaf(left, right, splitFeature, cutpoint) =>
-        if (sample.raw(splitFeature) < cutpoint) traverse(left)
+      case RegressionNonLeaf(
+            left,
+            right,
+            splitFeature,
+            cutpoint,
+            missingIsLess
+          ) =>
+        if (
+          sample.raw(splitFeature) < cutpoint || (missingIsLess && sample
+            .raw(splitFeature)
+            .isNaN)
+        ) traverse(left)
         else traverse(right)
     }
 
@@ -201,6 +306,25 @@ package object extratrees {
     }.toVec
   }
 
+  /** Train an extratrees classifier forest
+    *
+    * @param data
+    * @param target
+    * @param sampleWeights
+    * @param numClasses
+    * @param nMin
+    *   minimum sample size for splitting a node
+    * @param k
+    *   number of features to consider in each split step. The best among these
+    *   will be chosen.
+    * @param m
+    *   number of trees
+    * @param parallelism
+    * @param seed
+    *
+    * Returns a list of ClassificationTree objects which can be passed to
+    * `predictClassification`
+    */
   def buildForestClassification(
       data: Mat[Double],
       target: Vec[Int],
@@ -212,6 +336,11 @@ package object extratrees {
       parallelism: Int,
       seed: Long = java.time.Instant.now.toEpochMilli
   ): Seq[ClassificationTree] = {
+    require(
+      data.numRows == target.length,
+      s"Data.numRows(${data.numRows}) != target.length (${target.length})"
+    )
+
     val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(seed)
     val subset = array.range(0, data.numRows).toVec
     sampleWeights.foreach(v =>
@@ -260,6 +389,23 @@ package object extratrees {
     trees
   }
 
+  /** Train an extratrees regression forest
+    *
+    * @param data
+    * @param target
+    * @param nMin
+    *   minimum sample size for splitting a node
+    * @param k
+    *   number of features to consider in each split step. The best among these
+    *   will be chosen.
+    * @param m
+    *   number of trees
+    * @param parallelism
+    * @param seed
+    *
+    * Returns a list of RegressionTree objects which can be passed to
+    * `predictRegression`
+    */
   def buildForestRegression(
       data: Mat[Double],
       target: Vec[Double],
@@ -269,6 +415,10 @@ package object extratrees {
       parallelism: Int,
       seed: Long = java.time.Instant.now.toEpochMilli
   ): Seq[RegressionTree] = {
+    require(
+      data.numRows == target.length,
+      s"Data.numRows(${data.numRows}) != target.length (${target.length})"
+    )
     val subset = array.range(0, data.numRows).toVec
     val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(seed)
     val trees = if (parallelism <= 1) {
@@ -310,7 +460,7 @@ package object extratrees {
     trees
   }
 
-  def buildTreeRegression(
+  private[lamp] def buildTreeRegression(
       data: Mat[Double],
       subset: Vec[Int],
       target: Vec[Double],
@@ -320,7 +470,7 @@ package object extratrees {
       attributes: Array[Int],
       numConstant: Int
   ): RegressionTree = {
-
+    require(subset.length > 0)
     val targetInSubset = target.take(subset.toArray)
     def makeLeaf = {
       RegressionLeaf(targetInSubset.mean2)
@@ -329,9 +479,16 @@ package object extratrees {
         leftTree: RegressionTree,
         rightTree: RegressionTree,
         splitFeatureIdx: Int,
-        splitCutpoint: Double
+        splitCutpoint: Double,
+        splitMissingIsLess: Boolean
     ) =
-      RegressionNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
+      RegressionNonLeaf(
+        leftTree,
+        rightTree,
+        splitFeatureIdx,
+        splitCutpoint,
+        splitMissingIsLess
+      )
 
     val targetIsConstant = {
       val col = targetInSubset
@@ -351,7 +508,7 @@ package object extratrees {
     else if (targetIsConstant) makeLeaf
     else {
 
-      val (splitFeatureIdx, splitCutpoint, nConstant2) =
+      val (splitFeatureIdx, splitCutpoint, nConstant2, missingIsLess) =
         splitRegression(
           data,
           subset,
@@ -365,9 +522,22 @@ package object extratrees {
       else {
 
         val splitFeature = col(data, splitFeatureIdx)
-        val leftSubset = subset.filter(s => splitFeature.raw(s) < splitCutpoint)
+
+        val leftSubset =
+          if (missingIsLess)
+            subset.filter(s =>
+              splitFeature.raw(s) < splitCutpoint || splitFeature.raw(s).isNaN
+            )
+          else subset.filter(s => splitFeature.raw(s) < splitCutpoint)
+
         val rightSubset =
-          subset.filter(s => splitFeature.raw(s) >= splitCutpoint)
+          if (missingIsLess)
+            subset.filter(s => splitFeature.raw(s) >= splitCutpoint)
+          else
+            subset.filter(s =>
+              splitFeature.raw(s) >= splitCutpoint || splitFeature.raw(s).isNaN
+            )
+
         val leftTree =
           buildTreeRegression(
             data,
@@ -390,12 +560,18 @@ package object extratrees {
             attributes,
             nConstant2
           )
-        makeNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
+        makeNonLeaf(
+          leftTree,
+          rightTree,
+          splitFeatureIdx,
+          splitCutpoint,
+          missingIsLess
+        )
       }
     }
   }
 
-  def distribution(
+  private[lamp] def distribution(
       v: Vec[Int],
       sampleWeights: Option[Vec[Double]],
       numClasses: Int
@@ -429,15 +605,19 @@ package object extratrees {
     ar.toVec
   }
 
-  def takeCol(data: Mat[Double], rows: Vec[Int], col: Int): Vec[Double] = {
+  private[lamp] def takeCol(
+      data: Mat[Double],
+      rows: Vec[Int],
+      col: Int
+  ): Vec[Double] = {
     data.toVec.slice(col, data.length, data.numCols).view(rows.toArray)
   }
 
-  def col(data: Mat[Double], col: Int): Vec[Double] = {
+  private[lamp] def col(data: Mat[Double], col: Int): Vec[Double] = {
     data.toVec.slice(col, data.length, data.numCols)
   }
 
-  def buildTreeClassification(
+  private[lamp] def buildTreeClassification(
       data: Mat[Double],
       subset: Vec[Int],
       target: Vec[Int],
@@ -460,9 +640,16 @@ package object extratrees {
         leftTree: ClassificationTree,
         rightTree: ClassificationTree,
         splitFeatureIdx: Int,
-        splitCutpoint: Double
+        splitCutpoint: Double,
+        splitMissingIsLess: Boolean
     ) =
-      ClassificationNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
+      ClassificationNonLeaf(
+        leftTree,
+        rightTree,
+        splitFeatureIdx,
+        splitCutpoint,
+        splitMissingIsLess
+      )
     val targetIsConstant = {
       val col = targetInSubset
       val head = col.raw(0)
@@ -481,7 +668,7 @@ package object extratrees {
     else if (targetIsConstant) makeLeaf
     else {
 
-      val (splitFeatureIdx, splitCutpoint, numConstant2) =
+      val (splitFeatureIdx, splitCutpoint, numConstant2, missingIsLess) =
         splitClassification(
           data,
           subset,
@@ -496,10 +683,21 @@ package object extratrees {
       if (splitFeatureIdx < 0) makeLeaf
       else {
         val splitFeature = col(data, splitFeatureIdx)
+
         val leftSubset =
-          subset.filter(s => splitFeature.raw(s) < splitCutpoint)
+          if (missingIsLess)
+            subset.filter(s =>
+              splitFeature.raw(s) < splitCutpoint || splitFeature.raw(s).isNaN
+            )
+          else subset.filter(s => splitFeature.raw(s) < splitCutpoint)
+
         val rightSubset =
-          subset.filter(s => splitFeature.raw(s) >= splitCutpoint)
+          if (missingIsLess)
+            subset.filter(s => splitFeature.raw(s) >= splitCutpoint)
+          else
+            subset.filter(s =>
+              splitFeature.raw(s) >= splitCutpoint || splitFeature.raw(s).isNaN
+            )
 
         val leftTree =
           buildTreeClassification(
@@ -527,12 +725,18 @@ package object extratrees {
             attributes,
             numConstant2
           )
-        makeNonLeaf(leftTree, rightTree, splitFeatureIdx, splitCutpoint)
+        makeNonLeaf(
+          leftTree,
+          rightTree,
+          splitFeatureIdx,
+          splitCutpoint,
+          missingIsLess
+        )
       }
     }
   }
 
-  def partition[@specialized(Int, Double) T: ClassTag](
+  private[lamp] def partition[@specialized(Int, Double) T: ClassTag](
       vec: Vec[T]
   )(pred: Array[Boolean]): (Vec[T], Vec[T]) = {
     var i = 0
@@ -549,7 +753,7 @@ package object extratrees {
     (Vec(bufT.toArray), Vec(bufF.toArray))
   }
 
-  def giniScore(
+  private[lamp] def giniScore(
       target: Vec[Int],
       sampleWeights: Option[Vec[Double]],
       samplesInSplit: Vec[Boolean],
@@ -608,7 +812,7 @@ package object extratrees {
     giniImpurityNoSplit - gIn * targetInCount / numSamplesNoSplit - gOut * targetOutCount / numSamplesNoSplit
   }
 
-  def giniImpurity(
+  private[lamp] def giniImpurity(
       target: Vec[Int],
       weights: Option[Vec[Double]],
       numClasses: Int
@@ -617,7 +821,7 @@ package object extratrees {
     val p2 = p * p
     1d - p2.sum
   }
-  def giniImpurityFromDistribution(
+  private[lamp] def giniImpurityFromDistribution(
       distribution: Array[Double]
   ): Double = {
     var s = 0d
@@ -632,7 +836,7 @@ package object extratrees {
     1d - s
   }
 
-  def computeVarianceReduction(
+  private[lamp] def computeVarianceReduction(
       target: Vec[Double],
       samplesInSplit: Vec[Boolean],
       varianceNoSplit: Double
