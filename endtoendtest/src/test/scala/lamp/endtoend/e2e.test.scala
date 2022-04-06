@@ -19,6 +19,8 @@ import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
+import lamp.saddle._ 
+
 class EndToEndClassificationSuite extends AnyFunSuite {
 
   def parseDataset(file: File) = {
@@ -89,7 +91,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       val trainTarget = Frame(target).row(numExamples / 3 + 1 -> *).colAt(0)
 
       val testFeaturesTensor =
-        STen.fromMat(testFeatures.toMat, device, SinglePrecision)
+        lamp.saddle.fromMat(testFeatures.toMat, device, SinglePrecision)
 
       def mlp(dim: Int, k: Int, tOpt: STenOptions) =
         sequence(
@@ -98,9 +100,9 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         )
 
       val trainFeaturesTensor =
-        STen.fromMat(trainFeatures.toMat, device, SinglePrecision)
+        lamp.saddle.fromMat(trainFeatures.toMat, device, SinglePrecision)
       val trainTargetTensor =
-        STen
+        lamp.saddle
           .fromLongMat(
             Mat(trainTarget.toVec.map(_.toLong)),
             device
@@ -116,7 +118,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
         mlp(numFeatures, numClasses, device.options(SinglePrecision)),
         LossFunctions.NLL(numClasses, classWeights)
       )
-      val rng = org.saddle.spire.random.rng.Cmwc5.apply()
+      val rng = new scala.util.Random
       val makeTrainingBatch = (_: IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           1024,
@@ -143,7 +145,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
           _._2.module.forward(const(testFeaturesTensor))
         )
         .unsafeRunSync()
-      val prediction = output.toMat.rows.map(_.argmax).toVec
+      val prediction = output.value.toMat.rows.map(_.argmax).toVec
       val accuracy = prediction
         .zipMap(testTarget.toVec)((a, b) => if (a.toInt == b.toInt) 1d else 0d)
         .mean2
