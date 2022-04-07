@@ -306,7 +306,8 @@ object IOLoops {
       initState: Option[SimpleLoopState] = None,
       accumulateGradientOverNBatches: Int = 1,
       learningRateScheduleInitState: Option[LRState] = None,
-      printOptimizerAllocations: Boolean = false
+      printOptimizerAllocations: Boolean = false,
+      validationLossExponentialSmoothingFactor: Double = 1.0
   ): IO[
     (
         Int,
@@ -449,25 +450,11 @@ object IOLoops {
           maybeValidationLoss <-
             if (
               epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
-            )
-              if (dataParallelModels.isEmpty)
-                validationOneEpoch(
-                  model = modelWithOptimizer.model,
-                  validationBatches = validationBatchesOverEpoch.get(
-                    TrainingLoopContext(
-                      epoch,
-                      lastValidationLoss,
-                      minValidationLoss
-                    )
-                  ),
-                  validationCallback = validationCallback,
-                  logger = logger,
-                  epochCount = epoch
-                ).map(Some(_))
-              else
-                DataParallel
-                  .validationOneEpoch(
-                    models = modelWithOptimizer.model +: dataParallelModels,
+            ) {
+              val validationLossInThisEpoch =
+                if (dataParallelModels.isEmpty)
+                  validationOneEpoch(
+                    model = modelWithOptimizer.model,
                     validationBatches = validationBatchesOverEpoch.get(
                       TrainingLoopContext(
                         epoch,
@@ -479,8 +466,29 @@ object IOLoops {
                     logger = logger,
                     epochCount = epoch
                   )
-                  .map(Some(_))
-            else IO.pure(None)
+                else
+                  DataParallel
+                    .validationOneEpoch(
+                      models = modelWithOptimizer.model +: dataParallelModels,
+                      validationBatches = validationBatchesOverEpoch.get(
+                        TrainingLoopContext(
+                          epoch,
+                          lastValidationLoss,
+                          minValidationLoss
+                        )
+                      ),
+                      validationCallback = validationCallback,
+                      logger = logger,
+                      epochCount = epoch
+                    )
+
+              validationLossInThisEpoch.map { vt =>
+                val s = lastValidationLoss.getOrElse(0d)
+                Some(
+                  vt * validationLossExponentialSmoothingFactor + s * (1d - validationLossExponentialSmoothingFactor)
+                )
+              }
+            } else IO.pure(None)
 
           _ <- IO {
             maybeValidationLoss.foreach(validationLoss =>
