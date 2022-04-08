@@ -276,7 +276,7 @@ object IOLoops {
       val swaLearningCurve = swaResult._2
       val m = warmupLearningCurve.map(_._1).max + 1
       val concatLearningCurve = warmupLearningCurve ++ swaLearningCurve.map {
-        case (epoch, l1, l2) => (epoch + m, l1, l2)
+        case (epoch, l1, l2) => (epoch + m, l1, l2.map(x => (x,x)))
       }
       (warmupEpochReturned, swaModel, concatLearningCurve, warmedupModel)
     }
