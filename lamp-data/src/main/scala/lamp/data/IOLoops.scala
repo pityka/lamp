@@ -329,7 +329,7 @@ object IOLoops {
         (c, b)
       }
       println(
-        s"Optimizer allocations: $c(${(bts.toDouble * 1e-9).formatted("%.4f")}GB)"
+        s"Optimizer allocations: $c(${"%.4f".format(bts.toDouble * 1e-9)}GB)"
       )
     }
 
@@ -732,8 +732,7 @@ object IOLoops {
       _ <- IO {
         logger.foreach(
           _.info(
-            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${throughput
-              .formatted("%.2f")} instances/sec)"
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f".format(throughput)} instances/sec)"
           )
         )
       }
