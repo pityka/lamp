@@ -78,9 +78,8 @@ lazy val saddlecompat = project
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
-    )
-  )
-  .dependsOn(sten)
+    ),
+  ).dependsOn(sten)
 
 lazy val sten = project
   .in(file("lamp-sten"))
@@ -116,7 +115,8 @@ lazy val core = project
     testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil,
     libraryDependencies ++= List(
-      "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test"
+              "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test",
+
     )
   )
   .dependsOn(sten % "test->test;compile->compile", saddlecompat % "test->test")
@@ -160,7 +160,7 @@ lazy val e2etest = project
     testOptions in AllTest := Nil
   )
   .dependsOn(data)
-  .dependsOn(forest, saddlecompat)
+  .dependsOn(forest,saddlecompat)
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val umap = project
@@ -330,12 +330,7 @@ lazy val example_arxiv = project
 
 lazy val docs = project
   .in(file("lamp-docs"))
-  .dependsOn(
-    core % "compile->test;compile->compile",
-    data,
-    forest,
-    saddlecompat
-  )
+  .dependsOn(core % "compile->test;compile->compile", data, forest, saddlecompat)
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,

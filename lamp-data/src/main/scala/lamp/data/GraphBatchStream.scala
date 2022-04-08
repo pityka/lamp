@@ -139,11 +139,7 @@ object GraphBatchStream {
       rng
         .map(rng =>
           rng
-            .shuffle(
-              ArraySeq.unsafeWrapArray(
-                Array.range(0, graphNodesAndEdges.length)
-              )
-            )
+            .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, graphNodesAndEdges.length)))
             .grouped(minibatchSize)
             .map(_.toArray)
             .toList
