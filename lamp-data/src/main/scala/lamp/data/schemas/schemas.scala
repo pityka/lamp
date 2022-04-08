@@ -39,7 +39,7 @@ case class SimpleLoopState(
     lastValidationLoss: Option[Double],
     minValidationLoss: Option[Double],
     minValidationLossModel: Option[(Int, TensorList)],
-    learningCurve: List[(Int, Double, Option[Double])]
+    learningCurve: List[(Int, Double, Option[Double],Option[Double])]
 ) extends LoopState
 case class SWALoopState(
     model: TensorList,
