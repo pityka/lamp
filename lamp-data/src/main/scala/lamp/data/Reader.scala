@@ -58,7 +58,7 @@ object Reader {
 
   }
 
- private[lamp]  def readTensorsFromFile(
+ def readTensorsFromFile(
       file: File,
       device: Device,
       pin: Boolean
