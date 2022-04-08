@@ -306,7 +306,8 @@ object IOLoops {
       initState: Option[SimpleLoopState] = None,
       accumulateGradientOverNBatches: Int = 1,
       learningRateScheduleInitState: Option[LRState] = None,
-      printOptimizerAllocations: Boolean = false
+      printOptimizerAllocations: Boolean = false,
+      validationLossExponentialSmoothingFactor: Double = 1.0
   ): IO[
     (
         Int,
@@ -328,7 +329,7 @@ object IOLoops {
         (c, b)
       }
       println(
-        s"Optimizer allocations: $c(${(bts.toDouble * 1e-9).formatted("%.4f")}GB)"
+        s"Optimizer allocations: $c(${"%.4f".format(bts.toDouble * 1e-9)}GB)"
       )
     }
 
@@ -449,25 +450,11 @@ object IOLoops {
           maybeValidationLoss <-
             if (
               epoch % validationFrequency == 0 && validationBatchesOverEpoch.isDefined
-            )
-              if (dataParallelModels.isEmpty)
-                validationOneEpoch(
-                  model = modelWithOptimizer.model,
-                  validationBatches = validationBatchesOverEpoch.get(
-                    TrainingLoopContext(
-                      epoch,
-                      lastValidationLoss,
-                      minValidationLoss
-                    )
-                  ),
-                  validationCallback = validationCallback,
-                  logger = logger,
-                  epochCount = epoch
-                ).map(Some(_))
-              else
-                DataParallel
-                  .validationOneEpoch(
-                    models = modelWithOptimizer.model +: dataParallelModels,
+            ) {
+              val validationLossInThisEpoch =
+                if (dataParallelModels.isEmpty)
+                  validationOneEpoch(
+                    model = modelWithOptimizer.model,
                     validationBatches = validationBatchesOverEpoch.get(
                       TrainingLoopContext(
                         epoch,
@@ -479,8 +466,29 @@ object IOLoops {
                     logger = logger,
                     epochCount = epoch
                   )
-                  .map(Some(_))
-            else IO.pure(None)
+                else
+                  DataParallel
+                    .validationOneEpoch(
+                      models = modelWithOptimizer.model +: dataParallelModels,
+                      validationBatches = validationBatchesOverEpoch.get(
+                        TrainingLoopContext(
+                          epoch,
+                          lastValidationLoss,
+                          minValidationLoss
+                        )
+                      ),
+                      validationCallback = validationCallback,
+                      logger = logger,
+                      epochCount = epoch
+                    )
+
+              validationLossInThisEpoch.map { vt =>
+                val s = lastValidationLoss.getOrElse(0d)
+                Some(
+                  vt * validationLossExponentialSmoothingFactor + s * (1d - validationLossExponentialSmoothingFactor)
+                )
+              }
+            } else IO.pure(None)
 
           _ <- IO {
             maybeValidationLoss.foreach(validationLoss =>
@@ -708,7 +716,7 @@ object IOLoops {
         else simpleLoop(lossAcc, 0L, 0L, trainBatches.init)
 
       loopDone.map { numInstances =>
-        val totalLoss = lossAcc.toMat.raw(0)
+        val totalLoss = lossAcc.toDoubleArray.apply(0)
         (totalLoss, numInstances)
       }
     }
@@ -724,8 +732,7 @@ object IOLoops {
       _ <- IO {
         logger.foreach(
           _.info(
-            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${throughput
-              .formatted("%.2f")} instances/sec)"
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f".format(throughput)} instances/sec)"
           )
         )
       }
@@ -794,7 +801,7 @@ object IOLoops {
         0L,
         validationBatches.init
       ).flatMap { case (totalLoss, totalExamples) =>
-        val validationLoss = totalLoss.toMat.raw(0) / totalExamples
+        val validationLoss = totalLoss.toDoubleArray.apply(0) / totalExamples
         for {
           _ <- IO {
             logger.foreach(

@@ -7,6 +7,8 @@ import lamp.Sc
 import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
+import lamp.saddle._
+
 class LogisticSuite extends AnyFunSuite {
 
   def logisticRegression[S: Sc](dim: Int, k: Int, tOpt: STenOptions) =
@@ -34,7 +36,7 @@ class LogisticSuite extends AnyFunSuite {
         .toOption
         .get
       val target =
-        STen
+        lamp.saddle
           .fromLongMat(
             Mat(data.firstCol("label").toVec.map(_.toLong)),
             cuda
@@ -42,7 +44,7 @@ class LogisticSuite extends AnyFunSuite {
           .squeeze
 
       val x =
-        const(STen.fromMat(data.filterIx(_ != "label").toMat, cuda))
+        const(lamp.saddle.fromMat(data.filterIx(_ != "label").toMat, cuda))
 
       val model = logisticRegression(
         x.sizes(1).toInt,

@@ -10,7 +10,7 @@ import lamp.nn.simple
 import lamp.nn.NoTag
 import scribe.Logger
 import aten.Tensor
-
+import lamp.saddle._
 object Umap {
 
   private[lamp] def binarySearch(
@@ -49,7 +49,7 @@ object Umap {
     }
   }
 
-  private[lamp] def edgeWeights(
+  def edgeWeights(
       knnDistances: Mat[Double],
       knn: Mat[Int]
   ): Mat[Double] = {
@@ -182,9 +182,9 @@ object Umap {
     Tensor.manual_seed(randomSeed)
 
     Scope.leak { implicit scope =>
-      val indexIT = STen.fromLongVec(indexI, device)
+      val indexIT = lamp.saddle.fromLongVec(indexI, device)
       val locations = param(
-        STen.fromMat(
+        lamp.saddle.fromMat(
           Mat(total, numDim, array.randDouble(total * numDim, rng)),
           device,
           precision
@@ -196,12 +196,12 @@ object Umap {
       val index2 = {
         val indexJ = edgeWeights.col(1).map(_.toLong)
         const(
-          STen.fromLongVec(indexJ, device)
+          lamp.saddle.fromLongVec(indexJ, device)
         )
       }
 
       val b = const(
-        STen.fromVec(edgeWeights.col(2), device, precision)
+        lamp.saddle.fromVec(edgeWeights.col(2), device, precision)
       )
 
       val optimizer = AdamW.factory(
@@ -281,7 +281,7 @@ object Umap {
       }
       optimizer.release()
 
-      val jLoc = locations.toMat
+      val jLoc = locations.value.toMat
       (jLoc, lastLoss)
     }
 

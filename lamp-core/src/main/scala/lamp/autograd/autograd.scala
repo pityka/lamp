@@ -467,8 +467,9 @@ sealed trait Variable {
     (this.minimum(max)).maximum(min)
   def debug[S: Sc](fun: (STen, Boolean, Boolean) => Unit) =
     new Debug(extractScope, this, fun).value
-  def toMat = value.toMat
-  def toLongMat = value.toLongMat
+
+  def toDoubleArray = value.toDoubleArray
+  def toLongArray = value.toLongArray
 }
 
 object Autograd {
@@ -511,7 +512,7 @@ case class GraphMemoryAllocationReport(
     intermediateTensorCount: Long,
     intermediateTensorStorage: Long
 ) {
-  private def gb(l: Long) = (l.toDouble * 1e-9).formatted("%.4f")
+  private def gb(l: Long) = "%.4f".format(l.toDouble * 1e-9)
   override def toString =
     s"#par=$parameterTensorCount(${gb(parameterTensorStorage)}GB);#const=$constantTensorCount(${gb(
       constantTensorStorage

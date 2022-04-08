@@ -77,10 +77,6 @@ object Movable {
   implicit def LongIsMovable = Movable.empty[Long]
   implicit def ShortIsMovable = Movable.empty[Short]
   implicit def ByteIsMovable = Movable.empty[Byte]
-  implicit def MatDoubleIsMovable = Movable.empty[org.saddle.Mat[Double]]
-  implicit def VecDoubleIsMovable = Movable.empty[org.saddle.Vec[Double]]
-  implicit def MatIntIsMovable = Movable.empty[org.saddle.Mat[Int]]
-  implicit def VecIntIsMovable = Movable.empty[org.saddle.Vec[Int]]
   implicit def OptionIsMovable[T: Movable] = new Movable[Option[T]] {
     def list(m: Option[T]) =
       m.toList.flatMap(m => implicitly[Movable[T]].list(m)).toList
