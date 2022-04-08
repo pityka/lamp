@@ -15,7 +15,7 @@ class PerturbedLossSuite extends AnyFunSuite {
       pool: Scope
   ) =
     sequence(
-      MLP(dim, k, List(64, 64, 32), tOpt, dropout = 0.2),
+      MLP(dim, k, List(64,64, 32), tOpt, dropout = 0.2),
       Fun(implicit pool => _.logSoftMax(dim = 1))
     )
 
@@ -94,7 +94,7 @@ class PerturbedLossSuite extends AnyFunSuite {
           rng
         )
 
-      scribe.info("Start training loop")
+        scribe.info("Start training loop")
 
       val (_, trainedModel, _, _, _) = IOLoops
         .epochs(

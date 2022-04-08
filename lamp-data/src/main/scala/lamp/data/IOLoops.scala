@@ -732,8 +732,7 @@ object IOLoops {
       _ <- IO {
         logger.foreach(
           _.info(
-            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f"
-                .format(throughput)} instances/sec)"
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f".format(throughput)} instances/sec)"
           )
         )
       }

@@ -6,6 +6,7 @@ import lamp.data.BatchStream.scopeInResource
 import lamp.autograd.const
 import scala.collection.compat.immutable.ArraySeq
 
+
 package object bert {
 
   def pad(v: Array[Int], paddedLength: Int, padElem: Int) = {
@@ -24,11 +25,11 @@ package object bert {
   ) = {
     val mlmPositions = rng
       .shuffle(
-        ArraySeq.unsafeWrapArray(
-          Array
-            .range(0, bertTokens.length)
-            .filter(i => bertTokens(i) != clsToken && bertTokens(i) != sepToken)
+        ArraySeq.unsafeWrapArray(Array
+          .range(0, bertTokens.length)
+          .filter(i => bertTokens(i) != clsToken && bertTokens(i) != sepToken)
         )
+        
       )
       .take(math.max(1, (bertTokens.length * 0.15).toInt))
 
@@ -37,14 +38,14 @@ package object bert {
       val r = rng.nextDouble()
       val input =
         if (r < 0.8) maskToken
-        else if (r < 0.9) rng.nextInt(maximumTokenId)
+        else if (r < 0.9) rng.nextInt( maximumTokenId)
         else target
       input
     }
     val mlmTarget = mlmPositions.map(bertTokens)
 
     val mlmPositionsI = mlmPositions.zipWithIndex.toMap
-    val maskedBertTokens = bertTokens.zipWithIndex.map { case (token, idx) =>
+    val maskedBertTokens = bertTokens.zipWithIndex.map{ case (token, idx) =>
       if (mlmPositionsI.contains(idx))
         mlmMaskedInput(mlmPositionsI(idx))
       else token
@@ -100,8 +101,7 @@ package object bert {
             .++(nextSentence.map(_ => 1))
             .++(Array(1))
 
-          def to(v: Array[Int]) =
-            STen.fromLongArray(v.map(_.toLong), List(v.length), CPU)
+          def to(v: Array[Int]) = STen.fromLongArray(v.map(_.toLong), List(v.length), CPU)
 
           Some(
             (
@@ -142,13 +142,7 @@ package object bert {
       )
     }
     val nextSentenceTarget =
-      STen
-        .fromLongArray(
-          ps.map(v => if (v._1) 1L else 0L).toArray,
-          List(ps.length),
-          CPU
-        )
-        .castToFloat
+      STen.fromLongArray(ps.map(v => if (v._1) 1L else 0L).toArray, List(ps.length),CPU).castToFloat
     val maskedBertTokens = STen.stack(dim = 0, tensors = ps.map(_._2))
     val bertSegments = STen.stack(dim = 0, tensors = ps.map(_._3))
     val mlmPositions = STen.stack(dim = 0, tensors = ps.map(_._4))
@@ -217,11 +211,7 @@ package object bert {
 
     val idx = {
       val t = rng
-        .shuffle(
-          ArraySeq.unsafeWrapArray(
-            Array.range(0, fullData.maskedTokens.shape(0).toInt)
-          )
-        )
+        .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, fullData.maskedTokens.shape(0).toInt)))
         .grouped(minibatchSize)
         .map(_.toArray)
         .toList
