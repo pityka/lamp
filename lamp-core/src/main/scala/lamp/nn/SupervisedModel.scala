@@ -3,6 +3,11 @@ import lamp.autograd.{Variable, const}
 import lamp.Scope
 import lamp.STen
 
+/** Loss and Gradient calculation
+  *
+  * Takes samples, target, module, loss function and computes the loss and the
+  * gradients
+  */
 trait LossCalculation[I] {
   def apply[M <: GenericModule[I, Variable]](
       samples: I,
@@ -14,6 +19,66 @@ trait LossCalculation[I] {
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]])
 }
 
+/** Evaluates the gradient at current point + eps where eps is I *
+  * N(0,noiseLevel)
+  */
+class PerturbedLossCalculation[I](noiseLevel: Double)
+    extends LossCalculation[I] {
+
+  private def perturb(noiseLevel: Double, params: Seq[STen])(implicit
+      scope: Scope
+  ) = {
+
+    params.foreach { case param =>
+      val n = STen.randn(param.shape, param.options)
+      n *= noiseLevel
+      param += n
+    }
+  }
+
+  private def saveState[T](
+      params: Seq[STen]
+  )(f: => T)(implicit scope: Scope): T = {
+    val copy = params.map(_.cloneTensor)
+    val r = f
+    params.zip(copy).foreach { case (orig, copy) =>
+      orig.copyFrom(copy)
+    }
+    r
+  }
+
+  def apply[M <: GenericModule[I, Variable]](
+      samples: I,
+      target: STen,
+      module: M with GenericModule[I, Variable],
+      lossFunction: LossFunction,
+      computeGradients: Boolean,
+      zeroGradBeforeComputingGradients: Boolean
+  )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
+    val gradients = Scope { implicit scope =>
+      saveState(module.parameters.map(_._1.value)) {
+        perturb(
+          noiseLevel,
+          module.parameters.map(_._1.value)
+        )
+        Scope { implicit scope =>
+          val (perturbedLoss, _) = lossFunction(module.forward(samples), target)
+
+          if (computeGradients)
+            Some(
+              module.gradients(perturbedLoss, zeroGradBeforeComputingGradients)
+            )
+          else None
+        }
+
+      }
+    }
+    val (realLoss, numInstances) =
+      lossFunction(module.forward(samples), target)
+    (realLoss, numInstances, gradients)
+  }
+
+}
 class SimpleLossCalculation[I] extends LossCalculation[I] {
 
   def apply[M <: GenericModule[I, Variable]](

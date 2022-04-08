@@ -41,7 +41,7 @@ Scope.root{ implicit scope =>
   // get a handle to metadata about data type, data layout and device
   assert(img.options.isCPU)
 
-  val vec = STen.fromVec(org.saddle.Vec(2d,1d,3d))
+  val vec = STen.fromDoubleArray(Array(2d,1d,3d),List(3),CPU,DoublePrecision)
 
   // broadcasting matrix multiplication
   val singleChannel = (img matmul vec)
@@ -54,7 +54,7 @@ Scope.root{ implicit scope =>
   assert(vt.shape == List(768,1024))
 
   val errorOfSVD = (singleChannel - ((u * s) matmul vt)).norm2(dim=List(0,1), keepDim=false)
-  assert(errorOfSVD.toMat.raw(0) < 1E-6)
+  assert(errorOfSVD.toDoubleArray.head < 1E-6)
 } 
 
 
@@ -106,18 +106,18 @@ The feature matrix is copied into a 2D floating point tensor and the target vect
     val device = CPU
     val precision = SinglePrecision
     val testDataTensor =
-      STen.fromMat(testData.filterIx(_ != "label").toMat, device, precision)
+      lamp.saddle.fromMat(testData.filterIx(_ != "label").toMat, device, precision)
     val testTarget = 
-      STen.fromLongMat(
+      lamp.saddle.fromLongMat(
         Mat(testData.firstCol("label").toVec.map(_.toLong)),
         device
       ).squeeze
     
 
     val trainDataTensor =
-      STen.fromMat(trainData.filterIx(_ != "label").toMat, device,precision)
+      lamp.saddle.fromMat(trainData.filterIx(_ != "label").toMat, device,precision)
     val trainTarget = 
-      STen.fromLongMat(
+      lamp.saddle.fromLongMat(
         Mat(trainData.firstCol("label").toVec.map(_.toLong)),
         device
       ).squeeze
@@ -168,7 +168,7 @@ val makeTrainingBatch = (_:IOLoops.TrainingLoopContext) =>
         dropLast = true,
         features = trainDataTensor,
         target =trainTarget,
-        rng = org.saddle.spire.random.rng.Cmwc5.apply()
+        rng = new scala.util.Random()
       )
 ```
 
@@ -205,7 +205,7 @@ val module = trainedModel.module
 The trained model we can use for prediction:
 ```scala mdoc
 val bogusData = STen.ones(List(1,784),tensorOptions)
-val classProbabilities = module.forward(const(bogusData)).toMat.map(math.exp)
+val classProbabilities = module.forward(const(bogusData)).toDoubleArray.map(math.exp).toVector
 println(classProbabilities)
 ```
 

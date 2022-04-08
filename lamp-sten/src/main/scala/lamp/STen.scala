@@ -31,7 +31,8 @@ object STen {
     else TensorHelpers.fromLongArray(ar, dim, device).owned
 
   /** Returns a tensor with the given content and shape on the given device */
-  def fromLongArray[S: Sc](ar: Array[Long]) : STen = fromLongArray(ar,List(ar.length),CPU)
+  def fromLongArray[S: Sc](ar: Array[Long]): STen =
+    fromLongArray(ar, List(ar.length), CPU)
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromDoubleArray[S: Sc](
@@ -1370,6 +1371,24 @@ case class STen private (
     */
   def any[S: Sc] =
     ATen.any_1(value).owned
+
+  /** Return a boolean tensor indicating that any of the elements true in the
+    * respective dimension
+    */
+  def any[S: Sc](dim: Int, keepDim: Boolean) =
+    ATen.any_0(value, dim, keepDim).owned
+
+  /** Return a boolean scalar tensor indicating that all of the elements are
+    * true
+    */
+  def all[S: Sc] =
+    ATen.all_1(value).owned
+
+  /** Return a boolean tensor indicating that all of the elements are true in
+    * the respective dimension
+    */
+  def all[S: Sc](dim: Int, keepDim: Boolean) =
+    ATen.all_0(value, dim, keepDim).owned
 
   /** Return a boolean tensor indicating element-wise is-finite. */
   def isfinite[S: Sc] =
