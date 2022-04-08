@@ -16,8 +16,8 @@ inThisBuild(
 )
 
 lazy val commonSettings = Seq(
-  scalaVersion := "2.13.6",
-  crossScalaVersions := Seq("2.13.6", "2.12.15"),
+  scalaVersion := "2.13.8",
+  crossScalaVersions := Seq("2.13.8", "2.12.15"),
   parallelExecution in Test := false,
   scalacOptions ++= Seq(
     "-opt-warnings",
@@ -63,11 +63,12 @@ lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "3.2.0"
-val upickleVersion = "1.4.4"
+val upickleVersion = "1.5.0"
 val scalaTestVersion = "3.2.10"
-val scribeVersion = "3.6.9"
+val scribeVersion = "3.6.10"
 val catsEffectVersion = "3.3.11"
 val catsCoreVersion = "2.6.0"
+val jsoniterscalaVersion = "2.13.12"
 
 lazy val saddlecompat = project
   .in(file("lamp-saddle"))
@@ -130,8 +131,8 @@ lazy val data = project
     name := "lamp-data",
     libraryDependencies ++= Seq(
       "com.outr" %% "scribe" % scribeVersion,
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.12.4",
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "2.12.4" % "compile-internal"
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % jsoniterscalaVersion,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
