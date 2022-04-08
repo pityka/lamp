@@ -29,7 +29,7 @@ object StateIO {
       s.minValidationLoss,
       minValid,
       s.learningCurve.map { case (epoch, train, smoothedValid, valid) =>
-        (epoch, train, smoothedValid zip valid)
+        (epoch, train, smoothedValid.flatMap{a => valid.map(b => (a,b))})
       }
     )
   }
