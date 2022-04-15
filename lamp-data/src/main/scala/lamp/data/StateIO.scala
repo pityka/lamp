@@ -28,7 +28,9 @@ object StateIO {
       s.lastValidationLoss,
       s.minValidationLoss,
       minValid,
-      s.learningCurve
+      s.learningCurve.map { case (epoch, train, smoothedValid, valid) =>
+        (epoch, train, smoothedValid.flatMap{a => valid.map(b => (a,b))})
+      }
     )
   }
   private def readSWALoopStateDescriptor(
@@ -142,7 +144,9 @@ object StateIO {
       s.lastValidationLoss,
       s.minValidationLoss,
       minValidDescriptor,
-      s.learningCurve
+      s.learningCurve.map { case (epoch, train, valid) =>
+        (epoch, train, valid.map(_._1), valid.map(_._2))
+      }
     )
   }
   private def swaLoopStateDescriptor(
