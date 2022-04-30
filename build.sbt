@@ -174,8 +174,8 @@ lazy val umap = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "io.github.pityka" %% "saddle-linalg" % saddleVersion,
-      "io.github.pityka" %% "nspl-awt" % "0.3.0" % "test",
-      "io.github.pityka" %% "nspl-saddle" % "0.3.0" % "test"
+      "io.github.pityka" %% "nspl-awt" % "0.4.0" % "test",
+      "io.github.pityka" %% "nspl-saddle" % "0.4.0" % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
