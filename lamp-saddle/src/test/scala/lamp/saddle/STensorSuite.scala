@@ -10,6 +10,21 @@ import org.scalatest.compatible.Assertion
 class STenSuite extends AnyFunSuite {
   implicit def AssertionIsMovable = Movable.empty[Assertion]
 
+  test("from empty long") {
+    Scope.root { implicit scope =>
+      val t =
+        lamp.saddle.fromLongMat(mat.zeros(0, 0).map(_.toLong), false)
+      assert(t.shape == List(0, 0))
+    }
+  }
+  test("from empty float") {
+    Scope.root { implicit scope =>
+      val t =
+        lamp.saddle.fromFloatMat(mat.zeros(0, 0).map(_.toFloat), CPU)
+      assert(t.shape == List(0, 0))
+    }
+  }
+
   test("atan2") {
     Scope.root { implicit scope =>
       val one = STen.ones(List(1))
@@ -29,7 +44,10 @@ class STenSuite extends AnyFunSuite {
   test("unique 1") {
     Scope.root { implicit scope =>
       val t =
-        lamp.saddle.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
+        lamp.saddle.fromLongMat(
+          Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong),
+          false
+        )
       val (un, _) = t.unique(sorted = false, returnInverse = false)
       assert(un.toLongVec.sorted == Vec(1, 3, 8, 9))
     }
@@ -53,7 +71,10 @@ class STenSuite extends AnyFunSuite {
   test("unique 2") {
     Scope.root { implicit scope =>
       val t =
-        lamp.saddle.fromLongMat(Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong), false)
+        lamp.saddle.fromLongMat(
+          Mat(Vec(3, 3, 9), Vec(8, 8, 1)).map(_.toLong),
+          false
+        )
       val (un, inv, count) = t.unique(
         sorted = false,
         returnInverse = true,
@@ -99,7 +120,8 @@ class STenSuite extends AnyFunSuite {
     Scope.root { implicit scope =>
       val t1 = STen.ones(List(3, 2, 4), STenOptions.d)
       assert(
-        t1.indexSelect(0, lamp.saddle.fromLongVec(Vec(0L, 1L), false)).shape == List(
+        t1.indexSelect(0, lamp.saddle.fromLongVec(Vec(0L, 1L), false))
+          .shape == List(
           2,
           2,
           4
