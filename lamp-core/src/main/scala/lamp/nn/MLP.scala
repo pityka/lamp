@@ -43,7 +43,8 @@ object MLP {
       dropout: Double = 0d,
       lastNonLinearity: Boolean = false,
       activationFunction: ActivationFunction = Relu,
-      norm: NormType = NormType.BatchNorm
+      norm: NormType = NormType.BatchNorm,
+      numHeads: Int = 1
   ) = {
 
     def act() = activationFunction match {
@@ -78,20 +79,34 @@ object MLP {
 
     sequence(
       Sequential(
-        (List(in) ++ hidden)
-          .sliding(2)
-          .filter(_.size == 2)
-          .toList
-          .map { group =>
-            val in = group(0)
-            val out = group(1)
-            sequence(
-              Linear(in = in, out = out, tOpt = tOpt, bias = hasBias),
-              makeNorm(out),
-              act(),
-              Dropout(dropout, training = true)
-            )
-          }: _*
+        hidden.headOption.toList.map { out1 =>
+          sequence(
+            Linear(in = in, out = out1, tOpt = tOpt, bias = hasBias),
+            makeNorm(out1),
+            act(),
+            Dropout(dropout, training = true)
+          )
+        } ++
+          hidden
+            .sliding(2)
+            .filter(_.size == 2)
+            .toList
+            .map { group =>
+              val in = group(0)
+              val out = group(1)
+              sequence(
+                Linear(
+                  in = in,
+                  out = out,
+                  tOpt = tOpt,
+                  bias = hasBias,
+                  numHeads = numHeads
+                ),
+                makeNorm(out),
+                act(),
+                Dropout(dropout, training = true)
+              )
+            }: _*
       ),
       EitherModule(
         if (lastNonLinearity)
