@@ -17,7 +17,7 @@ case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
 
   def forward[S: Sc](x: Variable): Variable = {
     val v =
-      if (x.shape.size == 2 && weights.shape == 2)
+      if (x.shape.size == 2 && weights.shape.size == 2)
         x.mm(weights)
       else if (weights.shape.size == 3) {
         x
