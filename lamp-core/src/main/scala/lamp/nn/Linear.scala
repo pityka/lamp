@@ -16,7 +16,20 @@ case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
   }
 
   def forward[S: Sc](x: Variable): Variable = {
-    val v = if (x.shape.size == 2) x.mm(weights) else mm1(x, weights)
+    val v =
+      if (x.shape.size == 2 && weights.shape == 2)
+        x.mm(weights)
+      else if (weights.shape.size == 3) {
+        x
+          .view(List(x.shape(0), weights.shape(0), -1L))
+          .transpose(0, 1)
+          .bmm(
+            weights
+          )
+          .transpose(0, 1)
+          .reshape(List(x.shape(0), -1L))
+      } else mm1(x, weights)
+
     bias.map(_ + v).getOrElse(v)
   }
 }
@@ -33,11 +46,18 @@ object Linear {
       in: Int,
       out: Int,
       tOpt: STenOptions,
-      bias: Boolean = true
+      bias: Boolean = true,
+      numHeads: Int = 1
   ): Linear =
     Linear(
       weights = param(
-        STen.normal(0d, math.sqrt(2d / (in + out)), List(in, out), tOpt)
+        STen.normal(
+          0d,
+          math.sqrt(2d / (in + out)),
+          if (numHeads == 1) List(in, out)
+          else List(numHeads, in / numHeads, out / numHeads),
+          tOpt
+        )
       ),
       bias =
         if (bias)
