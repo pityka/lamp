@@ -68,7 +68,7 @@ val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.8.2"
 val catsEffectVersion = "3.3.11"
 val catsCoreVersion = "2.6.0"
-val jsoniterscalaVersion = "2.13.13"
+val jsoniterscalaVersion = "2.13.21"
 
 lazy val saddlecompat = project
   .in(file("lamp-saddle"))
