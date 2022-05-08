@@ -81,7 +81,14 @@ object MLP {
       Sequential(
         hidden.headOption.toList.map { out1 =>
           sequence(
-            Linear(in = in, out = out1, tOpt = tOpt, bias = hasBias),
+            Linear(
+              in = in,
+              out = out1,
+              tOpt = tOpt,
+              bias = hasBias,
+              numHeads =
+                if (out1 % numHeads == 0 && in % numHeads == 0) numHeads else 1
+            ),
             makeNorm(out1),
             act(),
             Dropout(dropout, training = true)
@@ -100,7 +107,9 @@ object MLP {
                   out = out,
                   tOpt = tOpt,
                   bias = hasBias,
-                  numHeads = numHeads
+                  numHeads =
+                    if (out % numHeads == 0 && in % numHeads == 0) numHeads
+                    else 1
                 ),
                 makeNorm(out),
                 act(),
@@ -109,32 +118,41 @@ object MLP {
             }: _*
       ),
       EitherModule(
-        if (lastNonLinearity)
-          Left(
-            sequence(
-              Linear(
-                in = (List(in) ++ hidden).last,
-                out = out,
-                tOpt = tOpt,
-                bias = hasBias
-              ),
-              makeNorm(out),
-              act(),
-              Dropout(dropout, training = true)
+        {
+          val in1 = (List(in) ++ hidden).last
+          if (lastNonLinearity)
+            Left(
+              sequence(
+                Linear(
+                  in = in1,
+                  out = out,
+                  tOpt = tOpt,
+                  bias = hasBias,
+                  numHeads =
+                    if (out % numHeads == 0 && in1 % numHeads == 0) numHeads
+                    else 1
+                ),
+                makeNorm(out),
+                act(),
+                Dropout(dropout, training = true)
+              )
             )
-          )
-        else
-          Right(
-            sequence(
-              Linear(
-                in = (List(in) ++ hidden).last,
-                out = out,
-                tOpt = tOpt,
-                bias = hasBias
-              ),
-              makeNorm(out)
+          else
+            Right(
+              sequence(
+                Linear(
+                  in = in1,
+                  out = out,
+                  tOpt = tOpt,
+                  bias = hasBias,
+                  numHeads =
+                    if (out % numHeads == 0 && in1 % numHeads == 0) numHeads
+                    else 1
+                ),
+                makeNorm(out)
+              )
             )
-          )
+        }
       )
     )
   }
