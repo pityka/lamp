@@ -161,7 +161,7 @@ class MLPSuite extends AnyFunSuite {
           true
         )
       val loss = acc.toDoubleArray.head / numExamples
-      assert(loss < 0.9)
+      assert(loss < 0.8)
 
       {
         val input = const(testDataTensor)

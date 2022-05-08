@@ -86,8 +86,7 @@ object MLP {
               out = out1,
               tOpt = tOpt,
               bias = hasBias,
-              numHeads =
-                if (out1 % numHeads == 0 && in % numHeads == 0) numHeads else 1
+              numHeads = 1
             ),
             makeNorm(out1),
             act(),
