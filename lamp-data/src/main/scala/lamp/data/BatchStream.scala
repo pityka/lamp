@@ -156,11 +156,7 @@ object BatchStream {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       scopeInResource.map { implicit scope =>
         val (d1, d2) = Scope { implicit scope =>
-          val idxT = STen.fromLongArray(
-            idx.map(_.toLong),
-            List(idx.length),
-            features.device
-          )
+          val idxT = STen.fromLongArray(idx.map(_.toLong), List(idx.length),features.device)
           val xcl = features.index(idxT)
           val tcl = target.index(idxT)
           val (d1, d2) =
@@ -177,13 +173,9 @@ object BatchStream {
     }
 
     val idx = {
-      val t = rng
-        .shuffle(
-          ArraySeq.unsafeWrapArray(Array.range(0, features.sizes.head.toInt))
-        )
+      val t = rng.shuffle(ArraySeq.unsafeWrapArray(Array.range(0, features.sizes.head.toInt)))
         .grouped(minibatchSize)
-        .toList
-        .map(_.toArray)
+        .toList.map(_.toArray)
       if (dropLast) t.dropRight(1)
       else t
     }
@@ -217,8 +209,8 @@ object BatchStream {
       s2
     }
 
-    sealed trait BucketState[+A, +B]
-    case class NotYetOpen[A, B](
+     sealed trait BucketState[+A, +B]
+     case class NotYetOpen[A, B](
         indices: BucketIndices,
         fn: Array[Int] => Resource[IO, B]
     ) extends BucketState[A, B] {
@@ -238,7 +230,7 @@ object BatchStream {
         } yield Opened(d, latch, refCompleted)
     }
 
-    case class Opened[A, B](
+     case class Opened[A, B](
         deferred: Deferred[IO, OpenedBucketState[B]],
         latch: CountDownLatch[IO],
         isClosed: Ref[IO, Boolean]
@@ -366,7 +358,7 @@ object BatchStream {
       }
     }
 
-    private[lamp] case class BucketIndices(
+   private[lamp] case class BucketIndices(
         instancesWithOriginalIndices: Array[Int],
         bucketSpecificIndices: Array[Array[Int]]
     )
@@ -408,7 +400,7 @@ object BatchStream {
             bucketSpecificIndices = originalIndices.map { minibatch =>
               minibatch
                 .map(i => instancesWithOriginalIndices.indexWhere(_ == i))
-
+                
             }
           )
 
