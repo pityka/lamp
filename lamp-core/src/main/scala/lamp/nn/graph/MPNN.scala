@@ -83,9 +83,9 @@ object MPNN {
       message: Variable,
       edgeI: STen,
       edgeJ: STen,
-      degreeNormalizeI: Boolean = true,
-      degreeNormalizeJ: Boolean = true,
-      aggregateJ: Boolean = true
+      degreeNormalizeI: Boolean ,
+      degreeNormalizeJ: Boolean ,
+      aggregateJ: Boolean 
   ) = {
     val p = if (degreeNormalizeJ && degreeNormalizeI) -0.5 else -1d
 
@@ -93,21 +93,21 @@ object MPNN {
       val t1 =
         if (degreeNormalizeI)
           message * const(
-            countOccurences(edgeI, numVertices).pow(p).indexSelect(0, edgeI)
+            countOccurences(edgeI, numVertices).pow(p).indexSelect(0, edgeI).view(-1L,1L)
           )
         else message
 
       if (degreeNormalizeJ)
         t1 * const(
-          countOccurences(edgeJ, numVertices).pow(p).indexSelect(0, edgeJ)
+          countOccurences(edgeJ, numVertices).pow(p).indexSelect(0, edgeJ).view(-1L,1L)
         )
       else t1
     }
 
-    val aggregateI = normalizedMessage.indexAdd(const(edgeI), 0, numVertices)
+    val aggregateI = normalizedMessage.indexAdd(const(edgeJ), 0, numVertices)
 
     if (aggregateJ) {
-      val aggregateJ = normalizedMessage.indexAdd(const(edgeJ), 0, numVertices)
+      val aggregateJ = normalizedMessage.indexAdd(const(edgeI), 0, numVertices)
 
       aggregateI + aggregateJ
     } else aggregateI

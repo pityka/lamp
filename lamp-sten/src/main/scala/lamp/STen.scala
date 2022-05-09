@@ -1207,13 +1207,17 @@ case class STen private (
   /** Reduces the given dimensions with their L2 norm. */
   def norm2[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(
-      ATen.norm_2(
+      ATen.norm_3(
         value,
         2d,
         dim.toArray.map(_.toLong),
-        keepDim,
-        STen.dOptions.scalarTypeByte
+        keepDim
       )
+    )
+
+  def hardSwish[S:Sc] = 
+    owned(
+      ATen.hardswish(value)
     )
 
   /** Reduces the given dimension with the log-softmax of its elements. */

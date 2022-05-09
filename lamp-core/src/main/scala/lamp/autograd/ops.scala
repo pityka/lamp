@@ -629,6 +629,21 @@ case class Sum(scope: Scope, a: Variable, dim: List[Int], keepDim: Boolean)
 
 }
 
+case class Norm2(scope: Scope, a: Variable, dim: List[Int], keepDim: Boolean)
+    extends Op {
+
+  val params = List(a.zipBackward { (p, out) =>
+    Scope.root { implicit scope =>
+      val pa = p * a.value
+      pa /= value.value
+      out += pa
+    }
+  })
+
+  val value = Variable(this, a.value.norm2(dim, keepDim)(scope))(scope)
+
+}
+
 case class ExpandAs(scope: Scope, a: Variable, as: STen) extends Op {
 
   val params = List(a.zipBackward { (p, out) =>
@@ -998,6 +1013,21 @@ case class Sigmoid(scope: Scope, a: Variable) extends Op {
     }
   )
   val value = Variable(this, a.value.sigmoid(scope))(scope)
+
+}
+case class HardSwish(scope: Scope, a: Variable) extends Op {
+
+  val params = List(
+    a.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val tmp =
+          STen.owned(ATen.hardswish_backward(p.value, a.value.value))
+        out += tmp
+      }
+
+    }
+  )
+  val value = Variable(this, a.value.hardSwish(scope))(scope)
 
 }
 
