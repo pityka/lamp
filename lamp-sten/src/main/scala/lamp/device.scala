@@ -57,12 +57,20 @@ sealed trait Device { self =>
     * stream to the default stream
     */
   def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A
+
+  def measureTime[A](f: => A): (A, Long)
 }
 object Device {
   def fromOptions(st: STenOptions) =
     if (st.isCPU) CPU else CudaDevice(st.deviceIndex)
 }
 case object CPU extends Device {
+  def measureTime[A](f: => A): (A, Long) = {
+    val t1 = System.nanoTime
+    val r = f
+    val t2 = System.nanoTime
+    (r, t2 - t1)
+  }
   def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = f
   def to[S: Sc](t: STenOptions): STenOptions = t.cpu
   def to(t: Tensor) = {
@@ -74,6 +82,15 @@ case object CPU extends Device {
 
 }
 case class CudaDevice(i: Int) extends Device {
+
+  def measureTime[A](f: => A): (A, Long) = {
+    val default = aten.CudaStream.getDefaultCUDAStream(i.toByte)
+    val t1 = System.nanoTime()
+    val r = f
+    default.synchronize()
+    val t2 = System.nanoTime
+    (r, t2 - t1)
+  }
 
   def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = {
     val default = aten.CudaStream.getDefaultCUDAStream(i.toByte)

@@ -833,6 +833,19 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
+  testGradientAndValue("hardswish")(mat2x3_2, 15.7700) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(lamp.saddle.fromMat(m, cuda) + 0.1)
+      val L = x1.hardSwish.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
   testGradientAndValue("exp")(mat2x3_2, 579.7027406974902) {
     (m, doBackprop, cuda) =>
       Scope.leak { implicit scope =>
@@ -1199,6 +1212,19 @@ class GradientSuite extends AnyFunSuite {
     Scope.leak { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.mean(List(0, 1))
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("norm2")(mat2x3_2, 9.5394) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val L = x1.norm2(List(0, 1),true)
       if (doBackprop) {
         L.backprop()
       }

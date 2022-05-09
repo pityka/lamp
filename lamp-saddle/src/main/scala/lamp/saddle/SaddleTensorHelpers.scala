@@ -113,7 +113,9 @@ private[lamp] object SaddleTensorHelpers {
       Array(m.length, d1, d2),
       STenOptions.d.value
     )
-    assert(t.copyFromDoubleArray(arr))
+
+    if (arr.nonEmpty) { assert(t.copyFromDoubleArray(arr)) }
+
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.leak { implicit scope =>
         t.to(device.options(precision).value, true, true)
@@ -140,7 +142,9 @@ private[lamp] object SaddleTensorHelpers {
       Array(m.numRows.toLong, m.numCols.toLong),
       STenOptions.f.value
     )
-    assert(t.copyFromFloatArray(arr))
+    if (arr.nonEmpty) {
+      assert(t.copyFromFloatArray(arr))
+    }
     if (device != CPU) {
       val t2 = Scope.leak { implicit scope =>
         t.to(device.options(SinglePrecision).value, true, true)
@@ -159,7 +163,9 @@ private[lamp] object SaddleTensorHelpers {
       Array(m.numRows.toLong, m.numCols.toLong),
       STenOptions.d.value
     )
-    assert(t.copyFromDoubleArray(arr))
+    if (arr.nonEmpty) {
+      assert(t.copyFromDoubleArray(arr))
+    }
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.leak { implicit scope =>
         t.to(device.options(precision).value, true, true)
@@ -176,7 +182,9 @@ private[lamp] object SaddleTensorHelpers {
       Array(m.numRows.toLong, m.numCols.toLong),
       STenOptions.l.value
     )
-    assert(t.copyFromLongArray(arr))
+    if (arr.nonEmpty) {
+      assert(t.copyFromLongArray(arr))
+    }
     if (device != CPU) {
       val t2 = device.to(t)
       t.release
@@ -191,7 +199,9 @@ private[lamp] object SaddleTensorHelpers {
       Array(m.length.toLong),
       STenOptions.l.value
     )
-    assert(t.copyFromLongArray(arr))
+    if (arr.nonEmpty) {
+      assert(t.copyFromLongArray(arr))
+    }
     if (device != CPU) {
       val t2 = device.to(t)
       t.release
@@ -217,7 +227,9 @@ private[lamp] object SaddleTensorHelpers {
       Array(m.length.toLong),
       STenOptions.d.value
     )
-    assert(t.copyFromDoubleArray(arr))
+    if (arr.nonEmpty) {
+      assert(t.copyFromDoubleArray(arr))
+    }
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.leak { implicit scope =>
         t.to(device.options(precision).value, true, true)

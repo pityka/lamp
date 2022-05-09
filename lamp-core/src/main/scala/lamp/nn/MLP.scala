@@ -26,6 +26,7 @@ object MLP {
   case object Relu extends ActivationFunction
   case object Gelu extends ActivationFunction
   case object Swish1 extends ActivationFunction
+  case object HardSwish extends ActivationFunction
   case object Sigmoid extends ActivationFunction
 
   sealed trait NormType
@@ -43,13 +44,15 @@ object MLP {
       dropout: Double = 0d,
       lastNonLinearity: Boolean = false,
       activationFunction: ActivationFunction = Relu,
-      norm: NormType = NormType.BatchNorm
+      norm: NormType = NormType.BatchNorm,
+      numHeads: Int = 1
   ) = {
 
     def act() = activationFunction match {
       case Gelu    => Fun(scope => input => input.gelu(scope))
       case Relu    => Fun(scope => input => input.relu(scope))
       case Swish1  => Fun(scope => input => input.swish1(scope))
+      case HardSwish  => Fun(scope => input => input.hardSwish(scope))
       case Sigmoid => Fun(scope => input => input.sigmoid(scope))
     }
     def makeNorm(normDim: Int): Sequential[Variable, EitherModule[
@@ -78,48 +81,79 @@ object MLP {
 
     sequence(
       Sequential(
-        (List(in) ++ hidden)
-          .sliding(2)
-          .filter(_.size == 2)
-          .toList
-          .map { group =>
-            val in = group(0)
-            val out = group(1)
-            sequence(
-              Linear(in = in, out = out, tOpt = tOpt, bias = hasBias),
-              makeNorm(out),
-              act(),
-              Dropout(dropout, training = true)
-            )
-          }: _*
+        hidden.headOption.toList.map { out1 =>
+          sequence(
+            Linear(
+              in = in,
+              out = out1,
+              tOpt = tOpt,
+              bias = hasBias,
+              numHeads = 1
+            ),
+            makeNorm(out1),
+            act(),
+            Dropout(dropout, training = true)
+          )
+        } ++
+          hidden
+            .sliding(2)
+            .filter(_.size == 2)
+            .toList
+            .map { group =>
+              val in = group(0)
+              val out = group(1)
+              sequence(
+                Linear(
+                  in = in,
+                  out = out,
+                  tOpt = tOpt,
+                  bias = hasBias,
+                  numHeads =
+                    if (out % numHeads == 0 && in % numHeads == 0) numHeads
+                    else 1
+                ),
+                makeNorm(out),
+                act(),
+                Dropout(dropout, training = true)
+              )
+            }: _*
       ),
       EitherModule(
-        if (lastNonLinearity)
-          Left(
-            sequence(
-              Linear(
-                in = (List(in) ++ hidden).last,
-                out = out,
-                tOpt = tOpt,
-                bias = hasBias
-              ),
-              makeNorm(out),
-              act(),
-              Dropout(dropout, training = true)
+        {
+          val in1 = (List(in) ++ hidden).last
+          if (lastNonLinearity)
+            Left(
+              sequence(
+                Linear(
+                  in = in1,
+                  out = out,
+                  tOpt = tOpt,
+                  bias = hasBias,
+                  numHeads =
+                    if (out % numHeads == 0 && in1 % numHeads == 0) numHeads
+                    else 1
+                ),
+                makeNorm(out),
+                act(),
+                Dropout(dropout, training = true)
+              )
             )
-          )
-        else
-          Right(
-            sequence(
-              Linear(
-                in = (List(in) ++ hidden).last,
-                out = out,
-                tOpt = tOpt,
-                bias = hasBias
-              ),
-              makeNorm(out)
+          else
+            Right(
+              sequence(
+                Linear(
+                  in = in1,
+                  out = out,
+                  tOpt = tOpt,
+                  bias = hasBias,
+                  numHeads =
+                    if (out % numHeads == 0 && in1 % numHeads == 0) numHeads
+                    else 1
+                ),
+                makeNorm(out)
+              )
             )
-          )
+        }
       )
     )
   }

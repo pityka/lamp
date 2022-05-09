@@ -73,24 +73,38 @@ package object nn {
       gradients: Seq[Option[STen]],
       theta: Double
   ): Unit = {
-    val norm = math.sqrt((gradients.map {
-      case Some(g) =>
-        Scope.leak { implicit scope =>
-          g.pow(2d).sum.toDoubleArray.apply(0)
-        }
-      case None => 0d
-    }: Seq[Double]).sum)
+
+    val norm = Scope.leak { implicit scope =>
+      STen
+        .stack(
+          gradients
+            .map {
+              case Some(g) =>
+                Some(g.pow(2d).sum)
+              case None => None
+            }
+            .collect { case Some(x) => x },
+          0
+        )
+        .sum
+        .sqrt
+        .toDoubleArray(0)
+    }
     if (norm > theta) {
-      gradients.foreach {
-        case None =>
-        case Some(g) =>
-          Scope.root { implicit scope =>
-            val scalar = STen.scalarDouble(theta / norm, g.options)
+      Scope.root { implicit scope =>
+        val scalar = STen.scalarDouble(
+          theta / norm,
+          gradients.find(_.isDefined).get.get.options
+        )
+        gradients.foreach {
+          case None =>
+          case Some(g) =>
             g *= scalar
-          }
+        }
 
       }
     }
+
   }
 
   def initLinear[S: Sc](in: Int, out: Int, tOpt: STenOptions): Constant = param(

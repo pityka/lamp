@@ -227,6 +227,9 @@ trait DefaultOpSet1 extends OpSet {
       case o: View =>
         Ops(out, "Reshape")(nm)
           .appendInput(Ops.tensorFromLongVec(o.shape.toSeq)) :: Nil
+      case o: Reshape =>
+        Ops(out, "Reshape")(nm)
+          .appendInput(Ops.tensorFromLongVec(o.shape.toSeq)) :: Nil
       case op: Concatenate =>
         Ops(out, "Concat", List(Ops.attr("axis", op.dim)))(nm) :: Nil
 

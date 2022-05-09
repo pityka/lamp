@@ -16,7 +16,7 @@ class MLPSuite extends AnyFunSuite {
       pool: Scope
   ) =
     sequence(
-      MLP(dim, k, List(64, 32), tOpt, dropout = 0.2),
+      MLP(dim, k, List(64, 32), tOpt, dropout = 0.2, numHeads=2),
       Fun(implicit pool => _.logSoftMax(dim = 1))
     )
 
