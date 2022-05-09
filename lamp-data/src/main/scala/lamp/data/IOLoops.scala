@@ -191,7 +191,6 @@ object IOLoops {
       swaLearningRateScheduleInitState: Option[LRStateSWA] = None,
       swaForwardPassAfterTraining: Boolean = true,
       validationLossExponentialSmoothingFactor: Double = 1.0
-
   ) = {
     for {
       warmedup <-
@@ -232,7 +231,8 @@ object IOLoops {
               initState.map(_.simple),
               accumulateGradientOverNBatches,
               learningRateScheduleInitState,
-              validationLossExponentialSmoothingFactor = validationLossExponentialSmoothingFactor
+              validationLossExponentialSmoothingFactor =
+                validationLossExponentialSmoothingFactor
             )
         }
       warmupEpochReturned = warmedup._1
@@ -276,7 +276,7 @@ object IOLoops {
       val swaLearningCurve = swaResult._2
       val m = warmupLearningCurve.map(_._1).max + 1
       val concatLearningCurve = warmupLearningCurve ++ swaLearningCurve.map {
-        case (epoch, l1, l2) => (epoch + m, l1, l2.map(x => (x,x)))
+        case (epoch, l1, l2) => (epoch + m, l1, l2.map(x => (x, x)))
       }
       (warmupEpochReturned, swaModel, concatLearningCurve, warmedupModel)
     }
@@ -315,7 +315,7 @@ object IOLoops {
     (
         Int,
         SupervisedModel[I, M],
-        List[(Int, Double, Option[(Double,Double)])],
+        List[(Int, Double, Option[(Double, Double)])],
         LRState,
         SimpleLoopState
     )
@@ -346,13 +346,13 @@ object IOLoops {
         lastValidationLoss: Option[Double],
         minValidationLoss: Option[Double],
         minValidationLossModel: Option[(Int, Seq[Tensor])],
-        learningCurve: List[(Int, Double, Option[(Double,Double)])],
+        learningCurve: List[(Int, Double, Option[(Double, Double)])],
         lrState: LRState
     ): IO[
       (
           Int,
           SupervisedModel[I, M],
-          List[(Int, Double, Option[(Double,Double)])],
+          List[(Int, Double, Option[(Double, Double)])],
           LRState,
           SimpleLoopState
       )
@@ -487,15 +487,16 @@ object IOLoops {
 
               validationLossInThisEpoch.map { unsmoothedValidationLoss =>
                 val s = lastValidationLoss.getOrElse(unsmoothedValidationLoss)
-                val smoothedValidationLoss = unsmoothedValidationLoss * validationLossExponentialSmoothingFactor + s * (1d - validationLossExponentialSmoothingFactor)
+                val smoothedValidationLoss =
+                  unsmoothedValidationLoss * validationLossExponentialSmoothingFactor + s * (1d - validationLossExponentialSmoothingFactor)
                 Some(
-                  (smoothedValidationLoss,unsmoothedValidationLoss)
+                  (smoothedValidationLoss, unsmoothedValidationLoss)
                 )
               }
             } else IO.pure(None)
 
           _ <- IO {
-            maybeValidationLoss.foreach{ case (validationLoss,_) =>
+            maybeValidationLoss.foreach { case (validationLoss, _) =>
               validationCallback.apply(epoch, validationLoss)
             }
           }
@@ -506,7 +507,9 @@ object IOLoops {
                 .contains(epoch)
             )
               minValidationLoss
-            else if (minValidationLoss.isEmpty) maybeValidationLoss.map{ case (smoothedValidationLoss,_) => smoothedValidationLoss}
+            else if (minValidationLoss.isEmpty) maybeValidationLoss.map {
+              case (smoothedValidationLoss, _) => smoothedValidationLoss
+            }
             else
               Some(math.min(minValidationLoss.get, maybeValidationLoss.get._1))
 
@@ -533,7 +536,9 @@ object IOLoops {
                   modelWithOptimizer.model.module.state.map(_._1.value),
                   modelWithOptimizer.optimizer.state,
                   epoch + 1,
-                  maybeValidationLoss.map{ case (smoothedValidationLoss,_) => smoothedValidationLoss},
+                  maybeValidationLoss.map { case (smoothedValidationLoss, _) =>
+                    smoothedValidationLoss
+                  },
                   nextMinValidationLoss,
                   nextMinValidationLossModel,
                   nextLearningCurve
@@ -543,7 +548,9 @@ object IOLoops {
             else IO.unit
           next <- loop(
             epoch = epoch + 1,
-            lastValidationLoss = maybeValidationLoss.map{ case (smoothedValidationLoss,_) => smoothedValidationLoss},
+            lastValidationLoss = maybeValidationLoss.map {
+              case (smoothedValidationLoss, _) => smoothedValidationLoss
+            },
             minValidationLoss = nextMinValidationLoss,
             minValidationLossModel = nextMinValidationLossModel,
             learningCurve = nextLearningCurve,
@@ -736,7 +743,8 @@ object IOLoops {
       _ <- IO {
         logger.foreach(
           _.info(
-            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f".format(throughput)} instances/sec)"
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f"
+                .format(throughput)} instances/sec)"
           )
         )
       }

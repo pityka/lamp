@@ -520,6 +520,6 @@ case class GraphMemoryAllocationReport(
   private def gb(l: Long) = "%.4f".format(l.toDouble * 1e-9)
   override def toString =
     s"#par=$parameterTensorCount(${gb(parameterTensorStorage)}GB);#const=$constantTensorCount(${gb(
-      constantTensorStorage
-    )}GB);#act=$intermediateTensorCount(${gb(intermediateTensorStorage)}GB)"
+        constantTensorStorage
+      )}GB);#act=$intermediateTensorCount(${gb(intermediateTensorStorage)}GB)"
 }
