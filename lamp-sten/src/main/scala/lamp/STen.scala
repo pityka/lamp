@@ -1192,6 +1192,13 @@ case class STen private (
       owned(value.expand_as(tmp.value))
     }
 
+  def split(splitSizes: List[Long], dim: Int)(implicit scope: Scope) =
+    ATen.split_with_sizes(value, splitSizes.toArray, dim).toVector.map(_.owned)
+  def splitToFixed(size: Long, dim: Int)(implicit scope: Scope) =
+    ATen.split(value, size, dim).toVector.map(_.owned)
+  def chunk(numberOfChunks: Long, dim: Int)(implicit scope: Scope) =
+    ATen.chunk(value, numberOfChunks, dim).toVector.map(_.owned)
+
   /** Returns a tensor with a new shape.
     *
     * No data is copied. The new shape must be compatible with the number of
@@ -1215,7 +1222,7 @@ case class STen private (
       )
     )
 
-  def hardSwish[S:Sc] = 
+  def hardSwish[S: Sc] =
     owned(
       ATen.hardswish(value)
     )
