@@ -27,11 +27,11 @@ class BatchStreamSuite extends AnyFunSuite {
     @volatile var total = 0
 
     def simpleLoop[S](
-        batchStream: BatchStream[Vec[Int], S],
+        batchStream: BatchStream[Vec[Int], S, Unit],
         state0: S
     ): IO[S] = {
       batchStream
-        .nextBatch(CPU, state0)
+        .nextBatch(CPU,(), state0)
         .flatMap { case (state1, resource) =>
           resource
             .use { batch =>
@@ -61,9 +61,10 @@ class BatchStreamSuite extends AnyFunSuite {
 
     }
 
-    val stream = BatchStream.stagedFromIndices[Vec[Int], Vec[Int]](
+    val stream = BatchStream.stagedFromIndices[Vec[Int], Vec[Int], Unit](
       indices = array.range(0, 23).grouped(3).toArray,
-      bucketSize = 3
+      bucketSize = 3,
+      _ => Resource.unit
     )(
       loadInstancesToStaging = (ar: Array[Int]) =>
         Resource.make(IO {
@@ -71,13 +72,13 @@ class BatchStreamSuite extends AnyFunSuite {
           ar.toVec
         })(_ =>
           IO {
-
             bucketReleases -= 1
           }
         ),
       makeNonEmptyBatch = (
           bucket: Vec[Int],
           take: Array[Int],
+          _: Unit,
           _: Device
       ) =>
         Resource.make(IO {

@@ -1585,4 +1585,9 @@ case class STen private (
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
 
+  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned()  else false
+
+  def pin[S:Sc] = if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned  else this
+
+
 }
