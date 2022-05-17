@@ -70,7 +70,9 @@ class SaddleTensorHelpersuite extends AnyFunSuite {
   }
   test("fromMatList") {
     val m =
-      SaddleTensorHelpers.fromMatList(Seq(mat.ident(2), mat.ident(2), mat.ident(2)))
+      SaddleTensorHelpers.fromMatList(
+        Seq(mat.ident(2), mat.ident(2), mat.ident(2))
+      )
     assert(m.shape == List(3, 2, 2))
     assert(
       m.toDoubleArray.toSeq == Seq(1d, 0d, 0d, 1d, 1d, 0d, 0d, 1d, 1d, 0d, 0d,
@@ -87,7 +89,9 @@ class SaddleTensorHelpersuite extends AnyFunSuite {
   }
   test("one hot") {
     val t =
-      SaddleTensorHelpers.fromLongMat(Mat(Vec(0L, 1L), Vec(1L, 1L), Vec(0L, 0L)).T)
+      SaddleTensorHelpers.fromLongMat(
+        Mat(Vec(0L, 1L), Vec(1L, 1L), Vec(0L, 0L)).T
+      )
 
     val t2 = ATen.one_hot(t, 4)
     assert(t2.shape == List(3, 2, 4))

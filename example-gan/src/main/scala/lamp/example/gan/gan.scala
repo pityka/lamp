@@ -131,7 +131,7 @@ object Train extends App {
         scribe.info(
           s"Loaded full batch data. Train shape: ${trainFullbatch.shape}"
         )
-                val rng = new scala.util.Random
+        val rng = new scala.util.Random
 
         val trainEpochs = () =>
           BatchStream.minibatchesFromFull(
@@ -221,7 +221,7 @@ object Train extends App {
 
             println(
               s"D-loss: ${totalDLoss.toMat.raw(0) / instances}, G-loss: ${totalGLoss.toMat
-                .raw(0) / instances}"
+                  .raw(0) / instances}"
             )
 
             // updateWindow(

@@ -49,11 +49,11 @@ object MLP {
   ) = {
 
     def act() = activationFunction match {
-      case Gelu    => Fun(scope => input => input.gelu(scope))
-      case Relu    => Fun(scope => input => input.relu(scope))
-      case Swish1  => Fun(scope => input => input.swish1(scope))
-      case HardSwish  => Fun(scope => input => input.hardSwish(scope))
-      case Sigmoid => Fun(scope => input => input.sigmoid(scope))
+      case Gelu      => Fun(scope => input => input.gelu(scope))
+      case Relu      => Fun(scope => input => input.relu(scope))
+      case Swish1    => Fun(scope => input => input.swish1(scope))
+      case HardSwish => Fun(scope => input => input.hardSwish(scope))
+      case Sigmoid   => Fun(scope => input => input.sigmoid(scope))
     }
     def makeNorm(normDim: Int): Sequential[Variable, EitherModule[
       Variable,

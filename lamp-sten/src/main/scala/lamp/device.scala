@@ -109,9 +109,9 @@ sealed trait Device { self =>
     val clones = r.map { t =>
       aten.ATen.clone(t)
     }
-    
+
     r.foreach(_.release)
-    
+
     clones
   }
   def to[S: Sc](t: STenOptions): STenOptions
