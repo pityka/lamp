@@ -30,9 +30,14 @@ object GraphBatchStream {
       minibatchSize: Int,
       graphNodesAndEdges: Array[Graph],
       targetPerGraph: STen,
-      rng: Option[scala.util.Random]
-  ): BatchStream[lamp.nn.graph.Graph, Int] = {
-    def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
+      rng: Option[scala.util.Random],
+      transferBufferSize: Long
+  ): BatchStream[lamp.nn.graph.Graph, Int, (BufferPair,BufferPair)] = {
+    def makeNonEmptyBatch(
+        idx: Array[Int],
+        buffers: (BufferPair, BufferPair),
+        device: Device
+    ) = {
       Scope.inResource.map { implicit scope =>
         val selectedGraphs = idx.map(graphNodesAndEdges)
         val (
@@ -84,9 +89,9 @@ object GraphBatchStream {
               ArraySeq.unsafeWrapArray(selectedGraphs.map(_.nodeFeatures)),
               0
             )
-            device.to(c)
+            c
           }
-          const(t)
+          t
         }
         val edgesV = {
           val t = Scope { implicit scope =>
@@ -94,21 +99,18 @@ object GraphBatchStream {
               ArraySeq.unsafeWrapArray(selectedGraphs.map(_.edgeFeatures)),
               0
             )
-            device.to(c)
+            c
           }
-          const(t)
+          t
         }
-        val edgesIC = Scope { implicit scope =>
-          device.to(STen.cat(edgesI, 0))
-        }
-        val edgesJC = Scope { implicit scope =>
-          device.to(STen.cat(edgesJ, 0))
-        }
+        val edgesIC =
+          STen.cat(edgesI, 0)
+
+        val edgesJC =
+          STen.cat(edgesJ, 0)
 
         val graphIndicesV =
-          Scope { implicit scope =>
-            device.to(STen.cat(graphIndices, 0))
-          }
+          STen.cat(graphIndices, 0)
 
         val selectedTargetOnDevice = Scope { implicit scope =>
           val idxT = STen.fromLongArray(
@@ -120,14 +122,24 @@ object GraphBatchStream {
           device.to(selectedTarget)
         }
 
+        val (floatBuffers, longBuffers) = buffers
+        val onDeviceListFloats = device.toBatched(
+          List(nodesV, edgesV),
+          floatBuffers
+        )
+        val onDeviceListLongs = device.toBatched(
+          List(edgesJC, edgesIC, graphIndicesV),
+          longBuffers
+        )
+
         StreamControl(
           (
             lamp.nn.graph.Graph(
-              nodeFeatures = nodesV,
-              edgeFeatures = edgesV,
-              edgeJ = edgesJC,
-              edgeI = edgesIC,
-              vertexPoolingIndices = graphIndicesV
+              nodeFeatures = const(onDeviceListFloats(0)),
+              edgeFeatures = const(onDeviceListFloats(1)),
+              edgeJ = onDeviceListLongs(0),
+              edgeI = onDeviceListLongs(1),
+              vertexPoolingIndices = onDeviceListLongs(2)
             ),
             selectedTargetOnDevice
           )
@@ -135,11 +147,23 @@ object GraphBatchStream {
       }
     }
 
+    val allocateBuffers = (device: Device) =>
+      Scope.inResource.map({ implicit scope =>
+        (
+        device.allocateBuffers(transferBufferSize,STenOptions.f),
+        device.allocateBuffers(transferBufferSize,STenOptions.l),
+        )
+      })
+
     val idx =
       rng
         .map(rng =>
           rng
-            .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, graphNodesAndEdges.length)))
+            .shuffle(
+              ArraySeq.unsafeWrapArray(
+                Array.range(0, graphNodesAndEdges.length)
+              )
+            )
             .grouped(minibatchSize)
             .map(_.toArray)
             .toList
@@ -151,7 +175,9 @@ object GraphBatchStream {
             .toList
         )
 
-    BatchStream.fromIndices(idx.toArray)(makeNonEmptyBatch)
+    BatchStream.fromIndicesWithBuffers(idx.toArray, allocateBuffers)(
+      makeNonEmptyBatch
+    )
 
   }
 
@@ -162,7 +188,7 @@ object GraphBatchStream {
   def singleLargeGraph(
       graph: GraphBatchStream.Graph,
       targetPerNode: STen
-  ): BatchStream[lamp.nn.graph.Graph, Boolean] =
+  ): BatchStream[lamp.nn.graph.Graph, Boolean, Unit] =
     BatchStream.single(Scope.inResource.map { implicit scope =>
       StreamControl(
         (graph.toVariable, targetPerNode)

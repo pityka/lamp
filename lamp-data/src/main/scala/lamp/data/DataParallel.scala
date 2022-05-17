@@ -10,17 +10,17 @@ import cats.effect.std.Queue
 import cats.effect.syntax.all._
 import cats.syntax.all._
 import lamp.Device
+import lamp.BufferPair
 
 object DataParallel {
 
-  def validationOneEpoch[I, M <: GenericModule[I, Variable], S](
+  def validationOneEpoch[I, M <: GenericModule[I, Variable], S, C](
       models: Seq[SupervisedModel[I, M]],
-      validationBatches: BatchStream[I, S],
+      validationBatches: BatchStream[I, S, C],
       validationCallback: ValidationCallback,
       logger: Option[Logger],
       epochCount: Long
   ): IO[Double] = {
-    val devices = models.map(_.module.state.head._1.value.device).toList
     val modelsAsEval = models.map(_.asEval)
 
     def allocatePerModelLossAcc(implicit scope: Scope) =
@@ -30,15 +30,15 @@ object DataParallel {
 
     def loop(
         batchCount: Int,
-        totalLossPerModel: List[STen],
+        totalLossPerModel: List[(STen, C)],
         totalExamples: Long,
         s0: S
     ): IO[(Seq[STen], Long)] = {
       makeMultipleBatches(
-        devices = devices,
-        makeOne = (device: Device, state: S) =>
+        devices = totalLossPerModel.map(t => (t._1.device, t._2)),
+        makeOne = (device: Device, state: S, c: C) =>
           validationBatches
-            .nextBatch(device, state)
+            .nextBatch(device, c, state)
       )(s0)
         .flatMap { case (s1, resource) =>
           resource
@@ -55,7 +55,7 @@ object DataParallel {
                               (validationSample, validationTarget),
                               modelAsEval
                             ),
-                            totalLoss
+                            (totalLoss, _)
                           ) =>
                         IO {
                           val numExamples =
@@ -77,7 +77,8 @@ object DataParallel {
             }
         }
         .flatMap {
-          case (_, EndStream) => IO.pure((totalLossPerModel, totalExamples))
+          case (_, EndStream) =>
+            IO.pure((totalLossPerModel.map(_._1), totalExamples))
           case (s1, EmptyBatch) =>
             loop(batchCount, totalLossPerModel, totalExamples, s1)
           case (s1, NonEmptyBatch(examples)) =>
@@ -92,53 +93,68 @@ object DataParallel {
     }
 
     Scope.inResource.use { implicit scope =>
-      loop(
-        0,
-        allocatePerModelLossAcc,
-        0L,
-        validationBatches.init
-      ).flatMap { case (totalLossPerModel, totalExamples) =>
-        val validationLoss =
-          totalLossPerModel.map(_.toDoubleArray.apply(0)).sum / totalExamples
-        for {
-          _ <- IO {
-            logger.foreach(
-              _.info(
-                s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
-              )
-            )
-          }
-          _ <- IO {
-            validationCallback(epochCount, validationLoss)
-          }
+      val devices = models.map(_.module.state.head._1.value.device)
+      import cats.implicits._
+      devices
+        .map(device => validationBatches.allocateBuffers(device))
+        .toList
+        .sequence
+        .use { cs =>
+          loop(
+            0,
+            allocatePerModelLossAcc.zip(cs),
+            0L,
+            validationBatches.init
+          ).flatMap { case (totalLossPerModel, totalExamples) =>
+            val validationLoss =
+              totalLossPerModel
+                .map(_.toDoubleArray.apply(0))
+                .sum / totalExamples
+            for {
+              _ <- IO {
+                logger.foreach(
+                  _.info(
+                    s"Avg validation loss in epoch $epochCount over $totalExamples examples: ${validationLoss}"
+                  )
+                )
+              }
+              _ <- IO {
+                validationCallback(epochCount, validationLoss)
+              }
 
-        } yield validationLoss
-      }
+            } yield validationLoss
+          }
+        }
     }
   }
 
-  def oneEpoch[I, M <: GenericModule[I, Variable], S](
+  def oneEpoch[I, M <: GenericModule[I, Variable], S, C](
       epochCount: Long,
       trainingCallback: TrainingCallback,
       mainModel: ModelWithOptimizer[I, M],
-      trainBatches: BatchStream[I, S],
+      trainBatches: BatchStream[I, S, C],
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
       models: Seq[SupervisedModel[I, M]],
       accumulateGradientOverNBatches: Int
   ) = {
 
+    val mainDevice = mainModel.model.module.state.head._1.value.device
+
     def allocatePerModelLossAcc(implicit scope: Scope) =
       (mainModel.model +: models)
         .map(model => STen.scalarDouble(0d, model.module.state.head._1.options))
         .toList
 
-    def loop(perModelLossAcc: List[STen]) =
+    def loop(
+        perModelLossAcc: List[(STen, C)],
+        deviceBuffers: List[BufferPair]
+    ) =
       driveSynchronousLoop[StreamControl[List[(I, STen)]], Long](
         fetch = makeMultipleBatches(
-          devices = perModelLossAcc.map(_.device),
-          makeOne =
-            (device: Device, s0: S) => trainBatches.nextBatch(device, s0)
+          devices = perModelLossAcc.map(t => (t._1.device, t._2)),
+          makeOne = (device: Device, s0: S, c: C) =>
+            trainBatches.nextBatch(device, c, s0)
         ),
         transform = (
             batchCounter,
@@ -149,7 +165,8 @@ object DataParallel {
               .map(batches =>
                 synchronousStep(
                   batches,
-                  perModelLossAcc,
+                  perModelLossAcc.map(_._1),
+                  deviceBuffers,
                   zeroGrad =
                     (batchCounter % accumulateGradientOverNBatches) == 0,
                   step =
@@ -171,13 +188,14 @@ object DataParallel {
     def synchronousStep(
         batch: List[(I, STen)],
         perModelLossAcc: List[STen],
+        deviceBuffers: List[BufferPair],
         step: Boolean,
         zeroGrad: Boolean
     ): IO[Long] = {
       assert(batch.size == perModelLossAcc.size)
       assert(batch.size == (models.size + 1))
       for {
-        _ <- copyStateFromMain()
+        _ <- copyStateFromMain(mainDevice, deviceBuffers)
         gradients <- batch
           .zip(mainModel.model +: models)
           .zip(perModelLossAcc)
@@ -249,18 +267,28 @@ object DataParallel {
 
     }
 
-    def copyStateFromMain() = {
+    def copyStateFromMain(
+        mainDevice: Device,
+        deviceBuffers: List[BufferPair]
+    ) = {
       val sources = mainModel.model.module.state.map(_._1.value)
-      val srcDevice = sources.head.device
-      models.toList.parTraverseN(models.size) { m =>
-        IO {
-          srcDevice.withOtherStreamThenSync(true) {
-            val destinations = m.module.state.map(_._1.value)
-            destinations.zip(sources).foreach { case (destination, source) =>
-              destination.copyFrom(source)
+      models.toList.zip(deviceBuffers).parTraverseN(models.size) {
+        case (destinationModel, buffers) =>
+          IO {
+            mainDevice.withOtherStreamThenSync(true) {
+
+              val destinations = destinationModel.module.state.map(_._1.value)
+              val device = destinationModel.module.state.head._1.value.device
+
+              Scope.root { implicit scope =>
+                val copied = device.toBatched(sources, buffers)
+
+                destinations.zip(copied).foreach { case (destination, source) =>
+                  destination.copyFrom(source)
+                }
+              }
             }
           }
-        }
       }
     }
 
@@ -333,13 +361,38 @@ object DataParallel {
     val epochLoop = Scope.inResource.use { implicit scope =>
       val lossAcc =
         allocatePerModelLossAcc
-      val loopDone =
-        loop(lossAcc)
+      val devices = lossAcc.map(_.device)
+      import cats.implicits._
 
-      loopDone.map { numInstances =>
-        val totalLoss = lossAcc.map(_.toDoubleArray.apply(0)).sum
-        (totalLoss, numInstances)
+      val buffersForBatchStream = devices
+        .map(device => trainBatches.allocateBuffers(device))
+        .toList
+        .sequence
+
+      val buffersForDataParallel = Scope.inResource.map { implicit scope =>
+        val size = mainModel.model.module.state.map(_._1.value.numel).sum
+        val op = mainModel.model.module.state.head._1.value.options
+        models.toList.map { m =>
+          val device = m.module.state.head._1.value.device
+          val onmain = STen.zeros(List(size), mainDevice.to(op))
+          val ondevice = STen.zeros(List(size), device.to(op))
+          BufferPair(source = onmain, destination = ondevice)
+
+        }
       }
+
+      buffersForBatchStream
+        .use { cs =>
+          buffersForDataParallel.use { dpBuffers =>
+            val loopDone =
+              loop(lossAcc.zip(cs), dpBuffers)
+
+            loopDone.map { numInstances =>
+              val totalLoss = lossAcc.map(_.toDoubleArray.apply(0)).sum
+              (totalLoss, numInstances)
+            }
+          }
+        }
     }
 
     for {
@@ -353,7 +406,8 @@ object DataParallel {
       _ <- IO {
         logger.foreach(
           _.info(
-            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f".format(throughput)} instances/sec)"
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f"
+              .format(throughput)} instances/sec)"
           )
         )
       }
@@ -364,21 +418,21 @@ object DataParallel {
     } yield trainingLoss
   }
 
-  private[lamp] def makeMultipleBatches[A, S](
-      devices: List[Device],
-      makeOne: (Device, S) => IO[(S, Resource[IO, StreamControl[A]])]
+  private[lamp] def makeMultipleBatches[A, S, C](
+      devices: List[(Device, C)],
+      makeOne: (Device, S, C) => IO[(S, Resource[IO, StreamControl[A]])]
   ): S => IO[
     (S, Resource[IO, StreamControl[List[A]]])
   ] = {
 
     def fold(
         s0: S,
-        remaining: List[Device],
+        remaining: List[(Device, C)],
         acc: List[Resource[IO, StreamControl[A]]]
     ): IO[(S, List[Resource[IO, StreamControl[A]]])] = remaining match {
       case Nil => IO.pure((s0, acc.reverse))
-      case d :: ds =>
-        makeOne(d, s0).flatMap { case (s1, resource) =>
+      case (d, c) :: ds =>
+        makeOne(d, s0, c).flatMap { case (s1, resource) =>
           fold(s1, ds, resource :: acc)
         }
     }

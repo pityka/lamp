@@ -50,15 +50,20 @@ object SWA {
   def epochs[I, M <: GenericModule[
     I,
     Variable
-  ]: Load, LRState, BatchStreamState](
+  ]: Load, LRState, BatchStreamState, BatchStreamBuffers](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: IOLoops.TrainingLoopContext => BatchStream[
         I,
-        BatchStreamState
+        BatchStreamState,
+        BatchStreamBuffers
       ],
       validationBatchesOverEpoch: Option[
-        IOLoops.TrainingLoopContext => BatchStream[I, BatchStreamState]
+        IOLoops.TrainingLoopContext => BatchStream[
+          I,
+          BatchStreamState,
+          BatchStreamBuffers
+        ]
       ],
       epochs: Int,
       trainingCallback: TrainingCallback = TrainingCallback.noop,
@@ -298,19 +303,21 @@ object SWA {
       (model, learningCurve) = trained
       // update batchnorm's state in a side effect
       _ <-
-        if (forwardPassAfterTraining)
+        if (forwardPassAfterTraining) {
+          val batchStream = trainBatchesOverEpoch(
+            IOLoops.TrainingLoopContext(
+              learningCurve.size,
+              None,
+              None
+            )
+          )
           IOLoops
             .forwardAndDiscardBatchStream(
-              trainBatchesOverEpoch(
-                IOLoops.TrainingLoopContext(
-                  learningCurve.size,
-                  None,
-                  None
-                )
-              ),
+              batchStream,
+              batchStream.allocateBuffers,
               model.module
             )
-        else IO.unit
+        } else IO.unit
     } yield trained
 
   }

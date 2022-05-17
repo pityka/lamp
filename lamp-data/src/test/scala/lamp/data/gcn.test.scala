@@ -326,11 +326,13 @@ class GCNSuite extends AnyFunSuite {
       }
       val rng = new scala.util.Random()
       val targets = lamp.saddle.fromVec(Vec(0d, 1d), device, precision)
-      val (batch, _) = GraphBatchStream
-        .smallGraphStream(2, graphs.toArray, targets, Some(rng))
-        .nextBatch(device, 0)
+      val batchStream = GraphBatchStream
+        .smallGraphStream(2, graphs.toArray, targets, Some(rng),10000)
+      val (batch, _) = batchStream.allocateBuffers(device).use{ buffers =>
+        batchStream.nextBatch(device,buffers, 0)
         .flatMap(_._2.allocated)
-        .unsafeRunSync()
+      }
+      .unsafeRunSync()
       val (batchGraph, batchTarget) =
         batch.unsafeGet
       assert(batchGraph.nodeFeatures.shape == List(10, 2))

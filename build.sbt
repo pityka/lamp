@@ -19,7 +19,7 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.13.8",
   crossScalaVersions := Seq("2.13.8", "2.12.15"),
   parallelExecution in Test := false,
-  scalacOptions ++= Seq(
+  scalacOptions ++= (Seq(
     "-opt-warnings",
     "-deprecation", // Emit warning and location for usages of deprecated APIs.
     "-encoding",
@@ -50,7 +50,11 @@ lazy val commonSettings = Seq(
     "-Ywarn-unused:params", // Warn if a value parameter is unused.
     "-Ywarn-unused:patvars", // Warn if a variable bound in a pattern is unused.
     "-Ywarn-unused:privates" // Warn if a private member is unused.
-  ),
+  ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, scalaMajor)) if scalaMajor == 12 =>
+      List("-Ypartial-unification")
+    case _ => Nil
+  })),
   scalacOptions in (Compile, console) ~= (_ filterNot (_ == "-Xfatal-warnings")),
   scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings"))
 ) ++ Seq(
