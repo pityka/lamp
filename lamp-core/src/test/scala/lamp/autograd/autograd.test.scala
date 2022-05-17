@@ -833,19 +833,18 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
-  testGradientAndValue("hardswish")(mat2x3_2, 15.7700) {
-    (m, doBackprop, cuda) =>
-      Scope.leak { implicit scope =>
-        val x1 = param(lamp.saddle.fromMat(m, cuda) + 0.1)
-        val L = x1.hardSwish.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+  testGradientAndValue("hardswish")(mat2x3_2, 15.7700) { (m, doBackprop, cuda) =>
+    Scope.leak { implicit scope =>
+      val x1 = param(lamp.saddle.fromMat(m, cuda) + 0.1)
+      val L = x1.hardSwish.sum
+      if (doBackprop) {
+        L.backprop()
       }
+      (
+        L.value.toMat.raw(0),
+        x1.partialDerivative.map(t => t.toMat)
+      )
+    }
   }
   testGradientAndValue("exp")(mat2x3_2, 579.7027406974902) {
     (m, doBackprop, cuda) =>
@@ -1050,8 +1049,7 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val out = new CappedShiftedNegativeExponential(scope, x1, 2.5d).value
       assert(
-        out.value.toMat.roundTo(4) == Mat(Vec(1d, 1d, math.exp(-0.5)))
-          .roundTo(4)
+        out.value.toMat.roundTo(4) == Mat(Vec(1d, 1d, math.exp(-0.5))).roundTo(4)
       )
       val L = out.sum
       if (doBackprop) {
@@ -1144,8 +1142,7 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3, cuda))
-        val L =
-          Variable.where(lamp.saddle.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
+        val L = Variable.where(lamp.saddle.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
         if (doBackprop) {
           L.backprop()
         }
@@ -1160,8 +1157,7 @@ class GradientSuite extends AnyFunSuite {
       Scope.leak { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(mat2x3_2, cuda))
         val x2 = param(lamp.saddle.fromMat(m, cuda))
-        val L =
-          Variable.where(lamp.saddle.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
+        val L = Variable.where(lamp.saddle.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
         if (doBackprop) {
           L.backprop()
         }
@@ -1228,7 +1224,7 @@ class GradientSuite extends AnyFunSuite {
   testGradientAndValue("norm2")(mat2x3_2, 9.5394) { (m, doBackprop, cuda) =>
     Scope.leak { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
-      val L = x1.norm2(List(0, 1), true)
+      val L = x1.norm2(List(0, 1),true)
       if (doBackprop) {
         L.backprop()
       }
@@ -1557,10 +1553,7 @@ class GradientSuite extends AnyFunSuite {
         )
       val output = input.indexAdd(index, 0, 2)
       assert(
-        output.value.toMat.roundTo(4) == Mat(
-          Vec(0d, 0d, 0d),
-          Vec(3d, 7d, 11d)
-        ).T
+        output.value.toMat.roundTo(4) == Mat(Vec(0d, 0d, 0d), Vec(3d, 7d, 11d)).T
       )
       val L = output.sum
       if (doBackprop) {
@@ -1592,10 +1585,7 @@ class GradientSuite extends AnyFunSuite {
           )
         val output = input.indexAddFromSource(index, 0, src)
         assert(
-          output.value.toMat.roundTo(4) == Mat(
-            Vec(2d, 5d, 8d),
-            Vec(2d, 4d, 6d)
-          ).T
+          output.value.toMat.roundTo(4) == Mat(Vec(2d, 5d, 8d), Vec(2d, 4d, 6d)).T
         )
         val L = output.sum
         if (doBackprop) {
@@ -1627,10 +1617,7 @@ class GradientSuite extends AnyFunSuite {
           )
         val output = input.indexAddFromSource(index, 0, src)
         assert(
-          output.value.toMat.roundTo(4) == Mat(
-            Vec(2d, 5d, 8d),
-            Vec(2d, 4d, 6d)
-          ).T
+          output.value.toMat.roundTo(4) == Mat(Vec(2d, 5d, 8d), Vec(2d, 4d, 6d)).T
         )
         val L = output.sum
         if (doBackprop) {

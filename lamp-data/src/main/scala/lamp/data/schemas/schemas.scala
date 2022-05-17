@@ -22,7 +22,7 @@ case class TensorList(
   assert(
     tensors.forall(t => t.byteOffset + t.byteLength <= byteLength),
     s"Some tensor offset+length is out of bound ${tensors
-        .map(v => (v.byteOffset, v.byteLength))} total: $byteLength"
+      .map(v => (v.byteOffset, v.byteLength))} total: $byteLength"
   )
 }
 
@@ -39,7 +39,7 @@ case class SimpleLoopState(
     lastValidationLoss: Option[Double],
     minValidationLoss: Option[Double],
     minValidationLossModel: Option[(Int, TensorList)],
-    learningCurve: List[(Int, Double, Option[Double], Option[Double])]
+    learningCurve: List[(Int, Double, Option[Double],Option[Double])]
 ) extends LoopState
 case class SWALoopState(
     model: TensorList,

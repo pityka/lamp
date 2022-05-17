@@ -1215,7 +1215,7 @@ case class STen private (
       )
     )
 
-  def hardSwish[S: Sc] =
+  def hardSwish[S:Sc] = 
     owned(
       ATen.hardswish(value)
     )
