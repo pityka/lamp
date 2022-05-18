@@ -87,10 +87,13 @@ sealed trait Device { self =>
     val viewSizes = views.map(_.numel())
     val shapes = tensors.map(_.sizes)
 
-    aten.ATen.cat_out(hostBuffer, views.toArray, 0)
+    val hostBufferSlice = aten.ATen.slice(hostBuffer,0,0,viewSizes.sum,1)
+
+    aten.ATen.cat_out(hostBufferSlice, views.toArray, 0)
     views.foreach(_.release)
 
     deviceBuffer.copyFrom(hostBuffer, true)
+    hostBufferSlice.release()
 
     val viewedBuffer =
       aten.ATen._unsafe_view(deviceBuffer, Array(viewSizes.sum))
