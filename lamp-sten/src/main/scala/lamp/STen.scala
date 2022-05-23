@@ -1191,7 +1191,7 @@ case class STen private (
       val tmp = STen.zeros(shape)
       owned(value.expand_as(tmp.value))
     }
-
+  
   /** Returns a tensor with a new shape.
     *
     * No data is copied. The new shape must be compatible with the number of
@@ -1207,13 +1207,17 @@ case class STen private (
   /** Reduces the given dimensions with their L2 norm. */
   def norm2[S: Sc](dim: Seq[Int], keepDim: Boolean) =
     owned(
-      ATen.norm_2(
+      ATen.norm_3(
         value,
         2d,
         dim.toArray.map(_.toLong),
-        keepDim,
-        STen.dOptions.scalarTypeByte
+        keepDim
       )
+    )
+
+  def hardSwish[S: Sc] =
+    owned(
+      ATen.hardswish(value)
     )
 
   /** Reduces the given dimension with the log-softmax of its elements. */
@@ -1573,5 +1577,10 @@ case class STen private (
   def toDoubleArray = TensorHelpers.toDoubleArray(value)
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
+
+  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned()  else false
+
+  def pin[S:Sc] = if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned  else this
+
 
 }

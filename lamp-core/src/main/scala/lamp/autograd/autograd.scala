@@ -338,6 +338,7 @@ sealed trait Variable {
   def swish1[S: Sc] = this * this.sigmoid
   def gelu[S: Sc] = new Gelu(extractScope, this).value
   def sigmoid[S: Sc] = new Sigmoid(extractScope, this).value
+  def hardSwish[S: Sc] = new HardSwish(extractScope, this).value
   def dropout[S: Sc](prob: Double, train: Boolean) =
     new Dropout(extractScope, this, prob, train).value
   def scatterAdd[S: Sc](index: Variable, dim: Int, maxIndex: Long) =
@@ -352,6 +353,10 @@ sealed trait Variable {
   def sum[S: Sc] = new Sum(extractScope, this, Nil, false).value
   def sum[S: Sc](dim: List[Int], keepDim: Boolean) =
     new Sum(extractScope, this, dim, keepDim).value
+  def norm2[S: Sc](dim: List[Int]) =
+    new Norm2(extractScope, this, dim, false).value
+  def norm2[S: Sc](dim: List[Int], keepDim: Boolean) =
+    new Norm2(extractScope, this, dim, keepDim).value
   def expandAs[S: Sc](other: STen) =
     new ExpandAs(extractScope, this, other).value
   def expand[S: Sc](shape: List[Long]) =
