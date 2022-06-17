@@ -169,7 +169,7 @@ object IOLoops {
   def withSWA[I, M <: GenericModule[
     I,
     Variable
-  ]: Load, LRState: TypeTag, LRStateSWA: TypeTag, BatchStreamState, BatchStreamBuffers](
+  ]: Load, LRState, LRStateSWA, BatchStreamState, BatchStreamBuffers](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: TrainingLoopContext => BatchStream[
