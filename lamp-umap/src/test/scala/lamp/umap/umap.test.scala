@@ -1,7 +1,6 @@
 package lamp.umap
 
 import org.saddle._
-import lamp.saddle._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.DoublePrecision
 import lamp.CPU
