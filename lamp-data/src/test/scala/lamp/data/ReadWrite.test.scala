@@ -21,7 +21,8 @@ class ReadWriteSuite extends AnyFunSuite {
       val st3 = STen.zeros(List(0, 0), STenOptions.f)
       val st4 = STen.zeros(List(0), STenOptions.l)
       val st5 = STen.ones(List(3, 3))
-      val list = List(st1, st2, st3, st4, st5)
+      val st6 = STen.ones(List(3), STenOptions.b)
+      val list = List(st1, st2, st3, st4, st5,st6)
       assert(
         Writer
           .writeTensorsIntoFile(list, file)

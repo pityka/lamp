@@ -110,7 +110,7 @@ lazy val sten = project
     name := "lamp-sten",
     libraryDependencies ++= Seq(
       "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0",
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+100-f0fb2228",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+105-b4f09d40",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"

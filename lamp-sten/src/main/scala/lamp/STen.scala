@@ -21,6 +21,9 @@ object STen {
   /** A tensor option specifying CPU and long */
   val lOptions = STenOptions(aten.TensorOptions.l)
 
+  /** A tensor option specifying CPU and byte */
+  val bOptions = STenOptions(aten.TensorOptions.b())
+
   implicit class OwnedSyntax(t: Tensor) {
     def owned[S: Sc] = STen.owned(t)
   }
@@ -476,6 +479,9 @@ case class STenOptions(value: aten.TensorOptions) {
   /** Returns a copy with dtype set to float */
   def toFloat[S: Sc] = value.toFloat.owned
 
+  /** Returns a copy with dtype set to a value compatible with Scala's Byte */
+  def toByte[S: Sc] = value.toByte.owned
+
   /** Returns a copy with device set to CPU */
   def cpu[S: Sc] = value.cpu.owned
 
@@ -487,6 +493,7 @@ case class STenOptions(value: aten.TensorOptions) {
 
   def isDouble = value.isDouble
   def isFloat = value.isFloat
+  def isByte = value.isByte
   def isLong = value.isLong
   def isCPU = value.isCPU
   def isCuda = value.isCuda
@@ -511,6 +518,9 @@ object STenOptions {
 
   /** Returns an tensor option specifying CPU and long */
   def l = STen.lOptions
+
+  /** Returns an tensor option specifying CPU and double */
+  def b = STen.bOptions
 
   /** Returns an tensor option specifying CPU and dtype corresponding to the
     * given byte
@@ -812,13 +822,13 @@ case class STen private (
     case 6 => castToFloat
     case 5 => castToHalf
     case 4 => castToLong
+    case 1 => castToByte
   }
 
-  /** Casts to char */
-  def castToChar[S: Sc] = owned(ATen._cast_Char(value, true))
-
-  /** Casts to byte */
-  def castToByte[S: Sc] = owned(ATen._cast_Byte(value, true))
+  /** Casts to byte. signed 8-bit integer (like Scala's Byte)
+   * This is called Char in libtorch
+   */
+  def castToByte[S: Sc] = owned(ATen._cast_Char(value, true))
 
   /** Casts to float */
   def castToFloat[S: Sc] = owned(ATen._cast_Float(value, true))
