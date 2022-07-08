@@ -54,13 +54,13 @@ object SWA {
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: IOLoops.TrainingLoopContext => BatchStream[
-        I,
+        (I,STen),
         BatchStreamState,
         BatchStreamBuffers
       ],
       validationBatchesOverEpoch: Option[
         IOLoops.TrainingLoopContext => BatchStream[
-          I,
+          (I,STen),
           BatchStreamState,
           BatchStreamBuffers
         ]

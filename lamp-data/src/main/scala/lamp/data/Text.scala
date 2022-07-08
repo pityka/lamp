@@ -296,7 +296,7 @@ object Text {
       timeSteps: Int,
       pad: Long,
       rng: scala.util.Random
-  ): BatchStream[(Variable, Variable), Int, Unit] = {
+  ): BatchStream[((Variable, Variable),STen), Int, Unit] = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) =
       BatchStream.scopeInResource.map { implicit scope =>
         val pairs = idx.map { i =>

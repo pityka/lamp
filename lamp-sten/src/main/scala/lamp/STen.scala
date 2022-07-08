@@ -2,6 +2,8 @@ package lamp
 
 import aten.Tensor
 import aten.ATen
+import aten.NcclComm
+import aten.CudaStream
 
 /** Companion object of [[lamp.STen]]
   *
@@ -464,6 +466,51 @@ object STen {
   def lstsq[S: Sc](A: STen, B: STen) = {
     val (a, b, c, d) = ATen.linalg_lstsq(A.value, B.value)
     (a.owned, b.owned, c.owned, d.owned)
+  }
+
+  /** Blocks until all peers join the clique. */
+  def ncclInitComm(
+      nRanks: Int,
+      myRank: Int,
+      myDevice: Int,
+      ncclUniqueId: NcclUniqueId
+  ): NcclComm = {
+    val id = java.util.Base64.getDecoder().decode(ncclUniqueId.base64)
+    val saveDevice = CudaStream.cudaGetDevice()
+    CudaStream.cudaSetDevice(myDevice)
+    val comm = NcclComm.comm_init_rank(nRanks, id, myRank)
+    CudaStream.cudaSetDevice(saveDevice)
+    comm
+  }
+
+  /** Broadcast tensor on root to the clique Blocks until all peers execute the
+    * broadcast. Takes a list of tensors for the case where a single thread
+    * manages multiple GPUs
+    */
+  def ncclBoadcast(tensors: Seq[(STen, NcclComm)]): Unit = {
+    aten.NcclComm.broadcast(
+      tensors.map(_._1.value).toArray,
+      tensors.map(_._2).toArray
+    )
+  }
+
+  /** Reduction with + Output must be on the root rank
+    *
+    * Blocks until all peers execute the reduce. Takes a list of tensors for the
+    * case where a single thread manages multiple GPUs
+    */
+  def ncclReduce(
+      inputs: Seq[(STen, NcclComm)],
+      output: STen,
+      rootRank: Int
+  ): Unit = {
+    aten.NcclComm.reduce(
+      inputs.map(_._1.value).toArray,
+      output.value,
+      rootRank,
+      0,
+      inputs.map(_._2).toArray
+    )
   }
 
 }
@@ -1202,7 +1249,7 @@ case class STen private (
       val tmp = STen.zeros(shape)
       owned(value.expand_as(tmp.value))
     }
-  
+
   /** Returns a tensor with a new shape.
     *
     * No data is copied. The new shape must be compatible with the number of
@@ -1589,9 +1636,18 @@ case class STen private (
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
 
-  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned()  else false
+  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned() else false
 
-  def pin[S:Sc] = if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned  else this
+  def pin[S: Sc] =
+    if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned else this
 
+}
+
+case class NcclUniqueId(base64: String)
+object NcclUniqueId {
+  def apply(): NcclUniqueId =
+    NcclUniqueId(
+      java.util.Base64.getEncoder.encodeToString(aten.NcclComm.get_unique_id)
+    )
 
 }

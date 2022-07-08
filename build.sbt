@@ -273,6 +273,23 @@ lazy val example_cifar100 = project
   .dependsOn(core, data, onnx, saddlecompat)
   .enablePlugins(JavaAppPackaging)
 
+lazy val example_cifar100_distributed = project
+  .in(file("example-cifar100-distributed"))
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    publish / skip := true,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.typesafe.akka" %% "akka-actor" % "2.6.19",
+      "com.typesafe.akka" %% "akka-remote" % "2.6.19",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
+      "com.outr" %% "scribe" % scribeVersion
+    )
+  )
+  .dependsOn(core, data, onnx, saddlecompat)
+  .enablePlugins(JavaAppPackaging)
+
 lazy val example_gan = project
   .in(file("example-gan"))
   .settings(commonSettings: _*)
