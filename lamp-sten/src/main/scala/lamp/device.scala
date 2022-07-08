@@ -50,19 +50,15 @@ sealed trait Device { self =>
   def to(t: Tensor): Tensor
   def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))
 
-  /** Copies tensors to this device in a single cross device copy. srcBuffer is
-    * supposed to be on the source device. dstBuffer has to be on `this` device.
-    * Tensors are first copied to the srcBuffer, then the srcBuffer is copied to
-    * dstBuffer, then the dstBuffer is split into views.
+  /** Copies tensors to this device in a single cross device copy. Data is
+    * copied via a buffer pair which consists of a source and a destinatin
+    * buffer. srcBuffer is supposed to be on the source device. dstBuffer has to
+    * be on `this` device. Tensors are first copied to the srcBuffer, then the
+    * srcBuffer is copied to dstBuffer, then the dstBuffer is split into views.
     *
     * All tensors must have the same data type.
     *
     * Might make sense to pin the srcBuffer.
-    *
-    * @param tensors
-    * @param srcBuffer
-    * @param dstBuffer
-    * @return
     */
   def toBatched[S: Sc](
       tensors: Seq[STen],
@@ -87,7 +83,7 @@ sealed trait Device { self =>
     val viewSizes = views.map(_.numel())
     val shapes = tensors.map(_.sizes)
 
-    val hostBufferSlice = aten.ATen.slice(hostBuffer,0,0,viewSizes.sum,1)
+    val hostBufferSlice = aten.ATen.slice(hostBuffer, 0, 0, viewSizes.sum, 1)
 
     aten.ATen.cat_out(hostBufferSlice, views.toArray, 0)
     views.foreach(_.release)
@@ -96,7 +92,7 @@ sealed trait Device { self =>
     hostBufferSlice.release()
 
     val slicedDeviceBuffer =
-      aten.ATen.slice(deviceBuffer,0,0,viewSizes.sum,1)
+      aten.ATen.slice(deviceBuffer, 0, 0, viewSizes.sum, 1)
 
     val offsets = viewSizes.scanLeft(0L)(_ + _).dropRight(1)
 
@@ -112,9 +108,9 @@ sealed trait Device { self =>
     val clones = r.map { t =>
       aten.ATen.clone(t)
     }
-    
+
     r.foreach(_.release)
-    
+
     clones
   }
   def to[S: Sc](t: STenOptions): STenOptions
