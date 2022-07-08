@@ -141,7 +141,7 @@ object Writer {
             bb.position(bb.position() + arr.length * 8)
           case 1 =>
             bb.put(arr.asInstanceOf[Array[Byte]])
-            bb.position(bb.position() + arr.length )
+            
         }
 
         writeFully(bb, channel)
