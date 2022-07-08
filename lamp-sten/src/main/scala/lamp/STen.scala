@@ -127,6 +127,7 @@ object STen {
       if (length == 0)
         tensors.toVector.map { case (tpe, _, _) =>
           tpe match {
+            case 1 => STen.zeros(List(0), STenOptions.b)
             case 4 => STen.zeros(List(0), STenOptions.l)
             case 6 => STen.zeros(List(0), STenOptions.f)
             case 7 => STen.zeros(List(0), STenOptions.d)
