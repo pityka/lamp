@@ -190,7 +190,7 @@ lazy val umap = project
   .settings(
     name := "lamp-umap",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
@@ -233,7 +233,7 @@ lazy val forest = project
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
-      "io.github.pityka" %% "saddle-core" % saddleVersion,
+      "io.github.pityka" %% "saddle-core" % saddleVersion
     )
   )
   .dependsOn(core % "test->test")
@@ -265,7 +265,7 @@ lazy val example_cifar100 = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -280,7 +280,7 @@ lazy val example_gan = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -293,7 +293,7 @@ lazy val example_timemachine = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -306,7 +306,7 @@ lazy val example_bert = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -320,7 +320,7 @@ lazy val example_translation = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -334,7 +334,7 @@ lazy val example_arxiv = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.0.1",
+      "com.github.scopt" %% "scopt" % "4.1.0",
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "io.github.pityka" %% "saddle-core" % saddleVersion,
