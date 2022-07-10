@@ -12,6 +12,7 @@ import lamp.nn.FreeRunningRNN
 import lamp.Scope
 import lamp.STen
 import scala.collection.compat.immutable.ArraySeq
+import lamp.nn.InitStateSyntax
 
 object Text {
   def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](

@@ -128,7 +128,7 @@ object StatefulSeq2 {
     T2,
     T3,
     S2
-  ]: TrainingMode] =
+  ]: TrainingMode] : TrainingMode[StatefulSeq2[T1, T2, T3, S1, S2, M1, M2]]=
     TrainingMode.make[StatefulSeq2[T1, T2, T3, S1, S2, M1, M2]](
       module => StatefulSeq2(module.m1.asEval, module.m2.asEval),
       module => StatefulSeq2(module.m1.asTraining, module.m2.asTraining)
@@ -142,7 +142,7 @@ object StatefulSeq2 {
     T2,
     T3,
     S2
-  ]: Load] =
+  ]: Load] : Load[StatefulSeq2[T1, T2, T3, S1, S2, M1, M2]]=
     Load.make[StatefulSeq2[T1, T2, T3, S1, S2, M1, M2]](module =>
       tensors => {
         val m1S = module.m1.state.size
@@ -161,7 +161,7 @@ object StatefulSeq2 {
     T2,
     T3,
     S2
-  ]](implicit is1: InitState[M1, S1], is2: InitState[M2, S2]) =
+  ]](implicit is1: InitState[M1, S1], is2: InitState[M2, S2]) : InitState[StatefulSeq2[T1, T2, T3, S1, S2, M1, M2], (S1, S2)]=
     InitState.make[StatefulSeq2[T1, T2, T3, S1, S2, M1, M2], (S1, S2)](module =>
       (module.m1.initState, module.m2.initState)
     )
@@ -210,7 +210,7 @@ object StatefulSeq3 {
     T3,
     T4,
     S3
-  ]: TrainingMode] =
+  ]: TrainingMode] : TrainingMode[StatefulSeq3[T1, T2, T3, T4, S1, S2, S3, M1, M2, M3]]=
     TrainingMode.make[StatefulSeq3[T1, T2, T3, T4, S1, S2, S3, M1, M2, M3]](
       module =>
         StatefulSeq3(module.m1.asEval, module.m2.asEval, module.m3.asEval),
@@ -234,7 +234,7 @@ object StatefulSeq3 {
     T3,
     T4,
     S3
-  ]: Load] =
+  ]: Load] : Load[StatefulSeq3[T1, T2, T3, T4, S1, S2, S3, M1, M2, M3]] =
     Load.make[StatefulSeq3[T1, T2, T3, T4, S1, S2, S3, M1, M2, M3]](module =>
       tensors => {
         val m1S = module.m1.state.size
@@ -263,7 +263,7 @@ object StatefulSeq3 {
       is1: InitState[M1, S1],
       is2: InitState[M2, S2],
       is3: InitState[M3, S3]
-  ) =
+  ) : InitState[StatefulSeq3[T1, T2, T3, T4, S1, S2, S3, M1, M2, M3], (S1, S2, S3)] =
     InitState
       .make[StatefulSeq3[T1, T2, T3, T4, S1, S2, S3, M1, M2, M3], (S1, S2, S3)](
         module =>
@@ -349,7 +349,7 @@ object StatefulSeq4 {
         T5,
         S4
       ]: TrainingMode
-  ] =
+  ] : TrainingMode[StatefulSeq4[T1, T2, T3, T4, T5, S1, S2, S3, S4, M1, M2, M3, M4]] =
     TrainingMode
       .make[StatefulSeq4[T1, T2, T3, T4, T5, S1, S2, S3, S4, M1, M2, M3, M4]](
         module =>
@@ -384,7 +384,7 @@ object StatefulSeq4 {
     T4,
     T5,
     S4
-  ]: Load] =
+  ]: Load] : Load[StatefulSeq4[T1, T2, T3, T4, T5, S1, S2, S3, S4, M1, M2, M3, M4]] =
     Load.make[StatefulSeq4[T1, T2, T3, T4, T5, S1, S2, S3, S4, M1, M2, M3, M4]](
       module =>
         tensors => {
@@ -435,7 +435,21 @@ object StatefulSeq4 {
       is2: InitState[M2, S2],
       is3: InitState[M3, S3],
       is4: InitState[M4, S4]
-  ) =
+  ) : InitState[StatefulSeq4[
+        T1,
+        T2,
+        T3,
+        T4,
+        T5,
+        S1,
+        S2,
+        S3,
+        S4,
+        M1,
+        M2,
+        M3,
+        M4
+      ], (S1, S2, S3, S4)] =
     InitState
       .make[StatefulSeq4[
         T1,
@@ -551,7 +565,24 @@ object StatefulSeq5 {
         T6,
         S5
       ]: TrainingMode
-  ] =
+  ] : TrainingMode[StatefulSeq5[
+        T1,
+        T2,
+        T3,
+        T4,
+        T5,
+        T6,
+        S1,
+        S2,
+        S3,
+        S4,
+        S5,
+        M1,
+        M2,
+        M3,
+        M4,
+        M5
+      ]] =
     TrainingMode
       .make[StatefulSeq5[
         T1,
@@ -626,7 +657,24 @@ object StatefulSeq5 {
         T6,
         S5
       ]: Load
-  ] =
+  ] : Load[StatefulSeq5[
+        T1,
+        T2,
+        T3,
+        T4,
+        T5,
+        T6,
+        S1,
+        S2,
+        S3,
+        S4,
+        S5,
+        M1,
+        M2,
+        M3,
+        M4,
+        M5
+      ]]=
     Load.make[StatefulSeq5[
       T1,
       T2,
@@ -703,7 +751,24 @@ object StatefulSeq5 {
       is3: InitState[M3, S3],
       is4: InitState[M4, S4],
       is5: InitState[M5, S5]
-  ) =
+  ) : InitState[StatefulSeq5[
+        T1,
+        T2,
+        T3,
+        T4,
+        T5,
+        T6,
+        S1,
+        S2,
+        S3,
+        S4,
+        S5,
+        M1,
+        M2,
+        M3,
+        M4,
+        M5
+      ], (S1, S2, S3, S4, S5)] =
     InitState
       .make[StatefulSeq5[
         T1,

@@ -118,7 +118,7 @@ object Train extends App {
       scribe.info(s"Config: $config")
       Scope.root { implicit scope =>
         val devices =
-          if (config.gpus.isEmpty) List(CPU) else config.gpus.map(CudaDevice)
+          if (config.gpus.isEmpty) List(CPU) else config.gpus.map(CudaDevice.apply)
         val device = devices.head
         val extraDevices = devices.drop(1)
         if (config.pinnedAllocator) {

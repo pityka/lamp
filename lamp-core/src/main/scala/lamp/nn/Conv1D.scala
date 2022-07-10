@@ -35,8 +35,8 @@ case class Conv1D(
 }
 
 object Conv1D {
-  implicit val trainingMode = TrainingMode.identity[Conv1D]
-  implicit val load = Load.make[Conv1D](m =>
+  implicit val trainingMode : TrainingMode[Conv1D] = TrainingMode.identity[Conv1D]
+  implicit val load : Load[Conv1D] = Load.make[Conv1D](m =>
     parameters => {
       m.weights.value.copyFrom(parameters.head)
       m.bias.value.copyFrom(parameters(1))

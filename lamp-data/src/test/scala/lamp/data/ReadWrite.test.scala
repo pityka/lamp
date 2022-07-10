@@ -16,15 +16,18 @@ class ReadWriteSuite extends AnyFunSuite {
   test("io empty") {
     Scope.root { implicit scope =>
       val file = File.createTempFile("prefix", "suffx")
-      val st1 = STen.ones(List(3, 3))
+      val st1 = STen.ones(List(23, 23))
+      val st1f = STen.ones(List(23, 23), STenOptions.f)
+      val st1l = STen.ones(List(23, 23), STenOptions.l)
       val st2 = STen.zeros(List(0))
       val st3 = STen.zeros(List(0, 0), STenOptions.f)
       val st4 = STen.zeros(List(0), STenOptions.l)
       val st5 = STen.ones(List(3, 3))
-      val list = List(st1, st2, st3, st4, st5)
+      val st6 = STen.ones(List(23), STenOptions.b)
+      val list = List(st1,st1f,st1l, st2, st3, st4, st5,st6)
       assert(
         Writer
-          .writeTensorsIntoFile(list, file)
+          .writeTensorsIntoFile(list, file, bufferSize =2)
           .unsafeRunSync()
           .isRight
       )

@@ -25,8 +25,8 @@ case class Embedding(weights: Constant) extends Module {
 }
 
 object Embedding {
-  implicit val trainingMode = TrainingMode.identity[Embedding]
-  implicit val load = Load.make[Embedding] { m => parameters =>
+  implicit val trainingMode : TrainingMode[Embedding] = TrainingMode.identity[Embedding]
+  implicit val load : Load[Embedding] = Load.make[Embedding] { m => parameters =>
     m.weights.value.copyFrom(parameters.head)
   }
   case object Weights extends LeafTag

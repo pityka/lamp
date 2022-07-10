@@ -164,12 +164,12 @@ object IOLoops {
     )
   }
 
-  import scala.reflect.runtime.universe._
+  // import scala.reflect.runtime.universe._
 
   def withSWA[I, M <: GenericModule[
     I,
     Variable
-  ]: Load, LRState: TypeTag, LRStateSWA: TypeTag, BatchStreamState, BatchStreamBuffers](
+  ]: Load, LRState, LRStateSWA, BatchStreamState, BatchStreamBuffers](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: TrainingLoopContext => BatchStream[
@@ -283,7 +283,7 @@ object IOLoops {
         accumulateGradientOverNBatches,
         swaLearningRateScheduleInitState match {
           case Some(x) => Some(x)
-          case None if typeTag[LRState] == typeTag[LRStateSWA] =>
+          case None if swaLearningRateSchedule.init.getClass == warmupLRState.getClass =>
             Some(warmupLRState.asInstanceOf[LRStateSWA])
           case _ => None
         },

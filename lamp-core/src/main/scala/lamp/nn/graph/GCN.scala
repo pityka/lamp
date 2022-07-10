@@ -144,13 +144,13 @@ object GCN {
     degrees * (a.mm(nodeFeatures * degrees))
   }
 
-  implicit def trainingMode[M <: Module: TrainingMode] =
+  implicit def trainingMode[M <: Module: TrainingMode] : TrainingMode[GCN[M]]=
     TrainingMode
       .make[GCN[M]](
         m => m.copy(transform = m.transform.asEval),
         m => m.copy(transform = m.transform.asTraining)
       )
-  implicit def load[M <: Module: Load] = Load.make[GCN[M]] { m => tensors =>
+  implicit def load[M <: Module: Load] : Load[GCN[M]] = Load.make[GCN[M]] { m => tensors =>
     m.transform.load(tensors)
 
   }

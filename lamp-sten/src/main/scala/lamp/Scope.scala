@@ -64,39 +64,39 @@ object Movable {
   def by[T, K: Movable](convert: T => K) = new Movable[T] {
     def list(t: T) = convert(t).tensors
   }
-  implicit def stensorIsMovable = new Movable[STen] {
+  implicit def stensorIsMovable : Movable[STen] = new Movable[STen] {
     def list(m: STen) = List(m.value)
   }
 
-  implicit def unitIsMovable = Movable.empty[Unit]
-  implicit def stringIsMovable = Movable.empty[String]
-  implicit def DoubleIsMovable = Movable.empty[Double]
-  implicit def FloatIsMovable = Movable.empty[Float]
-  implicit def BooleanIsMovable = Movable.empty[Boolean]
-  implicit def IntIsMovable = Movable.empty[Int]
-  implicit def LongIsMovable = Movable.empty[Long]
-  implicit def ShortIsMovable = Movable.empty[Short]
-  implicit def ByteIsMovable = Movable.empty[Byte]
-  implicit def OptionIsMovable[T: Movable] = new Movable[Option[T]] {
+  implicit def unitIsMovable : Movable[Unit] = Movable.empty[Unit]
+  implicit def stringIsMovable : Movable[String] = Movable.empty[String]
+  implicit def DoubleIsMovable : Movable[Double] = Movable.empty[Double]
+  implicit def FloatIsMovable : Movable[Float] = Movable.empty[Float]
+  implicit def BooleanIsMovable : Movable[Boolean]= Movable.empty[Boolean]
+  implicit def IntIsMovable  : Movable[Int]= Movable.empty[Int]
+  implicit def LongIsMovable : Movable[Long] = Movable.empty[Long]
+  implicit def ShortIsMovable : Movable[Short] = Movable.empty[Short]
+  implicit def ByteIsMovable : Movable[Byte] = Movable.empty[Byte]
+  implicit def OptionIsMovable[T: Movable] : Movable[Option[T]]= new Movable[Option[T]] {
     def list(m: Option[T]) =
       m.toList.flatMap(m => implicitly[Movable[T]].list(m)).toList
   }
-  implicit def EitherIsMovable[T1: Movable, T2: Movable] =
+  implicit def EitherIsMovable[T1: Movable, T2: Movable] : Movable[Either[T1, T2]] =
     new Movable[Either[T1, T2]] {
       def list(m: Either[T1, T2]) =
         m.fold(_.tensors, _.tensors)
     }
-  implicit def SeqIsMovable[T: Movable] = new Movable[Seq[T]] {
+  implicit def SeqIsMovable[T: Movable] :Movable[Seq[T]] = new Movable[Seq[T]] {
     def list(m: Seq[T]) = m.flatMap(m => implicitly[Movable[T]].list(m)).toList
   }
-  implicit def t2[T1: Movable, T2: Movable] = new Movable[(T1, T2)] {
+  implicit def t2[T1: Movable, T2: Movable] : Movable[(T1, T2)]= new Movable[(T1, T2)] {
     def list(m: (T1, T2)) = m._1.tensors ++ m._2.tensors
   }
-  implicit def t3[T1: Movable, T2: Movable, T3: Movable] =
+  implicit def t3[T1: Movable, T2: Movable, T3: Movable] : Movable[(T1, T2, T3)] =
     new Movable[(T1, T2, T3)] {
       def list(m: (T1, T2, T3)) = m._1.tensors ++ m._2.tensors ++ m._3.tensors
     }
-  implicit def t4[T1: Movable, T2: Movable, T3: Movable, T4: Movable] =
+  implicit def t4[T1: Movable, T2: Movable, T3: Movable, T4: Movable] : Movable[(T1, T2, T3, T4)]=
     new Movable[(T1, T2, T3, T4)] {
       def list(m: (T1, T2, T3, T4)) =
         m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors
@@ -107,7 +107,7 @@ object Movable {
       T3: Movable,
       T4: Movable,
       T5: Movable
-  ] =
+  ] : Movable[(T1, T2, T3, T4, T5)]=
     new Movable[(T1, T2, T3, T4, T5)] {
       def list(m: (T1, T2, T3, T4, T5)) =
         m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors ++ m._5.tensors
@@ -119,7 +119,7 @@ object Movable {
       T4: Movable,
       T5: Movable,
       T6: Movable
-  ] =
+  ] : Movable[(T1, T2, T3, T4, T5, T6)]=
     new Movable[(T1, T2, T3, T4, T5, T6)] {
       def list(m: (T1, T2, T3, T4, T5, T6)) =
         m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors ++ m._5.tensors ++ m._6.tensors

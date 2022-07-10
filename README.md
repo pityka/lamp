@@ -18,6 +18,8 @@ As a consequence lamp uses fast CPU and GPU code and stores its data in off-heap
 
 [API](https://pityka.github.io/lamp/api/lamp/index.html)
 
+Lamp is built both for Scala 2 and Scala 3.
+
 # Features
 
 Lamp provides CPU or GPU backed n-dimensional arrays and implements generic automatic reverse mode differentiation (also known as autograd, see e.g. [this paper](https://arxiv.org/pdf/1811.05031.pdf)). 

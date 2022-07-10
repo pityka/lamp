@@ -8,7 +8,7 @@ case class Dropout(prob: Double, training: Boolean) extends Module {
   def forward[S: Sc](x: Variable): Variable = x.dropout(prob, training)
 }
 object Dropout {
-  implicit val load = Load.identity[Dropout]
-  implicit val tr = TrainingMode
+  implicit val load :Load[Dropout] = Load.identity[Dropout]
+  implicit val tr : TrainingMode[Dropout] = TrainingMode
     .make[Dropout](_.copy(training = false), _.copy(training = true))
 }

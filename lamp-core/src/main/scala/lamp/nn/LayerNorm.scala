@@ -30,8 +30,8 @@ case class LayerNorm(
 }
 
 object LayerNorm {
-  implicit val trainingMode = TrainingMode.identity[LayerNorm]
-  implicit val load = Load.make[LayerNorm](m =>
+  implicit val trainingMode : TrainingMode[LayerNorm] = TrainingMode.identity[LayerNorm]
+  implicit val load : Load[LayerNorm] = Load.make[LayerNorm](m =>
     tensors => {
       m.scale.value.copyFrom(tensors.head)
       m.bias.value.copyFrom(tensors(1))

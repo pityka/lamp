@@ -10,6 +10,7 @@ import lamp.Scope
 import lamp.STen
 import java.nio.channels.Channels
 import java.nio.ByteBuffer
+import lamp.nn.LoadSyntax
 
 object Reader {
 

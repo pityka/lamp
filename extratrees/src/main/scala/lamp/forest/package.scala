@@ -1,7 +1,6 @@
 package lamp
 
 import org.saddle._
-import org.saddle.macros.BinOps._
 import cats.effect.IO
 import cats.effect.syntax.all._
 import scala.reflect.ClassTag
@@ -817,9 +816,21 @@ package object extratrees {
       weights: Option[Vec[Double]],
       numClasses: Int
   ): Double = {
+
+    def sqSum(a: Array[Double]): Double = {
+      var i = 0
+      var s = 0d
+      val l = a.length
+      while (i < l) {
+        val x = a(i)
+        s += x * x
+        i += 1
+      }
+      s
+    }
+
     val p = distribution(target, weights, numClasses)
-    val p2 = p * p
-    1d - p2.sum
+    1d - sqSum(p.toArray)
   }
   private[lamp] def giniImpurityFromDistribution(
       distribution: Array[Double]

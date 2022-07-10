@@ -101,10 +101,11 @@ class MLPSuite extends AnyFunSuite {
       val (_, trainedModel, _, _) = IOLoops
         .withSWA(
           model = model,
-          optimizerFactory = SGDW
+          optimizerFactory = Shampoo
             .factory(
               learningRate = simple(0.01),
-              weightDecay = simple(0.001d)
+              momentum = simple(0.9)
+              // weightDecay = simple(0.001d)
             ),
           trainBatchesOverEpoch = makeTrainingBatch,
           validationBatchesOverEpoch = Some(makeValidationBatch),

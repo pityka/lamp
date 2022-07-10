@@ -86,10 +86,10 @@ case class LSTM(
 }
 
 object LSTM {
-  implicit val trainingMode = TrainingMode.identity[LSTM]
-  implicit val is =
+  implicit val trainingMode : TrainingMode[LSTM] = TrainingMode.identity[LSTM]
+  implicit val is : InitState[LSTM,Option[(Variable,Variable)]] =
     InitState.make[LSTM, Option[(Variable, Variable)]](_ => None)
-  implicit val load = Load.make[LSTM] { m => tensors =>
+  implicit val load : Load[LSTM] = Load.make[LSTM] { m => tensors =>
     m.weightXi.value.copyFrom(tensors(0))
     m.weightXf.value.copyFrom(tensors(1))
     m.weightXo.value.copyFrom(tensors(2))
