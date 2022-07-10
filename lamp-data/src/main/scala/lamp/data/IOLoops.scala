@@ -117,7 +117,7 @@ object IOLoops {
       DataParallel
         .makeMultipleBatches(
           devices = devicesWithBuffers,
-          makeOne = (device: lamp.Device, state: S, c:C) =>
+          makeOne = (device: lamp.Device, state: S, c: C) =>
             batchStream
               .nextBatch(device, c, state)
         )(s0)
@@ -283,7 +283,8 @@ object IOLoops {
         accumulateGradientOverNBatches,
         swaLearningRateScheduleInitState match {
           case Some(x) => Some(x)
-          case None if swaLearningRateSchedule.init.getClass == warmupLRState.getClass =>
+          case None
+              if swaLearningRateSchedule.init.getClass == warmupLRState.getClass =>
             Some(warmupLRState.asInstanceOf[LRStateSWA])
           case _ => None
         },
@@ -773,7 +774,7 @@ object IOLoops {
         logger.foreach(
           _.info(
             s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f"
-              .format(throughput)} instances/sec)"
+                .format(throughput)} instances/sec)"
           )
         )
       }

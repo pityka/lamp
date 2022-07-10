@@ -20,7 +20,7 @@ class ShampooSuite extends AnyFunSuite {
       val gradients = lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda)
       val opt = Shampoo(
         parameters = List((params, NoTag)),
-        learningRate = simple(0.1d),
+        learningRate = simple(0.1d)
       )
       opt.step(List(Some(gradients)), 1d)
       val updatedParams1 = params.toMat
@@ -39,10 +39,10 @@ class ShampooSuite extends AnyFunSuite {
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 513)
       val params = lamp.saddle.fromMat(initParams, cuda)
-      val gradients = STen.rand(List(1,513), params.options)
+      val gradients = STen.rand(List(1, 513), params.options)
       val opt = Shampoo(
         parameters = List((params, NoTag)),
-        learningRate = simple(0.1d),
+        learningRate = simple(0.1d)
       )
       opt.step(List(Some(gradients)), 1d)
       // val updatedParams1 = params.toMat
@@ -50,12 +50,12 @@ class ShampooSuite extends AnyFunSuite {
       //   updatedParams1.roundTo(4) == Mat(Vec(0.9445, 0.2101)).T
       // )
       opt.step(List(Some(gradients)), 1d)
-      // val updatedParams2 = params.toMat
+    // val updatedParams2 = params.toMat
 
-      // assert(
-      //   updatedParams2.roundTo(4) == Mat(Vec(0.9053, -0.4542)).T
-      // )
+    // assert(
+    //   updatedParams2.roundTo(4) == Mat(Vec(0.9053, -0.4542)).T
+    // )
     }
   }
-  
+
 }

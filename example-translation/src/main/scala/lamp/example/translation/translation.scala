@@ -32,7 +32,6 @@ import lamp.nn.ToUnlift
 import lamp.nn.InitStateSyntax
 import lamp.nn.ToWithInit
 
-
 case class CliConfig(
     trainData: String = "",
     testData: Option[String] = None,

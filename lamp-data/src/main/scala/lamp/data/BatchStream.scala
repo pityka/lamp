@@ -17,7 +17,7 @@ sealed trait StreamControl[+I] {
 }
 object StreamControl {
   def apply[I](i: I): StreamControl[I] = NonEmptyBatch(i)
-  implicit def StreamControlIsMovable[T: Movable] : Movable[StreamControl[T]] =
+  implicit def StreamControlIsMovable[T: Movable]: Movable[StreamControl[T]] =
     new Movable[StreamControl[T]] {
       def list(m: StreamControl[T]) =
         m match {
@@ -370,7 +370,7 @@ object BatchStream {
               buckets(nextBucketIdx) match {
                 case Opened(_, _, _) => IO.pure(None)
                 case s @ NotYetOpen(_, _) =>
-                  s.asInstanceOf[NotYetOpen[A,B]].open().map(Some(_))
+                  s.asInstanceOf[NotYetOpen[A, B]].open().map(Some(_))
 
               }
             }
@@ -378,15 +378,16 @@ object BatchStream {
           openNextBucket.flatMap { nextBucketOpen =>
             bucketState match {
               case s @ NotYetOpen(_, _) =>
-                s.asInstanceOf[NotYetOpen[A,B]].open()
+                s.asInstanceOf[NotYetOpen[A, B]]
+                  .open()
                   .flatMap { opened =>
                     val nextState = copy(
                       batchIdx = batchIdx + 1,
                       buckets = updateBuckets(
                         buckets,
                         bucketIdx,
-                        Some(opened),//.asInstanceOf[Opened[A,B]]),
-                        nextBucketOpen//.asInstanceOf[Option[Opened[A, B]]]
+                        Some(opened), // .asInstanceOf[Opened[A,B]]),
+                        nextBucketOpen // .asInstanceOf[Option[Opened[A, B]]]
                       )
                     )
                     opened
@@ -404,12 +405,14 @@ object BatchStream {
                   buckets =
                     updateBuckets(buckets, bucketIdx, None, nextBucketOpen)
                 )
-                s.asInstanceOf[Opened[A,B]].nextBatch(
-                  batchIdxWithinBucket,
-                  device,
-                  buffers,
-                  loadBatch
-                ).map((nextState, _))
+                s.asInstanceOf[Opened[A, B]]
+                  .nextBatch(
+                    batchIdxWithinBucket,
+                    device,
+                    buffers,
+                    loadBatch
+                  )
+                  .map((nextState, _))
 
             }
           }

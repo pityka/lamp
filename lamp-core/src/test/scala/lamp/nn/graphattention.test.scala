@@ -132,7 +132,8 @@ class GraphAttentionSuite extends AnyFunSuite {
           wNodeValue = const(wNodeValue),
           wAttention = Some(const(wAttention)),
           numHeads = 2
-        ).value
+        )
+        .value
         .toMat
       assert(result.numRows == 5)
       assert(result.numCols == 6)
@@ -150,7 +151,8 @@ class GraphAttentionSuite extends AnyFunSuite {
           wNodeValue = const(wNodeValue),
           wAttention = None,
           numHeads = 2
-        ).value
+        )
+        .value
         .toMat
       assert(resultDot.numRows == 5)
       assert(resultDot.numCols == 6)

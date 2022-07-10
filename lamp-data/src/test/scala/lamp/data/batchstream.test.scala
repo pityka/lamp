@@ -31,7 +31,7 @@ class BatchStreamSuite extends AnyFunSuite {
         state0: S
     ): IO[S] = {
       batchStream
-        .nextBatch(CPU,(), state0)
+        .nextBatch(CPU, (), state0)
         .flatMap { case (state1, resource) =>
           resource
             .use { batch =>
