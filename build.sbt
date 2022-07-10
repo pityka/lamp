@@ -81,7 +81,7 @@ lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "3.5.0"
-val upickleVersion = "1.6.0"
+val upickleVersion = "2.0.0"
 val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.8.2"
 val catsEffectVersion = "3.3.11"
@@ -190,7 +190,7 @@ lazy val umap = project
   .settings(
     name := "lamp-umap",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
@@ -233,7 +233,7 @@ lazy val forest = project
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
-      "io.github.pityka" %% "saddle-core" % saddleVersion,
+      "io.github.pityka" %% "saddle-core" % saddleVersion
     )
   )
   .dependsOn(core % "test->test")
