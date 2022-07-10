@@ -18,7 +18,8 @@ import lamp.data.schemas.TensorList
   * it uses JSON rather then protobuf.
   *
   * Format specification
-  * \==================== Sequences of tensors are serialized into a JSON
+  * ==================== 
+  * Sequences of tensors are serialized into a JSON
   * descriptor and a data blob. The schema of the descriptor is the case class
   * lamp.data.schemas.TensorList. The location field in this schema holds a path
   * to the data blob. If this the location a relative POSIX then it is relative
@@ -40,7 +41,7 @@ object Writer {
       dataChannel: WritableByteChannel,
       initialByteOffset: Long,
       bufferSize: Int
-  ): Either[String, TensorList] = {
+  ): Either[String,TensorList] = {
     writeTensorDataIntoChannel(tensors, dataChannel, bufferSize).map {
       offsets =>
         val tensorDescriptors =

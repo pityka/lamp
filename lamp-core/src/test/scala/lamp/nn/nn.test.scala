@@ -632,9 +632,7 @@ final class NNSuite extends AnyFunSuite {
         .value
       assert(output.shape == List(2, 3, 4))
       val target =
-        STen.owned(
-          SaddleTensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong))
-        )
+        STen.owned(SaddleTensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong)))
       val loss = LossFunctions
         .SequenceNLL(
           4,
@@ -642,9 +640,7 @@ final class NNSuite extends AnyFunSuite {
         )(const(output), target)
         ._1
         .value
-      assert(
-        SaddleTensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507
-      )
+      assert(SaddleTensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507)
       ()
     }
   }

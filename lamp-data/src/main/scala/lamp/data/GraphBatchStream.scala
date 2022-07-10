@@ -32,7 +32,7 @@ object GraphBatchStream {
       targetPerGraph: STen,
       rng: Option[scala.util.Random],
       transferBufferSize: Long
-  ): BatchStream[lamp.nn.graph.Graph, Int, (BufferPair, BufferPair)] = {
+  ): BatchStream[lamp.nn.graph.Graph, Int, (BufferPair,BufferPair)] = {
     def makeNonEmptyBatch(
         idx: Array[Int],
         buffers: (BufferPair, BufferPair),
@@ -150,8 +150,8 @@ object GraphBatchStream {
     val allocateBuffers = (device: Device) =>
       Scope.inResource.map({ implicit scope =>
         (
-          device.allocateBuffers(transferBufferSize, STenOptions.f),
-          device.allocateBuffers(transferBufferSize, STenOptions.l)
+        device.allocateBuffers(transferBufferSize,STenOptions.f),
+        device.allocateBuffers(transferBufferSize,STenOptions.l),
         )
       })
 

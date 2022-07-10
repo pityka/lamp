@@ -179,7 +179,7 @@ object GraphAttention {
     assert(
       nodeValue.shape(1) % numHeads == 0,
       s"wNodeValue and numHeads size do not align ${wNodeValue
-          .shape(1)} $numHeads"
+        .shape(1)} $numHeads"
     )
 
     val h = {

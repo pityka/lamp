@@ -21,6 +21,7 @@ package object util {
     def toDoubleArray = TensorHelpers.toDoubleArray(self)
     def toFloatArray = TensorHelpers.toFloatArray(self)
     def toLongArray = TensorHelpers.toLongArray(self)
+    
 
   }
 
