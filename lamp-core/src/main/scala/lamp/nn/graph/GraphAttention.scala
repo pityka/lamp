@@ -202,7 +202,7 @@ object GraphAttention {
       m => m.copy(dropout = m.dropout.asEval),
       m => m.copy(dropout = m.dropout.asTraining)
     )
-  implicit val load = Load.make[GraphAttention] { m => parameters =>
+  implicit val load : Load[GraphAttention] = Load.make[GraphAttention] { m => parameters =>
     m.wNodeKey1.value.copyFrom(parameters(0))
     m.wNodeKey2.value.copyFrom(parameters(1))
     m.wEdgeKey.value.copyFrom(parameters(2))

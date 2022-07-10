@@ -87,6 +87,11 @@ object Writer {
           assert(arr.length == numel)
           if (numel > 0) { assert(t.value.copyToLongArray(arr)) }
           arr
+        case 1 =>
+          val arr = Array.ofDim[Byte]((end - start).toInt)
+          assert(arr.length == numel)
+          if (numel > 0) { assert(t.value.copyToByteArray(arr)) }
+          arr
       })
 
       array
@@ -97,6 +102,7 @@ object Writer {
     case 7     => Right(8)
     case 6     => Right(4)
     case 4     => Right(8)
+    case 1     => Right(1)
     case other => Left(s"Type $other not supported.")
   }
 
@@ -133,6 +139,9 @@ object Writer {
           case 4 =>
             bb.asLongBuffer().put(arr.asInstanceOf[Array[Long]])
             bb.position(bb.position() + arr.length * 8)
+          case 1 =>
+            bb.put(arr.asInstanceOf[Array[Byte]])
+            
         }
 
         writeFully(bb, channel)

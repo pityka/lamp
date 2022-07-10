@@ -32,8 +32,8 @@ case class SeqLinear(
 }
 
 object SeqLinear {
-  implicit val trainingMode = TrainingMode.identity[SeqLinear]
-  implicit val load = Load.make[SeqLinear] { m => tensors =>
+  implicit val trainingMode : TrainingMode[SeqLinear] = TrainingMode.identity[SeqLinear]
+  implicit val load : Load[SeqLinear] = Load.make[SeqLinear] { m => tensors =>
     m.weight.value.copyFrom(tensors(0))
     m.bias.value.copyFrom(tensors(1))
 

@@ -49,9 +49,9 @@ case class RNN(
 }
 
 object RNN {
-  implicit val trainingMode = TrainingMode.identity[RNN]
-  implicit val is = InitState.make[RNN, Option[Variable]](_ => None)
-  implicit val load = Load.make[RNN] { m => tensors =>
+  implicit val trainingMode : TrainingMode[RNN] = TrainingMode.identity[RNN]
+  implicit val is : InitState[RNN, Option[Variable]]= InitState.make[RNN, Option[Variable]](_ => None)
+  implicit val load : Load[RNN] = Load.make[RNN] { m => tensors =>
     m.weightXh.value.copyFrom(tensors(0))
     m.weightHh.value.copyFrom(tensors(1))
     m.biasH.value.copyFrom(tensors(2))
