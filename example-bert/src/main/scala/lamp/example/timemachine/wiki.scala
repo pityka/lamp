@@ -125,7 +125,6 @@ object Train extends App {
       val padToken = 2
       val maskToken = 3
       val unknownToken = 4
-      println(vocab.size)
 
       val maxToken = vocab.values.max
       val trainParagraphs =
@@ -140,7 +139,6 @@ object Train extends App {
           vocab,
           unknownToken
         )
-      println(trainParagraphs.size)
       Scope.root { implicit scope =>
         scribe.info(
           s"Vocabulary size ${vocab.size}, train num sentences: ${trainParagraphs.map(_.size).sum}"
@@ -181,36 +179,32 @@ object Train extends App {
 
         val rng = new scala.util.Random
         val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
-          lamp.data.bert.minibatchesFromFull(
-            config.trainBatchSize,
-            true,
-            lamp.data.bert.prepareFullDatasetFromTokenizedParagraphs(
-              trainParagraphs,
-              maxToken,
-              clsToken,
-              sepToken,
-              padToken,
-              maskToken,
-              maxLength,
-              rng
-            ),
-            rng
+          lamp.data.bert.minibatchesFromParagraphs(
+            minibatchSize = config.trainBatchSize,
+            dropLast = true,
+              paragraphs = trainParagraphs,
+              maximumTokenId = maxToken,
+              clsToken = clsToken,
+              sepToken = sepToken,
+              padToken = padToken,
+              maskToken = maskToken,
+              maxLength = maxLength,
+            
+            rng = rng
           )
         val validEpochs = (_: IOLoops.TrainingLoopContext) =>
-          lamp.data.bert.minibatchesFromFull(
-            config.trainBatchSize,
-            true,
-            lamp.data.bert.prepareFullDatasetFromTokenizedParagraphs(
-              validParagraphs,
-              maxToken,
-              clsToken,
-              sepToken,
-              padToken,
-              maskToken,
-              maxLength,
-              rng
-            ),
-            rng
+          lamp.data.bert.minibatchesFromParagraphs(
+            minibatchSize = config.trainBatchSize,
+            dropLast = true,
+              paragraphs = validParagraphs,
+              maximumTokenId = maxToken,
+              clsToken = clsToken,
+              sepToken = sepToken,
+              padToken = padToken,
+              maskToken = maskToken,
+              maxLength = maxLength,
+            
+            rng = rng
           )
 
         val optimizer = RAdam.factory(
@@ -225,7 +219,7 @@ object Train extends App {
             optimizerFactory = optimizer,
             trainBatchesOverEpoch = trainEpochs,
             validationBatchesOverEpoch = Some(validEpochs),
-            epochs = config.epochs,
+            epochs = 10,
             logger = Some(scribe.Logger("training")),
             validationFrequency = 1
           )
