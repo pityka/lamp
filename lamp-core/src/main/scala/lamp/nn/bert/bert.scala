@@ -188,7 +188,7 @@ object BertPretrainModule {
     ),
     wholeSentenceBinaryClassifier = sequence(
       Linear(embeddingDim, wholeStentenceHiddenDim, tOpt),
-      Fun(_ => _.tanh),
+      Fun(scope => _.tanh(scope)),
       Linear(wholeStentenceHiddenDim, 1, tOpt)
     )
   )
@@ -261,7 +261,7 @@ object MaskedLanguageModelModule {
   ): MaskedLanguageModelModule = MaskedLanguageModelModule(
     sequence(
       Linear(inputDim, hiddenDim, tOpt),
-      Fun(_ => _.relu),
+      Fun(scope => _.relu(scope)),
       LayerNorm(List(hiddenDim), tOpt),
       Linear(hiddenDim, vocabularySize, tOpt)
     )
