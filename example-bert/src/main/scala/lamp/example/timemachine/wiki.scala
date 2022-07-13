@@ -165,7 +165,8 @@ object Train extends App {
           dropout = 0d,
           padToken = padToken,
           tOpt = tensorOptions,
-          linearized = false
+          linearized = false,
+          positionEmbedding = None
         )
         config.checkpointLoad
           .foreach { load =>

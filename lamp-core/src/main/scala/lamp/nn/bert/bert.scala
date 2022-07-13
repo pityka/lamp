@@ -10,6 +10,7 @@ import lamp.autograd.{param, const}
 import lamp.STenOptions
 
 import lamp.autograd.Mean
+import lamp.SinglePrecision
 
 case class BertLossInput(
     input: BertPretrainInput,
@@ -56,7 +57,8 @@ object BertLoss {
       dropout: Double,
       padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      positionEmbedding: Option[STen]
   ): BertLoss = BertLoss(
     pretrain = BertPretrainModule(
       maxLength = maxLength,
@@ -72,7 +74,8 @@ object BertLoss {
       dropout = dropout,
       padToken = padToken,
       tOpt = tOpt,
-      linearized = linearized
+      linearized = linearized,
+      positionEmbedding = positionEmbedding
     ),
     mlmLoss = LossFunctions.NLL(
       numClasses = vocabularySize,
@@ -164,7 +167,8 @@ object BertPretrainModule {
       dropout: Double,
       padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      positionEmbedding: Option[STen]
   ): BertPretrainModule = BertPretrainModule(
     encoder = BertEncoder(
       maxLength = maxLength,
@@ -178,7 +182,8 @@ object BertPretrainModule {
       dropout = dropout,
       padToken = padToken,
       tOpt = tOpt,
-      linearized = linearized
+      linearized = linearized,
+      positionEmbedding = positionEmbedding
     ),
     mlm = MaskedLanguageModelModule(
       inputDim = embeddingDim,
@@ -388,6 +393,9 @@ object BertEncoder {
     *   ignored, padding is not the same as masking
     * @param tOpt
     *   tensor options
+    * @param positionEmbedding optional float tensor of size (sequence length, embedding dimension)
+    *   if missing the absolute positional embeddings from Vaswani et al 2017 is used
+    *   Following the Bert paper the position embeddings are summed
     * @return
     *   a module
     */
@@ -403,7 +411,8 @@ object BertEncoder {
       dropout: Double,
       padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      positionEmbedding: Option[STen]
   ): BertEncoder =
     BertEncoder(
       tokenEmbedding = Embedding.apply(
@@ -416,8 +425,16 @@ object BertEncoder {
         dimensions = embeddingDim,
         tOpt = tOpt
       ),
-      positionalEmbedding =
-        param(STen.normal(0d, 1d, List(1, maxLength, embeddingDim), tOpt)),
+      positionalEmbedding = param(
+        positionEmbedding.getOrElse(PositionalEmbedding
+          .vaswani(
+            sequenceLength = maxLength,
+            dimension = embeddingDim,
+            device = lamp.Device.fromOptions(tOpt),
+            SinglePrecision
+          ))
+          .unsqueeze(0)
+      ),
       blocks = 0 until numBlocks map (_ =>
         TransformerEncoderBlock(
           in = embeddingDim,
