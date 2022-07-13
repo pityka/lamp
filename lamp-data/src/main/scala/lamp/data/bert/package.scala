@@ -64,68 +64,65 @@ package object bert {
       rng: scala.util.Random
   ) = {
 
+    def cpy(v: Array[Int]) = {
+      STen.fromLongArray(v.map(_.toLong), List(v.length), CPU)
+    }
+
     val maxNumPredictionPositions = (maxLength * 0.15).toInt
     val numSentences = paragraph.size
     val windowSize = (maxLength - 3) / 2
 
     def window(sentence: Array[Int]) = {
-      if (sentence.length <= windowSize) sentence 
+      if (sentence.length <= windowSize) sentence
       else {
-        val maxStart = sentence.size - windowSize 
+        val maxStart = sentence.size - windowSize
         val start = rng.nextInt(maxStart)
-        sentence.slice(start,start+windowSize)
+        sentence.slice(start, start + windowSize)
       }
     }
 
     paragraph.zipWithIndex
       .dropRight(1)
       .map { case (sentence0, sentenceIdx) =>
-
         val trueNextSentence = rng.nextBoolean()
         val nextSentence0 =
           if (trueNextSentence) paragraph(sentenceIdx + 1)
           else paragraph(rng.nextInt(numSentences))
 
-
         val sentence = window(sentence0)
         val nextSentence = window(nextSentence0)
 
-          val bertTokens = Array(clsToken)
-            .++(sentence)
-            .++(Array(sepToken))
-            .++(nextSentence)
-            .++(Array(sepToken))
+        val bertTokens = Array(clsToken)
+          .++(sentence)
+          .++(Array(sepToken))
+          .++(nextSentence)
+          .++(Array(sepToken))
 
-          assert(bertTokens.length <= maxLength)
+        assert(bertTokens.length <= maxLength)
 
-          val (mlmPositions, mlmTarget, maskedBertTokens) =
-            makeMaskForMaskedLanguageModel(
-              bertTokens,
-              maximumTokenId = maximumTokenId,
-              clsToken = clsToken,
-              sepToken = sepToken,
-              maskToken = maskToken,
-              rng = rng
-            )
+        val (mlmPositions, mlmTarget, maskedBertTokens) =
+          makeMaskForMaskedLanguageModel(
+            bertTokens,
+            maximumTokenId = maximumTokenId,
+            clsToken = clsToken,
+            sepToken = sepToken,
+            maskToken = maskToken,
+            rng = rng
+          )
 
-          val bertSegments = Array(0)
-            .++(sentence.map(_ => 0))
-            .++(Array(0))
-            .++(nextSentence.map(_ => 1))
-            .++(Array(1))
+        val bertSegments = Array(0)
+          .++(sentence.map(_ => 0))
+          .++(Array(0))
+          .++(nextSentence.map(_ => 1))
+          .++(Array(1))
 
-          def to(v: Array[Int]) =
-            STen.fromLongArray(v.map(_.toLong), List(v.length), CPU)
-
-            (
-              trueNextSentence,
-              to(pad(maskedBertTokens, maxLength, padToken)),
-              to(pad(bertSegments, maxLength, 0)),
-              to(pad(mlmPositions, maxNumPredictionPositions, 0)),
-              to(pad(mlmTarget, maxNumPredictionPositions, padToken))
-            )
-          
-        
+        (
+          trueNextSentence,
+          cpy(pad(maskedBertTokens, maxLength, padToken)),
+          cpy(pad(bertSegments, maxLength, 0)),
+          cpy(pad(mlmPositions, maxNumPredictionPositions, 0)),
+          cpy(pad(mlmTarget, maxNumPredictionPositions, padToken))
+        )
 
       }
 
