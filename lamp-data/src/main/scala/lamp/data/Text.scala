@@ -149,7 +149,7 @@ object Text {
       tensor: STen,
       vocab: Map[Int, Char]
   ): Seq[String] = {
-    Scope.leak{ implicit scope =>
+    Scope.root{ implicit scope =>
     val r = tensor.t.toLongArray
     r.grouped(tensor.shape(1).toInt).toVector.map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
     }

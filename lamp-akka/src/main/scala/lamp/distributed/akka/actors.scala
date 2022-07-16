@@ -1,4 +1,4 @@
-package lamp.example.cifar
+package lamp.distributed.akka
 
 import akka.actor._
 import lamp.NcclUniqueId
@@ -29,9 +29,8 @@ class NonRootRankActor(rankRepository: ActorRef, callback: String => Unit)
 
   var listener = Option.empty[ActorRef]
 
-  def receive: Receive = {
-    case x: String =>
-      callback(x)
+  def receive: Receive = { case x: String =>
+    callback(x)
 
   }
 

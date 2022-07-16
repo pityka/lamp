@@ -101,6 +101,19 @@ lazy val saddlecompat = project
   )
   .dependsOn(sten)
 
+lazy val akkacommunicator = project
+  .in(file("lamp-akka"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-akka",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-actor" % "2.6.19" % Provided,
+      "com.typesafe.akka" %% "akka-remote" % "2.6.19" % Provided,
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
+    )
+  )
+  .dependsOn(data % "compile->compile;test->test")
+
 lazy val sten = project
   .in(file("lamp-sten"))
   .configs(Cuda)
@@ -190,7 +203,7 @@ lazy val umap = project
   .settings(
     name := "lamp-umap",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
@@ -233,7 +246,7 @@ lazy val forest = project
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
-      "io.github.pityka" %% "saddle-core" % saddleVersion,
+      "io.github.pityka" %% "saddle-core" % saddleVersion
     )
   )
   .dependsOn(core % "test->test")
@@ -287,7 +300,7 @@ lazy val example_cifar100_distributed = project
       "com.outr" %% "scribe" % scribeVersion
     )
   )
-  .dependsOn(core, data, onnx, saddlecompat)
+  .dependsOn(core, data, onnx, saddlecompat, akkacommunicator)
   .enablePlugins(JavaAppPackaging)
 
 lazy val example_gan = project
@@ -377,7 +390,18 @@ lazy val docs = project
       "VERSION" -> version.value
     ),
     ScalaUnidoc / unidoc / target := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
-    cleanFiles += (ScalaUnidoc / unidoc / target).value
+    cleanFiles += (ScalaUnidoc / unidoc / target).value,
+      ScalaUnidoc / unidoc / unidocProjectFilter :=
+      (inAnyProject -- inProjects(
+        example_arxiv,
+        example_bert,
+        example_cifar100,
+        example_cifar100_distributed,
+        example_gan,
+        example_timemachine,
+        example_translation,
+        e2etest,
+      )),
   )
   .enablePlugins(MdocPlugin, ScalaUnidocPlugin)
 
@@ -391,6 +415,7 @@ lazy val root = project
   .aggregate(
     sten,
     saddlecompat,
+    akkacommunicator,
     core,
     data,
     knn,
@@ -399,6 +424,7 @@ lazy val root = project
     onnx,
     docs,
     example_cifar100,
+    example_cifar100_distributed,
     example_timemachine,
     example_translation,
     example_arxiv,

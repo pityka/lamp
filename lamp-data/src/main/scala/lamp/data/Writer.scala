@@ -66,7 +66,7 @@ object Writer {
   }
 
   private def tensorToArray(tensor0: STen, start: Long, end: Long) =
-    Scope.leak { implicit scope =>
+    Scope.unsafe { implicit scope =>
       val section = tensor0.view(-1).slice(0, start, end, 1)
       val t = if (section.isCPU) section else section.copyToDevice(lamp.CPU)
       val numel = t.numel
