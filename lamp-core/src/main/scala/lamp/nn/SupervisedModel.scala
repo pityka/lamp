@@ -154,7 +154,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
       acc: STen
   ): Long = {
 
-    Scope.leak { implicit scope =>
+    Scope.root { implicit scope =>
       val (loss, examples, _) =
         lossCalculation(samples, target, module, lossFunction, false, false)
       if (printMemoryAllocations) {
@@ -171,7 +171,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
       acc: STen,
       zeroGrad: Boolean
   ): (Long, Seq[Option[STen]]) =
-    Scope.leak { implicit scope =>
+    Scope.unsafe { implicit scope =>
       val (loss, numInstances, mayGradients) =
         lossCalculation(samples, target, module, lossFunction, true, zeroGrad)
       acc += (loss.value * numInstances.toDouble)

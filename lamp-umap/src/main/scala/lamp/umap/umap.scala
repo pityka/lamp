@@ -179,7 +179,7 @@ object Umap {
     val rng = org.saddle.spire.random.rng.Cmwc5.fromTime(randomSeed)
     Tensor.manual_seed(randomSeed)
 
-    Scope.leak { implicit scope =>
+    Scope.root { implicit scope =>
       val indexIT = lamp.saddle.fromLongVec(indexI, device)
       val locations = param(
         lamp.saddle.fromMat(

@@ -683,28 +683,28 @@ case class STen private (
   def values[S: Sc] = value.values.owned
 
   /** Returns true if data type is double */
-  def isDouble = Scope.leak { implicit scope => options.isDouble }
+  def isDouble = Scope.root{ implicit scope => options.isDouble }
 
   /** Returns true if data type is float */
-  def isFloat = Scope.leak { implicit scope => options.isFloat }
+  def isFloat = Scope.root { implicit scope => options.isFloat }
 
   /** Returns true if data type is long */
-  def isLong = Scope.leak { implicit scope => options.isLong }
+  def isLong = Scope.root { implicit scope => options.isLong }
 
   /** Returns true if device is CPU */
-  def isCPU = Scope.leak { implicit scope => options.isCPU }
+  def isCPU = Scope.root { implicit scope => options.isCPU }
 
   /** Returns true if device is Cuda */
-  def isCuda = Scope.leak { implicit scope => options.isCuda }
+  def isCuda = Scope.root { implicit scope => options.isCuda }
 
   /** Returns true if this is sparse tensor */
-  def isSparse = Scope.leak { implicit scope => options.isSparse }
+  def isSparse = Scope.root { implicit scope => options.isSparse }
 
   /** Returns the device index. Only for Cuda tensors. */
-  def deviceIndex = Scope.leak { implicit scope => options.deviceIndex }
+  def deviceIndex = Scope.root { implicit scope => options.deviceIndex }
 
   /** Returns the Device this tensor resides on */
-  def device = Scope.leak { implicit scope => Device.fromOptions(options) }
+  def device = Scope.root { implicit scope => Device.fromOptions(options) }
 
   /** Returns the byte representation of the data type
     *
@@ -713,7 +713,7 @@ case class STen private (
     *   - 6 for Float
     *   - 7 for Double
     */
-  def scalarTypeByte = Scope.leak { implicit scope => options.scalarTypeByte }
+  def scalarTypeByte = Scope.root { implicit scope => options.scalarTypeByte }
 
   /** Returns a copy of this tensor on the given device */
   def copyToDevice(device: Device)(implicit scope: Scope) = {

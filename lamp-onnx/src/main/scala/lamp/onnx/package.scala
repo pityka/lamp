@@ -27,7 +27,7 @@ package object onnx {
     }
   }
 
-  private[lamp] def tensorAsByteString(t: STen): ByteString = Scope.leak { implicit scope =>
+  private[lamp] def tensorAsByteString(t: STen): ByteString = Scope.unsafe { implicit scope =>
     t.options.scalarTypeByte match {
       case 4 =>
         val array = t.toLongArray
@@ -83,7 +83,7 @@ package object onnx {
       ox.TypeProto(value =
         ox.TypeProto.Value.TensorType(value =
           ox.TypeProto.Tensor(
-            elemType = Scope.leak { implicit scope =>
+            elemType = Scope.root { implicit scope =>
               v.value.options.scalarTypeByte match {
                 case 4 => Some(DataType.INT64.index)
                 case 6 => Some(DataType.FLOAT.index)
@@ -152,7 +152,7 @@ package object onnx {
           name = Some("graph1"),
           node = nodes,
           initializer = constants ++ (nonInputConstantNodes ++ parameters)
-            .filterNot(v => Scope.leak { implicit scope => v.options.isSparse })
+            .filterNot(v => Scope.root { implicit scope => v.options.isSparse })
             .map { variable =>
               ox.TensorProto(
                 name = Some(makeName(variable.id)),
@@ -160,7 +160,7 @@ package object onnx {
                   .find(_.variable.id == variable.id)
                   .map(_.docString),
                 dims = variable.shape,
-                dataType = Scope.leak { implicit scope =>
+                dataType = Scope.root { implicit scope =>
                   variable.options.scalarTypeByte match {
                     case 4 => Some(ox.TensorProto.DataType.INT64.index)
                     case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
@@ -171,9 +171,9 @@ package object onnx {
               )
             },
           sparseInitializer = (nonInputConstantNodes ++ parameters)
-            .filter(v => Scope.leak { implicit scope => v.options.isSparse })
+            .filter(v => Scope.root { implicit scope => v.options.isSparse })
             .map { variable =>
-              Scope.leak { implicit scope =>
+              Scope.unsafe { implicit scope =>
                 val coalesced = variable.value.coalesce
                 val values = coalesced.values
                 val indices = coalesced.indices

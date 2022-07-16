@@ -104,7 +104,7 @@ package object knn {
       precision: FloatingPointPrecision,
       minibatchSize: Int
   ): Mat[Int] = {
-    Scope.leak { implicit scope =>
+    Scope.root { implicit scope =>
       val featuresOnDevice = lamp.saddle.fromMat(features, device, precision)
       val queryOnDevice = lamp.saddle.fromMat(query, device, precision)
       val indices = knnMinibatched(

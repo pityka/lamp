@@ -127,6 +127,7 @@ sealed trait Device { self =>
 object Device {
   def fromOptions(st: STenOptions) =
     if (st.isCPU) CPU else CudaDevice(st.deviceIndex)
+  implicit val movable: EmptyMovable[Device] = Movable.empty
 }
 case object CPU extends Device {
   def measureTime[A](f: => A): (A, Long) = {
