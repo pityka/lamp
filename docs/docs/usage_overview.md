@@ -191,7 +191,7 @@ val trainedModelIO = IOLoops.epochs(
     )
 ```
 
-Lamp provides two optimizers: SgdW and AdamW. They can take a learning rate schedule as well.
+Lamp provides many optimizers: SgdW, AdamW, RAdam, Shampoo etc. They can take a custom learning rate schedule.
 For other capabilities of this training loop see the scaladoc of `IOLoops.epochs`.
 
 The `IOLoop.epochs` method returns an `IO` which will run into the trained model once executed:
