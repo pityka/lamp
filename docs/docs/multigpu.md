@@ -94,10 +94,7 @@ The main entry points here are the `lamp.data.distributed.driveDistributedTraini
 and `lamp.data.distributed.followDistributedTraining` methods.
 
 This training loop in `lamp.data.distributed` uses [NCCL](https://github.com/NVIDIA/nccl) for 
-device-device transfers therefor all devices  must be CUDA devices (i.e. no host). 
-Due to NCCL the transport optimally uses the available hardware (NVLink, fabric adapters etc).
-On the other hand NCCL does not support routing over networks thus each compute node must be on the same
-private network (ie. no NAT).
+device-device transfers therefore all devices must be CUDA devices. 
 
 In total the following restrictions apply to the distributed training loop:
 - the batch streams of each processes must not contain `EmptyBatch` elements and 
@@ -110,8 +107,7 @@ If these are not respected then the distributed process will fail with an except
 
 All tensor data is transfered directly between devices by NCCL.
 However NCCL itself does not provide implementations for control messages and initial rendez-vous.
-One can use MPI, a raw TCP socket or other means of communication for this purpose. 
-Lamp abstracts this functionality away in the `lamp.data.distributed.DistributedCommunication` trait
+Lamp abstracts this functionality in the `lamp.data.distributed.DistributedCommunication` trait
 and provides an implementation using Akka in the `lamp-akka` module.
 This message channel for control messages is very low throughput, it broadcasts the NCCL unique id,
 and a few messages before and after each epoch.
