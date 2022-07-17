@@ -826,9 +826,9 @@ case class STen private (
     case 1 => castToByte
   }
 
-  /** Casts to byte. signed 8-bit integer (like Scala's Byte) This is called
-    * Char in libtorch
-    */
+  /** Casts to byte. signed 8-bit integer (like Scala's Byte)
+   * This is called Char in libtorch
+   */
   def castToByte[S: Sc] = owned(ATen._cast_Char(value, true))
 
   /** Casts to float */
@@ -1202,7 +1202,7 @@ case class STen private (
       val tmp = STen.zeros(shape)
       owned(value.expand_as(tmp.value))
     }
-
+  
   /** Returns a tensor with a new shape.
     *
     * No data is copied. The new shape must be compatible with the number of
@@ -1589,9 +1589,9 @@ case class STen private (
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
 
-  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned() else false
+  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned()  else false
 
-  def pin[S: Sc] =
-    if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned else this
+  def pin[S:Sc] = if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned  else this
+
 
 }
