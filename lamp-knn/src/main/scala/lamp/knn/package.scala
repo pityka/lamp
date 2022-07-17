@@ -2,7 +2,7 @@ package lamp
 
 import org.saddle._
 import lamp.saddle._
-import org.saddle.macros.BinOps._
+
 package object knn {
 
   trait DistanceFunction {
@@ -92,7 +92,7 @@ package object knn {
       val selected = values.take(r.toArray)
       vec
         .range(0, numClasses)
-        .map(c => selected.countif(_ == c).toDouble) / selected.length
+        .map(c => selected.countif(_ == c).toDouble).map(_ / selected.length)
     }: _*).T.map(v => if (log) math.log(v + 1e-6) else v)
 
   def knnSearch(
@@ -104,7 +104,7 @@ package object knn {
       precision: FloatingPointPrecision,
       minibatchSize: Int
   ): Mat[Int] = {
-    Scope.leak { implicit scope =>
+    Scope.root { implicit scope =>
       val featuresOnDevice = lamp.saddle.fromMat(features, device, precision)
       val queryOnDevice = lamp.saddle.fromMat(query, device, precision)
       val indices = knnMinibatched(

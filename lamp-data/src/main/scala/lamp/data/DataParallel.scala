@@ -16,7 +16,7 @@ object DataParallel {
 
   def validationOneEpoch[I, M <: GenericModule[I, Variable], S, C](
       models: Seq[SupervisedModel[I, M]],
-      validationBatches: BatchStream[I, S, C],
+      validationBatches: BatchStream[(I,STen), S, C],
       validationCallback: ValidationCallback,
       logger: Option[Logger],
       epochCount: Long
@@ -128,16 +128,18 @@ object DataParallel {
     }
   }
 
+  /** Updates main model in place, returns average training loss
+   */
   def oneEpoch[I, M <: GenericModule[I, Variable], S, C](
       epochCount: Long,
       trainingCallback: TrainingCallback,
       mainModel: ModelWithOptimizer[I, M],
-      trainBatches: BatchStream[I, S, C],
+      trainBatches: BatchStream[(I,STen), S, C],
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
       models: Seq[SupervisedModel[I, M]],
       accumulateGradientOverNBatches: Int
-  ) = {
+  ): IO[Double] = {
 
     val mainDevice = mainModel.model.module.state.head._1.value.device
 
@@ -150,7 +152,7 @@ object DataParallel {
         perModelLossAcc: List[(STen, C)],
         deviceBuffers: List[BufferPair]
     ) =
-      driveSynchronousLoop[StreamControl[List[(I, STen)]], Long](
+      driveSynchronousLoop[S, StreamControl[List[(I, STen)]], Long](
         fetch = makeMultipleBatches(
           devices = perModelLossAcc.map(t => (t._1.device, t._2)),
           makeOne = (device: Device, s0: S, c: C) =>
@@ -213,59 +215,7 @@ object DataParallel {
 
     }
 
-    def driveSynchronousLoop[A, B](
-        fetch: S => IO[(S, Resource[IO, A])],
-        transform: (Long, A) => IO[StreamControl[B]],
-        reduce: (B, B) => B,
-        zero: B,
-        zeroS: S
-    ): IO[B] = {
-
-      def startFetch(q: Queue[IO, (A, IO[Unit])], s0: S) =
-        for {
-          resource <- fetch(s0)
-          started <- resource._2.allocated
-            .attemptTap {
-              case Left(exc) =>
-                IO {
-                  scribe.error("Error during load", exc)
-                }
-              case _ => IO.unit
-            }
-            .flatMap(q.offer)
-            .start
-        } yield (resource._1, started)
-
-      def loop(
-          counter: Long,
-          acc: B,
-          queue: Queue[IO, (A, IO[Unit])],
-          s0: S
-      ): IO[B] = {
-        for {
-          fetched <- queue.take
-          a = fetched._1
-          release = fetched._2
-          started <- startFetch(queue, s0)
-          s1 = started._1
-          done <- transform(counter, a)
-          _ <- release
-          loopDone <- done match {
-            case EndStream  => IO.pure(acc)
-            case EmptyBatch => loop(counter, acc, queue, s1)
-            case NonEmptyBatch(b) =>
-              loop(counter + 1, reduce(b, acc), queue, s1)
-          }
-        } yield loopDone
-      }
-
-      for {
-        q <- Queue.bounded[IO, (A, IO[Unit])](1)
-        started <- startFetch(q, zeroS)
-        l <- loop(0, zero, q, started._1)
-      } yield l
-
-    }
+  
 
     def copyStateFromMain(
         mainDevice: Device,
@@ -406,8 +356,7 @@ object DataParallel {
       _ <- IO {
         logger.foreach(
           _.info(
-            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f"
-              .format(throughput)} instances/sec)"
+            s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f".format(throughput)} instances/sec)"
           )
         )
       }
@@ -474,5 +423,59 @@ object DataParallel {
         )
       }
   }
+
+   private[lamp] def driveSynchronousLoop[S, A, B](
+        fetch: S => IO[(S, Resource[IO, A])],
+        transform: (Long, A) => IO[StreamControl[B]],
+        reduce: (B, B) => B,
+        zero: B,
+        zeroS: S
+    ): IO[B] = {
+
+      def startFetch(q: Queue[IO, (A, IO[Unit])], s0: S) =
+        for {
+          resource <- fetch(s0)
+          started <- resource._2.allocated
+            .attemptTap {
+              case Left(exc) =>
+                IO {
+                  scribe.error("Error during load", exc)
+                }
+              case _ => IO.unit
+            }
+            .flatMap(q.offer)
+            .start
+        } yield (resource._1, started)
+
+      def loop(
+          counter: Long,
+          acc: B,
+          queue: Queue[IO, (A, IO[Unit])],
+          s0: S
+      ): IO[B] = {
+        for {
+          fetched <- queue.take
+          a = fetched._1
+          release = fetched._2
+          started <- startFetch(queue, s0)
+          s1 = started._1
+          done <- transform(counter, a)
+          _ <- release
+          loopDone <- done match {
+            case EndStream  => IO.pure(acc)
+            case EmptyBatch =>  loop(counter, acc, queue, s1)
+            case NonEmptyBatch(b) =>
+              loop(counter + 1, reduce(b, acc), queue, s1)
+          }
+        } yield loopDone
+      }
+
+      for {
+        q <- Queue.bounded[IO, (A, IO[Unit])](1)
+        started <- startFetch(q, zeroS)
+        l <- loop(0, zero, q, started._1)
+      } yield l
+
+    }
 
 }

@@ -81,7 +81,7 @@ class EndToEndClassificationSuite extends AnyFunSuite {
       features: Frame[Int, String, Double],
       cuda: Boolean
   ) = {
-    Scope.leak { implicit scope =>
+    Scope.root { implicit scope =>
       val device = if (cuda) CudaDevice(0) else CPU
       val numExamples = target.length
 

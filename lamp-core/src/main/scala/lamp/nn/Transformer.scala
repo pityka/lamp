@@ -30,12 +30,12 @@ case class TransformerEncoder(
   }
 }
 object TransformerEncoder {
-  implicit val trainingMode = TrainingMode
+  implicit val trainingMode : TrainingMode[TransformerEncoder] = TrainingMode
     .make[TransformerEncoder](
       m => m.copy(blocks = m.blocks.map(_.asEval)),
       m => m.copy(blocks = m.blocks.map(_.asTraining))
     )
-  implicit val load = Load.make[TransformerEncoder] { m => tensors =>
+  implicit val load : Load[TransformerEncoder] = Load.make[TransformerEncoder] { m => tensors =>
     m.blocks.foldLeft((List[Unit](), tensors)) { case ((acc, params), member) =>
       val numParam = member.state.size
       val loaded = member.load(params.take(numParam))
@@ -656,11 +656,11 @@ case class TransformerEmbedding(
 }
 object TransformerEmbedding {
   case object Embedding extends LeafTag
-  implicit val trainingMode = TrainingMode.make[TransformerEmbedding](
+  implicit val trainingMode : TrainingMode[TransformerEmbedding] = TrainingMode.make[TransformerEmbedding](
     m => m.copy(embedding = m.embedding.asEval),
     m => m.copy(embedding = m.embedding.asTraining)
   )
-  implicit val load = Load.make[TransformerEmbedding] { m => tensors =>
+  implicit val load : Load[TransformerEmbedding] = Load.make[TransformerEmbedding] { m => tensors =>
     m.positionalEmbedding.value.copyFrom(tensors(0))
     m.embedding.load(tensors.drop(1))
 

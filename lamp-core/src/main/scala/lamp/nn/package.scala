@@ -74,7 +74,7 @@ package object nn {
       theta: Double
   ): Unit = {
 
-    val norm = Scope.leak { implicit scope =>
+    val norm = Scope.root { implicit scope =>
       STen
         .stack(
           gradients

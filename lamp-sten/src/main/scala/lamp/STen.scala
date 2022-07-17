@@ -2,6 +2,8 @@ package lamp
 
 import aten.Tensor
 import aten.ATen
+import aten.NcclComm
+import aten.CudaStream
 
 /** Companion object of [[lamp.STen]]
   *
@@ -20,6 +22,9 @@ object STen {
 
   /** A tensor option specifying CPU and long */
   val lOptions = STenOptions(aten.TensorOptions.l)
+
+  /** A tensor option specifying CPU and byte */
+  val bOptions = STenOptions(aten.TensorOptions.b())
 
   implicit class OwnedSyntax(t: Tensor) {
     def owned[S: Sc] = STen.owned(t)
@@ -124,6 +129,7 @@ object STen {
       if (length == 0)
         tensors.toVector.map { case (tpe, _, _) =>
           tpe match {
+            case 1 => STen.zeros(List(0), STenOptions.b)
             case 4 => STen.zeros(List(0), STenOptions.l)
             case 6 => STen.zeros(List(0), STenOptions.f)
             case 7 => STen.zeros(List(0), STenOptions.d)
@@ -462,6 +468,51 @@ object STen {
     (a.owned, b.owned, c.owned, d.owned)
   }
 
+  /** Blocks until all peers join the clique. */
+  def ncclInitComm(
+      nRanks: Int,
+      myRank: Int,
+      myDevice: Int,
+      ncclUniqueId: NcclUniqueId
+  ): NcclComm = {
+    val id = java.util.Base64.getDecoder().decode(ncclUniqueId.base64)
+    val saveDevice = CudaStream.cudaGetDevice()
+    CudaStream.cudaSetDevice(myDevice)
+    val comm = NcclComm.comm_init_rank(nRanks, id, myRank)
+    CudaStream.cudaSetDevice(saveDevice)
+    comm
+  }
+
+  /** Broadcast tensor on root to the clique Blocks until all peers execute the
+    * broadcast. Takes a list of tensors for the case where a single thread
+    * manages multiple GPUs
+    */
+  def ncclBoadcast(tensors: Seq[(STen, NcclComm)]): Unit = {
+    aten.NcclComm.broadcast(
+      tensors.map(_._1.value).toArray,
+      tensors.map(_._2).toArray
+    )
+  }
+
+  /** Reduction with + Output must be on the root rank
+    *
+    * Blocks until all peers execute the reduce. Takes a list of tensors for the
+    * case where a single thread manages multiple GPUs
+    */
+  def ncclReduce(
+      inputs: Seq[(STen, NcclComm)],
+      output: STen,
+      rootRank: Int
+  ): Unit = {
+    aten.NcclComm.reduce(
+      inputs.map(_._1.value).toArray,
+      output.value,
+      rootRank,
+      0,
+      inputs.map(_._2).toArray
+    )
+  }
+
 }
 
 case class STenOptions(value: aten.TensorOptions) {
@@ -476,6 +527,9 @@ case class STenOptions(value: aten.TensorOptions) {
   /** Returns a copy with dtype set to float */
   def toFloat[S: Sc] = value.toFloat.owned
 
+  /** Returns a copy with dtype set to a value compatible with Scala's Byte */
+  def toByte[S: Sc] = value.toByte.owned
+
   /** Returns a copy with device set to CPU */
   def cpu[S: Sc] = value.cpu.owned
 
@@ -487,6 +541,7 @@ case class STenOptions(value: aten.TensorOptions) {
 
   def isDouble = value.isDouble
   def isFloat = value.isFloat
+  def isByte = value.isByte
   def isLong = value.isLong
   def isCPU = value.isCPU
   def isCuda = value.isCuda
@@ -511,6 +566,9 @@ object STenOptions {
 
   /** Returns an tensor option specifying CPU and long */
   def l = STen.lOptions
+
+  /** Returns an tensor option specifying CPU and double */
+  def b = STen.bOptions
 
   /** Returns an tensor option specifying CPU and dtype corresponding to the
     * given byte
@@ -625,28 +683,28 @@ case class STen private (
   def values[S: Sc] = value.values.owned
 
   /** Returns true if data type is double */
-  def isDouble = Scope.leak { implicit scope => options.isDouble }
+  def isDouble = Scope.root{ implicit scope => options.isDouble }
 
   /** Returns true if data type is float */
-  def isFloat = Scope.leak { implicit scope => options.isFloat }
+  def isFloat = Scope.root { implicit scope => options.isFloat }
 
   /** Returns true if data type is long */
-  def isLong = Scope.leak { implicit scope => options.isLong }
+  def isLong = Scope.root { implicit scope => options.isLong }
 
   /** Returns true if device is CPU */
-  def isCPU = Scope.leak { implicit scope => options.isCPU }
+  def isCPU = Scope.root { implicit scope => options.isCPU }
 
   /** Returns true if device is Cuda */
-  def isCuda = Scope.leak { implicit scope => options.isCuda }
+  def isCuda = Scope.root { implicit scope => options.isCuda }
 
   /** Returns true if this is sparse tensor */
-  def isSparse = Scope.leak { implicit scope => options.isSparse }
+  def isSparse = Scope.root { implicit scope => options.isSparse }
 
   /** Returns the device index. Only for Cuda tensors. */
-  def deviceIndex = Scope.leak { implicit scope => options.deviceIndex }
+  def deviceIndex = Scope.root { implicit scope => options.deviceIndex }
 
   /** Returns the Device this tensor resides on */
-  def device = Scope.leak { implicit scope => Device.fromOptions(options) }
+  def device = Scope.root { implicit scope => Device.fromOptions(options) }
 
   /** Returns the byte representation of the data type
     *
@@ -655,7 +713,7 @@ case class STen private (
     *   - 6 for Float
     *   - 7 for Double
     */
-  def scalarTypeByte = Scope.leak { implicit scope => options.scalarTypeByte }
+  def scalarTypeByte = Scope.root { implicit scope => options.scalarTypeByte }
 
   /** Returns a copy of this tensor on the given device */
   def copyToDevice(device: Device)(implicit scope: Scope) = {
@@ -812,13 +870,13 @@ case class STen private (
     case 6 => castToFloat
     case 5 => castToHalf
     case 4 => castToLong
+    case 1 => castToByte
   }
 
-  /** Casts to char */
-  def castToChar[S: Sc] = owned(ATen._cast_Char(value, true))
-
-  /** Casts to byte */
-  def castToByte[S: Sc] = owned(ATen._cast_Byte(value, true))
+  /** Casts to byte. signed 8-bit integer (like Scala's Byte)
+   * This is called Char in libtorch
+   */
+  def castToByte[S: Sc] = owned(ATen._cast_Char(value, true))
 
   /** Casts to float */
   def castToFloat[S: Sc] = owned(ATen._cast_Float(value, true))
@@ -1191,7 +1249,7 @@ case class STen private (
       val tmp = STen.zeros(shape)
       owned(value.expand_as(tmp.value))
     }
-  
+
   /** Returns a tensor with a new shape.
     *
     * No data is copied. The new shape must be compatible with the number of
@@ -1578,9 +1636,18 @@ case class STen private (
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
 
-  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned()  else false
+  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned() else false
 
-  def pin[S:Sc] = if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned  else this
+  def pin[S: Sc] =
+    if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned else this
 
+}
+
+case class NcclUniqueId(base64: String)
+object NcclUniqueId {
+  def apply(): NcclUniqueId =
+    NcclUniqueId(
+      java.util.Base64.getEncoder.encodeToString(aten.NcclComm.get_unique_id)
+    )
 
 }

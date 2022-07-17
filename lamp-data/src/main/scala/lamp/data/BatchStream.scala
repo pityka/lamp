@@ -17,7 +17,7 @@ sealed trait StreamControl[+I] {
 }
 object StreamControl {
   def apply[I](i: I): StreamControl[I] = NonEmptyBatch(i)
-  implicit def StreamControlIsMovable[T: Movable] =
+  implicit def StreamControlIsMovable[T: Movable]: Movable[StreamControl[T]] =
     new Movable[StreamControl[T]] {
       def list(m: StreamControl[T]) =
         m match {
@@ -54,9 +54,168 @@ trait BatchStream[+I, S, C] { self =>
       device: Device,
       buffers: C,
       state: S
-  ): IO[(S, Resource[IO, StreamControl[(I, STen)]])]
+  ): IO[(S, Resource[IO, StreamControl[I]])]
 
-  def map[I2](f: (I, STen) => Resource[IO, StreamControl[(I2, STen)]]) =
+  def drainIntoSeq(
+      device: Device
+  ): Resource[IO, Vector[I]] = {
+
+    def loop(
+        batch: Resource[IO, StreamControl[I]],
+        buffer: C,
+        s0: S,
+        acc: Vector[StreamControl[I]],
+        releases: IO[Unit]
+    ): IO[(Vector[StreamControl[I]], IO[Unit])] = {
+      batch.allocated.flatMap { case (control, release) =>
+        val acc1 = acc.appended(control)
+        val releases1 = releases *> release
+
+        if (control == EndStream) IO.pure(acc1 -> releases1)
+        else
+          this.nextBatch(device, buffer, s0).flatMap { case (s1, next) =>
+            loop(next, buffer, s1, acc1, releases1)
+          }
+      }
+    }
+    this
+      .allocateBuffers(device)
+      .flatMap { buffers =>
+        Resource.make(IO {
+          this.nextBatch(device, buffers, this.init).flatMap {
+            case (s1, next) =>
+              loop(next, buffers, s1, Vector.empty[StreamControl[I]], IO.unit)
+          }
+        }.flatten) { case (_, r) => r }
+
+      }
+      .map { case (vector, _) =>
+        vector.collect { case NonEmptyBatch(x) =>
+          x
+        }
+      }
+  }
+
+  /** Returns a new stream with EmptyBatches filtered out
+    */
+  def withoutEmptyBatches =
+    new BatchStream[I, S, C] {
+      def init = self.init
+
+      def allocateBuffers(target: Device): Resource[IO, C] =
+        self.allocateBuffers(target)
+
+      def nextBatch(
+          device: Device,
+          buffers: C,
+          state: S
+      ): IO[(S, Resource[IO, StreamControl[I]])] =
+        self
+          .nextBatch(device, buffers, state)
+          .flatMap { case (state1, resource) =>
+            val s = resource.map { maybe =>
+              maybe match {
+                case EmptyBatch =>
+                  self.nextBatch(device, buffers, state1)
+                case x =>
+                  IO.pure(
+                    (state1, Resource.pure[IO, StreamControl[I]](x))
+                  )
+
+              }
+
+            }
+
+            s.allocated.flatMap { case (next, release) =>
+              next.map { case (state, resource) =>
+                (state, resource.onFinalize(release))
+              }
+            }
+
+          }
+    }
+
+  def concat[I2 >: I, S2](other: BatchStream[I2, S2, C]) =
+    new BatchStream[I2, (Boolean, Either[S, S2]), C] {
+      def init = (false, Left(self.init))
+
+      def allocateBuffers(target: Device): Resource[IO, C] =
+        self.allocateBuffers(target)
+
+      def nextBatch(
+          device: Device,
+          buffers: C,
+          state: (Boolean, Either[S, S2])
+      ): IO[((Boolean, Either[S, S2]), Resource[IO, StreamControl[I2]])] = {
+        val current =
+          if (!state._1)
+            self.nextBatch(device, buffers, state._2.left.toOption.get)
+          else other.nextBatch(device, buffers, state._2.toOption.get)
+
+        current
+          .flatMap { case (state1, resource) =>
+            val s = resource.map { maybe =>
+              maybe match {
+                case EndStream =>
+                  if (state._1)
+                    IO.pure(
+                      (
+                        (true, Right(state1.asInstanceOf[S2])),
+                        Resource.pure[IO, StreamControl[I2]](EndStream)
+                      )
+                    )
+                  else
+                    other.nextBatch(device, buffers, other.init).map {
+                      case (s2, resource) =>
+                        ((true, Right(s2)), resource)
+                    }
+                case x =>
+                  IO.pure(
+                    (
+                      (false, Left(state1.asInstanceOf[S])),
+                      Resource.pure[IO, StreamControl[I2]](x)
+                    )
+                  )
+
+              }
+
+            }
+
+            s.allocated.flatMap { case (next, release) =>
+              next.map { case (state, resource) =>
+                (state, resource.onFinalize(release))
+              }
+            }
+
+          }
+      }
+    }
+
+  def take(n: Long) =
+    new BatchStream[I, (Long, S), C] {
+      def init = (0L, self.init)
+
+      def allocateBuffers(target: Device): Resource[IO, C] =
+        self.allocateBuffers(target)
+      def nextBatch(
+          device: Device,
+          buffers: C,
+          state: (Long, S)
+      ): IO[((Long, S), Resource[IO, StreamControl[I]])] =
+        if (state._1 < n)
+          self
+            .nextBatch(device, buffers, state._2)
+            .map(s => (state._1 + 1L, s._1) -> s._2)
+        else
+          IO.pure(
+            (
+              state._1 + 1L -> state._2,
+              Resource.pure[IO, StreamControl[I]](EndStream)
+            )
+          )
+    }
+
+  def map[I2](f: I => Resource[IO, StreamControl[I2]]) =
     new BatchStream[I2, S, C] {
       def init = self.init
 
@@ -66,7 +225,7 @@ trait BatchStream[+I, S, C] { self =>
           device: Device,
           buffers: C,
           state: S
-      ): IO[(S, Resource[IO, StreamControl[(I2, STen)]])] =
+      ): IO[(S, Resource[IO, StreamControl[I2]])] =
         self
           .nextBatch(device, buffers, state)
           .map { case (state1, resource) =>
@@ -75,11 +234,11 @@ trait BatchStream[+I, S, C] { self =>
               resource.flatMap(maybe =>
                 maybe match {
                   case EndStream =>
-                    Resource.pure[IO, StreamControl[(I2, STen)]](EndStream)
+                    Resource.pure[IO, StreamControl[I2]](EndStream)
                   case EmptyBatch =>
-                    Resource.pure[IO, StreamControl[(I2, STen)]](EmptyBatch)
-                  case NonEmptyBatch(pair) =>
-                    f.tupled(pair)
+                    Resource.pure[IO, StreamControl[I2]](EmptyBatch)
+                  case NonEmptyBatch(i) =>
+                    f(i)
                 }
               )
             )
@@ -87,7 +246,7 @@ trait BatchStream[+I, S, C] { self =>
     }
 
   def foldLeft[B](zero: B, device: Device, stateZero: S)(
-      f: (B, (I, STen)) => IO[B]
+      f: (B, I) => IO[B]
   ): IO[B] = {
     allocateBuffers(device).use { buffers =>
       def loop(b: B, init: S): IO[B] = {
@@ -114,11 +273,92 @@ trait BatchStream[+I, S, C] { self =>
 
   }
 
+  def repeatOrTake(requiredLength: Long) =
+    new BatchStream[I, (Long, S), C] {
+      val init0 = self.init
+      def init = (0L, self.init)
+
+      def allocateBuffers(target: Device) =
+        self.allocateBuffers(target)
+
+      def nextBatch(
+          device: Device,
+          buffers: C,
+          state: (Long, S)
+      ) =
+        if (state._1 >= requiredLength)
+          IO.pure(
+            (state._1 + 1L, state._2) -> Resource.pure[IO, StreamControl[I]](
+              EndStream
+            )
+          )
+        else {
+          self
+            .nextBatch(device, buffers, state._2)
+            .flatMap { case (state1, resource) =>
+              val s = resource.map { maybe =>
+                maybe match {
+                  case EndStream =>
+                    self.nextBatch(device, buffers, init0).map {
+                      case (s2, resource) =>
+                        ((state._1 + 1, s2), resource)
+                    }
+                  case x =>
+                    IO.pure(
+                      (
+                        (state._1 + 1, state1),
+                        Resource.pure[IO, StreamControl[I]](x)
+                      )
+                    )
+
+                }
+
+              }
+
+              s.allocated.flatMap { case (next, release) =>
+                next.map { case (state, resource) =>
+                  (state, resource.onFinalize(release))
+                }
+              }
+
+            }
+        }
+
+    }
+
+  /** Takes only batches where (i % n == offset), i being the number of batch
+    * counted from 0
+    * @return
+    */
+  def everyNth(n: Int, offset: Int) =
+    new BatchStream[I, (Long, S), C] {
+      def init = (0L, self.init)
+
+      def allocateBuffers(target: Device) =
+        self.allocateBuffers(target)
+
+      def nextBatch(
+          device: Device,
+          buffers: C,
+          state: (Long, S)
+      ) = {
+        self
+          .nextBatch(device, buffers, state._2)
+          .flatMap { case (state1, resource) =>
+            if (state._1 % n == offset)
+              IO.pure(((state._1 + 1L, state1), resource))
+            else nextBatch(device, buffers, (state._1 + 1L, state1))
+
+          }
+      }
+
+    }
+
 }
 
 object BatchStream {
 
-  def single[A](resource: Resource[IO, StreamControl[(A, STen)]]) =
+  def single[A](resource: Resource[IO, StreamControl[A]]) =
     new BatchStream[A, Boolean, Unit] {
       def init = false
 
@@ -132,7 +372,26 @@ object BatchStream {
       ) = IO {
         if (!pulled)
           (true, resource)
-        else (true, Resource.pure[IO, StreamControl[(A, STen)]](EndStream))
+        else (true, Resource.pure[IO, StreamControl[A]](EndStream))
+      }
+
+    }
+
+  def fromVector[A](resources: Vector[Resource[IO, StreamControl[A]]]) =
+    new BatchStream[A, Int, Unit] {
+      def init = 0
+
+      def allocateBuffers(target: Device): Resource[IO, Unit] =
+        Resource.unit[IO]
+
+      def nextBatch(
+          device: Device,
+          buffers: Unit,
+          i: Int
+      ) = IO {
+        if (i < resources.size)
+          (i + 1, resources(i))
+        else (i + 1, Resource.pure[IO, StreamControl[A]](EndStream))
       }
 
     }
@@ -145,7 +404,7 @@ object BatchStream {
           Array[Int],
           C,
           Device
-      ) => Resource[IO, StreamControl[(A, STen)]]
+      ) => Resource[IO, StreamControl[A]]
   ) =
     new BatchStream[A, Int, C] {
       def init = 0
@@ -157,7 +416,7 @@ object BatchStream {
         if (counter < N)
           (counter + 1, makeNonEmptyBatch(indices(counter), buffers, device))
         else
-          (counter + 1, Resource.pure[IO, StreamControl[(A, STen)]](EndStream))
+          (counter + 1, Resource.pure[IO, StreamControl[A]](EndStream))
       }
 
     }
@@ -231,7 +490,7 @@ object BatchStream {
       else t
     }
 
-    BatchStream.fromIndicesWithBuffers[Variable, BufferPair](
+    BatchStream.fromIndicesWithBuffers[(Variable, STen), BufferPair](
       idx.toArray,
       allocateBuffers
     )(makeNonEmptyBatch)
@@ -298,8 +557,8 @@ object BatchStream {
               Array[Int],
               C,
               Device
-          ) => Resource[IO, StreamControl[(A, STen)]]
-      ): IO[Resource[IO, StreamControl[(A, STen)]]] = {
+          ) => Resource[IO, StreamControl[A]]
+      ): IO[Resource[IO, StreamControl[A]]] = {
 
         deferred.get.flatMap { openBucketState =>
           if (
@@ -356,8 +615,8 @@ object BatchStream {
               Array[Int],
               C,
               Device
-          ) => Resource[IO, StreamControl[(A, STen)]]
-      ): IO[(State[A, B], Resource[IO, StreamControl[(A, STen)]])] = {
+          ) => Resource[IO, StreamControl[A]]
+      ): IO[(State[A, B], Resource[IO, StreamControl[A]])] = {
         val (bucketIdx, batchIdxWithinBucket) = batchIdxToBucketIdx(batchIdx)
         if (bucketIdx >= buckets.size) IO.pure((this, Resource.pure(EndStream)))
         else {
@@ -370,7 +629,7 @@ object BatchStream {
               buckets(nextBucketIdx) match {
                 case Opened(_, _, _) => IO.pure(None)
                 case s @ NotYetOpen(_, _) =>
-                  s.open().map(Some(_))
+                  s.asInstanceOf[NotYetOpen[A, B]].open().map(Some(_))
 
               }
             }
@@ -378,15 +637,16 @@ object BatchStream {
           openNextBucket.flatMap { nextBucketOpen =>
             bucketState match {
               case s @ NotYetOpen(_, _) =>
-                s.open()
+                s.asInstanceOf[NotYetOpen[A, B]]
+                  .open()
                   .flatMap { opened =>
                     val nextState = copy(
                       batchIdx = batchIdx + 1,
                       buckets = updateBuckets(
                         buckets,
                         bucketIdx,
-                        Some(opened),
-                        nextBucketOpen
+                        Some(opened), // .asInstanceOf[Opened[A,B]]),
+                        nextBucketOpen // .asInstanceOf[Option[Opened[A, B]]]
                       )
                     )
                     opened
@@ -404,12 +664,14 @@ object BatchStream {
                   buckets =
                     updateBuckets(buckets, bucketIdx, None, nextBucketOpen)
                 )
-                s.nextBatch(
-                  batchIdxWithinBucket,
-                  device,
-                  buffers,
-                  loadBatch
-                ).map((nextState, _))
+                s.asInstanceOf[Opened[A, B]]
+                  .nextBatch(
+                    batchIdxWithinBucket,
+                    device,
+                    buffers,
+                    loadBatch
+                  )
+                  .map((nextState, _))
 
             }
           }
@@ -448,7 +710,7 @@ object BatchStream {
           Array[Int],
           C,
           Device
-      ) => Resource[IO, StreamControl[(A, STen)]]
+      ) => Resource[IO, StreamControl[A]]
   ) =
     new BatchStream[A, StagedLoader.State[A, B], C] {
 
@@ -482,7 +744,7 @@ object BatchStream {
           buffers: C,
           state: StagedLoader.State[A, B]
       ): IO[
-        (StagedLoader.State[A, B], Resource[IO, StreamControl[(A, STen)]])
+        (StagedLoader.State[A, B], Resource[IO, StreamControl[A]])
       ] = {
         state.nextBatch(device, buffers, makeNonEmptyBatch)
       }

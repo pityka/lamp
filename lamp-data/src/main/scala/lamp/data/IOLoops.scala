@@ -28,7 +28,7 @@ object IOLoops {
   }
 
   def forwardAndDiscardBatchStream[I, M <: GenericModule[I, Variable], S, C](
-      batchStream: BatchStream[I, S, C],
+      batchStream: BatchStream[(I, STen), S, C],
       buffers: Device => Resource[IO, C],
       model: M with GenericModule[I, Variable]
   ): IO[Unit] = {
@@ -44,7 +44,7 @@ object IOLoops {
         case EndStream  => IO.pure(false)
         case EmptyBatch => IO.pure(true)
         case NonEmptyBatch((x, _)) =>
-          IO { Scope.root { implicit scope => model.forward(x) }; true }
+          IO { Scope.root { implicit scope => model.forward(x); () }; true }
       } flatMap {
         case true =>
           batchStream.nextBatch(device, buffer, s0).flatMap { case (s1, next) =>
@@ -61,28 +61,28 @@ object IOLoops {
     )
   }
 
-  def runBatchStream[I, M <: GenericModule[I, Variable], S, C](
-      batchStream: BatchStream[I, S, C],
+  def runBatchStream[A, B: Movable, M <: GenericModule[A, B], S, C](
+      batchStream: BatchStream[A, S, C],
       buffers: Resource[IO, C],
-      model: M with GenericModule[I, Variable]
-  )(implicit scope: Scope): IO[List[STen]] = {
+      model: M with GenericModule[A, B]
+  )(implicit scope: Scope): IO[Vector[B]] = {
 
     val device = model.state.head._1.value.device
 
     def loop(
-        batch: Resource[IO, StreamControl[(I, STen)]],
-        acc: List[STen],
+        batch: Resource[IO, StreamControl[A]],
+        acc: Vector[B],
         s0: S,
         buffers: C
-    ): IO[List[STen]] = {
+    ): IO[Vector[B]] = {
       batch.use {
-        case EndStream  => IO.pure(Left(acc.reverse))
+        case EndStream  => IO.pure(Left(acc))
         case EmptyBatch => IO.pure(Right(acc))
-        case NonEmptyBatch((x, _)) =>
+        case NonEmptyBatch(x) =>
           IO {
-            Right(Scope { implicit scope =>
-              model.forward(x).value
-            } :: acc)
+            Right(acc :+ Scope { implicit scope =>
+              model.forward(x)
+            })
           }
 
       } flatMap {
@@ -98,12 +98,12 @@ object IOLoops {
     buffers.use { buffers =>
       batchStream.nextBatch(device, buffers, batchStream.init).flatMap {
         case (s1, next) =>
-          loop(next, Nil, s1, buffers)
+          loop(next, Vector.empty, s1, buffers)
       }
     }
   }
   def parallelRunBatchStream[I, O, M <: GenericModule[I, O], S, O2: Movable, C](
-      batchStream: BatchStream[I, S, C],
+      batchStream: BatchStream[(I, STen), S, C],
       bufferPerModel: Resource[IO, List[(lamp.Device, C)]],
       models: Seq[M with GenericModule[I, O]]
   )(tx: ((I, STen), O) => O2)(implicit scope: Scope): IO[Vector[O2]] = {
@@ -117,7 +117,7 @@ object IOLoops {
       DataParallel
         .makeMultipleBatches(
           devices = devicesWithBuffers,
-          makeOne = (device: lamp.Device, state: S, c:C) =>
+          makeOne = (device: lamp.Device, state: S, c: C) =>
             batchStream
               .nextBatch(device, c, state)
         )(s0)
@@ -164,16 +164,16 @@ object IOLoops {
     )
   }
 
-  import scala.reflect.runtime.universe._
+  // import scala.reflect.runtime.universe._
 
   def withSWA[I, M <: GenericModule[
     I,
     Variable
-  ]: Load, LRState: TypeTag, LRStateSWA: TypeTag, BatchStreamState, BatchStreamBuffers](
+  ]: Load, LRState, LRStateSWA, BatchStreamState, BatchStreamBuffers](
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: TrainingLoopContext => BatchStream[
-        I,
+        (I, STen),
         BatchStreamState,
         BatchStreamBuffers
       ],
@@ -181,7 +181,7 @@ object IOLoops {
       swaEpochs: Int,
       validationBatchesOverEpoch: Option[
         TrainingLoopContext => BatchStream[
-          I,
+          (I, STen),
           BatchStreamState,
           BatchStreamBuffers
         ]
@@ -283,7 +283,8 @@ object IOLoops {
         accumulateGradientOverNBatches,
         swaLearningRateScheduleInitState match {
           case Some(x) => Some(x)
-          case None if typeTag[LRState] == typeTag[LRStateSWA] =>
+          case None
+              if swaLearningRateSchedule.init.getClass == warmupLRState.getClass =>
             Some(warmupLRState.asInstanceOf[LRStateSWA])
           case _ => None
         },
@@ -307,13 +308,13 @@ object IOLoops {
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: TrainingLoopContext => BatchStream[
-        I,
+        (I, STen),
         BatchStreamState,
         BatchStreamBuffers
       ],
       validationBatchesOverEpoch: Option[
         TrainingLoopContext => BatchStream[
-          I,
+          (I, STen),
           BatchStreamState,
           BatchStreamBuffers
         ]
@@ -604,7 +605,7 @@ object IOLoops {
       epochCount: Long,
       trainingCallback: TrainingCallback,
       model: ModelWithOptimizer[I, M],
-      trainBatches: BatchStream[I, S, C],
+      trainBatches: BatchStream[(I, STen), S, C],
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
       prefetch: Boolean,
@@ -685,55 +686,12 @@ object IOLoops {
 
     }
 
-    def prefetch1[A, B](
-        fetch: S => IO[(S, Resource[IO, StreamControl[A]])],
-        transform: (Long, StreamControl[A]) => IO[StreamControl[B]],
-        reduce: (B, B) => B,
-        zero: B,
-        zeroS: S
-    ): IO[B] = {
-
-      def loop(
-          counter: Long,
-          acc: B,
-          queue: Queue[IO, (StreamControl[A], IO[Unit])],
-          s0: S
-      ): IO[B] = {
-        for {
-          fetched <- queue.take
-          a = fetched._1
-          release = fetched._2
-          pair <- fetch(s0)
-          s1 = pair._1
-          resource = pair._2
-          _ <- resource.allocated.flatMap(queue.offer).start
-          done <- transform(counter, a)
-          _ <- release
-          loopDone <- done match {
-            case EndStream  => IO.pure(acc)
-            case EmptyBatch => loop(counter, acc, queue, s1)
-            case NonEmptyBatch(b) =>
-              loop(counter + 1, reduce(b, acc), queue, s1)
-          }
-        } yield loopDone
-      }
-
-      for {
-        q <- Queue.bounded[IO, (StreamControl[A], IO[Unit])](1)
-        pair <- fetch(zeroS)
-        s1 = pair._1
-        _ <- pair._2.allocated.flatMap(q.offer).start
-        l <- loop(0, zero, q, s1)
-      } yield l
-
-    }
-
     def prefetchLoop(
         lossAcc: STen,
         buffers: C
     ) = {
 
-      prefetch1[(I, STen), Long](
+      prefetch1[S, (I, STen), Long](
         fetch = (s) => trainBatches.nextBatch(device, buffers, s),
         transform = (batchCounter, batch) =>
           IO {
@@ -786,7 +744,7 @@ object IOLoops {
   }
   def validationOneEpoch[I, M <: GenericModule[I, Variable], S, C](
       model: SupervisedModel[I, M],
-      validationBatches: BatchStream[I, S, C],
+      validationBatches: BatchStream[(I, STen), S, C],
       validationCallback: ValidationCallback,
       logger: Option[Logger],
       epochCount: Long
@@ -863,6 +821,49 @@ object IOLoops {
         }
       }
     }
+  }
+
+  private[lamp] def prefetch1[S, A, B](
+      fetch: S => IO[(S, Resource[IO, StreamControl[A]])],
+      transform: (Long, StreamControl[A]) => IO[StreamControl[B]],
+      reduce: (B, B) => B,
+      zero: B,
+      zeroS: S
+  ): IO[B] = {
+
+    def loop(
+        counter: Long,
+        acc: B,
+        queue: Queue[IO, (StreamControl[A], IO[Unit])],
+        s0: S
+    ): IO[B] = {
+      for {
+        fetched <- queue.take
+        a = fetched._1
+        release = fetched._2
+        pair <- fetch(s0)
+        s1 = pair._1
+        resource = pair._2
+        _ <- resource.allocated.flatMap(queue.offer).start
+        done <- transform(counter, a)
+        _ <- release
+        loopDone <- done match {
+          case EndStream  => IO.pure(acc)
+          case EmptyBatch => loop(counter, acc, queue, s1)
+          case NonEmptyBatch(b) =>
+            loop(counter + 1, reduce(b, acc), queue, s1)
+        }
+      } yield loopDone
+    }
+
+    for {
+      q <- Queue.bounded[IO, (StreamControl[A], IO[Unit])](1)
+      pair <- fetch(zeroS)
+      s1 = pair._1
+      _ <- pair._2.allocated.flatMap(q.offer).start
+      l <- loop(0, zero, q, s1)
+    } yield l
+
   }
 
 }

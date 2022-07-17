@@ -27,8 +27,8 @@ case class WeightNormLinear(
 }
 
 object WeightNormLinear {
-  implicit val trainingMode = TrainingMode.identity[WeightNormLinear]
-  implicit val load = Load.make[WeightNormLinear] { m => parameters =>
+  implicit val trainingMode : TrainingMode[WeightNormLinear] = TrainingMode.identity[WeightNormLinear]
+  implicit val load : Load[WeightNormLinear] = Load.make[WeightNormLinear] { m => parameters =>
     m.weightsV.value.copyFrom(parameters.head)
     m.weightsG.value.copyFrom(parameters(1))
     m.bias.foreach(_.value.copyFrom(parameters(2)))

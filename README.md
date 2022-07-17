@@ -18,6 +18,8 @@ As a consequence lamp uses fast CPU and GPU code and stores its data in off-heap
 
 [API](https://pityka.github.io/lamp/api/lamp/index.html)
 
+Lamp is built both for Scala 2 and Scala 3.
+
 # Features
 
 Lamp provides CPU or GPU backed n-dimensional arrays and implements generic automatic reverse mode differentiation (also known as autograd, see e.g. [this paper](https://arxiv.org/pdf/1811.05031.pdf)). 
@@ -26,11 +28,11 @@ Lamp may be used for scientific computing similarly to numpy, or to build neural
 It provides neural networks components:
 
 - fully connected, 1D and 2D convolutional, embedding, graph convolution, self-attention (transformer), BERT
-- various nonlinearities
 - batch, weight, layer normalization
 - dropout, weight decay
-- optimizers: SgdW, AdamW (see [here](https://arxiv.org/abs/1711.05101)), RAdam, Yogi
+- optimizers: SgdW, AdamW (see [here](https://arxiv.org/abs/1711.05101)), RAdam, Yogi, Shampoo
 - multi gpu data parallel training loop and data loaders
+- distributed data parallel training using [NCCL](https://github.com/NVIDIA/nccl) transport.
 - checkpointing, ONNX export, NPY and CSV import
 
 This repository also hosts some other loosely related libraries. 
@@ -78,8 +80,9 @@ The following artifacts are published to Maven Central from this repository:
 - `"io.github.pityka" %% "lamp-knn"` - provides k nearest neighbor
 - `"io.github.pityka" %% "lamp-umap"` - UMAP implementation
 - `"io.github.pityka" %% "extratrees"` - extremely randomized trees implementation
+- `"io.github.pityka" %% "lamp-akka"` - helper utilities for distributed training
 
-All artifacts are published for scala 2.12 and 2.13. 
+All artifacts are published for scala 2.13 and scala 3. 
 
 ## Running tests
 
@@ -97,6 +100,7 @@ Examples for various tasks:
 - Text generation: `bash run_timemachine.sh` runs the code in `example-timemachine/`.
 - Machine translation: `bash run_translation.sh` runs the code in `example-translation/`.
 - Graph node property prediction: `bash run_arxiv.sh` runs the code in `example-arxiv/`.
+- Multi node distributed training: `bash run_cifar_dist1.sh` and  `bash run_cifar_dist2.sh` .
 
 # Building from source
 

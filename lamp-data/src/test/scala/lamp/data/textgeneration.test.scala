@@ -20,6 +20,8 @@ import lamp.nn.statefulSequence
 import lamp.Scope
 import lamp.STen
 import cats.effect.unsafe.implicits.global
+import lamp.nn.ToLift
+import lamp.nn.ToUnlift
 
 class TextGenerationSuite extends AnyFunSuite {
   val asciiSilentCharsetDecoder = Charset
@@ -95,6 +97,7 @@ class TextGenerationSuite extends AnyFunSuite {
         .unsafeRunSync()
 
       assert(learningCurve.last._2 < 3d)
+      ()
     }
   }
   test("text learning", SlowTest) {
@@ -209,6 +212,7 @@ class TextGenerationSuite extends AnyFunSuite {
       )
 
       assert(learningCurve.last._2 < 8d)
+      ()
     }
   }
 

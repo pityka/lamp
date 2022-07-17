@@ -10,7 +10,7 @@ import lamp.nn.graph.GraphAttention
 import lamp.nn.graph.Graph
 import lamp.STen
 import lamp.saddle._
-
+import org.saddle.doubleOrd
 
 class GraphAttentionSuite extends AnyFunSuite {
 
