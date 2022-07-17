@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <title>Training on multiple devices - Lamp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link rel="icon" href="https://pityka.github.io/lamp/favicon.png">
+
+  
+  
+  <link rel="stylesheet" href="/lamp/css/style.min.ab49f0da65a9bb2e51b43f76fb24346d416717d3205cbd8e2e0bd70b9c811f6c.css">
+  
+
+  
+
+</head>
+
+<body class='page page-default-single'>
+  <div id="main-menu-mobile" class="main-menu-mobile">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+  <div class="wrapper">
+    <div class='header'>
+  <div class="container">
+    
+    
+    <div id="main-menu" class="main-menu">
+  <ul>
+    
+    
+    <li class="menu-item-home">
+      <a href="/lamp/">
+        <span>Home</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-docs">
+      <a href="/lamp/docs/">
+        <span>Docs</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-api">
+      <a href="/lamp/api/">
+        <span>API</span>
+      </a>
+    </li>
+    
+    <li class="menu-item-code">
+      <a href="https://github.com/pityka/lamp">
+        <span>Code</span>
+      </a>
+    </li>
+    
+  </ul>
+</div>
+    <button id="toggle-main-menu-mobile" class="hamburger hamburger--slider" type="button">
+  <span class="hamburger-box">
+    <span class="hamburger-inner"></span>
+  </span>
+</button>
+  </div>
+</div>
+
+    <div class="container pt-2 pt-md-6 pb-3 pb-md-6">
+      <div class="row">
+        <div class="col-12 col-md-3 mb-3">
+          <div class="sidebar">
+            
+<div class="docs-menu">
+  <h4>Docs</h4>
+  <ul>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/getting_started/">Getting started</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/usage_overview/">How to build and train a model</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/memory_management/">Memory management</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/modules/">Defining modules</a>
+    </li>
+    
+    <li class="">
+      <a href="https://pityka.github.io/lamp/docs/extratrees/">Extratrees</a>
+    </li>
+    
+    <li class="active ">
+      <a href="https://pityka.github.io/lamp/docs/multigpu/">Training on multiple devices</a>
+    </li>
+    
+  </ul>
+</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-9">
+          
+<h1 class="title">Training on multiple devices</h1>
+<div class="content anchor-link-enabled">
+  
+
+<p>Lamp can utilize multiple GPUs for training.
+The algorithm lamp uses is a simple version data parallel stochastic gradient descent.
+One of the GPUs holds the optimizer and all GPUs hold an identical copy of the model.
+All GPUs perform gradient calculations on separate streams of batches of data.
+After each N batches the gradients are transferred and summed up on the GPU which holds the optimizer,
+the optimizer updates the model parameters, which in turn are redistributed to the devices.</p>
+
+<p>There is no support for very large models which would need to be striped over multiple devices.</p>
+
+<p>Lamp supports both distributed and non-distributed multi-GPU training.
+In the distributed setting each GPU may be located in a different computer and/or driven by a different
+JVM process, while in the non-distributed multi-GPU setting there is a single JVM which drives and
+coordinates the work of all GPUs.</p>
+
+<h1 id="single-process-multi-gpu-data-parallel-training">Single-process multi-GPU data parallel training</h1>
+
+<p>This is the case when all devices are attached to the same computer and can be driven by the same JVM.
+In this case the training loop in <code>lamp.data.IOLoops.epochs</code> may take an optional argument <code>dataParallelModels</code>. <code>dataParallelModels</code> receives a list of additional models each allocated onto a different device.</p>
+
+<p>This method is very simple to use, one only has to allocate the same model onto multiple devices and
+provide those to the training loop.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala"><span style="color:#66d9ef">import</span> lamp._  
+  <span style="color:#66d9ef">import</span> lamp.nn._  
+  <span style="color:#66d9ef">import</span> lamp.data._  
+
+ <span style="color:#a6e22e">Scope</span><span style="color:#f92672">.</span>root <span style="color:#f92672">{</span> <span style="color:#66d9ef">implicit</span> scope <span style="color:#66d9ef">=&gt;</span>
+      <span style="color:#75715e">// two devices
+</span><span style="color:#75715e"></span>      <span style="color:#66d9ef">val</span> device <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">CPU</span>
+      <span style="color:#66d9ef">val</span> device2 <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">CudaDevice</span><span style="color:#f92672">(</span><span style="color:#ae81ff">0</span><span style="color:#f92672">)</span>
+
+      <span style="color:#66d9ef">val</span> classWeights <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">STen</span><span style="color:#f92672">.</span>ones<span style="color:#f92672">(</span><span style="color:#a6e22e">List</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">),</span> device<span style="color:#f92672">.</span>options<span style="color:#f92672">(</span><span style="color:#a6e22e">SinglePrecision</span><span style="color:#f92672">))</span>
+
+      <span style="color:#75715e">// we allocate the exact same model twice, onto each device
+</span><span style="color:#75715e"></span>
+      <span style="color:#66d9ef">def</span> logisticRegression<span style="color:#f92672">(</span>inputDim<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Int</span><span style="color:#f92672">,</span> outDim<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Int</span><span style="color:#f92672">,</span> tOpt<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">STenOptions</span><span style="color:#f92672">)(</span><span style="color:#66d9ef">implicit</span> scope<span style="color:#66d9ef">:</span> <span style="color:#66d9ef">Scope</span><span style="color:#f92672">)</span> <span style="color:#66d9ef">=</span>
+        <span style="color:#a6e22e">Seq2</span><span style="color:#f92672">(</span>
+          <span style="color:#a6e22e">Linear</span><span style="color:#f92672">(</span>inputDim<span style="color:#f92672">,</span> outDim<span style="color:#f92672">,</span> tOpt <span style="color:#66d9ef">=</span> tOpt<span style="color:#f92672">),</span>
+          <span style="color:#a6e22e">Fun</span><span style="color:#f92672">(</span><span style="color:#66d9ef">implicit</span> scope <span style="color:#66d9ef">=&gt;</span> <span style="color:#66d9ef">_</span><span style="color:#f92672">.</span>logSoftMax<span style="color:#f92672">(</span>dim <span style="color:#66d9ef">=</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">))</span>
+        <span style="color:#f92672">)</span>
+
+      <span style="color:#66d9ef">val</span> model1 <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SupervisedModel</span><span style="color:#f92672">(</span>
+        logisticRegression<span style="color:#f92672">(</span>
+          <span style="color:#ae81ff">784</span><span style="color:#f92672">,</span>
+          <span style="color:#ae81ff">10</span><span style="color:#f92672">,</span>
+          device<span style="color:#f92672">.</span>options<span style="color:#f92672">(</span><span style="color:#a6e22e">SinglePrecision</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">),</span>
+        <span style="color:#a6e22e">LossFunctions</span><span style="color:#f92672">.</span><span style="color:#a6e22e">NLL</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">,</span> classWeights<span style="color:#f92672">)</span>
+      <span style="color:#f92672">)</span>
+      <span style="color:#66d9ef">val</span> model2 <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">SupervisedModel</span><span style="color:#f92672">(</span>
+        logisticRegression<span style="color:#f92672">(</span>
+          <span style="color:#ae81ff">784</span><span style="color:#f92672">,</span>
+          <span style="color:#ae81ff">10</span><span style="color:#f92672">,</span>
+          device2<span style="color:#f92672">.</span>options<span style="color:#f92672">(</span><span style="color:#a6e22e">SinglePrecision</span><span style="color:#f92672">)</span>
+        <span style="color:#f92672">),</span>
+        <span style="color:#a6e22e">LossFunctions</span><span style="color:#f92672">.</span><span style="color:#a6e22e">NLL</span><span style="color:#f92672">(</span><span style="color:#ae81ff">10</span><span style="color:#f92672">,</span> device2<span style="color:#f92672">.</span>to<span style="color:#f92672">(</span>classWeights<span style="color:#f92672">))</span>
+      <span style="color:#f92672">)</span>
+
+
+      <span style="color:#75715e">// We provide both models to the training loop
+</span><span style="color:#75715e"></span>
+      <span style="color:#a6e22e">IOLoops</span>
+        <span style="color:#f92672">.</span>epochs<span style="color:#f92672">(</span>
+          <span style="color:#75715e">// provide the training loop the first model as usual in `model`
+</span><span style="color:#75715e"></span>          <span style="color:#75715e">// this is where the optimizer will run
+</span><span style="color:#75715e"></span>          model <span style="color:#66d9ef">=</span> model1<span style="color:#f92672">,</span>
+          dataParallelModels <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">List</span><span style="color:#f92672">(</span>model2<span style="color:#f92672">),</span>
+          <span style="color:#75715e">// rest of the arguments are as in single GPU training
+</span><span style="color:#75715e"></span>          optimizerFactory <span style="color:#66d9ef">=</span> <span style="color:#f92672">???,</span>
+          trainBatchesOverEpoch <span style="color:#66d9ef">=</span> <span style="color:#f92672">???,</span>
+          validationBatchesOverEpoch <span style="color:#66d9ef">=</span> <span style="color:#f92672">???,</span>
+          epochs <span style="color:#66d9ef">=</span> <span style="color:#f92672">???,</span>
+        <span style="color:#f92672">)</span>
+        
+        
+        <span style="color:#f92672">()</span>
+        
+ <span style="color:#f92672">}</span></code></pre></div>
+<h1 id="distributed-data-parallel-training">Distributed data parallel training</h1>
+
+<p>In this settings the GPUs are potentially attached to different computers and the whole training
+process is distributed across multiple JVM processes (one process per GPU).</p>
+
+<p>For this use case Lamp has a separate training loop in the <code>lamp.data.distributed</code> package.
+The main entry points here are the <code>lamp.data.distributed.driveDistributedTraining</code>
+and <code>lamp.data.distributed.followDistributedTraining</code> methods.</p>
+
+<p>This training loop in <code>lamp.data.distributed</code> uses <a href="https://github.com/NVIDIA/nccl">NCCL</a> for
+device-device transfers therefor all devices  must be CUDA devices (i.e. no host).
+Due to NCCL the transport optimally uses the available hardware (NVLink, fabric adapters etc).
+On the other hand NCCL does not support routing over networks thus each compute node must be on the same
+private network (ie. no NAT).</p>
+
+<p>In total the following restrictions apply to the distributed training loop:
+- the batch streams of each processes must not contain <code>EmptyBatch</code> elements and
+- the batch streams of each processes must contain the exact same number of batches.
+- each compute node or process must sit on the same private network
+- only CUDA devices
+If these are not respected then the distributed process will fail with an exception or worse, go to a dead lock.</p>
+
+<h2 id="network-transports-in-distributed-training">Network transports in distributed training</h2>
+
+<p>All tensor data is transfered directly between devices by NCCL.
+However NCCL itself does not provide implementations for control messages and initial rendez-vous.
+One can use MPI, a raw TCP socket or other means of communication for this purpose.
+Lamp abstracts this functionality away in the <code>lamp.data.distributed.DistributedCommunication</code> trait
+and provides an implementation using Akka in the <code>lamp-akka</code> module.
+This message channel for control messages is very low throughput, it broadcasts the NCCL unique id,
+and a few messages before and after each epoch.</p>
+
+<h2 id="distributed-training-example">Distributed training example</h2>
+
+<p>In a distributed setting each process has to set up the model, the batch streams and the
+training loop separately.
+One of these processes is driving the training while the rest follows.</p>
+
+<p>There is a working example in the <code>example-cifar100-distributed</code> folder in lamp&rsquo;s source tree.
+The part of how to set up the training loop is this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-scala" data-lang="scala">        <span style="color:#75715e">// This is an incomplete example, see the full example in the source tree
+</span><span style="color:#75715e"></span>
+        <span style="color:#75715e">// The following is executed on each processes
+</span><span style="color:#75715e"></span>         <span style="color:#66d9ef">if</span> <span style="color:#f92672">(</span>config<span style="color:#f92672">.</span>rank <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span><span style="color:#f92672">)</span> <span style="color:#f92672">{</span>
+            <span style="color:#75715e">// if the rank of the process is 0, then it will drive the training loop
+</span><span style="color:#75715e"></span>
+            <span style="color:#75715e">// First get a communication object for the control messages and initial rendez-vous
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">val</span> comm <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> lamp<span style="color:#f92672">.</span>distributed<span style="color:#f92672">.</span>akka<span style="color:#f92672">.</span><span style="color:#a6e22e">AkkaCommunicationServer</span><span style="color:#f92672">(</span>
+              actorSystem
+            <span style="color:#f92672">)</span>
+
+            <span style="color:#75715e">// driveDistributedTraining starts the communication cliques and starts the training loop
+</span><span style="color:#75715e"></span>            distributed<span style="color:#f92672">.</span>driveDistributedTraining<span style="color:#f92672">(</span>
+              nranks <span style="color:#66d9ef">=</span> config<span style="color:#f92672">.</span>nranks<span style="color:#f92672">,</span>
+              gpu <span style="color:#66d9ef">=</span> config<span style="color:#f92672">.</span>gpu<span style="color:#f92672">,</span>
+              controlCommunication <span style="color:#66d9ef">=</span> comm<span style="color:#f92672">,</span>
+              model <span style="color:#66d9ef">=</span> model<span style="color:#f92672">,</span>
+              optimizerFactory <span style="color:#66d9ef">=</span> <span style="color:#a6e22e">AdamW</span><span style="color:#f92672">.</span>factory<span style="color:#f92672">(</span>
+                weightDecay <span style="color:#66d9ef">=</span> simple<span style="color:#f92672">(</span><span style="color:#ae81ff">0.00</span><span style="color:#f92672">),</span>
+                learningRate <span style="color:#66d9ef">=</span> simple<span style="color:#f92672">(</span>config<span style="color:#f92672">.</span>learningRate<span style="color:#f92672">)</span>
+              <span style="color:#f92672">),</span>
+              trainBatches <span style="color:#66d9ef">=</span> trainBatches<span style="color:#f92672">,</span>
+              validationBatches <span style="color:#66d9ef">=</span> validationBatches<span style="color:#f92672">,</span>
+              maxEpochs <span style="color:#66d9ef">=</span> config<span style="color:#f92672">.</span>epochs
+            <span style="color:#f92672">)</span>
+
+          <span style="color:#f92672">}</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">{</span>
+            <span style="color:#75715e">// otherwise, if rank is &gt; 0 then the process on which this is executing
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">// will follow the driver, i.e. react to the requests of the driver process
+</span><span style="color:#75715e"></span>
+            <span style="color:#75715e">// to join the communication clique of the driver we have to specify the network 
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">// coordinates where to find the driver
+</span><span style="color:#75715e"></span>            <span style="color:#66d9ef">val</span> comm <span style="color:#66d9ef">=</span> <span style="color:#66d9ef">new</span> lamp<span style="color:#f92672">.</span>distributed<span style="color:#f92672">.</span>akka<span style="color:#f92672">.</span><span style="color:#a6e22e">AkkaCommunicationClient</span><span style="color:#f92672">(</span>
+              actorSystem<span style="color:#f92672">,</span>
+              config<span style="color:#f92672">.</span>rootAddress<span style="color:#f92672">,</span>
+              config<span style="color:#f92672">.</span>rootPort<span style="color:#f92672">,</span>
+              <span style="color:#e6db74">&#34;cifar-0&#34;</span><span style="color:#f92672">,</span>
+              <span style="color:#ae81ff">600</span> seconds
+            <span style="color:#f92672">)</span>
+
+            <span style="color:#75715e">// `followDistributedTraining` will join the clique and participate in the training
+</span><span style="color:#75715e"></span>            <span style="color:#75715e">// process
+</span><span style="color:#75715e"></span>            distributed<span style="color:#f92672">.</span>followDistributedTraining<span style="color:#f92672">(</span>
+              rank <span style="color:#66d9ef">=</span> config<span style="color:#f92672">.</span>rank<span style="color:#f92672">,</span>
+              nranks <span style="color:#66d9ef">=</span> config<span style="color:#f92672">.</span>nranks<span style="color:#f92672">,</span>
+              gpu <span style="color:#66d9ef">=</span> config<span style="color:#f92672">.</span>gpu<span style="color:#f92672">,</span>
+              controlCommunication <span style="color:#66d9ef">=</span> comm<span style="color:#f92672">,</span>
+              model <span style="color:#66d9ef">=</span> model<span style="color:#f92672">,</span>
+              trainBatches <span style="color:#66d9ef">=</span> trainBatches<span style="color:#f92672">,</span>
+              validationBatches <span style="color:#66d9ef">=</span> validationBatches
+            <span style="color:#f92672">)</span>
+
+          <span style="color:#f92672">}</span></code></pre></div>
+</div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  
+  
+
+  
+  <script type="text/javascript" src="/lamp/js/scripts.min.1237ff71925bb8625c97a9af8db4c54525258bedfd7c47493daaff723bea755e.js"></script>
+  
+
+  
+  
+  
+    
+  
+
+
+</body>
+
+</html>
