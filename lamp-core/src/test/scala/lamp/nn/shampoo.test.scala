@@ -5,8 +5,10 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.saddle._
 import lamp.Scope
 import lamp.STen
+import org.scalatest.compatible.Assertion
 
 class ShampooSuite extends AnyFunSuite {
+  implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
 
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }

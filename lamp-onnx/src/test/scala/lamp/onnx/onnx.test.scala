@@ -71,7 +71,7 @@ class OnnxSuite extends AnyFunSuite {
       name + (if (expectNoImplemenation) " !!! No runtime implementation !!!"
               else "")
     ) {
-      Scope.root { implicit scope =>
+      Scope.unsafe { implicit scope =>
         val tt1 = STen.ones(shape1, tOpt)
         val tt2 = STen.ones(shape2, tOpt) * 3
         val t1 = const(tt1)

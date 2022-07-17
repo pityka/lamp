@@ -117,7 +117,7 @@ private[lamp] object SaddleTensorHelpers {
     if (arr.nonEmpty) { assert(t.copyFromDoubleArray(arr)) }
 
     if (device != CPU || precision != DoublePrecision) {
-      val t2 = Scope.leak { implicit scope =>
+      val t2 = Scope.unsafe { implicit scope =>
         t.to(device.options(precision).value, true, true)
       }
       t.release
@@ -146,7 +146,7 @@ private[lamp] object SaddleTensorHelpers {
       assert(t.copyFromFloatArray(arr))
     }
     if (device != CPU) {
-      val t2 = Scope.leak { implicit scope =>
+      val t2 = Scope.unsafe { implicit scope =>
         t.to(device.options(SinglePrecision).value, true, true)
       }
       t.release
@@ -167,7 +167,7 @@ private[lamp] object SaddleTensorHelpers {
       assert(t.copyFromDoubleArray(arr))
     }
     if (device != CPU || precision != DoublePrecision) {
-      val t2 = Scope.leak { implicit scope =>
+      val t2 = Scope.unsafe { implicit scope =>
         t.to(device.options(precision).value, true, true)
       }
       t.release
@@ -231,7 +231,7 @@ private[lamp] object SaddleTensorHelpers {
       assert(t.copyFromDoubleArray(arr))
     }
     if (device != CPU || precision != DoublePrecision) {
-      val t2 = Scope.leak { implicit scope =>
+      val t2 = Scope.unsafe { implicit scope =>
         t.to(device.options(precision).value, true, true)
       }
       t.release

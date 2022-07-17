@@ -164,7 +164,7 @@ object Ops {
         "Literal or constant converted to a tensor to match ONNX operator signatures."
       ),
       dims = d.shape,
-      dataType = Scope.leak { implicit scope =>
+      dataType = Scope.root { implicit scope =>
         d.options.scalarTypeByte match {
           case 4 => Some(ox.TensorProto.DataType.INT64.index)
           case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
@@ -248,7 +248,7 @@ trait DefaultOpSet1 extends OpSet {
           .appendInput(
             Ops.tensorFromDoubleVec(
               List(0d, 1d),
-              Scope.leak { implicit scope => op.value.options.scalarTypeByte }
+              Scope.root { implicit scope => op.value.options.scalarTypeByte }
             )
           ) :: Nil
 
@@ -256,7 +256,7 @@ trait DefaultOpSet1 extends OpSet {
         Ops(out, "Add")(nm).appendInput(
           Ops.tensorFromDoubleScalar(
             op.b,
-            Scope.leak { implicit scope =>
+            Scope.root { implicit scope =>
               op.a.options.scalarTypeByte
             }
           )
@@ -266,7 +266,7 @@ trait DefaultOpSet1 extends OpSet {
         Ops(out, "Mul")(nm).appendInput(
           Ops.tensorFromDoubleScalar(
             op.b,
-            Scope.leak { implicit scope =>
+            Scope.root { implicit scope =>
               op.a.options.scalarTypeByte
             }
           )
@@ -298,7 +298,7 @@ trait DefaultOpSet1 extends OpSet {
         Ops(out, "Pow")(nm).appendInput(
           Ops.tensorFromDoubleScalar(
             op.exponent,
-            Scope.leak { implicit scope =>
+            Scope.root { implicit scope =>
               op.a.options.scalarTypeByte
             }
           )

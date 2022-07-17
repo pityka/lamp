@@ -144,6 +144,7 @@ class TransformerSuite extends AnyFunSuite {
       }
       println(accuracy)
       assert(accuracy > 0.6)
+      ()
     }
 
   }

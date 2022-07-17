@@ -10,12 +10,34 @@ import lamp.autograd.{param, const}
 import lamp.STenOptions
 
 import lamp.autograd.Mean
+import lamp.SinglePrecision
+import lamp.Movable
 
+/** Input to BertLoss module
+  *
+  *   - input: feature data, see documentation of BertPretrainInput
+  *   - maskedLanguageModelTarget: long tensor of (batch size, masked positions
+  *     (variable)). Values are the true tokens masked out at the positions in
+  *     input.positions
+  *   - wholeSentenceTarget: float tensor of size (batch size). Values are truth
+  *     targets for the whole sentence loss which is a BCEWithLogitLoss. Values
+  *     are floats in [0,1].
+  *
+  * @param input
+  * @param maskedLanguageModelTarget
+  * @param wholeSentenceTarget
+  */
 case class BertLossInput(
     input: BertPretrainInput,
     maskedLanguageModelTarget: STen,
     wholeSentenceTarget: STen
 )
+
+object BertLossInput {
+  implicit val movable: Movable[BertLossInput] = Movable.by(v =>
+    (v.input, v.maskedLanguageModelTarget, v.wholeSentenceTarget)
+  )
+}
 
 case class BertLoss(
     pretrain: BertPretrainModule,
@@ -28,7 +50,7 @@ case class BertLoss(
     val (l1, _) =
       mlmLoss
         .apply(
-          output.languageModelScores.flatten(0, 1).logSoftMax(1),
+          output.languageModelScores.flatten(0, 1),
           x.maskedLanguageModelTarget.view(-1L)
         )
 
@@ -42,6 +64,35 @@ case class BertLoss(
 
 object BertLoss {
 
+  /** Allocate Bert module
+    *
+    * @param maxLength
+    *   Total sequence length including cls, sep and potential pad tokens
+    * @param vocabularySize
+    *   Total vocabulary size including cls, sep, pad, mask tokens
+    * @param segmentVocabularySize
+    *   Vocabulary size of the segment features
+    * @param mlmHiddenDim
+    *   Hidden dimension of the masked language model decoder
+    * @param wholeStentenceHiddenDim
+    *   Hidden dimension of the whole sentence task decoder
+    * @param numBlocks
+    *   Number of transformer blocks
+    * @param embeddingDim
+    *   Width of the initial embedding dimension, as well as the output width of
+    *   the feed forward network in each transformer block
+    * @param attentionHiddenPerHeadDim
+    * @param attentionNumHeads
+    * @param bertEncoderMlpHiddenDim
+    *   Hidden dimension within transformer blocks
+    * @param dropout
+    * @param padToken
+    *   pad will be ignored
+    * @param tOpt
+    * @param linearized
+    *   Whether to use linearized self attention
+    * @return
+    */
   def apply[S: Sc](
       maxLength: Int,
       vocabularySize: Int,
@@ -56,7 +107,8 @@ object BertLoss {
       dropout: Double,
       padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      positionEmbedding: Option[STen]
   ): BertLoss = BertLoss(
     pretrain = BertPretrainModule(
       maxLength = maxLength,
@@ -72,7 +124,8 @@ object BertLoss {
       dropout = dropout,
       padToken = padToken,
       tOpt = tOpt,
-      linearized = linearized
+      linearized = linearized,
+      positionEmbedding = positionEmbedding
     ),
     mlmLoss = LossFunctions.NLL(
       numClasses = vocabularySize,
@@ -103,12 +156,48 @@ object BertLoss {
 
 }
 
+/** Input for BERT pretrain module
+  *
+  *   - Tokens: Long tensor of size (batch, sequence length). Sequence length
+  *     includes cls and sep tokens. Values are tokens of the input vocabulary
+  *     and 4 additional control tokens: cls, sep, pad, mask. First token must
+  *     be cls.
+  *   - Segments: Long tensor of size (batch, sequence length). Values are
+  *     segment tokens.
+  *   - Positions: Long tensor of size (batch, mask size (variable)). Values are
+  *     indices in [0,sequence length) selecting masked sequence positions. They
+  *     never select positions of cls, sep, pad.
+  *
+  * @param tokens
+  * @param segments
+  * @param positions
+  */
 case class BertPretrainInput(
-    tokens: Variable,
-    segments: Variable,
+    tokens: Constant,
+    segments: Constant,
     positions: STen
 )
 
+object BertPretrainInput {
+  implicit val movable: Movable[BertPretrainInput] =
+    Movable.by(v => (v.tokens, v.segments, v.positions))
+}
+
+/** Output of BERT
+  *
+  *   - encoded: float tensor of size (batch, sequence length, embedding
+  *     dimension ) holds per token embeddings
+  *   - languageModelScores: float tensor of size (batch, sequence length,
+  *     vocabulary size) holds per token log probability distributions (from
+  *     logSoftMax)
+  *   - wholeSentenceBinaryClassifierScore: float tensor of size (batch) holds
+  *     the output score of the whole sentence prediction task suitable for
+  *     BCELogitLoss
+  *
+  * @param encoded
+  * @param languageModelScores
+  * @param wholeSentenceBinaryClassifierScore
+  */
 case class BertPretrainOutput(
     encoded: Variable,
     languageModelScores: Variable,
@@ -125,7 +214,7 @@ case class BertPretrainModule(
   def forward[S: Sc](x: BertPretrainInput): BertPretrainOutput = {
 
     val encoded = encoder.forward((x.tokens, x.segments))
-    val mlmScores = mlm.forward((encoded, x.positions))
+    val mlmScores = mlm.forward((encoded, x.positions)).logSoftMax(dim = 2)
     val encodedClsPosition = encoded.select(dim = 1, index = 0)
     val binaryScore =
       wholeSentenceBinaryClassifier.forward(encodedClsPosition).view(List(-1L))
@@ -164,7 +253,8 @@ object BertPretrainModule {
       dropout: Double,
       padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      positionEmbedding: Option[STen]
   ): BertPretrainModule = BertPretrainModule(
     encoder = BertEncoder(
       maxLength = maxLength,
@@ -178,7 +268,8 @@ object BertPretrainModule {
       dropout = dropout,
       padToken = padToken,
       tOpt = tOpt,
-      linearized = linearized
+      linearized = linearized,
+      positionEmbedding = positionEmbedding
     ),
     mlm = MaskedLanguageModelModule(
       inputDim = embeddingDim,
@@ -188,7 +279,7 @@ object BertPretrainModule {
     ),
     wholeSentenceBinaryClassifier = sequence(
       Linear(embeddingDim, wholeStentenceHiddenDim, tOpt),
-      Fun(_ => _.tanh),
+      Fun(scope => _.tanh(scope)),
       Linear(wholeStentenceHiddenDim, 1, tOpt)
     )
   )
@@ -261,7 +352,7 @@ object MaskedLanguageModelModule {
   ): MaskedLanguageModelModule = MaskedLanguageModelModule(
     sequence(
       Linear(inputDim, hiddenDim, tOpt),
-      Fun(_ => _.relu),
+      Fun(scope => _.relu(scope)),
       LayerNorm(List(hiddenDim), tOpt),
       Linear(hiddenDim, vocabularySize, tOpt)
     )
@@ -388,6 +479,9 @@ object BertEncoder {
     *   ignored, padding is not the same as masking
     * @param tOpt
     *   tensor options
+    * @param positionEmbedding optional float tensor of size (sequence length, embedding dimension)
+    *   if missing the absolute positional embeddings from Vaswani et al 2017 is used
+    *   Following the Bert paper the position embeddings are summed
     * @return
     *   a module
     */
@@ -403,7 +497,8 @@ object BertEncoder {
       dropout: Double,
       padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      positionEmbedding: Option[STen]
   ): BertEncoder =
     BertEncoder(
       tokenEmbedding = Embedding.apply(
@@ -416,8 +511,16 @@ object BertEncoder {
         dimensions = embeddingDim,
         tOpt = tOpt
       ),
-      positionalEmbedding =
-        param(STen.normal(0d, 1d, List(1, maxLength, embeddingDim), tOpt)),
+      positionalEmbedding = param(
+        positionEmbedding.getOrElse(PositionalEmbedding
+          .vaswani(
+            sequenceLength = maxLength,
+            dimension = embeddingDim,
+            device = lamp.Device.fromOptions(tOpt),
+            SinglePrecision
+          ))
+          .unsqueeze(0)
+      ),
       blocks = 0 until numBlocks map (_ =>
         TransformerEncoderBlock(
           in = embeddingDim,

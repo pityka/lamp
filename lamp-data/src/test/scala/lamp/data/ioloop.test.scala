@@ -111,6 +111,7 @@ class IOLoopSuite extends AnyFunSuite {
       assert(learningCurve.size == 70)
 
       assert(loss < 50)
+      ()
     }
   }
   test1("mnist tabular mini batch") { cuda =>
@@ -181,6 +182,7 @@ class IOLoopSuite extends AnyFunSuite {
         )
       val loss = acc.toDoubleArray.head / n
       assert(loss < 50)
+      ()
     }
   }
   test1("mnist tabular mini batch gradient accum") { cuda =>
@@ -252,6 +254,7 @@ class IOLoopSuite extends AnyFunSuite {
         )
       val loss = acc.toDoubleArray.head / n
       assert(loss < 50)
+      ()
     }
   }
 }

@@ -57,6 +57,7 @@ class GCNSuite extends AnyFunSuite {
         (c mm nodesM)
       }
       assert(output.roundTo(4) == expected.roundTo(4))
+      ()
     }
   }
 
@@ -119,6 +120,7 @@ class GCNSuite extends AnyFunSuite {
         ((c mm nodesM mm weight) + bias).map(v => math.max(0, v))
       }
       assert(output.roundTo(4) == expected.roundTo(4))
+      ()
     }
   }
 
@@ -278,6 +280,7 @@ class GCNSuite extends AnyFunSuite {
       }
       println(accuracy)
       assert(accuracy > 0.7)
+      ()
     }
 
     tensorLogger.cancel()
@@ -343,6 +346,7 @@ class GCNSuite extends AnyFunSuite {
           0L, 1L, 1L, 1L, 1L, 1L)
       )
       assert(batchTarget.sizes.toList == List(2))
+      ()
     }
   }
   test1("forward/backward") { cuda =>
@@ -414,6 +418,7 @@ class GCNSuite extends AnyFunSuite {
           nodesStatesM.row(5, 6, 7, 8, 9).reduceCols((v, _) => v.mean)
         ).T
       )
+      ()
 
     }
   }

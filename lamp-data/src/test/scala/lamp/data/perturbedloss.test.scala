@@ -124,7 +124,7 @@ class PerturbedLossSuite extends AnyFunSuite {
       val loss = acc.toDoubleArray.head / numExamples
       println(loss)
       assert(loss < 0.25)
-
+      ()
     }
 
     ()

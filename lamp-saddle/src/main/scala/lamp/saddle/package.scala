@@ -109,5 +109,19 @@ package object saddle {
     def toLongVec = value.toLongArray.toVec
 
   }
+  implicit val mD: EmptyMovable[Mat[Double]] = Movable.empty
+  implicit val mI: EmptyMovable[Mat[Int]] = Movable.empty
+  implicit val mF: EmptyMovable[Mat[Float]] = Movable.empty
+  implicit val mBool: EmptyMovable[Mat[Boolean]] = Movable.empty
+  implicit val mByte: EmptyMovable[Mat[Byte]] = Movable.empty
+  implicit val mL: EmptyMovable[Mat[Long]] = Movable.empty
+  implicit val mS: EmptyMovable[Mat[Short]] = Movable.empty
 
+  implicit val vD: EmptyMovable[Vec[Double]] = Movable.empty
+  implicit val vI: EmptyMovable[Vec[Int]] = Movable.empty
+  implicit val vF: EmptyMovable[Vec[Float]] = Movable.empty
+  implicit val vBool: EmptyMovable[Vec[Boolean]] = Movable.empty
+  implicit val vByte: EmptyMovable[Vec[Byte]] = Movable.empty
+  implicit val vL: EmptyMovable[Vec[Long]] = Movable.empty
+  implicit val vS: EmptyMovable[Mat[Short]] = Movable.empty
 }

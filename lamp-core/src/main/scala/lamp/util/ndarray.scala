@@ -5,6 +5,8 @@ import scala.reflect.ClassTag
 import aten.ATen
 import aten.Tensor
 import lamp.STenOptions
+import lamp.EmptyMovable
+import lamp.Movable
 
 /** INTERNAL API
   *
@@ -147,4 +149,7 @@ private[lamp] object NDArray {
       if (t != t0) { t.release }
     }
   }
+
+  @scala.annotation.nowarn
+  implicit def m[T:EmptyMovable] : EmptyMovable[NDArray[T]] = Movable.empty
 }

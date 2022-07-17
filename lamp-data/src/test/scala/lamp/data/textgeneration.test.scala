@@ -97,6 +97,7 @@ class TextGenerationSuite extends AnyFunSuite {
         .unsafeRunSync()
 
       assert(learningCurve.last._2 < 3d)
+      ()
     }
   }
   test("text learning", SlowTest) {
@@ -211,6 +212,7 @@ class TextGenerationSuite extends AnyFunSuite {
       )
 
       assert(learningCurve.last._2 < 8d)
+      ()
     }
   }
 

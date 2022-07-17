@@ -99,6 +99,7 @@ class DataParallelLoopSuite extends AnyFunSuite {
       val loss = acc.toDoubleArray.head / n
       println(loss)
       assert(loss < 1.5)
+      ()
     }
   }
 }

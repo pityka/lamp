@@ -1,0 +1,10 @@
+
+.git/*
+.metals/*
+.bloop/*
+.github/*
+.bsp/*
+*class
+example-arxiv/*
+*scala
+*tasty

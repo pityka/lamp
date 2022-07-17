@@ -6,6 +6,7 @@ import lamp.Scope
 import lamp.scope
 import lamp.STen
 import lamp.Movable
+import lamp.EmptyMovable
 
 case class Recursive[A, M <: GenericModule[A, A]](
     member: M with GenericModule[A, A],
@@ -294,7 +295,7 @@ trait PTag {
   def leaf: PTag
 }
 object PTag {
-  implicit def isMovable : Movable[PTag] = Movable.empty[PTag]
+  implicit val isMovable : EmptyMovable[PTag] = Movable.empty[PTag]
 }
 trait LeafTag extends PTag {
   def leaf: PTag = this
