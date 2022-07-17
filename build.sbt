@@ -85,7 +85,7 @@ val upickleVersion = "1.6.0"
 val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.8.2"
 val catsEffectVersion = "3.3.14"
-val catsCoreVersion = "2.7.0"
+val catsCoreVersion = "2.8.0"
 val jsoniterscalaVersion = "2.13.36"
 
 lazy val saddlecompat = project
@@ -122,7 +122,6 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "org.scala-lang.modules" %% "scala-collection-compat" % "2.7.0",
       "io.github.pityka" %% "aten-scala-core" % "0.0.0+105-b4f09d40",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
