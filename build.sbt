@@ -223,7 +223,7 @@ lazy val onnx = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "com.microsoft.onnxruntime" % "onnxruntime" % "1.11.0" % "test"
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.12.0" % "test"
     ),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
@@ -390,7 +390,7 @@ lazy val docs = project
     ),
     ScalaUnidoc / unidoc / target := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
     cleanFiles += (ScalaUnidoc / unidoc / target).value,
-      ScalaUnidoc / unidoc / unidocProjectFilter :=
+    ScalaUnidoc / unidoc / unidocProjectFilter :=
       (inAnyProject -- inProjects(
         example_arxiv,
         example_bert,
@@ -399,8 +399,8 @@ lazy val docs = project
         example_gan,
         example_timemachine,
         example_translation,
-        e2etest,
-      )),
+        e2etest
+      ))
   )
   .enablePlugins(MdocPlugin, ScalaUnidocPlugin)
 
