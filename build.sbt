@@ -86,7 +86,7 @@ val scalaTestVersion = "3.2.10"
 val scribeVersion = "3.8.2"
 val catsEffectVersion = "3.3.14"
 val catsCoreVersion = "2.8.0"
-val jsoniterscalaVersion = "2.13.36"
+val jsoniterscalaVersion = "2.13.39"
 
 lazy val saddlecompat = project
   .in(file("lamp-saddle"))
@@ -390,7 +390,7 @@ lazy val docs = project
     ),
     ScalaUnidoc / unidoc / target := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
     cleanFiles += (ScalaUnidoc / unidoc / target).value,
-      ScalaUnidoc / unidoc / unidocProjectFilter :=
+    ScalaUnidoc / unidoc / unidocProjectFilter :=
       (inAnyProject -- inProjects(
         example_arxiv,
         example_bert,
@@ -399,8 +399,8 @@ lazy val docs = project
         example_gan,
         example_timemachine,
         example_translation,
-        e2etest,
-      )),
+        e2etest
+      ))
   )
   .enablePlugins(MdocPlugin, ScalaUnidocPlugin)
 
