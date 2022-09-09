@@ -107,8 +107,8 @@ lazy val akkacommunicator = project
   .settings(
     name := "lamp-akka",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-actor" % "2.6.19" % Provided,
-      "com.typesafe.akka" %% "akka-remote" % "2.6.19" % Provided,
+      "com.typesafe.akka" %% "akka-actor" % "2.6.20" % Provided,
+      "com.typesafe.akka" %% "akka-remote" % "2.6.20" % Provided,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     )
   )
@@ -293,8 +293,8 @@ lazy val example_cifar100_distributed = project
     publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
-      "com.typesafe.akka" %% "akka-actor" % "2.6.19",
-      "com.typesafe.akka" %% "akka-remote" % "2.6.19",
+      "com.typesafe.akka" %% "akka-actor" % "2.6.20",
+      "com.typesafe.akka" %% "akka-remote" % "2.6.20",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
