@@ -17,7 +17,7 @@ inThisBuild(
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.13.8",
-  crossScalaVersions := Seq("2.13.8", "3.1.3"),
+  crossScalaVersions := Seq("2.13.8", "3.2.0"),
   Test / parallelExecution := false,
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((3, _)) =>
@@ -390,7 +390,7 @@ lazy val docs = project
     ),
     ScalaUnidoc / unidoc / target := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
     cleanFiles += (ScalaUnidoc / unidoc / target).value,
-      ScalaUnidoc / unidoc / unidocProjectFilter :=
+    ScalaUnidoc / unidoc / unidocProjectFilter :=
       (inAnyProject -- inProjects(
         example_arxiv,
         example_bert,
@@ -399,8 +399,8 @@ lazy val docs = project
         example_gan,
         example_timemachine,
         example_translation,
-        e2etest,
-      )),
+        e2etest
+      ))
   )
   .enablePlugins(MdocPlugin, ScalaUnidocPlugin)
 
