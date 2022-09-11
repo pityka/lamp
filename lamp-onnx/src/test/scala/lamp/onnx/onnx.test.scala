@@ -316,7 +316,18 @@ class OnnxSuite extends AnyFunSuite {
     implicit scope =>
       (a, b) => {
         val bb = const(STen.zeros(List(1), STenOptions.f))
-        new Conv1D(scope, a, b, bb, 1, 1, 1, 1).value
+        new Convolution(
+          scope = scope,
+          input = a,
+          weight = b,
+          bias = bb,
+          stride = Array(1),
+          padding = Array(1),
+          dilation = Array(1),
+          groups = 1,
+          outputPadding = Array(0),
+          transposed = false
+        ).value
       }
   )
   testBinaryOps(
@@ -326,7 +337,18 @@ class OnnxSuite extends AnyFunSuite {
     implicit scope =>
       (a, b) => {
         val bb = const(STen.zeros(List(1), STenOptions.f))
-        new Conv2D(scope, a, b, bb, 1, 1, 1, 1).value
+        new Convolution(
+          scope = scope,
+          input = a,
+          weight = b,
+          bias = bb,
+          stride = Array(1, 1),
+          padding = Array(1, 1),
+          dilation = Array(1, 1),
+          groups = 1,
+          outputPadding = Array(0, 0),
+          transposed = false
+        ).value
       }
   )
   testBinaryOps(

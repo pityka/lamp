@@ -7,8 +7,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.autograd.NDArraySyntax._
 import aten.ATen
 import lamp.autograd.{
-  Conv2D => _,
-  Conv1D => _,
   BatchNorm => _,
   BatchNorm2D => _,
   Embedding => _,
