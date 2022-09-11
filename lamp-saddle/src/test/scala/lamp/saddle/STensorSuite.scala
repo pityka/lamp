@@ -8,7 +8,8 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.compatible.Assertion
 
 class STenSuite extends AnyFunSuite {
-  implicit def AssertionIsMovable : EmptyMovable[Assertion] = Movable.empty[Assertion]
+  implicit def AssertionIsMovable: EmptyMovable[Assertion] =
+    Movable.empty[Assertion]
 
   test("from empty long") {
     Scope.root { implicit scope =>

@@ -14,7 +14,7 @@ import lamp.nn.LoadSyntax
 
 object Reader {
 
- private[lamp]  def readTensorListDescriptorFromChannel(
+  private[lamp] def readTensorListDescriptorFromChannel(
       channel: ReadableByteChannel
   ): schemas.TensorList = {
     val is = Channels.newInputStream(channel)
@@ -22,7 +22,7 @@ object Reader {
       .readFromStream[schemas.TensorList](is)
   }
 
- private[lamp]  def readTensorListDescriptorFromFile(
+  private[lamp] def readTensorListDescriptorFromFile(
       file: File
   ): schemas.TensorList = {
     val fis = new FileInputStream(file)
@@ -59,7 +59,7 @@ object Reader {
 
   }
 
- def readTensorsFromFile(
+  def readTensorsFromFile(
       file: File,
       device: Device,
       pin: Boolean
@@ -89,7 +89,7 @@ object Reader {
 
   }
 
- private[lamp]  def readFully(bb: ByteBuffer, channel: ReadableByteChannel) = {
+  private[lamp] def readFully(bb: ByteBuffer, channel: ReadableByteChannel) = {
     bb.clear
     var i = 0
     while (bb.hasRemaining && i >= 0) {

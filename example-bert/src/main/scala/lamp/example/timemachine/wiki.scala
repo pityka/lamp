@@ -182,28 +182,26 @@ object Train extends App {
           lamp.data.bert.minibatchesFromParagraphs(
             minibatchSize = config.trainBatchSize,
             dropLast = true,
-              paragraphs = trainParagraphs,
-              maximumTokenId = maxToken,
-              clsToken = clsToken,
-              sepToken = sepToken,
-              padToken = padToken,
-              maskToken = maskToken,
-              maxLength = maxLength,
-            
+            paragraphs = trainParagraphs,
+            maximumTokenId = maxToken,
+            clsToken = clsToken,
+            sepToken = sepToken,
+            padToken = padToken,
+            maskToken = maskToken,
+            maxLength = maxLength,
             rng = rng
           )
         val validEpochs = (_: IOLoops.TrainingLoopContext) =>
           lamp.data.bert.minibatchesFromParagraphs(
             minibatchSize = config.trainBatchSize,
             dropLast = true,
-              paragraphs = validParagraphs,
-              maximumTokenId = maxToken,
-              clsToken = clsToken,
-              sepToken = sepToken,
-              padToken = padToken,
-              maskToken = maskToken,
-              maxLength = maxLength,
-            
+            paragraphs = validParagraphs,
+            maximumTokenId = maxToken,
+            clsToken = clsToken,
+            sepToken = sepToken,
+            padToken = padToken,
+            maskToken = maskToken,
+            maxLength = maxLength,
             rng = rng
           )
 

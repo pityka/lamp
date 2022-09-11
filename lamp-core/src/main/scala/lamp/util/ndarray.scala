@@ -27,7 +27,7 @@ private[lamp] case class NDArray[@specialized(Long, Double, Float) T](
   }
   def shapeOffsets = shape.drop(1).reverse.scanLeft(1)(_ * _).reverse
   def toArray = data
-  
+
   override def toString = s"NDArray(${data.toVector},$shape)"
   def mapWithIndex[@specialized(Long, Double, Float) B: ClassTag](
       f: (T, List[Int]) => B
@@ -151,5 +151,5 @@ private[lamp] object NDArray {
   }
 
   @scala.annotation.nowarn
-  implicit def m[T:EmptyMovable] : EmptyMovable[NDArray[T]] = Movable.empty
+  implicit def m[T: EmptyMovable]: EmptyMovable[NDArray[T]] = Movable.empty
 }

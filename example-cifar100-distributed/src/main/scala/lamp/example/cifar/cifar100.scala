@@ -60,7 +60,7 @@ case class CliConfig(
 )
 
 object Train {
-  def main(args: Array[String]) : Unit = {
+  def main(args: Array[String]): Unit = {
     scribe.info("Logger start")
     import scopt.OParser
     val builder = OParser.builder[CliConfig]

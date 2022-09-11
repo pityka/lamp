@@ -9,7 +9,8 @@ import lamp.nn.graph.MPNN
 import org.scalatest.compatible.Assertion
 
 class MPNNSuite extends AnyFunSuite {
-implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
+  implicit val AssertionIsMovable: lamp.EmptyMovable[Assertion] =
+    lamp.Movable.empty[Assertion]
   test("count occurrences") {
     Scope.root { implicit scope =>
       val t = STen.fromLongArray(Array(1L, 1L, 2L, 1L, 3L, 2L, 1L))
