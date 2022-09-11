@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: 'pityka/base-ubuntu-libtorch:torch112'
+      image: 'pityka/base-ubuntu-libtorch:torch1121'
       env: 
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       
