@@ -17,14 +17,9 @@ jobs:
       
     
     steps:
-    - uses: actions/checkout@v1
-    - name: Setup JDK
-      uses: actions/setup-java@v3
-      with:
-        distribution: temurin
-        java-version: 17    
+    - uses: actions/checkout@v1   
     - name: Compile
-      run: sbt -mem 3000 clean +test  
+      run: ./sbt -mem 3000 clean +test  
     - name: website
       run: |
         curl -L https://github.com/gohugoio/hugo/releases/download/v0.59.1/hugo_extended_0.59.1_Linux-64bit.tar.gz | tar xzf - 
