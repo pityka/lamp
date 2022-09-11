@@ -19,7 +19,7 @@ import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
-import lamp.saddle._
+import lamp.saddle._ 
 
 class EndToEndClassificationSuite extends AnyFunSuite {
 

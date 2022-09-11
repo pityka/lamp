@@ -683,7 +683,7 @@ case class STen private (
   def values[S: Sc] = value.values.owned
 
   /** Returns true if data type is double */
-  def isDouble = Scope.root { implicit scope => options.isDouble }
+  def isDouble = Scope.root{ implicit scope => options.isDouble }
 
   /** Returns true if data type is float */
   def isFloat = Scope.root { implicit scope => options.isFloat }
@@ -873,9 +873,9 @@ case class STen private (
     case 1 => castToByte
   }
 
-  /** Casts to byte. signed 8-bit integer (like Scala's Byte) This is called
-    * Char in libtorch
-    */
+  /** Casts to byte. signed 8-bit integer (like Scala's Byte)
+   * This is called Char in libtorch
+   */
   def castToByte[S: Sc] = owned(ATen._cast_Char(value, true))
 
   /** Casts to float */

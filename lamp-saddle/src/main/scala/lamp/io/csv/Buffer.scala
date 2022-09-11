@@ -1,6 +1,6 @@
 /** This code is copied with modifications from
   * https://github.com/denisrosset/meta The MIT License (MIT)
-  * \=====================
+  * =====================
   *
   * Copyright (c) 2015 Denis Rosset Hash set and hash map implementations based
   * on code (c) 2012-2014 Eirk Osheim
