@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, Constant, param, Conv2D => Conv2dOp, const}
+import lamp.autograd.{Variable, Constant, param, Convolution, const}
 import lamp.STenOptions
 import lamp.Sc
 import lamp.scope
@@ -20,22 +20,25 @@ case class Conv2D(
   )
 
   def forward[S: Sc](x: Variable): Variable =
-    new Conv2dOp(
-      scope,
-      x,
-      weights,
-      bias,
-      stride,
-      padding,
-      dilation,
-      groups
+    new Convolution(
+      scope = scope,
+      input = x,
+      weight = weights,
+      bias = bias,
+      stride = Array(stride, stride),
+      padding = Array(padding, padding),
+      dilation = Array(dilation, dilation),
+      transposed = false,
+      outputPadding = Array(0, 0),
+      groups = groups
     ).value
 
 }
 
 object Conv2D {
-  implicit val trainingMode : TrainingMode[Conv2D] = TrainingMode.identity[Conv2D]
-  implicit val load : Load[Conv2D]  = Load.make[Conv2D](m =>
+  implicit val trainingMode: TrainingMode[Conv2D] =
+    TrainingMode.identity[Conv2D]
+  implicit val load: Load[Conv2D] = Load.make[Conv2D](m =>
     parameters => {
       m.weights.value.copyFrom(parameters.head)
       m.bias.value.copyFrom(parameters(1))

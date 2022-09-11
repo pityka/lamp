@@ -279,7 +279,7 @@ object STen {
       steps: Long,
       tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.linspace(start, end, steps, tensorOptions.value))
+    owned(ATen.linspace_0(start, end, steps, tensorOptions.value))
   def sparse_coo[S: Sc](
       indices: STen,
       values: STen,
@@ -410,6 +410,16 @@ object STen {
     ATen
       .addcmul_out(out.value, self.value, tensor1.value, tensor2.value, alpha)
 
+  def indexCopyOut(
+      out: STen,
+      self: STen,
+      dim: Int,
+      index: STen,
+      source: STen
+  ): Unit =
+    ATen
+      .index_copy_out(out.value, self.value, dim, index.value, source.value)
+
   def tanh_backward[S: Sc](gradOutput: STen, output: STen) =
     ATen.tanh_backward(gradOutput.value, output.value).owned
 
@@ -417,16 +427,14 @@ object STen {
       gradOutput: STen,
       self: STen,
       beta: Double,
-      threshold: Double,
-      output: STen
+      threshold: Double
   ) =
     owned(
       ATen.softplus_backward(
         gradOutput.value,
         self.value,
         beta,
-        threshold,
-        output.value
+        threshold
       )
     )
 
@@ -683,7 +691,7 @@ case class STen private (
   def values[S: Sc] = value.values.owned
 
   /** Returns true if data type is double */
-  def isDouble = Scope.root{ implicit scope => options.isDouble }
+  def isDouble = Scope.root { implicit scope => options.isDouble }
 
   /** Returns true if data type is float */
   def isFloat = Scope.root { implicit scope => options.isFloat }
@@ -873,9 +881,9 @@ case class STen private (
     case 1 => castToByte
   }
 
-  /** Casts to byte. signed 8-bit integer (like Scala's Byte)
-   * This is called Char in libtorch
-   */
+  /** Casts to byte. signed 8-bit integer (like Scala's Byte) This is called
+    * Char in libtorch
+    */
   def castToByte[S: Sc] = owned(ATen._cast_Char(value, true))
 
   /** Casts to float */
@@ -1365,7 +1373,9 @@ case class STen private (
     owned(ATen.argsort(value, dim, descending))
 
   def choleskyLower[S: Sc] =
-    owned(ATen.linalg_cholesky(value))
+    owned(ATen.linalg_cholesky(value, false))
+  def cholesky[S: Sc](upper: Boolean) =
+    owned(ATen.linalg_cholesky(value, upper))
   def choleskyInverse[S: Sc](upper: Boolean) =
     owned(ATen.cholesky_inverse(value, upper))
   def choleskySolve[S: Sc](choleskyFactor: STen, upper: Boolean) =
@@ -1475,9 +1485,6 @@ case class STen private (
     ATen
       .index_copy(value, dim, index.value, source.value)
       .owned
-  def index_copy_(dim: Int, index: STen, source: STen): Unit =
-    ATen
-      ._index_copy_(value, dim, index.value, source.value)
 
   def matrixPower[S: Sc](n: Int) =
     ATen.matrix_power(value, n).owned
