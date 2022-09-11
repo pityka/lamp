@@ -29,6 +29,8 @@ jobs:
         ../hugo
         cd public
         touch .nojekyll
+    - name: install git
+      run: apt-get update && apt-get install -y git
     - name: gh-pages-deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
