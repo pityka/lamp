@@ -18,27 +18,27 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1   
+    - name: install git
+      run: apt-get update && apt-get install -y git    
     - name: Compile
       run: sbt -mem 3000 clean +test  
     - name: website
       run: |
-        wget -O - https://github.com/gohugoio/hugo/releases/download/v0.59.1/hugo_extended_0.59.1_Linux-64bit.tar.gz | tar xzf - 
+        wget -O - https://github.com/gohugoio/hugo/releases/download/v0.59.1/hugo_extended_0.59.1_Linux-64bit.tar.gz | tar xzf - hugo
         chmod u+x hugo
         sbt clean docs/mdoc docs/unidoc
         cd website
         ../hugo
+        rm ../hugo
         cd public
         touch .nojekyll
-    - name: install git
-      run: apt-get update && apt-get install -y git
+
     - name: gh-pages-deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
         publish_dir: ./website/public
-    - name: git reset
-      run: git restore README.md LICENSE
     - name: Publish
       run: sbt -mem 3000 clean ci-release
       env:
