@@ -18,10 +18,5 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-    - name: Setup JDK
-      uses: actions/setup-java@v3
-      with:
-        distribution: temurin
-        java-version: 17
     - name: Compile
-      run: sbt -mem 3000 clean +test docs/mdoc docs/unidoc
+      run: ./sbt -mem 3000 clean +test docs/mdoc docs/unidoc
