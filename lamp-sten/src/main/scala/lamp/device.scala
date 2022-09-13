@@ -146,6 +146,28 @@ case object CPU extends Device {
     precision.convertOption(STenOptions.d)
 
 }
+case object MPS extends Device {
+  def measureTime[A](f: => A): (A, Long) = {
+    val t1 = System.nanoTime
+    val r = f
+    val t2 = System.nanoTime
+    (r, t2 - t1)
+  }
+  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = f
+  def to[S: Sc](t: STenOptions): STenOptions = t.mps
+  def to(t: Tensor) = {
+    val tmp = t.options()
+    val tmp2 = tmp.device(STenOptions.deviceTypeMps,0)
+    val r = t.to(tmp2,true,true)
+    tmp.release 
+    tmp2.release 
+    r
+  }
+  def setSeed(seed: Long) = Tensor.manual_seed_mps(seed)
+  def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
+    precision.convertOption(STenOptions.d.mps)
+
+}
 case class CudaDevice(i: Int) extends Device {
 
   def measureTime[A](f: => A): (A, Long) = {

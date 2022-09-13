@@ -547,6 +547,9 @@ case class STenOptions(value: aten.TensorOptions) {
   /** Returns a copy with device set to cuda:0 */
   def cuda[S: Sc] = cudaIndex(0)
 
+  /** Returns a copy with device set to mps:0 */
+  def mps[S:Sc] = value.device(STenOptions.deviceTypeMps,0).owned
+
   def isDouble = value.isDouble
   def isFloat = value.isFloat
   def isByte = value.isByte
@@ -577,6 +580,10 @@ object STenOptions {
 
   /** Returns an tensor option specifying CPU and double */
   def b = STen.bOptions
+
+  val deviceTypeCpu : Byte = 0 
+  val deviceTypeCuda : Byte = 1
+  val deviceTypeMps : Byte = 13
 
   /** Returns an tensor option specifying CPU and dtype corresponding to the
     * given byte
@@ -1643,10 +1650,10 @@ case class STen private (
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
 
-  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned() else false
+  def isPinned = if (aten.Tensor.hasCuda()) value.is_pinned() else false
 
   def pin[S: Sc] =
-    if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned else this
+    if (aten.Tensor.hasCuda()) value.pin_memory().owned else this
 
 }
 
