@@ -42,10 +42,7 @@ This repository also hosts some other loosely related libraries.
 
 # Platforms
 
-Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.9.0 shared libraries in its linker path.
-
-On mac it suffices to copy the shared libraries from `https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.9.0.zip` to e.g. `/usr/local/lib/`.
-On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile).
+Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac (both x86 and M1) and Linux. Mac has no GPU support. Your system has to have the libtorch 1.12.1 shared libraries in `/usr/local/lib/`. See the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile) on how to do that.
 
 # Dependencies
 

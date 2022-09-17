@@ -122,7 +122,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+106-60284546",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+109-227b5d12",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
@@ -302,19 +302,6 @@ lazy val example_cifar100_distributed = project
   .dependsOn(core, data, onnx, saddlecompat, akkacommunicator)
   .enablePlugins(JavaAppPackaging)
 
-lazy val example_gan = project
-  .in(file("example-gan"))
-  .settings(commonSettings: _*)
-  .settings(
-    publishArtifact := false,
-    publish / skip := true,
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
-      "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.outr" %% "scribe" % scribeVersion
-    )
-  )
-  .dependsOn(core, data, onnx, saddlecompat)
 lazy val example_timemachine = project
   .in(file("example-timemachine"))
   .settings(commonSettings: _*)
@@ -396,7 +383,6 @@ lazy val docs = project
         example_bert,
         example_cifar100,
         example_cifar100_distributed,
-        example_gan,
         example_timemachine,
         example_translation,
         e2etest,
@@ -427,7 +413,6 @@ lazy val root = project
     example_timemachine,
     example_translation,
     example_arxiv,
-    example_gan,
     example_bert,
     e2etest
   )
