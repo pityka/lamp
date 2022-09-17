@@ -23,4 +23,4 @@ jobs:
       with:
         fetch-depth: 0   
     - name: Compile
-      run: sbt version
+      run: git fetch --tags && sbt version
