@@ -111,7 +111,7 @@ object Train extends App {
       scribe.info(s"Config: $config")
       Scope.root { implicit scope =>
         val device =
-          if (config.cuda && aten.Tensor.cudnnAvailable()) CudaDevice(0)
+          if (config.cuda && aten.Tensor.hasCuda()) CudaDevice(0)
           else CPU
         val precision = SinglePrecision
         val tensorOptions = device.options(precision)
