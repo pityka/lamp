@@ -548,7 +548,7 @@ case class STenOptions(value: aten.TensorOptions) {
   def cuda[S: Sc] = cudaIndex(0)
 
   /** Returns a copy with device set to mps:0 */
-  def mps[S:Sc] = value.device(STenOptions.deviceTypeMps,0).owned
+  def mps[S: Sc] = value.device(STenOptions.deviceTypeMps, 0).owned
 
   def isDouble = value.isDouble
   def isFloat = value.isFloat
@@ -581,9 +581,9 @@ object STenOptions {
   /** Returns an tensor option specifying CPU and double */
   def b = STen.bOptions
 
-  val deviceTypeCpu : Byte = 0 
-  val deviceTypeCuda : Byte = 1
-  val deviceTypeMps : Byte = 13
+  val deviceTypeCpu: Byte = 0
+  val deviceTypeCuda: Byte = 1
+  val deviceTypeMps: Byte = 13
 
   /** Returns an tensor option specifying CPU and dtype corresponding to the
     * given byte

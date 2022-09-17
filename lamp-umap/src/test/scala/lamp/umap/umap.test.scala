@@ -23,7 +23,7 @@ class UmapSuite extends AnyFunSuite {
       val row1 = data.row(rowIdx)
       row.map { idx2 =>
         val row2 = data.row(idx2)
-                val d = {
+        val d = {
           var i = 0
           val l = row1.length
           var s = 0d

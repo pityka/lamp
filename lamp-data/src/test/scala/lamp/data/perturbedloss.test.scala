@@ -15,7 +15,7 @@ class PerturbedLossSuite extends AnyFunSuite {
       pool: Scope
   ) =
     sequence(
-      MLP(dim, k, List(64,64, 32), tOpt, dropout = 0.2),
+      MLP(dim, k, List(64, 64, 32), tOpt, dropout = 0.2),
       Fun(implicit pool => _.logSoftMax(dim = 1))
     )
 
@@ -77,16 +77,16 @@ class PerturbedLossSuite extends AnyFunSuite {
       )
 
       val rng = new scala.util.Random
-      val makeValidationBatch = {
-      (_: IOLoops.TrainingLoopContext) =>
+      val makeValidationBatch = { (_: IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           200,
           true,
           testDataTensor,
           testTarget,
           rng
-        )}
-      val makeTrainingBatch ={ (_: IOLoops.TrainingLoopContext) =>
+        )
+      }
+      val makeTrainingBatch = { (_: IOLoops.TrainingLoopContext) =>
         BatchStream.minibatchesFromFull(
           200,
           true,
@@ -96,7 +96,7 @@ class PerturbedLossSuite extends AnyFunSuite {
         )
       }
 
-        scribe.info("Start training loop")
+      scribe.info("Start training loop")
 
       val (_, trainedModel, _, _, _) = IOLoops
         .epochs(

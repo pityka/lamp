@@ -479,9 +479,10 @@ object BertEncoder {
     *   ignored, padding is not the same as masking
     * @param tOpt
     *   tensor options
-    * @param positionEmbedding optional float tensor of size (sequence length, embedding dimension)
-    *   if missing the absolute positional embeddings from Vaswani et al 2017 is used
-    *   Following the Bert paper the position embeddings are summed
+    * @param positionEmbedding
+    *   optional float tensor of size (sequence length, embedding dimension) if
+    *   missing the absolute positional embeddings from Vaswani et al 2017 is
+    *   used Following the Bert paper the position embeddings are summed
     * @return
     *   a module
     */
@@ -512,13 +513,16 @@ object BertEncoder {
         tOpt = tOpt
       ),
       positionalEmbedding = param(
-        positionEmbedding.getOrElse(PositionalEmbedding
-          .vaswani(
-            sequenceLength = maxLength,
-            dimension = embeddingDim,
-            device = lamp.Device.fromOptions(tOpt),
-            SinglePrecision
-          ))
+        positionEmbedding
+          .getOrElse(
+            PositionalEmbedding
+              .vaswani(
+                sequenceLength = maxLength,
+                dimension = embeddingDim,
+                device = lamp.Device.fromOptions(tOpt),
+                SinglePrecision
+              )
+          )
           .unsqueeze(0)
       ),
       blocks = 0 until numBlocks map (_ =>

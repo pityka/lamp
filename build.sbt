@@ -377,7 +377,7 @@ lazy val docs = project
     ),
     ScalaUnidoc / unidoc / target := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
     cleanFiles += (ScalaUnidoc / unidoc / target).value,
-      ScalaUnidoc / unidoc / unidocProjectFilter :=
+    ScalaUnidoc / unidoc / unidocProjectFilter :=
       (inAnyProject -- inProjects(
         example_arxiv,
         example_bert,
@@ -385,8 +385,8 @@ lazy val docs = project
         example_cifar100_distributed,
         example_timemachine,
         example_translation,
-        e2etest,
-      )),
+        e2etest
+      ))
   )
   .enablePlugins(MdocPlugin, ScalaUnidocPlugin)
 

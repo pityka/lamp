@@ -6,12 +6,7 @@ import lamp.saddle._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.autograd.NDArraySyntax._
 import aten.ATen
-import lamp.autograd.{
-  BatchNorm => _,
-  BatchNorm2D => _,
-  Embedding => _,
-  _
-}
+import lamp.autograd.{BatchNorm => _, BatchNorm2D => _, Embedding => _, _}
 import org.scalatest.Tag
 import lamp.Scope
 import lamp.Sc
@@ -631,7 +626,9 @@ final class NNSuite extends AnyFunSuite {
         .value
       assert(output.shape == List(2, 3, 4))
       val target =
-        STen.owned(SaddleTensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong)))
+        STen.owned(
+          SaddleTensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong))
+        )
       val loss = LossFunctions
         .SequenceNLL(
           4,
@@ -639,13 +636,16 @@ final class NNSuite extends AnyFunSuite {
         )(const(output), target)
         ._1
         .value
-      assert(SaddleTensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507)
+      assert(
+        SaddleTensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507
+      )
       ()
     }
   }
 
   test1("gradient clipping") { cuda =>
-implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
+    implicit val AssertionIsMovable: lamp.EmptyMovable[Assertion] =
+      lamp.Movable.empty[Assertion]
     Scope.root { implicit scope =>
       val topt =
         if (cuda) STenOptions.d.cuda
