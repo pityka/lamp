@@ -17,11 +17,11 @@ jobs:
       
     
     steps:
+    - name: install git
+      run: apt-get update && apt-get install -y git 
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0   
-    - name: install git
-      run: apt-get update && apt-get install -y git 
     - run: git describe --tags    
     - run: sbt version
     # - name: Compile
