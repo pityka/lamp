@@ -341,7 +341,7 @@ trait DefaultOpSet1 extends OpSet {
           "Conv",
           attributes = List(
             Ops.attrLongSeq("dilations", op.dilation.toList),
-            Ops.attrLongSeq("pads", op.padding.toList.flatMap(x => List(x, x))),
+            Ops.attrLongSeq("pads", op.padding.toList.flatMap(x => List(x,x))),
             Ops.attrLongSeq("strides", op.stride.toList),
             Ops.attr("group", op.groups)
           )
@@ -352,7 +352,7 @@ trait DefaultOpSet1 extends OpSet {
           "ConvTranspose",
           attributes = List(
             Ops.attrLongSeq("dilations", op.dilation.toList),
-            Ops.attrLongSeq("pads", op.padding.toList.flatMap(x => List(x, x))),
+            Ops.attrLongSeq("pads", op.padding.toList.flatMap(x => List(x,x))),
             Ops.attrLongSeq("strides", op.stride.toList),
             Ops.attrLongSeq("output_padding", op.outputPadding.toList),
             Ops.attr("group", op.groups)

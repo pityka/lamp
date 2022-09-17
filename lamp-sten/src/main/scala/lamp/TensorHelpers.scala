@@ -86,8 +86,8 @@ object TensorHelpers {
   def fromLongArray(
       arr: Array[Long],
       device: Device
-  ): Tensor = fromLongArray(arr, List(arr.length), device)
-
+  ) : Tensor = fromLongArray(arr,List(arr.length),device)
+  
   def fromLongArray(
       arr: Array[Long],
       dim: Seq[Long],
