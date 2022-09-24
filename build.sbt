@@ -213,6 +213,25 @@ lazy val umap = project
   .dependsOn(data, knn, saddlecompat % "test")
   .dependsOn(core % "test->test;compile->compile")
 
+lazy val kmeans = project
+  .in(file("lamp-kmeans"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-kmeans",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
+    ),
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil
+  )
+  .dependsOn(data, knn, saddlecompat % "test")
+  .dependsOn(core % "test->test;compile->compile")
+
 lazy val onnx = project
   .in(file("lamp-onnx"))
   .configs(Cuda)
@@ -406,6 +425,7 @@ lazy val root = project
     knn,
     forest,
     umap,
+    kmeans,
     onnx,
     docs,
     example_cifar100,

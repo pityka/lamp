@@ -215,6 +215,13 @@ object STen {
   ) =
     owned(ATen.randn(size.toArray.map(_.toLong), tensorOptions.value))
 
+  def multinomial[S: Sc](
+      probs: STen,
+      numSamples: Int,
+      replacement: Boolean
+  ) =
+    owned(ATen.multinomial(probs.value, numSamples, replacement))
+
   def normal[S: Sc](
       mean: Double,
       std: Double,
@@ -548,7 +555,7 @@ case class STenOptions(value: aten.TensorOptions) {
   def cuda[S: Sc] = cudaIndex(0)
 
   /** Returns a copy with device set to mps:0 */
-  def mps[S:Sc] = value.device(STenOptions.deviceTypeMps,0).owned
+  def mps[S: Sc] = value.device(STenOptions.deviceTypeMps, 0).owned
 
   def isDouble = value.isDouble
   def isFloat = value.isFloat
@@ -581,9 +588,9 @@ object STenOptions {
   /** Returns an tensor option specifying CPU and double */
   def b = STen.bOptions
 
-  val deviceTypeCpu : Byte = 0 
-  val deviceTypeCuda : Byte = 1
-  val deviceTypeMps : Byte = 13
+  val deviceTypeCpu: Byte = 0
+  val deviceTypeCuda: Byte = 1
+  val deviceTypeMps: Byte = 13
 
   /** Returns an tensor option specifying CPU and dtype corresponding to the
     * given byte
@@ -1445,6 +1452,10 @@ case class STen private (
   /** Return a boolean tensor indicating element-wise is-nan. */
   def isnan[S: Sc] =
     ATen.isnan(value).owned
+
+  /** Replaces NaNs with zeros */
+  def nanToNum[S: Sc] =
+    ATen.nan_to_num(value).owned
 
   /** Return a boolean scalar tensor indicating that any of the elements is true
     */
