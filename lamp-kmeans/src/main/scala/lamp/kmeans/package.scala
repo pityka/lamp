@@ -18,20 +18,23 @@ package object kmeans {
     * @param minibatchSize
     *   Size of minibatch
     * @return
-    *   triple of (centers, memberships, distance to closest center)
+    *   centers of shape [clusters,channels]
     */
   def minibatchKMeans(
       instances: STen,
       clusters: Int,
       iterations: Int,
       learningRate: Double,
-      minibatchSize: Int
-  )(implicit scope: Scope): (STen, STen, STen) = {
+      minibatchSize: Int,
+      device: Device
+  )(implicit scope: Scope): STen = {
 
     def loop(centers: STen, it: Int): STen = if (it == 0) centers
     else {
       Scope { implicit scope =>
-        val mb = selectRandomInstancesWithReplacement(instances, minibatchSize)
+        val mb = device.to(
+          selectRandomInstancesWithReplacement(instances, minibatchSize)
+        )
         val newMeans = findMeansOfClusters(mb, centers)
 
         val mask = {
@@ -47,20 +50,41 @@ package object kmeans {
     }
 
     val init: STen = Scope { implicit scope =>
-      kmeansPlusPlus(instances, clusters)
+      val mb = device.to(
+        selectRandomInstancesWithReplacement(instances, minibatchSize)
+      )
+      kmeansPlusPlus(mb, clusters)
     }
 
     val finalClusterCenters = loop(centers = init, it = iterations)
-    val distanceToCenters =
-      lamp.knn.squaredEuclideanDistance(instances, finalClusterCenters)
-    val min = distanceToCenters.topk(1, 1, false, false)._2
-    val distanceToClosestCenters =
-      distanceToCenters.gather(index = min, dim = 1).sqrt
-    (finalClusterCenters, min, distanceToClosestCenters)
+
+    instances.device.to(finalClusterCenters)
 
   }
 
-  def kmeansPlusPlusExtendTo(instances: STen, centers: STen, max: Int)(implicit
+  /** Assigns all N instances to the centers by minimum distance
+    *
+    * @return
+    *   (membership index vector of shape [N], distance to closest cluster of
+    *   shape [N])
+    */
+  def assignInstances(instances: STen, centers: STen)(implicit
+      scope: Scope
+  ): (STen, STen) =
+    Scope { implicit scope =>
+      val distanceToCenters =
+        lamp.knn.squaredEuclideanDistance(instances, centers)
+      val min = distanceToCenters.topk(1, 1, false, false)._2
+      val distanceToClosestCenters =
+        distanceToCenters.gather(index = min, dim = 1).sqrt
+      (min, distanceToClosestCenters)
+    }
+
+  private[lamp] def kmeansPlusPlusExtendTo(
+      instances: STen,
+      centers: STen,
+      max: Int
+  )(implicit
       scope: Scope
   ) = {
 
@@ -69,7 +93,7 @@ package object kmeans {
         lamp.knn.squaredEuclideanDistance(instances, cs)
       val min = d.topk(1, 1, false, false)._2
       val w = d.gather(index = min, dim = 1).squeeze
-      val i = STen.multinomial(w, 1, false)
+      val i = instances.device.to(STen.multinomial(w, 1, false))
       cs.cat(instances.indexSelect(dim = 0, index = i), dim = 0)
     }
 
@@ -77,15 +101,17 @@ package object kmeans {
     r
 
   }
-  def kmeansPlusPlus(instances: STen, centers: Int)(implicit scope: Scope) = {
+  private[lamp] def kmeansPlusPlus(instances: STen, centers: Int)(implicit
+      scope: Scope
+  ) = {
 
-    val i = STen.randint(0, instances.sizes(0), List(1), STenOptions.l)
+    val i = instances.device.to(STen.randint(0, instances.sizes(0), List(1), STenOptions.l))
     val init = instances.indexSelect(0, i)
 
     kmeansPlusPlusExtendTo(instances, init, centers)
   }
 
-  def findMeansOfClusters(instances: STen, centers: STen)(implicit
+  private[lamp] def findMeansOfClusters(instances: STen, centers: STen)(implicit
       scope: Scope
   ): STen = {
     val distanceToCenters =
@@ -104,15 +130,22 @@ package object kmeans {
     newCenters
   }
 
-  def selectRandomInstancesWithoutReplacement(instances: STen, num: Int)(
-      implicit scope: Scope
+  private[lamp] def selectRandomInstancesWithoutReplacement(
+      instances: STen,
+      num: Int
+  )(implicit
+      scope: Scope
   ) = {
     val permuted = STen.randperm(instances.sizes(0), STenOptions.l)
     val idx =
       permuted.slice(dim = 0, start = 0, end = num.toLong, step = 1).view(-1L)
     instances.indexSelect(dim = 0, index = idx)
   }
-  def selectRandomInstancesWithReplacement(instances: STen, num: Int)(implicit
+
+  private[lamp] def selectRandomInstancesWithReplacement(
+      instances: STen,
+      num: Int
+  )(implicit
       scope: Scope
   ) = {
     val idx = STen.randint(
