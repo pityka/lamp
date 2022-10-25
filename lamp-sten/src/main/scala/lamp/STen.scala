@@ -2,6 +2,8 @@ package lamp
 
 import aten.Tensor
 import aten.ATen
+import aten.NcclComm
+import aten.CudaStream
 
 /** Companion object of [[lamp.STen]]
   *
@@ -213,6 +215,13 @@ object STen {
   ) =
     owned(ATen.randn(size.toArray.map(_.toLong), tensorOptions.value))
 
+  def multinomial[S: Sc](
+      probs: STen,
+      numSamples: Int,
+      replacement: Boolean
+  ) =
+    owned(ATen.multinomial(probs.value, numSamples, replacement))
+
   def normal[S: Sc](
       mean: Double,
       std: Double,
@@ -277,7 +286,7 @@ object STen {
       steps: Long,
       tensorOptions: STenOptions = STen.dOptions
   ) =
-    owned(ATen.linspace(start, end, steps, tensorOptions.value))
+    owned(ATen.linspace_0(start, end, steps, tensorOptions.value))
   def sparse_coo[S: Sc](
       indices: STen,
       values: STen,
@@ -408,6 +417,16 @@ object STen {
     ATen
       .addcmul_out(out.value, self.value, tensor1.value, tensor2.value, alpha)
 
+  def indexCopyOut(
+      out: STen,
+      self: STen,
+      dim: Int,
+      index: STen,
+      source: STen
+  ): Unit =
+    ATen
+      .index_copy_out(out.value, self.value, dim, index.value, source.value)
+
   def tanh_backward[S: Sc](gradOutput: STen, output: STen) =
     ATen.tanh_backward(gradOutput.value, output.value).owned
 
@@ -415,16 +434,14 @@ object STen {
       gradOutput: STen,
       self: STen,
       beta: Double,
-      threshold: Double,
-      output: STen
+      threshold: Double
   ) =
     owned(
       ATen.softplus_backward(
         gradOutput.value,
         self.value,
         beta,
-        threshold,
-        output.value
+        threshold
       )
     )
 
@@ -466,6 +483,51 @@ object STen {
     (a.owned, b.owned, c.owned, d.owned)
   }
 
+  /** Blocks until all peers join the clique. */
+  def ncclInitComm(
+      nRanks: Int,
+      myRank: Int,
+      myDevice: Int,
+      ncclUniqueId: NcclUniqueId
+  ): NcclComm = {
+    val id = java.util.Base64.getDecoder().decode(ncclUniqueId.base64)
+    val saveDevice = CudaStream.cudaGetDevice()
+    CudaStream.cudaSetDevice(myDevice)
+    val comm = NcclComm.comm_init_rank(nRanks, id, myRank)
+    CudaStream.cudaSetDevice(saveDevice)
+    comm
+  }
+
+  /** Broadcast tensor on root to the clique Blocks until all peers execute the
+    * broadcast. Takes a list of tensors for the case where a single thread
+    * manages multiple GPUs
+    */
+  def ncclBoadcast(tensors: Seq[(STen, NcclComm)]): Unit = {
+    aten.NcclComm.broadcast(
+      tensors.map(_._1.value).toArray,
+      tensors.map(_._2).toArray
+    )
+  }
+
+  /** Reduction with + Output must be on the root rank
+    *
+    * Blocks until all peers execute the reduce. Takes a list of tensors for the
+    * case where a single thread manages multiple GPUs
+    */
+  def ncclReduce(
+      inputs: Seq[(STen, NcclComm)],
+      output: STen,
+      rootRank: Int
+  ): Unit = {
+    aten.NcclComm.reduce(
+      inputs.map(_._1.value).toArray,
+      output.value,
+      rootRank,
+      0,
+      inputs.map(_._2).toArray
+    )
+  }
+
 }
 
 case class STenOptions(value: aten.TensorOptions) {
@@ -491,6 +553,9 @@ case class STenOptions(value: aten.TensorOptions) {
 
   /** Returns a copy with device set to cuda:0 */
   def cuda[S: Sc] = cudaIndex(0)
+
+  /** Returns a copy with device set to mps:0 */
+  def mps[S: Sc] = value.device(STenOptions.deviceTypeMps, 0).owned
 
   def isDouble = value.isDouble
   def isFloat = value.isFloat
@@ -522,6 +587,10 @@ object STenOptions {
 
   /** Returns an tensor option specifying CPU and double */
   def b = STen.bOptions
+
+  val deviceTypeCpu: Byte = 0
+  val deviceTypeCuda: Byte = 1
+  val deviceTypeMps: Byte = 13
 
   /** Returns an tensor option specifying CPU and dtype corresponding to the
     * given byte
@@ -636,28 +705,28 @@ case class STen private (
   def values[S: Sc] = value.values.owned
 
   /** Returns true if data type is double */
-  def isDouble = Scope.leak { implicit scope => options.isDouble }
+  def isDouble = Scope.root { implicit scope => options.isDouble }
 
   /** Returns true if data type is float */
-  def isFloat = Scope.leak { implicit scope => options.isFloat }
+  def isFloat = Scope.root { implicit scope => options.isFloat }
 
   /** Returns true if data type is long */
-  def isLong = Scope.leak { implicit scope => options.isLong }
+  def isLong = Scope.root { implicit scope => options.isLong }
 
   /** Returns true if device is CPU */
-  def isCPU = Scope.leak { implicit scope => options.isCPU }
+  def isCPU = Scope.root { implicit scope => options.isCPU }
 
   /** Returns true if device is Cuda */
-  def isCuda = Scope.leak { implicit scope => options.isCuda }
+  def isCuda = Scope.root { implicit scope => options.isCuda }
 
   /** Returns true if this is sparse tensor */
-  def isSparse = Scope.leak { implicit scope => options.isSparse }
+  def isSparse = Scope.root { implicit scope => options.isSparse }
 
   /** Returns the device index. Only for Cuda tensors. */
-  def deviceIndex = Scope.leak { implicit scope => options.deviceIndex }
+  def deviceIndex = Scope.root { implicit scope => options.deviceIndex }
 
   /** Returns the Device this tensor resides on */
-  def device = Scope.leak { implicit scope => Device.fromOptions(options) }
+  def device = Scope.root { implicit scope => Device.fromOptions(options) }
 
   /** Returns the byte representation of the data type
     *
@@ -666,7 +735,7 @@ case class STen private (
     *   - 6 for Float
     *   - 7 for Double
     */
-  def scalarTypeByte = Scope.leak { implicit scope => options.scalarTypeByte }
+  def scalarTypeByte = Scope.root { implicit scope => options.scalarTypeByte }
 
   /** Returns a copy of this tensor on the given device */
   def copyToDevice(device: Device)(implicit scope: Scope) = {
@@ -826,9 +895,9 @@ case class STen private (
     case 1 => castToByte
   }
 
-  /** Casts to byte. signed 8-bit integer (like Scala's Byte)
-   * This is called Char in libtorch
-   */
+  /** Casts to byte. signed 8-bit integer (like Scala's Byte) This is called
+    * Char in libtorch
+    */
   def castToByte[S: Sc] = owned(ATen._cast_Char(value, true))
 
   /** Casts to float */
@@ -1202,7 +1271,7 @@ case class STen private (
       val tmp = STen.zeros(shape)
       owned(value.expand_as(tmp.value))
     }
-  
+
   /** Returns a tensor with a new shape.
     *
     * No data is copied. The new shape must be compatible with the number of
@@ -1318,7 +1387,9 @@ case class STen private (
     owned(ATen.argsort(value, dim, descending))
 
   def choleskyLower[S: Sc] =
-    owned(ATen.linalg_cholesky(value))
+    owned(ATen.linalg_cholesky(value, false))
+  def cholesky[S: Sc](upper: Boolean) =
+    owned(ATen.linalg_cholesky(value, upper))
   def choleskyInverse[S: Sc](upper: Boolean) =
     owned(ATen.cholesky_inverse(value, upper))
   def choleskySolve[S: Sc](choleskyFactor: STen, upper: Boolean) =
@@ -1382,6 +1453,10 @@ case class STen private (
   def isnan[S: Sc] =
     ATen.isnan(value).owned
 
+  /** Replaces NaNs with zeros */
+  def nanToNum[S: Sc] =
+    ATen.nan_to_num(value).owned
+
   /** Return a boolean scalar tensor indicating that any of the elements is true
     */
   def any[S: Sc] =
@@ -1428,9 +1503,6 @@ case class STen private (
     ATen
       .index_copy(value, dim, index.value, source.value)
       .owned
-  def index_copy_(dim: Int, index: STen, source: STen): Unit =
-    ATen
-      ._index_copy_(value, dim, index.value, source.value)
 
   def matrixPower[S: Sc](n: Int) =
     ATen.matrix_power(value, n).owned
@@ -1589,9 +1661,18 @@ case class STen private (
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
 
-  def isPinned = if (aten.Tensor.cudnnAvailable()) value.is_pinned()  else false
+  def isPinned = if (aten.Tensor.hasCuda()) value.is_pinned() else false
 
-  def pin[S:Sc] = if (aten.Tensor.cudnnAvailable()) value.pin_memory().owned  else this
+  def pin[S: Sc] =
+    if (aten.Tensor.hasCuda()) value.pin_memory().owned else this
 
+}
+
+case class NcclUniqueId(base64: String)
+object NcclUniqueId {
+  def apply(): NcclUniqueId =
+    NcclUniqueId(
+      java.util.Base64.getEncoder.encodeToString(aten.NcclComm.get_unique_id)
+    )
 
 }

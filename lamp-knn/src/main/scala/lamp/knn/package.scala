@@ -25,7 +25,7 @@ package object knn {
       val outer = v1.mm(v2.t)
       val n1 = (v1 * v1).rowSum
       val n2 = (v2 * v2).rowSum
-      (n1 + n2.t - outer * 2)
+      (n1 + n2.t - outer * 2).max(STen.zeros(List(1),v1.options))
     }
   }
 
@@ -104,7 +104,7 @@ package object knn {
       precision: FloatingPointPrecision,
       minibatchSize: Int
   ): Mat[Int] = {
-    Scope.leak { implicit scope =>
+    Scope.root { implicit scope =>
       val featuresOnDevice = lamp.saddle.fromMat(features, device, precision)
       val queryOnDevice = lamp.saddle.fromMat(query, device, precision)
       val indices = knnMinibatched(

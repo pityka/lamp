@@ -51,52 +51,116 @@ import java.util.concurrent.ConcurrentLinkedQueue
 trait Movable[-R] {
   def list(movable: R): List[Tensor]
 }
+class EmptyMovable[-R]
+object EmptyMovable {
+  def make[T] = new EmptyMovable[T]
+  implicit def unitIsMovable: EmptyMovable[Unit] = Movable.empty[Unit]
+  implicit def stringIsMovable: EmptyMovable[String] = Movable.empty[String]
+  implicit def DoubleIsMovable: EmptyMovable[Double] = Movable.empty[Double]
+  implicit def FloatIsMovable: EmptyMovable[Float] = Movable.empty[Float]
+  implicit def BooleanIsMovable: EmptyMovable[Boolean] = Movable.empty[Boolean]
+  implicit def IntIsMovable: EmptyMovable[Int] = Movable.empty[Int]
+  implicit def LongIsMovable: EmptyMovable[Long] = Movable.empty[Long]
+  implicit def ShortIsMovable: EmptyMovable[Short] = Movable.empty[Short]
+  implicit def ByteIsMovable: EmptyMovable[Byte] = Movable.empty[Byte]
+
+  @scala.annotation.nowarn
+  implicit def OptionIsMovable[T: EmptyMovable]: EmptyMovable[Option[T]] =
+    Movable.empty
+
+  @scala.annotation.nowarn
+  implicit def EitherIsMovable[T1: EmptyMovable, T2: EmptyMovable]
+      : EmptyMovable[Either[T1, T2]] = Movable.empty
+
+  @scala.annotation.nowarn
+  implicit def SeqIsMovable[T: EmptyMovable]: EmptyMovable[Seq[T]] =
+    Movable.empty
+
+  @scala.annotation.nowarn
+  implicit def t2[T1: EmptyMovable, T2: EmptyMovable]: EmptyMovable[(T1, T2)] =
+    Movable.empty
+
+  @scala.annotation.nowarn
+  implicit def t3[T1: EmptyMovable, T2: EmptyMovable, T3: EmptyMovable]
+      : EmptyMovable[(T1, T2, T3)] =
+    Movable.empty
+
+  @scala.annotation.nowarn
+  implicit def t4[
+      T1: EmptyMovable,
+      T2: EmptyMovable,
+      T3: EmptyMovable,
+      T4: EmptyMovable
+  ]: EmptyMovable[(T1, T2, T3, T4)] =
+    Movable.empty
+
+  @scala.annotation.nowarn
+  implicit def t5[
+      T1: EmptyMovable,
+      T2: EmptyMovable,
+      T3: EmptyMovable,
+      T4: EmptyMovable,
+      T5: EmptyMovable
+  ]: EmptyMovable[(T1, T2, T3, T4, T5)] =
+    Movable.empty
+
+  @scala.annotation.nowarn
+  implicit def t6[
+      T1: EmptyMovable,
+      T2: EmptyMovable,
+      T3: EmptyMovable,
+      T4: EmptyMovable,
+      T5: EmptyMovable,
+      T6: EmptyMovable
+  ]: EmptyMovable[(T1, T2, T3, T4, T5, T6)] = Movable.empty
+
+}
 object Movable {
   implicit class MovableSyntax[T: Movable](t: T) {
     def tensors = implicitly[Movable[T]].list(t)
   }
-  def empty[T] = new Movable[T] {
-    def list(t: T) = Nil
-  }
+  def empty[T] = new EmptyMovable[T]
   def nonEmpty[T](extract: T => List[Tensor]) = new Movable[T] {
     def list(t: T) = extract(t)
   }
   def by[T, K: Movable](convert: T => K) = new Movable[T] {
     def list(t: T) = convert(t).tensors
   }
-  implicit def stensorIsMovable : Movable[STen] = new Movable[STen] {
+  implicit def stensorIsMovable: Movable[STen] = new Movable[STen] {
     def list(m: STen) = List(m.value)
   }
 
-  implicit def unitIsMovable : Movable[Unit] = Movable.empty[Unit]
-  implicit def stringIsMovable : Movable[String] = Movable.empty[String]
-  implicit def DoubleIsMovable : Movable[Double] = Movable.empty[Double]
-  implicit def FloatIsMovable : Movable[Float] = Movable.empty[Float]
-  implicit def BooleanIsMovable : Movable[Boolean]= Movable.empty[Boolean]
-  implicit def IntIsMovable  : Movable[Int]= Movable.empty[Int]
-  implicit def LongIsMovable : Movable[Long] = Movable.empty[Long]
-  implicit def ShortIsMovable : Movable[Short] = Movable.empty[Short]
-  implicit def ByteIsMovable : Movable[Byte] = Movable.empty[Byte]
-  implicit def OptionIsMovable[T: Movable] : Movable[Option[T]]= new Movable[Option[T]] {
-    def list(m: Option[T]) =
-      m.toList.flatMap(m => implicitly[Movable[T]].list(m)).toList
-  }
-  implicit def EitherIsMovable[T1: Movable, T2: Movable] : Movable[Either[T1, T2]] =
+  @scala.annotation.nowarn
+  implicit def emptyIsMovable[T](implicit empty: EmptyMovable[T]): Movable[T] =
+    new Movable[T] {
+      def list(t: T) = Nil
+    }
+
+  implicit def OptionIsMovable[T: Movable]: Movable[Option[T]] =
+    new Movable[Option[T]] {
+      def list(m: Option[T]) =
+        m.toList.flatMap(m => implicitly[Movable[T]].list(m)).toList
+    }
+  implicit def EitherIsMovable[T1: Movable, T2: Movable]
+      : Movable[Either[T1, T2]] =
     new Movable[Either[T1, T2]] {
       def list(m: Either[T1, T2]) =
         m.fold(_.tensors, _.tensors)
     }
-  implicit def SeqIsMovable[T: Movable] :Movable[Seq[T]] = new Movable[Seq[T]] {
+  implicit def SeqIsMovable[T: Movable]: Movable[Seq[T]] = new Movable[Seq[T]] {
     def list(m: Seq[T]) = m.flatMap(m => implicitly[Movable[T]].list(m)).toList
   }
-  implicit def t2[T1: Movable, T2: Movable] : Movable[(T1, T2)]= new Movable[(T1, T2)] {
-    def list(m: (T1, T2)) = m._1.tensors ++ m._2.tensors
-  }
-  implicit def t3[T1: Movable, T2: Movable, T3: Movable] : Movable[(T1, T2, T3)] =
+  implicit def t2[T1: Movable, T2: Movable]: Movable[(T1, T2)] =
+    new Movable[(T1, T2)] {
+      def list(m: (T1, T2)) = m._1.tensors ++ m._2.tensors
+    }
+  implicit def t3[T1: Movable, T2: Movable, T3: Movable]
+      : Movable[(T1, T2, T3)] =
     new Movable[(T1, T2, T3)] {
       def list(m: (T1, T2, T3)) = m._1.tensors ++ m._2.tensors ++ m._3.tensors
     }
-  implicit def t4[T1: Movable, T2: Movable, T3: Movable, T4: Movable] : Movable[(T1, T2, T3, T4)]=
+  implicit def t4[T1: Movable, T2: Movable, T3: Movable, T4: Movable]
+      : Movable[(T1, T2, T3, T4)] =
     new Movable[(T1, T2, T3, T4)] {
       def list(m: (T1, T2, T3, T4)) =
         m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors
@@ -107,7 +171,7 @@ object Movable {
       T3: Movable,
       T4: Movable,
       T5: Movable
-  ] : Movable[(T1, T2, T3, T4, T5)]=
+  ]: Movable[(T1, T2, T3, T4, T5)] =
     new Movable[(T1, T2, T3, T4, T5)] {
       def list(m: (T1, T2, T3, T4, T5)) =
         m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors ++ m._5.tensors
@@ -119,7 +183,7 @@ object Movable {
       T4: Movable,
       T5: Movable,
       T6: Movable
-  ] : Movable[(T1, T2, T3, T4, T5, T6)]=
+  ]: Movable[(T1, T2, T3, T4, T5, T6)] =
     new Movable[(T1, T2, T3, T4, T5, T6)] {
       def list(m: (T1, T2, T3, T4, T5, T6)) =
         m._1.tensors ++ m._2.tensors ++ m._3.tensors ++ m._4.tensors ++ m._5.tensors ++ m._6.tensors
@@ -140,7 +204,7 @@ object Movable {
   * implicit scope.
   *
   * Create new scopes with [[lamp.Scope.root]], [[lamp.Scope.apply]] or
-  * [[lamp.Scope.leak]].
+  * [[lamp.Scope.root]].
   *
   * =Examples=
   * {{{
@@ -358,6 +422,9 @@ object Scope {
       Scope.free
     })(scope => IO { scope.release() })
 
+  def root[A: EmptyMovable](use: Scope => IO[A]): IO[A] =
+    Scope.bracket(Scope.free)(use)
+
   /** Create new Scope bound to a cats-effect IO.
     *
     * Will release when the IO finishes. Return values of the IO are moved to
@@ -405,9 +472,10 @@ object Scope {
     *
     * Will release when the function returns.
     */
-  def root[A](
-      op: Scope => Unit
-  ): Unit = {
+  @scala.annotation.nowarn
+  def root[A: EmptyMovable](
+      op: Scope => A
+  ): A = {
     (new Scope).manage(op)
   }
 
@@ -415,10 +483,8 @@ object Scope {
     *
     * Will release when the function returns. Return values are *not* moved to
     * any parent scope.
-    *
-    * This method exists to return GC-managed values from a Scope block.
     */
-  def leak[A](
+  def unsafe[A](
       op: Scope => A
   ): A = {
     (new Scope).manage(op)

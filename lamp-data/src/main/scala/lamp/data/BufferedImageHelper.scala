@@ -8,8 +8,11 @@ import java.awt.Color
 import lamp.util.syntax
 import lamp.STen
 import lamp.Scope
+import lamp.Movable
+import lamp.EmptyMovable
 
 object BufferedImageHelper {
+  implicit val movable: EmptyMovable[BufferedImage] = Movable.empty
   def fromFloatTensor(t: Tensor): BufferedImage = {
     val shape = t.shape
     assert(shape.size == 3, "Needs dim of 3")
@@ -35,7 +38,7 @@ object BufferedImageHelper {
     bi
   }
   def fromDoubleTensor(t: STen): BufferedImage = {
-    Scope.leak { implicit scope =>
+    Scope.root { implicit scope =>
       val shape = t.shape
       assert(shape.size == 3, s"Needs dim of 3, got ${shape}")
       val arr = Array.ofDim[Double](shape.reduce(_ * _).toInt)

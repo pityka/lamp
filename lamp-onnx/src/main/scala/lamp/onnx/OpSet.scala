@@ -164,7 +164,7 @@ object Ops {
         "Literal or constant converted to a tensor to match ONNX operator signatures."
       ),
       dims = d.shape,
-      dataType = Scope.leak { implicit scope =>
+      dataType = Scope.root { implicit scope =>
         d.options.scalarTypeByte match {
           case 4 => Some(ox.TensorProto.DataType.INT64.index)
           case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
@@ -248,7 +248,7 @@ trait DefaultOpSet1 extends OpSet {
           .appendInput(
             Ops.tensorFromDoubleVec(
               List(0d, 1d),
-              Scope.leak { implicit scope => op.value.options.scalarTypeByte }
+              Scope.root { implicit scope => op.value.options.scalarTypeByte }
             )
           ) :: Nil
 
@@ -256,7 +256,7 @@ trait DefaultOpSet1 extends OpSet {
         Ops(out, "Add")(nm).appendInput(
           Ops.tensorFromDoubleScalar(
             op.b,
-            Scope.leak { implicit scope =>
+            Scope.root { implicit scope =>
               op.a.options.scalarTypeByte
             }
           )
@@ -266,7 +266,7 @@ trait DefaultOpSet1 extends OpSet {
         Ops(out, "Mul")(nm).appendInput(
           Ops.tensorFromDoubleScalar(
             op.b,
-            Scope.leak { implicit scope =>
+            Scope.root { implicit scope =>
               op.a.options.scalarTypeByte
             }
           )
@@ -298,7 +298,7 @@ trait DefaultOpSet1 extends OpSet {
         Ops(out, "Pow")(nm).appendInput(
           Ops.tensorFromDoubleScalar(
             op.exponent,
-            Scope.leak { implicit scope =>
+            Scope.root { implicit scope =>
               op.a.options.scalarTypeByte
             }
           )
@@ -335,31 +335,30 @@ trait DefaultOpSet1 extends OpSet {
           nm
         ) :: Nil
 
-      case op: Conv1D =>
+      case op: Convolution if !op.transposed =>
         Ops(
           out,
           "Conv",
           attributes = List(
-            Ops.attrLongSeq("dilations", List(op.dilation)),
-            Ops.attrLongSeq("pads", List(op.padding, op.padding)),
-            Ops.attrLongSeq("strides", List(op.stride)),
+            Ops.attrLongSeq("dilations", op.dilation.toList),
+            Ops.attrLongSeq("pads", op.padding.toList.flatMap(x => List(x,x))),
+            Ops.attrLongSeq("strides", op.stride.toList),
             Ops.attr("group", op.groups)
           )
         )(nm) :: Nil
-      case op: Conv2D =>
+      case op: Convolution if op.transposed =>
         Ops(
           out,
-          "Conv",
+          "ConvTranspose",
           attributes = List(
-            Ops.attrLongSeq("dilations", List(op.dilation, op.dilation)),
-            Ops.attrLongSeq(
-              "pads",
-              List(op.padding, op.padding, op.padding, op.padding)
-            ),
-            Ops.attrLongSeq("strides", List(op.stride, op.stride)),
+            Ops.attrLongSeq("dilations", op.dilation.toList),
+            Ops.attrLongSeq("pads", op.padding.toList.flatMap(x => List(x,x))),
+            Ops.attrLongSeq("strides", op.stride.toList),
+            Ops.attrLongSeq("output_padding", op.outputPadding.toList),
             Ops.attr("group", op.groups)
           )
         )(nm) :: Nil
+
       case op: MaxPool1D =>
         Ops(
           out,

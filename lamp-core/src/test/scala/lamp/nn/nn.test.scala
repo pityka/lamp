@@ -7,8 +7,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.autograd.NDArraySyntax._
 import aten.ATen
 import lamp.autograd.{
-  Conv2D => _,
-  Conv1D => _,
   BatchNorm => _,
   BatchNorm2D => _,
   Embedding => _,
@@ -20,6 +18,7 @@ import lamp.Sc
 import lamp.util.NDArray
 import lamp.STen
 import lamp.STenOptions
+import org.scalatest.compatible.Assertion
 
 object CudaTest extends Tag("cuda")
 object SlowTest extends Tag("slow")
@@ -646,6 +645,7 @@ final class NNSuite extends AnyFunSuite {
   }
 
   test1("gradient clipping") { cuda =>
+implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
     Scope.root { implicit scope =>
       val topt =
         if (cuda) STenOptions.d.cuda

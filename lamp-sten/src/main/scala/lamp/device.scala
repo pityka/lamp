@@ -50,19 +50,15 @@ sealed trait Device { self =>
   def to(t: Tensor): Tensor
   def to[S: Sc](t: STen): STen = STen.owned(self.to(t.value))
 
-  /** Copies tensors to this device in a single cross device copy. srcBuffer is
-    * supposed to be on the source device. dstBuffer has to be on `this` device.
-    * Tensors are first copied to the srcBuffer, then the srcBuffer is copied to
-    * dstBuffer, then the dstBuffer is split into views.
+  /** Copies tensors to this device in a single cross device copy. Data is
+    * copied via a buffer pair which consists of a source and a destinatin
+    * buffer. srcBuffer is supposed to be on the source device. dstBuffer has to
+    * be on `this` device. Tensors are first copied to the srcBuffer, then the
+    * srcBuffer is copied to dstBuffer, then the dstBuffer is split into views.
     *
     * All tensors must have the same data type.
     *
     * Might make sense to pin the srcBuffer.
-    *
-    * @param tensors
-    * @param srcBuffer
-    * @param dstBuffer
-    * @return
     */
   def toBatched[S: Sc](
       tensors: Seq[STen],
@@ -87,7 +83,7 @@ sealed trait Device { self =>
     val viewSizes = views.map(_.numel())
     val shapes = tensors.map(_.sizes)
 
-    val hostBufferSlice = aten.ATen.slice(hostBuffer,0,0,viewSizes.sum,1)
+    val hostBufferSlice = aten.ATen.slice(hostBuffer, 0, 0, viewSizes.sum, 1)
 
     aten.ATen.cat_out(hostBufferSlice, views.toArray, 0)
     views.foreach(_.release)
@@ -96,7 +92,7 @@ sealed trait Device { self =>
     hostBufferSlice.release()
 
     val slicedDeviceBuffer =
-      aten.ATen.slice(deviceBuffer,0,0,viewSizes.sum,1)
+      aten.ATen.slice(deviceBuffer, 0, 0, viewSizes.sum, 1)
 
     val offsets = viewSizes.scanLeft(0L)(_ + _).dropRight(1)
 
@@ -112,9 +108,9 @@ sealed trait Device { self =>
     val clones = r.map { t =>
       aten.ATen.clone(t)
     }
-    
+
     r.foreach(_.release)
-    
+
     clones
   }
   def to[S: Sc](t: STenOptions): STenOptions
@@ -131,6 +127,7 @@ sealed trait Device { self =>
 object Device {
   def fromOptions(st: STenOptions) =
     if (st.isCPU) CPU else CudaDevice(st.deviceIndex)
+  implicit val movable: EmptyMovable[Device] = Movable.empty
 }
 case object CPU extends Device {
   def measureTime[A](f: => A): (A, Long) = {
@@ -147,6 +144,28 @@ case object CPU extends Device {
   def setSeed(seed: Long) = Tensor.manual_seed_cpu(seed)
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
     precision.convertOption(STenOptions.d)
+
+}
+case object MPS extends Device {
+  def measureTime[A](f: => A): (A, Long) = {
+    val t1 = System.nanoTime
+    val r = f
+    val t2 = System.nanoTime
+    (r, t2 - t1)
+  }
+  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = f
+  def to[S: Sc](t: STenOptions): STenOptions = t.mps
+  def to(t: Tensor) = {
+    val tmp = t.options()
+    val tmp2 = tmp.device(STenOptions.deviceTypeMps,0)
+    val r = t.to(tmp2,true,true)
+    tmp.release 
+    tmp2.release 
+    r
+  }
+  def setSeed(seed: Long) = Tensor.manual_seed_mps(seed)
+  def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
+    precision.convertOption(STenOptions.d.mps)
 
 }
 case class CudaDevice(i: Int) extends Device {

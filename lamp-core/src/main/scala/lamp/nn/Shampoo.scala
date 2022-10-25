@@ -111,11 +111,11 @@ case class Shampoo(
             lastGradient.copyFrom(gradients)
           }
 
-          Scope.root { implicit sc =>
+          Scope.root { implicit scope =>
             val gradientsAsMatrix = gradients.view(gradients.shape(0), -1L)
 
             if (lt.shape.size == 2) {
-              lt += gradientsAsMatrix.mm(gradientsAsMatrix.t(scope))
+              lt += gradientsAsMatrix.mm(gradientsAsMatrix.t)
             } else {
               lt += (gradientsAsMatrix * gradientsAsMatrix).sum(
                 dim = 1,

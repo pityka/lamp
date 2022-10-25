@@ -32,7 +32,7 @@ object GraphBatchStream {
       targetPerGraph: STen,
       rng: Option[scala.util.Random],
       transferBufferSize: Long
-  ): BatchStream[lamp.nn.graph.Graph, Int, (BufferPair,BufferPair)] = {
+  ): BatchStream[(lamp.nn.graph.Graph,STen), Int, (BufferPair,BufferPair)] = {
     def makeNonEmptyBatch(
         idx: Array[Int],
         buffers: (BufferPair, BufferPair),
@@ -188,7 +188,7 @@ object GraphBatchStream {
   def singleLargeGraph(
       graph: GraphBatchStream.Graph,
       targetPerNode: STen
-  ): BatchStream[lamp.nn.graph.Graph, Boolean, Unit] =
+  ): BatchStream[(lamp.nn.graph.Graph,STen), Boolean, Unit] =
     BatchStream.single(Scope.inResource.map { implicit scope =>
       StreamControl(
         (graph.toVariable, targetPerNode)
