@@ -190,7 +190,7 @@ lazy val umap = project
   .settings(
     name := "lamp-umap",
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
     ),
     inConfig(Cuda)(Defaults.testTasks),
     inConfig(AllTest)(Defaults.testTasks),
@@ -233,7 +233,7 @@ lazy val forest = project
       "com.lihaoyi" %% "upickle" % upickleVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
-      "io.github.pityka" %% "saddle-core" % saddleVersion
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
     )
   )
   .dependsOn(core % "test->test")
@@ -338,7 +338,7 @@ lazy val example_arxiv = project
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.lihaoyi" %% "requests" % "0.7.1",
+      "com.lihaoyi" %% "requests" % "0.6.9",
       "com.lihaoyi" %% "os-lib" % "0.8.1"
     )
   )
