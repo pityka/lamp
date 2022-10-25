@@ -28,11 +28,11 @@ Lamp may be used for scientific computing similarly to numpy, or to build neural
 It provides neural networks components:
 
 - fully connected, 1D and 2D convolutional, embedding, graph convolution, self-attention (transformer), BERT
-- various nonlinearities
 - batch, weight, layer normalization
 - dropout, weight decay
-- optimizers: SgdW, AdamW (see [here](https://arxiv.org/abs/1711.05101)), RAdam, Yogi
+- optimizers: SgdW, AdamW (see [here](https://arxiv.org/abs/1711.05101)), RAdam, Yogi, Shampoo
 - multi gpu data parallel training loop and data loaders
+- distributed data parallel training using [NCCL](https://github.com/NVIDIA/nccl) transport.
 - checkpointing, ONNX export, NPY and CSV import
 
 This repository also hosts some other loosely related libraries. 
@@ -42,10 +42,7 @@ This repository also hosts some other loosely related libraries.
 
 # Platforms
 
-Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac and Linux. Mac has no GPU support. Your system has to have the libtorch 1.9.0 shared libraries in its linker path.
-
-On mac it suffices to copy the shared libraries from `https://download.pytorch.org/libtorch/cpu/libtorch-macos-1.9.0.zip` to e.g. `/usr/local/lib/`.
-On linux, see the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile).
+Lamp depends on the JNI bindings in [aten-scala](https://github.com/pityka/aten-scala) which has cross compiled artifacts for Mac (both x86 and M1) and Linux. Mac has no GPU support. Your system has to have the libtorch 1.12.1 shared libraries in `/usr/local/lib/`. See the following [Dockerfile](https://github.com/pityka/aten-scala/blob/master/docker-runtime/Dockerfile) on how to do that.
 
 # Dependencies
 
@@ -80,8 +77,9 @@ The following artifacts are published to Maven Central from this repository:
 - `"io.github.pityka" %% "lamp-knn"` - provides k nearest neighbor
 - `"io.github.pityka" %% "lamp-umap"` - UMAP implementation
 - `"io.github.pityka" %% "extratrees"` - extremely randomized trees implementation
+- `"io.github.pityka" %% "lamp-akka"` - helper utilities for distributed training
 
-All artifacts are published for scala 2.12 and 2.13. 
+All artifacts are published for scala 2.13 and scala 3. 
 
 ## Running tests
 
@@ -99,6 +97,7 @@ Examples for various tasks:
 - Text generation: `bash run_timemachine.sh` runs the code in `example-timemachine/`.
 - Machine translation: `bash run_translation.sh` runs the code in `example-translation/`.
 - Graph node property prediction: `bash run_arxiv.sh` runs the code in `example-arxiv/`.
+- Multi node distributed training: `bash run_cifar_dist1.sh` and  `bash run_cifar_dist2.sh` .
 
 # Building from source
 
