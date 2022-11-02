@@ -17,7 +17,7 @@ inThisBuild(
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.13.8",
-  crossScalaVersions := Seq("2.13.8", "3.1.3"),
+  crossScalaVersions := Seq("2.13.8", "3.2.0"),
   Test / parallelExecution := false,
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((3, _)) =>
@@ -82,11 +82,11 @@ lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "3.5.0"
 val upickleVersion = "1.6.0"
-val scalaTestVersion = "3.2.10"
+val scalaTestVersion = "3.2.13"
 val scribeVersion = "3.8.2"
 val catsEffectVersion = "3.3.14"
 val catsCoreVersion = "2.8.0"
-val jsoniterscalaVersion = "2.13.36"
+val jsoniterscalaVersion = "2.13.39"
 
 lazy val saddlecompat = project
   .in(file("lamp-saddle"))
@@ -107,8 +107,8 @@ lazy val akkacommunicator = project
   .settings(
     name := "lamp-akka",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-actor" % "2.6.19" % Provided,
-      "com.typesafe.akka" %% "akka-remote" % "2.6.19" % Provided,
+      "com.typesafe.akka" %% "akka-actor" % "2.6.20" % Provided,
+      "com.typesafe.akka" %% "akka-remote" % "2.6.20" % Provided,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     )
   )
@@ -122,7 +122,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+105-b4f09d40",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+109-227b5d12",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
@@ -213,6 +213,25 @@ lazy val umap = project
   .dependsOn(data, knn, saddlecompat % "test")
   .dependsOn(core % "test->test;compile->compile")
 
+lazy val kmeans = project
+  .in(file("lamp-kmeans"))
+  .configs(Cuda)
+  .configs(AllTest)
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-kmeans",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
+    ),
+    inConfig(Cuda)(Defaults.testTasks),
+    inConfig(AllTest)(Defaults.testTasks),
+    Test / testOptions += Tests.Argument("-l", "cuda slow"),
+    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
+    AllTest / testOptions := Nil
+  )
+  .dependsOn(data, knn, saddlecompat % "test")
+  .dependsOn(core % "test->test;compile->compile")
+
 lazy val onnx = project
   .in(file("lamp-onnx"))
   .configs(Cuda)
@@ -223,7 +242,7 @@ lazy val onnx = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "com.microsoft.onnxruntime" % "onnxruntime" % "1.11.0" % "test"
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.12.1" % "test"
     ),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
@@ -293,8 +312,8 @@ lazy val example_cifar100_distributed = project
     publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
-      "com.typesafe.akka" %% "akka-actor" % "2.6.19",
-      "com.typesafe.akka" %% "akka-remote" % "2.6.19",
+      "com.typesafe.akka" %% "akka-actor" % "2.6.20",
+      "com.typesafe.akka" %% "akka-remote" % "2.6.20",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -302,19 +321,6 @@ lazy val example_cifar100_distributed = project
   .dependsOn(core, data, onnx, saddlecompat, akkacommunicator)
   .enablePlugins(JavaAppPackaging)
 
-lazy val example_gan = project
-  .in(file("example-gan"))
-  .settings(commonSettings: _*)
-  .settings(
-    publishArtifact := false,
-    publish / skip := true,
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
-      "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.outr" %% "scribe" % scribeVersion
-    )
-  )
-  .dependsOn(core, data, onnx, saddlecompat)
 lazy val example_timemachine = project
   .in(file("example-timemachine"))
   .settings(commonSettings: _*)
@@ -390,17 +396,16 @@ lazy val docs = project
     ),
     ScalaUnidoc / unidoc / target := (LocalRootProject / baseDirectory).value / "website" / "static" / "api",
     cleanFiles += (ScalaUnidoc / unidoc / target).value,
-      ScalaUnidoc / unidoc / unidocProjectFilter :=
+    ScalaUnidoc / unidoc / unidocProjectFilter :=
       (inAnyProject -- inProjects(
         example_arxiv,
         example_bert,
         example_cifar100,
         example_cifar100_distributed,
-        example_gan,
         example_timemachine,
         example_translation,
-        e2etest,
-      )),
+        e2etest
+      ))
   )
   .enablePlugins(MdocPlugin, ScalaUnidocPlugin)
 
@@ -420,6 +425,7 @@ lazy val root = project
     knn,
     forest,
     umap,
+    kmeans,
     onnx,
     docs,
     example_cifar100,
@@ -427,7 +433,6 @@ lazy val root = project
     example_timemachine,
     example_translation,
     example_arxiv,
-    example_gan,
     example_bert,
     e2etest
   )

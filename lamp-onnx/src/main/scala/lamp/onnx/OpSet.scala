@@ -335,31 +335,30 @@ trait DefaultOpSet1 extends OpSet {
           nm
         ) :: Nil
 
-      case op: Conv1D =>
+      case op: Convolution if !op.transposed =>
         Ops(
           out,
           "Conv",
           attributes = List(
-            Ops.attrLongSeq("dilations", List(op.dilation)),
-            Ops.attrLongSeq("pads", List(op.padding, op.padding)),
-            Ops.attrLongSeq("strides", List(op.stride)),
+            Ops.attrLongSeq("dilations", op.dilation.toList),
+            Ops.attrLongSeq("pads", op.padding.toList.flatMap(x => List(x,x))),
+            Ops.attrLongSeq("strides", op.stride.toList),
             Ops.attr("group", op.groups)
           )
         )(nm) :: Nil
-      case op: Conv2D =>
+      case op: Convolution if op.transposed =>
         Ops(
           out,
-          "Conv",
+          "ConvTranspose",
           attributes = List(
-            Ops.attrLongSeq("dilations", List(op.dilation, op.dilation)),
-            Ops.attrLongSeq(
-              "pads",
-              List(op.padding, op.padding, op.padding, op.padding)
-            ),
-            Ops.attrLongSeq("strides", List(op.stride, op.stride)),
+            Ops.attrLongSeq("dilations", op.dilation.toList),
+            Ops.attrLongSeq("pads", op.padding.toList.flatMap(x => List(x,x))),
+            Ops.attrLongSeq("strides", op.stride.toList),
+            Ops.attrLongSeq("output_padding", op.outputPadding.toList),
             Ops.attr("group", op.groups)
           )
         )(nm) :: Nil
+
       case op: MaxPool1D =>
         Ops(
           out,

@@ -1,6 +1,6 @@
 package lamp.nn
 
-import lamp.autograd.{Variable, Constant, param, Conv1D => Conv1dOp, const}
+import lamp.autograd.{Variable, Constant, param, Convolution, const}
 import lamp.Sc
 import lamp.STenOptions
 import lamp.scope
@@ -21,15 +21,17 @@ case class Conv1D(
   )
 
   def forward[S: Sc](x: Variable): Variable =
-    new Conv1dOp(
-      scope,
-      x,
-      weights,
-      bias,
-      stride,
-      padding,
-      dilation,
-      groups
+    new Convolution(
+      scope = scope,
+      input = x,
+      weight = weights,
+      bias = bias,
+      stride = Array(stride),
+      padding = Array(padding),
+      dilation = Array(dilation),
+      transposed = false,
+      outputPadding = Array(0),
+      groups = groups
     ).value
 
 }

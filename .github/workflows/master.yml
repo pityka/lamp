@@ -11,36 +11,43 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: 'pityka/base-ubuntu-libtorch:torch190-jdk17'
+      image: 'pityka/base-ubuntu-libtorch-sbt:torch1121'
       env: 
         GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       
     
     steps:
-    - uses: actions/checkout@v1
+    - name: install git
+      run: apt-get update && apt-get install -y git && git version
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0   
+    - run: ls -lhatr
+    - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+    - run: git describe --tags    
     - name: Compile
-      run: sbt -mem 3000 clean +test  
+      run: sbt -mem 3000 clean +test 
+    - name: Publish
+      run: sbt -mem 3000 ci-release
+      env:
+        PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+        PGP_SECRET: ${{ secrets.PGP_SECRET }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+        SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
     - name: website
       run: |
-        curl -L https://github.com/gohugoio/hugo/releases/download/v0.59.1/hugo_extended_0.59.1_Linux-64bit.tar.gz | tar xzf - 
+        wget -O - https://github.com/gohugoio/hugo/releases/download/v0.59.1/hugo_extended_0.59.1_Linux-64bit.tar.gz | tar xzf - hugo
         chmod u+x hugo
         sbt clean docs/mdoc docs/unidoc
         cd website
         ../hugo
+        rm ../hugo
         cd public
         touch .nojekyll
+
     - name: gh-pages-deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_branch: gh-pages
         publish_dir: ./website/public
-    - name: git reset
-      run: git restore README.md LICENSE
-    - name: Publish
-      run: sbt -mem 3000 clean ci-release
-      env:
-        PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
-        PGP_SECRET: ${{ secrets.PGP_SECRET }}
-        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-        SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
