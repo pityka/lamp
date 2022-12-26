@@ -84,7 +84,7 @@ val saddleVersion = "3.5.0"
 val upickleVersion = "1.6.0"
 val scalaTestVersion = "3.2.14"
 val scribeVersion = "3.8.2"
-val catsEffectVersion = "3.3.14"
+val catsEffectVersion = "3.4.3"
 val catsCoreVersion = "2.8.0"
 val jsoniterscalaVersion = "2.19.0"
 
