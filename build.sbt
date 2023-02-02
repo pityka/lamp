@@ -16,8 +16,8 @@ inThisBuild(
 )
 
 lazy val commonSettings = Seq(
-  scalaVersion := "2.13.8",
-  crossScalaVersions := Seq("2.13.8", "3.2.1"),
+  scalaVersion := "2.13.10",
+  crossScalaVersions := Seq("2.13.10", "3.2.2"),
   Test / parallelExecution := false,
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((3, _)) =>
@@ -82,11 +82,11 @@ lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "3.5.0"
 val upickleVersion = "1.6.0"
-val scalaTestVersion = "3.2.14"
-val scribeVersion = "3.8.2"
-val catsEffectVersion = "3.3.14"
-val catsCoreVersion = "2.8.0"
-val jsoniterscalaVersion = "2.19.0"
+val scalaTestVersion = "3.2.15"
+val scribeVersion = "3.8.3"
+val catsEffectVersion = "3.4.5"
+val catsCoreVersion = "2.9.0"
+val jsoniterscalaVersion = "2.20.6"
 
 lazy val saddlecompat = project
   .in(file("lamp-saddle"))
