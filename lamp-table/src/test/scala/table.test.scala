@@ -138,6 +138,7 @@ NA,NA,NA,NA,NA
       assert(pivoted.numRows == 4)
       assert(pivoted.numCols == 5)
       assert(pivoted.firstCol("a").toVec == Vec("v1", null, "v5", null))
+      ()
     }
   }
 
@@ -200,7 +201,7 @@ NA,NA,NA,NA,NA
           4.5
         ).toString
       )
-
+      ()
     }
   }
 
@@ -217,7 +218,7 @@ NA,NA,NA,NA,NA
           2.5f
         ).toString
       )
-
+      ()
     }
   }
 
@@ -231,6 +232,7 @@ NA,NA,NA,NA,NA
       assert(joined.numCols == 7)
       assert(joined.colAt(1).values.toFloatVec == Vec(2.5,3.0,3.0))
       assert(joined.colAt(6).values.toFloatVec == Vec(4.5,5.5,4.5))
+      ()
     }
   }
   test("join") {
@@ -242,6 +244,7 @@ NA,NA,NA,NA,NA
       assert(joined.numCols == 6)
       assert(joined.colAt(5).values.toFloatVec == Vec(4.5, 5.5, 6.0, 5.5, 6.0))
       assert(joined.colAt(0).values.toLongVec == Vec(1L, 2L, 2L, 2L, 2L))
+      ()
     }
   }
   test("product") {
@@ -260,6 +263,7 @@ NA,NA,NA,NA,NA
         product.colAt(1).values.toFloatVec == Vec(1.5, 1.5, 1.5, 2.5, 2.5, 2.5,
           3d, 3d, 3d)
       )
+      ()
     }
   }
   test("distinct") {
@@ -272,6 +276,7 @@ NA,NA,NA,NA,NA
       assert(distinct.numCols == 2)
       assert(distinct.colAt(0).values.toLongVec == Vec(1L, 2L, 2L))
       assert(distinct.colAt(1).values.toFloatVec == Vec(1.5, 2.5, 3.0))
+      ()
     }
   }
   test("filter") {
@@ -284,6 +289,7 @@ NA,NA,NA,NA,NA
       assert(filtered.numCols == 5)
       assert(filtered.colAt(0).values.toLongVec == Vec(2L, 2L))
       assert(filtered.colAt(1).values.toFloatVec == Vec(2.5, 3.0))
+      ()
     }
   }
   test("equi filter") {
@@ -295,6 +301,7 @@ NA,NA,NA,NA,NA
       assert(filtered.numCols == 5)
       assert(filtered.colAt(0).values.toLongVec == Vec(2L))
       assert(filtered.colAt(1).values.toFloatVec == Vec(2.5))
+      ()
     }
   }
   test("rfilter") {
@@ -306,6 +313,7 @@ NA,NA,NA,NA,NA
       assert(filtered.numCols == 5)
       assert(filtered.colAt(0).values.toLongVec == Vec(2L))
       assert(filtered.colAt(1).values.toFloatVec == Vec(2.5))
+      ()
     }
   }
 
@@ -329,6 +337,7 @@ NA,NA,NA,NA,NA
       assert(aggregated.numRows == 3)
       assert(aggregated.numCols == 1)
       assert(aggregated.colAt(0).values.toFloatVec == Vec(3d, 5d, 6d))
+      ()
     }
   }
   test("union") {
@@ -342,7 +351,7 @@ NA,NA,NA,NA,NA
         unioned.colAt(1).values.toFloatVec == Vec(1.5f, 2.5f, 3.0f, 1.5f, 2.5f,
           3.0f, 1.5f, 2.5, 3.0f)
       )
-
+      ()
     }
   }
 
@@ -359,7 +368,7 @@ NA,NA,NA,NA,NA
       assert(grouped.numRows == 2)
       assert(grouped.numCols == 1)
       assert(grouped.colAt(0).values.toFloatVec == Vec(1.5, 2.75))
-
+      ()
     }
   }
   test("without col") {
@@ -398,7 +407,7 @@ NA,NA,NA,NA,NA
           "a,"
         )
       )
-
+      ()
     }
   }
   test("csv reader") {
@@ -438,7 +447,7 @@ NA,NA,NA,NA,NA
           "a,"
         )
       )
-
+      ()
     }
   }
   test("equality") {
@@ -451,7 +460,7 @@ NA,NA,NA,NA,NA
       assert(table != table2)
       assert(table equalDeep table2)
       assert(table equalDeep table)
-
+      ()
     }
   }
   test("missingness") {
@@ -473,7 +482,7 @@ NA,NA,NA,NA,NA
       assert(
         table.colAt(4).missingnessMask.castToLong.toVec == Vec(0L, 1L, 0L)
       )
-
+      ()
     }
   }
 }
