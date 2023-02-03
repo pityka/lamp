@@ -44,7 +44,8 @@ object STen {
       dim: Seq[Long],
       device: Device
   ) =
-    if (ar.isEmpty || ar.map(_.length).sum == 0) STen.zeros(dim, device.to(STenOptions.l))
+    if (ar.isEmpty || ar.map(_.length).sum == 0)
+      STen.zeros(dim, device.to(STenOptions.l))
     else TensorHelpers.fromLongArrayOfArrays(ar, dim, device).owned
 
   /** Returns a tensor with the given content and shape on the given device */
@@ -835,7 +836,7 @@ case class STen private (
     */
   def maskFill[S: Sc](mask: STen, fill: Double) =
     owned(ATen.masked_fill_0(value, mask.value, fill))
-    
+
   /** Fills the tensor with the given `fill` value in the locations indicated by
     * the `mask` boolean mask.
     */
@@ -928,8 +929,9 @@ case class STen private (
 
   /** Casts to half */
   def castToHalf[S: Sc] = owned(ATen._cast_Half(value, true))
+
   /** Casts to bool */
-  def castToBool[S: Sc] = this.equ(STen.scalarDouble(0d,options)).logicalNot
+  def castToBool[S: Sc] = this.equ(STen.scalarDouble(0d, options)).logicalNot
 
   /** Adds to tensors. */
   def +[S: Sc](other: STen) =
@@ -1032,6 +1034,7 @@ case class STen private (
   /** Division. */
   def /[S: Sc](other: Double) =
     owned(ATen.div_2(value, other))
+
   /** Division. */
   def /[S: Sc](other: Long) =
     owned(ATen.div_2_l(value, other))
@@ -1620,7 +1623,10 @@ case class STen private (
   def where[S: Sc] =
     ATen.where_4(value).toList.map(_.owned)
 
-  def round[S: Sc] = ATen.round(value).owned
+  def round[S: Sc] =
+    if (isLong) this
+    else
+      ATen.round(value).owned
 
   def dropout_(p: Double, training: Boolean): Unit =
     ATen.dropout_(value, p, training)
