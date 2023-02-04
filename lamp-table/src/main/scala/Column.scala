@@ -9,12 +9,11 @@ import org.saddle.Index
 import lamp.saddle._
 import org.saddle.scalar.ScalarTagLong
 
-
 case class Column(
     values: STen,
     tpe: ColumnDataType,
     index: Option[ColumnIndex[_]]
-)  extends ColumnOps {
+) extends ColumnOps {
 
   def table = Table(this)
   def tableWithName(s: String) = Table(this).rename(0, s)
@@ -37,10 +36,10 @@ case class Column(
   def indexed = withIndex
 
   def toVec: Vec[_] = tpe match {
-    case DateTimeColumnType(_) =>
+    case _: DateTimeColumnType =>
       values.toLongVec
 
-    case BooleanColumnType(_) =>
+    case _: BooleanColumnType =>
       values.toLongVec
 
     case TextColumnType(_, pad, vocabulary) =>
@@ -78,10 +77,10 @@ case class Column(
       m
   }
   def makeIndex: ColumnIndex[_] = tpe match {
-    case DateTimeColumnType(_) =>
+    case _: DateTimeColumnType =>
       LongIndex(Index(values.toLongVec))
 
-    case BooleanColumnType(_) =>
+    case _: BooleanColumnType =>
       LongIndex(Index(values.toLongVec))
 
     case TextColumnType(_, pad, vocabulary) =>

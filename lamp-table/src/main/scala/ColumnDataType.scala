@@ -6,7 +6,6 @@ import org.saddle.scalar.ScalarTagLong
 import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 
-
 sealed trait ColumnDataType {
   type Buf
   def allocateBuffer(): Buf
@@ -14,10 +13,14 @@ sealed trait ColumnDataType {
   def copyBufferToSTen(buf: Buf)(implicit scope: Scope): STen
 
 }
-final case class DateTimeColumnType(
+final class DateTimeColumnType(
     parse: String => Long = DateTimeColumnType.parse _
 ) extends ColumnDataType {
   override def toString = "DT"
+  override def equals(other: Any) = other match {
+    case x: DateTimeColumnType => true
+    case _                     => false
+  }
   type Buf = Buffer[Long]
   def allocateBuffer() = Buffer.empty[Long](1024)
   def parseIntoBuffer(string: String, buffer: Buf): Unit =
@@ -40,9 +43,14 @@ final case class DateTimeColumnType(
 object DateTimeColumnType {
   def parse(s: String): Long = java.time.Instant.parse(s).toEpochMilli()
 }
-final case class BooleanColumnType(
+final class BooleanColumnType(
     isTrue: String => Boolean = BooleanColumnType.parse _
 ) extends ColumnDataType {
+
+  override def equals(other: Any) = other match {
+    case x: BooleanColumnType => true
+    case _                    => false
+  }
 
   override def toString = "B"
   type Buf = Buffer[Long]

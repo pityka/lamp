@@ -11,7 +11,7 @@ import org.saddle.index._
 import lamp.saddle._
 
 class TableSuite extends AnyFunSuite {
-  implicit def AssertionIsMovable = Movable.empty[Assertion]
+  implicit def AssertionIsMovable: EmptyMovable[Assertion] = Movable.empty[Assertion]
 
   val csvText = """hint,hfloat,htime,hbool,htext
 1,1.5,2020-01-01T00:00:00Z,false,"something, something"

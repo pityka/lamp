@@ -77,14 +77,14 @@ case class Table(
             val name = colName(idx).get
             val indexed = if (column.index.isDefined) "|IX" else ""
             val frame = column.tpe match {
-              case DateTimeColumnType(_) =>
+              case _: DateTimeColumnType =>
                 Frame(
                   s"$name|DT$indexed" -> column.values.toLongVec.map(l =>
                     if (ScalarTagLong.isMissing(l)) null
                     else java.time.Instant.ofEpochMilli(l).toString()
                   )
                 )
-              case BooleanColumnType(_) =>
+              case _: BooleanColumnType =>
                 Frame(
                   s"$name|B$indexed" -> column.values.toLongVec.map(l =>
                     if (ScalarTagLong.isMissing(l)) null
