@@ -336,7 +336,6 @@ final class Scope private {
   private def manageMovableIO[A](
       op: Scope => IO[A]
   )(implicit movable: Movable[A]): IO[(A, List[ResourceType])] = {
-    import cats.syntax.all._
 
     op(this)
       .map { last =>
