@@ -18,7 +18,7 @@ final class DateTimeColumnType(
 ) extends ColumnDataType {
   override def toString = "DT"
   override def equals(other: Any) = other match {
-    case x: DateTimeColumnType => true
+    case _: DateTimeColumnType => true
     case _                     => false
   }
   type Buf = Buffer[Long]
@@ -41,6 +41,7 @@ final class DateTimeColumnType(
     )
 }
 object DateTimeColumnType {
+  def apply() : DateTimeColumnType = new DateTimeColumnType()
   def parse(s: String): Long = java.time.Instant.parse(s).toEpochMilli()
 }
 final class BooleanColumnType(
@@ -48,7 +49,7 @@ final class BooleanColumnType(
 ) extends ColumnDataType {
 
   override def equals(other: Any) = other match {
-    case x: BooleanColumnType => true
+    case _: BooleanColumnType => true
     case _                    => false
   }
 
@@ -73,6 +74,7 @@ final class BooleanColumnType(
     )
 }
 object BooleanColumnType {
+  def apply() : BooleanColumnType = new BooleanColumnType()
   def parse(s: String) =
     s == "true" || s == "T" || s == "True" || s == "TRUE" || s == "yes" || s == "Yes" || s == "Yes" || s.trim
       .toLowerCase() == "yes" || s.trim.toLowerCase() == "true"
