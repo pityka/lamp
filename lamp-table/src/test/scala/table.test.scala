@@ -450,6 +450,14 @@ NA,NA,NA,NA,NA
       ()
     }
   }
+  test("csv writer") {
+    Scope.root { implicit scope =>
+      val table = makeTable1
+      val rendered = lamp.table.csv.renderToCSVString(table, recordSeparator = "\n").dropRight(1)
+      assert(csvText == rendered)
+      ()
+    }
+  }
   test("equality") {
     Scope.root { implicit scope =>
       val table = makeTable1
