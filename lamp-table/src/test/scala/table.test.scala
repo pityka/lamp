@@ -493,4 +493,17 @@ NA,NA,NA,NA,NA
       ()
     }
   }
+  test("binary writer") {
+    Scope.root { implicit scope =>
+      val table = makeTable1
+      val tmp = java.io.File.createTempFile("test","table")
+      import cats.effect.unsafe.implicits.global
+
+      lamp.table.io.writeTableToFile(table,tmp).unsafeRunSync().toOption.get 
+      val readBack = lamp.table.io.readTableFromFile(tmp)
+      assert(readBack.equalDeep(table))
+      tmp.delete
+      ()
+    }
+  }
 }
