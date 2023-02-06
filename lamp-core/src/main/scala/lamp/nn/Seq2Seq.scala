@@ -94,7 +94,7 @@ object WithInit {
     A,
     B,
     C
-  ]: TrainingMode] : TrainingMode[WithInit[A, B, C, M]] =
+  ]: TrainingMode]: TrainingMode[WithInit[A, B, C, M]] =
     TrainingMode.make[WithInit[A, B, C, M]](
       m => m.copy(m.module.asEval),
       m => m.copy(m.module.asTraining)
@@ -103,12 +103,12 @@ object WithInit {
     A,
     B,
     C
-  ]: Load] : Load[WithInit[A, B, C, M]] =
+  ]: Load]: Load[WithInit[A, B, C, M]] =
     Load.make[WithInit[A, B, C, M]] { m => t => m.module.load(t) }
   implicit def initState[A, B, C, M <: StatefulModule[
     A,
     B,
     C
-  ]] : InitState[WithInit[A, B, C, M], C] =
+  ]]: InitState[WithInit[A, B, C, M], C] =
     InitState.make[WithInit[A, B, C, M], C] { m => m.init }
 }

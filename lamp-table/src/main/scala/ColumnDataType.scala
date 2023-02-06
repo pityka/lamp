@@ -41,7 +41,7 @@ final class DateTimeColumnType(
     )
 }
 object DateTimeColumnType {
-  def apply() : DateTimeColumnType = new DateTimeColumnType()
+  def apply(): DateTimeColumnType = new DateTimeColumnType()
   def parse(s: String): Long = java.time.Instant.parse(s).toEpochMilli()
 }
 final class BooleanColumnType(
@@ -74,7 +74,7 @@ final class BooleanColumnType(
     )
 }
 object BooleanColumnType {
-  def apply() : BooleanColumnType = new BooleanColumnType()
+  def apply(): BooleanColumnType = new BooleanColumnType()
   def parse(s: String) =
     s == "true" || s == "T" || s == "True" || s == "TRUE" || s == "yes" || s == "Yes" || s == "Yes" || s.trim
       .toLowerCase() == "yes" || s.trim.toLowerCase() == "true"

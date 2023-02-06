@@ -138,7 +138,7 @@ object csv {
         (table.colNames.toSeq
           .map(quote)
           .mkString(columnSeparatorStr)
-          +recordSeparator)
+          + recordSeparator)
           .getBytes(charset)
       )
     )
