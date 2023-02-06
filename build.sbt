@@ -207,7 +207,8 @@ lazy val table = project
     testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil,
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-parse" % "0.3.5"
+      "org.typelevel" %% "cats-parse" % "0.3.5",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
     ),
     // coverageEnabled := true
   )
