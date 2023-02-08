@@ -143,15 +143,17 @@ object Text {
     convertIntegersToText(tensor.argmax(2, false), vocab)
   }
 
-  /** Convert back to text. Tensor shape: time x batch 
+  /** Convert back to text. Tensor shape: time x batch
     */
   def convertIntegersToText(
       tensor: STen,
       vocab: Map[Int, Char]
   ): Seq[String] = {
-    Scope.root{ implicit scope =>
-    val r = tensor.t.toLongArray
-    r.grouped(tensor.shape(1).toInt).toVector.map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
+    Scope.root { implicit scope =>
+      val r = tensor.t.toLongArray
+      r.grouped(tensor.shape(1).toInt)
+        .toVector
+        .map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
     }
   }
   def charsToIntegers(text: String) = {
@@ -273,9 +275,14 @@ object Text {
     val dropped = text.drop(scala.util.Random.nextInt(timeSteps))
     val numSamples = (dropped.size - 1) / timeSteps
     val idx = rng
-      .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, numSamples * timeSteps, timeSteps)))
+      .shuffle(
+        ArraySeq.unsafeWrapArray(
+          Array.range(0, numSamples * timeSteps, timeSteps)
+        )
+      )
       .grouped(minibatchSize)
-      .toList.map(_.toArray)
+      .toList
+      .map(_.toArray)
       .dropRight(1)
 
     scribe.info(
@@ -296,7 +303,7 @@ object Text {
       timeSteps: Int,
       pad: Long,
       rng: scala.util.Random
-  ): BatchStream[((Variable, Variable),STen), Int, Unit] = {
+  ): BatchStream[((Variable, Variable), STen), Int, Unit] = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) =
       BatchStream.scopeInResource.map { implicit scope =>
         val pairs = idx.map { i =>
@@ -378,7 +385,8 @@ object Text {
     val idx = rng
       .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, text.size)))
       .grouped(minibatchSize)
-      .toList.map(_.toArray)
+      .toList
+      .map(_.toArray)
       .dropRight(1)
 
     scribe.info(
@@ -389,6 +397,14 @@ object Text {
 
   }
 
+  def sentenceToPaddedVec(
+      sentence: String,
+      maxLength: Int,
+      pad: Int,
+      vocabulary: Map[Char, Int]
+  ): Array[Int] =
+    sentence.map(vocabulary).toArray.take(maxLength).padTo(maxLength, pad)
+
   def sentencesToPaddedMatrix(
       sentences: Seq[String],
       maxLength: Int,
@@ -396,7 +412,7 @@ object Text {
       vocabulary: Map[Char, Int]
   ): Seq[Array[Int]] = {
     sentences.map { s =>
-      s.map(vocabulary).toArray.take(maxLength).padTo(maxLength, pad).toArray
+      sentenceToPaddedVec(s, maxLength, pad, vocabulary)
     }
   }
 }
