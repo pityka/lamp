@@ -209,7 +209,7 @@ lazy val table = project
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-parse" % "0.3.5",
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
-    ),
+    )
     // coverageEnabled := true
   )
   .dependsOn(data)
@@ -263,7 +263,7 @@ lazy val onnx = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "com.microsoft.onnxruntime" % "onnxruntime" % "1.12.1" % "test"
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.14.0" % "test"
     ),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
