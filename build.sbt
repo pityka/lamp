@@ -263,7 +263,7 @@ lazy val onnx = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "com.microsoft.onnxruntime" % "onnxruntime" % "1.12.1" % "test"
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.14.0" % "test"
     ),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
