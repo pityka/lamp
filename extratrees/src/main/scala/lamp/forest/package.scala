@@ -3,7 +3,6 @@ package lamp
 import org.saddle._
 import cats.effect.IO
 import cats.effect.syntax.all._
-import scala.reflect.ClassTag
 import cats.effect.unsafe.implicits.global
 
 package object extratrees {
@@ -735,14 +734,14 @@ package object extratrees {
     }
   }
 
-  private[lamp] def partition[@specialized(Int, Double) T: ClassTag](
+  private[lamp] def partition[@specialized(Int, Double) T: ST](
       vec: Vec[T]
   )(pred: Array[Boolean]): (Vec[T], Vec[T]) = {
     var i = 0
     val n = vec.length
     val m = n / 2 + 1
-    val bufT = new Buffer(new Array[T](m), 0)
-    val bufF = new Buffer(new Array[T](m), 0)
+    val bufT = Buffer.empty[T](m) 
+    val bufF = Buffer.empty[T](m)
     while (i < n) {
       val v: T = vec.raw(i)
       if (pred(i)) bufT.+=(v)

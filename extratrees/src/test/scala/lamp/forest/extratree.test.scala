@@ -253,13 +253,10 @@ class ExtraTreesSuite extends AnyFunSuite {
 
   test("mnist") {
     val data = org.saddle.csv.CsvParser
-      .parseSourceWithHeader[Double](
-        scala.io.Source
-          .fromInputStream(
-            new java.util.zip.GZIPInputStream(
-              getClass.getResourceAsStream("/mnist_test.csv.gz")
-            )
-          )
+      .parseInputStreamWithHeader[Double](
+        new java.util.zip.GZIPInputStream(
+          getClass.getResourceAsStream("/mnist_test.csv.gz")
+        )
       )
       .toOption
       .get
@@ -291,13 +288,10 @@ class ExtraTreesSuite extends AnyFunSuite {
   }
   test("mnist weighted") {
     val data = org.saddle.csv.CsvParser
-      .parseSourceWithHeader[Double](
-        scala.io.Source
-          .fromInputStream(
-            new java.util.zip.GZIPInputStream(
-              getClass.getResourceAsStream("/mnist_test.csv.gz")
-            )
-          )
+      .parseInputStreamWithHeader[Double](
+        new java.util.zip.GZIPInputStream(
+          getClass.getResourceAsStream("/mnist_test.csv.gz")
+        )
       )
       .toOption
       .get
@@ -331,24 +325,18 @@ class ExtraTreesSuite extends AnyFunSuite {
   }
   test("mnist full, slow ") {
     val data = org.saddle.csv.CsvParser
-      .parseSourceWithHeader[Double](
-        scala.io.Source
-          .fromInputStream(
-            new java.util.zip.GZIPInputStream(
-              getClass.getResourceAsStream("/mnist_train.csv.gz")
-            )
-          )
+      .parseInputStreamWithHeader[Double](
+        new java.util.zip.GZIPInputStream(
+          getClass.getResourceAsStream("/mnist_train.csv.gz")
+        )
       )
       .toOption
       .get
     val datatest = org.saddle.csv.CsvParser
-      .parseSourceWithHeader[Double](
-        scala.io.Source
-          .fromInputStream(
-            new java.util.zip.GZIPInputStream(
-              getClass.getResourceAsStream("/mnist_test.csv.gz")
-            )
-          )
+      .parseInputStreamWithHeader[Double](
+        new java.util.zip.GZIPInputStream(
+          getClass.getResourceAsStream("/mnist_test.csv.gz")
+        )
       )
       .toOption
       .get
@@ -381,13 +369,10 @@ class ExtraTreesSuite extends AnyFunSuite {
   }
   test("mnist regression") {
     val data = org.saddle.csv.CsvParser
-      .parseSourceWithHeader[Double](
-        scala.io.Source
-          .fromInputStream(
-            new java.util.zip.GZIPInputStream(
-              getClass.getResourceAsStream("/mnist_test.csv.gz")
-            )
-          )
+      .parseInputStreamWithHeader[Double](
+        new java.util.zip.GZIPInputStream(
+          getClass.getResourceAsStream("/mnist_test.csv.gz")
+        )
       )
       .toOption
       .get

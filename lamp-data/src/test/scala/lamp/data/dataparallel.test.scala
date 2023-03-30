@@ -28,13 +28,10 @@ class DataParallelLoopSuite extends AnyFunSuite {
       val device = CPU
       val device2 = CudaDevice(0)
       val data = org.saddle.csv.CsvParser
-        .parseSourceWithHeader[Double](
-          scala.io.Source
-            .fromInputStream(
-              new java.util.zip.GZIPInputStream(
-                getClass.getResourceAsStream("/mnist_test.csv.gz")
-              )
-            )
+        .parseInputStreamWithHeader[Double](
+          new java.util.zip.GZIPInputStream(
+            getClass.getResourceAsStream("/mnist_test.csv.gz")
+          )
         )
         .toOption
         .get
