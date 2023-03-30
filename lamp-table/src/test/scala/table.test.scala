@@ -307,7 +307,7 @@ NA,NA,NA,NA,NA
   test("rfilter") {
     Scope.root { implicit scope =>
       val table = makeTable1
-      val filtered = table.rfilter()(r => r.first("htext").get.asInstanceOf[String] == "something,")
+      val filtered = table.rfilter()(r => r("htext").asInstanceOf[String] == "something,")
 
       assert(filtered.numRows == 1)
       assert(filtered.numCols == 5)
@@ -349,7 +349,7 @@ NA,NA,NA,NA,NA
       assert(unioned.numCols == table.numCols)
       assert(
         unioned.colAt(1).values.toFloatVec == Vec(1.5f, 2.5f, 3.0f, 1.5f, 2.5f,
-          3.0f, 1.5f, 2.5, 3.0f)
+          3.0f, 1.5f, 2.5f, 3.0f)
       )
       ()
     }

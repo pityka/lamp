@@ -2,7 +2,7 @@ package lamp.table
 
 import lamp._
 import java.nio.channels.ReadableByteChannel
-import lamp.io.csv.asciiSilentCharsetDecoder
+import lamp.io.csv.makeAsciiSilentCharsetDecoder
 import java.nio.charset.CharsetDecoder
 import java.io.File
 import java.nio.channels.WritableByteChannel
@@ -10,6 +10,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.nio.ByteBuffer
 import org.saddle.Buffer
+import org.saddle.io.csv.Callback
 
 object csv {
   def renderToCSVString(
@@ -138,7 +139,7 @@ object csv {
         (table.colNames.toSeq
           .map(quote)
           .mkString(columnSeparatorStr)
-          +recordSeparator)
+          + recordSeparator)
           .getBytes(charset)
       )
     )
@@ -157,7 +158,7 @@ object csv {
       columnTypes: Seq[(Int, ColumnDataType)],
       file: File,
       device: Device = lamp.CPU,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
+      charset: CharsetDecoder = makeAsciiSilentCharsetDecoder,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
@@ -188,76 +189,193 @@ object csv {
       columnTypes: Seq[(Int, ColumnDataType)],
       channel: ReadableByteChannel,
       device: Device = lamp.CPU,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
+      charset: CharsetDecoder = makeAsciiSilentCharsetDecoder,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, Table] = {
 
-    val source = org.saddle.io.csv
-      .readChannel(channel, bufferSize = 65536, charset = charset)
-
     val sortedColumnTypes = columnTypes
       .sortBy(_._1)
-      .toIndexedSeq
+      .toArray
 
-    var bufdata: Seq[_] = null
+    val locs = sortedColumnTypes.map(_._1)
 
-    def prepare(headerLength: Int) = {
-      val _ = headerLength
-      bufdata = sortedColumnTypes.map { case (_, tpe) =>
-        tpe.allocateBuffer()
-      }
-    }
+    val callback = new ColumnBufferCallback(maxLines, header, sortedColumnTypes)
 
-    def addToBuffer(s: String, buf: Int) = {
-      val tpe = sortedColumnTypes(buf)._2
-      tpe.parseIntoBuffer(s, bufdata(buf).asInstanceOf[tpe.Buf])
-    }
+    val error: Option[String] = org.saddle.io.csv.parse(
+      channel = channel,
+      callback = callback,
+      bufferSize = bufferSize,
+      charset = charset,
+      fieldSeparator = fieldSeparator,
+      quoteChar = quoteChar,
+      recordSeparator = recordSeparator
+    )
 
-    val done = org.saddle.io.csv.parseFromIteratorCallback(
-      source,
-      sortedColumnTypes.map(_._1),
-      fieldSeparator,
-      quoteChar,
-      recordSeparator,
-      maxLines,
-      header
-    )(prepare, addToBuffer)
+    error match {
+      case Some(error) => Left(error)
+      case None =>
+        val colIndex = if (header) Some(callback.headerFields) else None
 
-    done.flatMap { colIndex =>
-      assert(bufdata.length == sortedColumnTypes.length)
-      val columns = bufdata.zip(sortedColumnTypes).zipWithIndex map {
-        case ((b, (_, tpe)), idx) =>
-          val sten = tpe.copyBufferToSTen(b.asInstanceOf[tpe.Buf])
-          val ondevice = if (device != CPU) {
-            device.to(sten)
-          } else sten
-          val name = colIndex.map(_.apply(idx))
-          (name, Column(ondevice, tpe, None))
-      }
-      if (columns.map(_._2.values.shape(0)).distinct.size != 1)
-        Left(
-          s"Uneven length ${columns.map(_._2.values.shape(0)).toVector} columns"
-        )
-      else {
-        import org.saddle._
-        Right(
-          Table(
-            columns.map(_._2).toVector,
-            columns
-              .map(_._1)
-              .zipWithIndex
-              .map { case (maybe, idx) => maybe.getOrElse(s"V$idx") }
-              .toIndex
+        if (locs.length > 0 && callback.headerLocFields != locs.length) {
+
+          Left(
+            s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${callback.allHeaderFields
+              .mkString("[", ", ", "]")}"
           )
-        )
+        } else {
+          val columns =
+            callback.bufdata.zip(sortedColumnTypes).zipWithIndex map {
+              case ((b, (_, tpe)), idx) =>
+                val sten = tpe.copyBufferToSTen(b.asInstanceOf[tpe.Buf])
+                val ondevice = if (device != CPU) {
+                  device.to(sten)
+                } else sten
+                val name = colIndex.map(_.apply(idx))
+                (name, Column(ondevice, tpe, None))
+            }
+          import org.saddle._
+          Right(
+            Table(
+              columns.map(_._2).toVector,
+              columns
+                .map(_._1)
+                .zipWithIndex
+                .map { case (maybe, idx) => maybe.getOrElse(s"V$idx") }
+                .toVector
+                .toIndex
+            )
+          )
+
+        }
+    }
+  }
+
+  private[lamp] class ColumnBufferCallback(
+      maxLines: Long,
+      header: Boolean,
+      columnTypes: Array[(Int, ColumnDataType)]
+  ) extends Callback {
+
+    val locs = columnTypes.map(_._1)
+    private val locsIdx = org.saddle.Index(locs)
+
+    val headerFields = scala.collection.mutable.ArrayBuffer[String]()
+    val allHeaderFields = scala.collection.mutable.ArrayBuffer[String]()
+
+    var headerAllFields = 0
+    var headerLocFields = 0
+
+    var bufdata: Array[_] = columnTypes.map { case (_, tpe) =>
+      tpe.allocateBuffer()
+    }
+
+    val types: Array[ColumnDataType] = columnTypes.map(_._2)
+
+    private val emptyLoc = locs.length == 0
+
+    private final def add(s: Array[Char], from: Int, to: Int, buf: Int) = {
+      val tpe0: ColumnDataType = types(buf)
+      val buf0 = bufdata(buf)
+
+      tpe0.tpeByte match {
+        case 0 =>
+          val tpe = tpe0.asInstanceOf[DateTimeColumnType]
+          tpe.parseIntoBuffer(s, from, to, buf0.asInstanceOf[tpe.Buf])
+        case 1 =>
+          val tpe = tpe0.asInstanceOf[BooleanColumnType]
+          tpe.parseIntoBuffer(s, from, to, buf0.asInstanceOf[tpe.Buf])
+        case 2 =>
+          val tpe = tpe0.asInstanceOf[TextColumnType]
+          tpe.parseIntoBuffer(s, from, to, buf0.asInstanceOf[tpe.Buf])
+        case 3 =>
+          val tpe = I64ColumnType
+          tpe.parseIntoBuffer(s, from, to, buf0.asInstanceOf[tpe.Buf])
+        case 4 =>
+          val tpe = F32ColumnType
+          tpe.parseIntoBuffer(s, from, to, buf0.asInstanceOf[tpe.Buf])
+        case 5 =>
+          val tpe = F64ColumnType
+          tpe.parseIntoBuffer(s, from, to, buf0.asInstanceOf[tpe.Buf])
       }
+
+    }
+
+    private var loc = 0
+    private var line = 0L
+    def apply(
+        s: Array[Char],
+        from: Array[Int],
+        to: Array[Int],
+        len: Int
+    ): org.saddle.io.csv.Control = {
+      var i = 0
+
+      var error = false
+      var errorString = ""
+
+      if (len == -2) {
+        error = true
+        errorString =
+          s"Unclosed quote after line $line (not necessarily in that line)"
+      }
+
+      while (i < len && line < maxLines && !error) {
+        val fromi = from(i)
+        val toi = to(i)
+        val ptoi = math.abs(toi)
+        if (line == 0) {
+          allHeaderFields.append(new String(s, fromi, ptoi - fromi))
+          headerAllFields += 1
+          if (emptyLoc || locsIdx.contains(loc)) {
+            headerLocFields += 1
+          }
+        }
+
+        if (emptyLoc || locsIdx.contains(loc)) {
+          if (header && line == 0) {
+            headerFields.append(new String(s, fromi, ptoi - fromi))
+          } else {
+            if (loc >= headerAllFields) {
+              error = true
+              errorString =
+                s"Too long line ${line + 1} (1-based). Expected $headerAllFields fields, got ${loc + 1}."
+            } else {
+              add(s, fromi, ptoi, loc)
+            }
+          }
+        }
+
+        if (toi < 0) {
+          if (line == 0 && !emptyLoc && headerLocFields != locs.length) {
+            error = true
+            errorString =
+              s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${allHeaderFields
+                .mkString("[", ", ", "]")}"
+          }
+          if (loc < headerAllFields - 1) {
+            error = true
+            errorString =
+              s"Too short line ${line + 1} (1-based). Expected $headerAllFields fields, got ${loc + 1}."
+          }
+
+          loc = 0
+          line += 1
+        } else loc += 1
+        i += 1
+      }
+
+      if (error) org.saddle.io.csv.Error(errorString)
+      else if (line >= maxLines) org.saddle.io.csv.Done
+      else org.saddle.io.csv.Next
     }
 
   }
+
 }

@@ -25,13 +25,11 @@ class LogisticSuite extends AnyFunSuite {
   test1("mnist tabular") { cuda =>
     Scope.root { implicit scope =>
       val data = org.saddle.csv.CsvParser
-        .parseSourceWithHeader[Double](
-          scala.io.Source
-            .fromInputStream(
+        .parseInputStreamWithHeader[Double](
+          
               new java.util.zip.GZIPInputStream(
                 getClass.getResourceAsStream("/mnist_test.csv.gz")
               )
-            )
         )
         .toOption
         .get
