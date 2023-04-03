@@ -415,11 +415,12 @@ sealed trait Variable {
       reduction: Reduction = Mean
   ) =
     new MseLoss(extractScope, this, target, reduction).value
-  def l1Loss[S: Sc](
+  def smoothL1Loss[S: Sc](
       target: STen,
-      reduction: Reduction = Mean
+      reduction: Reduction = Mean,
+      beta : Double = 1.0
   ) =
-    new L1Loss(extractScope, this, target, reduction).value
+    new SmoothL1Loss(extractScope, this, target, reduction, beta).value
   def squaredFrobenius[S: Sc] =
     new SquaredFrobeniusMatrixNorm(extractScope, this).value
   def mean[S: Sc](dim: List[Int]) =
