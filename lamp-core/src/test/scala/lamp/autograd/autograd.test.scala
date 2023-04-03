@@ -1252,11 +1252,11 @@ class GradientSuite extends AnyFunSuite {
       )
     }
   }
-  testGradientAndValue("l1 loss")(mat3x1, 1d) { (m, doBackprop, cuda) =>
+  testGradientAndValue("l1 loss")(mat3x1, 0.5) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = lamp.saddle.fromMat(mat3x1_2, cuda)
-      val L = x1.l1Loss(x2.squeeze).sum
+      val L = x1.smoothL1Loss(x2.squeeze).sum
       if (doBackprop) {
         L.backprop()
       }
@@ -1303,6 +1303,29 @@ class GradientSuite extends AnyFunSuite {
         ((data
           .mm(w))
           .binaryCrossEntropyWithLogitsLoss(y.value, Some(classWeights), Sum))
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        L.value.toMat.raw(0),
+        w.partialDerivative.map(t => t.toMat)
+      )
+    }
+  }
+  testGradientAndValue("l2 logistic regression loss - bce loss mean")(
+    mat2x2,
+    9.0845
+  ) { (m, doBackprop, _) =>
+    Scope.root { implicit scope =>
+      val w = param(lamp.saddle.fromMat(m))
+      val data = const(lamp.saddle.fromMat(mat3x2))
+      val y =
+        const(lamp.saddle.fromMat(Mat(Vec(0d, 1d, 0.5d), Vec(0d, 0.5, 1d))))
+      val classWeights = STen.ones(List(1, 2), w.value.options)
+      val L =
+        ((data
+          .mm(w))
+          .binaryCrossEntropyWithLogitsLoss(y.value, Some(classWeights), Mean))
       if (doBackprop) {
         L.backprop()
       }

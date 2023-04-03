@@ -457,14 +457,15 @@ object STen {
   def to_dense_backward[S: Sc](gradOutput: STen, input: STen) =
     ATen.to_dense_backward(gradOutput.value, input.value).owned
 
-  def l1_loss_backward[S: Sc](
+  def smooth_l1_loss_backward[S: Sc](
       gradOutput: STen,
       self: STen,
       target: STen,
-      reduction: Long
+      reduction: Long,
+      beta: Double
   ) =
     ATen
-      .l1_loss_backward(gradOutput.value, self.value, target.value, reduction)
+      .smooth_l1_loss_backward_0(gradOutput.value, self.value, target.value, reduction, beta)
       .owned
   def mse_loss_backward[S: Sc](
       gradOutput: STen,
@@ -1415,8 +1416,8 @@ case class STen private (
     * Indexing the given dimension by the returned tensor would result in a
     * sorted order.
     */
-  def argsort[S: Sc](dim: Int, descending: Boolean) =
-    owned(ATen.argsort(value, dim, descending))
+  def argsort[S: Sc](stable: Boolean, dim: Int, descending: Boolean) =
+    owned(ATen.argsort(value, stable, dim, descending))
 
   def choleskyLower[S: Sc] =
     owned(ATen.linalg_cholesky(value, false))
@@ -1554,8 +1555,8 @@ case class STen private (
 
   def matrixPower[S: Sc](n: Int) =
     ATen.matrix_power(value, n).owned
-  def matrixRank[S: Sc](tol: Double, symmetric: Boolean) =
-    ATen.matrix_rank(value, tol, symmetric).owned
+  def matrixRank[S: Sc](tol: STen, symmetric: Boolean) =
+    ATen.linalg_matrix_rank_1(value, tol.value, symmetric).owned
 
   /** Returns a tensor with a subset of its elements.
     *
@@ -1631,7 +1632,7 @@ case class STen private (
   def dropout_(p: Double, training: Boolean): Unit =
     ATen.dropout_(value, p, training)
 
-  def frobeniusNorm[S: Sc] = ATen.frobenius_norm_0(value).owned
+  def frobeniusNorm[S: Sc](dim: Seq[Int], keepDim: Boolean) = ATen.frobenius_norm(value, dim.map(_.toLong).toArray, keepDim).owned
 
   /** @param fullMatrices
     *   whether to return reduced or full matrices (in case of non-square input)

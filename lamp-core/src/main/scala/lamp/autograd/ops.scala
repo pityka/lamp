@@ -1197,11 +1197,12 @@ case class MseLoss(
       STen.mse_loss(input.value, targetViewed, reduction.asLong)(scope)
     )(scope)
 }
-case class L1Loss(
+case class SmoothL1Loss(
     scope: Scope,
     input: Variable,
     target: STen,
-    reduction: Reduction
+    reduction: Reduction,
+    beta: Double
 ) extends Op {
   assert(input.value.numel == target.numel)
 
@@ -1210,11 +1211,12 @@ case class L1Loss(
       Scope.root { implicit scope =>
         val tmp =
           STen.owned(
-            ATen.l1_loss_backward(
+            ATen.smooth_l1_loss_backward_0(
               p.value,
               input.value.value,
               targetViewed.value,
-              reduction.asLong
+              reduction.asLong,
+              beta
             )
           )
 
@@ -1228,7 +1230,12 @@ case class L1Loss(
     Variable(
       this,
       STen.owned(
-        ATen.l1_loss(input.value.value, targetViewed.value, reduction.asLong)
+        ATen.smooth_l1_loss_0(
+          input.value.value,
+          targetViewed.value,
+          reduction.asLong,
+          beta
+        )
       )(scope)
     )(scope)
 }
@@ -1308,18 +1315,28 @@ case class BinaryCrossEntropyWithLogitsLoss(
   val params = List(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val tmp =
-          STen.owned(
-            ATen.binary_cross_entropy_with_logits_backward(
-              p.value,
-              input.value.value,
-              target.value,
-              None,
-              posWeights.map(_.value),
-              reduction.asLong
-            )
-          )
-        out += tmp
+        // -[ pos * y * (1 -sigmoid(x)) - (1 - y) sigmoid(x)] * grad
+        
+        val t = if (posWeights.isDefined) {
+          val t = posWeights.get * target
+          val t2 = t + 1.0
+          t2 -= target
+          t2 *= input.value.sigmoid
+          t2 -= t
+          t2
+        } else {
+          val t = input.value.sigmoid(scope)
+          t -= target
+          t
+        }
+
+        t *= p
+
+        if (reduction == Mean) {
+          t.*=(1d / input.value.numel.toDouble)
+        }
+
+        out += t
 
       }
     }
@@ -1350,7 +1367,7 @@ case class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
   val value =
     Variable(
       this, {
-        val fr = a.value.frobeniusNorm(scope)
+        val fr = a.value.frobeniusNorm(Seq(-2, -1), false)(scope)
         fr.pow_(2d)
         fr
       }
