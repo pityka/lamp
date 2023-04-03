@@ -84,8 +84,8 @@ object OgbArxivDataset {
       new java.util.zip.GZIPInputStream(new java.io.FileInputStream(file.toIO))
     val f =
       org.saddle.csv.CsvParser
-        .parseSource[T](
-          scala.io.Source.fromInputStream(is),
+        .parseInputStream[T](
+          is,
           recordSeparator = "\n"
         )
     is.close

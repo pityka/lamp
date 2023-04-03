@@ -406,7 +406,7 @@ class STenSuite extends AnyFunSuite {
 
   }
 
-  test("csv") {
+  test("csv float") {
     Scope.root { implicit scope =>
       val tmp = java.io.File.createTempFile("dfsd", ".csv")
       val is = new java.io.FileInputStream(tmp)
@@ -427,13 +427,64 @@ class STenSuite extends AnyFunSuite {
       assert(ten.shape == List(numRows, 2))
     }
   }
+  test("csv double") {
+    Scope.root { implicit scope =>
+      val tmp = java.io.File.createTempFile("dfsd", ".csv")
+      val is = new java.io.FileInputStream(tmp)
+      val writer = new java.io.BufferedWriter(new java.io.FileWriter(tmp))
+      writer.write("a,b\r\n")
+      val line = "1.0,2.0\r\n"
+      val numRows = 1000L
+      var i = 0L
+      while (i < numRows) {
+        writer.write(line)
+        i += 1
+      }
+      writer.close
+      val channel = is.getChannel
+      val (h, ten) =
+        lamp.io.csv.readFromChannel(7, channel, CPU, header = true).toOption.get
+      assert(h == Some(List("a", "b")))
+      assert(ten.shape == List(numRows, 2))
+    }
+  }
+  test("csv long") {
+    Scope.root { implicit scope =>
+      val tmp = java.io.File.createTempFile("dfsd", ".csv")
+      val is = new java.io.FileInputStream(tmp)
+      val writer = new java.io.BufferedWriter(new java.io.FileWriter(tmp))
+      writer.write("a,b\r\n")
+      val line = "1,2\r\n"
+      val numRows = 1000L
+      var i = 0L
+      while (i < numRows) {
+        writer.write(line)
+        i += 1
+      }
+      writer.close
+      val channel = is.getChannel
+      val (h, ten) =
+        lamp.io.csv.readFromChannel(4, channel, CPU, header = true).toOption.get
+      assert(h == Some(List("a", "b")))
+      assert(ten.shape == List(numRows, 2))
+    }
+  }
 
-  test("csv - buffer") {
+  test("csv - buffer toArrays") {
     val buffer =
-      new lamp.io.csv.Buffer[Double](Array.ofDim[Double](0), 0, Nil, 5)
-    0 until 100 foreach (i => buffer.+=(i.toDouble))
+       org.saddle.Buffer.empty[Double]
+    0 until 100000 foreach (i => buffer.+=(i.toDouble))
     assert(
-      buffer.toArrays.reduce(_ ++ _).toList == (0 until 100).toList
+      buffer.toArrays.reduce(_ ++ _).toList == (0 until 100000).toList
+        .map(_.toDouble)
+    )
+  }
+  test("csv - buffer toArray") {
+    val buffer =
+       org.saddle.Buffer.empty[Double]
+    0 until 100000 foreach (i => buffer.+=(i.toDouble))
+    assert(
+      buffer.toArray.toList == (0 until 100000).toList
         .map(_.toDouble)
     )
   }

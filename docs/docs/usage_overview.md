@@ -71,24 +71,18 @@ First get some tabular data into the JVM memory:
 
 ```scala mdoc:reset
     val testData = org.saddle.csv.CsvParser
-      .parseSourceWithHeader[Double](
-        scala.io.Source
-          .fromInputStream(
-            new java.util.zip.GZIPInputStream(
-              getClass.getResourceAsStream("/mnist_test.csv.gz")
-            )
+      .parseInputStreamWithHeader[Double](
+          new java.util.zip.GZIPInputStream(
+            getClass.getResourceAsStream("/mnist_test.csv.gz")            
           ),
         maxLines = 100L
       )
       .toOption
       .get
     val trainData = org.saddle.csv.CsvParser
-      .parseSourceWithHeader[Double](
-        scala.io.Source
-          .fromInputStream(
-            new java.util.zip.GZIPInputStream(
-              getClass.getResourceAsStream("/mnist_train.csv.gz")
-            )
+      .parseInputStreamWithHeader[Double](
+          new java.util.zip.GZIPInputStream(
+            getClass.getResourceAsStream("/mnist_train.csv.gz")
           ),
         maxLines = 100L
       )

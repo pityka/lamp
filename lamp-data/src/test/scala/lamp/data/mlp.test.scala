@@ -16,7 +16,7 @@ class MLPSuite extends AnyFunSuite {
       pool: Scope
   ) =
     sequence(
-      MLP(dim, k, List(64, 32), tOpt, dropout = 0.2, numHeads=2),
+      MLP(dim, k, List(64, 32), tOpt, dropout = 0.2, numHeads = 2),
       Fun(implicit pool => _.logSoftMax(dim = 1))
     )
 
@@ -30,13 +30,10 @@ class MLPSuite extends AnyFunSuite {
     Scope.root { implicit scope =>
       val device = if (cuda) CudaDevice(0) else CPU
       val testData = org.saddle.csv.CsvParser
-        .parseSourceWithHeader[Double](
-          scala.io.Source
-            .fromInputStream(
-              new java.util.zip.GZIPInputStream(
-                getClass.getResourceAsStream("/mnist_test.csv.gz")
-              )
-            )
+        .parseInputStreamWithHeader[Double](
+          new java.util.zip.GZIPInputStream(
+            getClass.getResourceAsStream("/mnist_test.csv.gz")
+          )
         )
         .toOption
         .get
@@ -51,13 +48,10 @@ class MLPSuite extends AnyFunSuite {
           .squeeze
 
       val trainData = org.saddle.csv.CsvParser
-        .parseSourceWithHeader[Double](
-          scala.io.Source
-            .fromInputStream(
-              new java.util.zip.GZIPInputStream(
-                getClass.getResourceAsStream("/mnist_train.csv.gz")
-              )
-            )
+        .parseInputStreamWithHeader[Double](
+          new java.util.zip.GZIPInputStream(
+            getClass.getResourceAsStream("/mnist_train.csv.gz")
+          )
         )
         .toOption
         .get

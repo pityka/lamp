@@ -10,6 +10,7 @@ import lamp.CPU
 import lamp.Scope
 import org.saddle.scalar.ScalarTagLong
 import org.saddle.scalar.ScalarTagFloat
+import org.saddle.Buffer
 import java.io.File
 
 /** This package provides methods to read CSV formatted data into STen tensors
@@ -19,18 +20,20 @@ import java.io.File
   * array can hold.
   */
 package object csv {
-  val asciiSilentCharsetDecoder = org.saddle.io.csv.asciiSilentCharsetDecoder
+  def makeAsciiSilentCharsetDecoder =
+    org.saddle.io.csv.makeAsciiSilentCharsetDecoder
 
   def readLongFromChannel(
       channel: ReadableByteChannel,
       device: Device,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
       cols: Seq[Int] = Nil,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      charset: CharsetDecoder = org.saddle.io.csv.makeAsciiSilentCharsetDecoder,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
@@ -38,24 +41,26 @@ package object csv {
       4,
       channel,
       device,
-      charset,
       cols,
       fieldSeparator,
       quoteChar,
       recordSeparator,
       maxLines,
-      header
+      header,
+      charset,
+      bufferSize
     )
   def readFloatFromChannel(
       channel: ReadableByteChannel,
       device: Device,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
       cols: Seq[Int] = Nil,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      charset: CharsetDecoder = org.saddle.io.csv.makeAsciiSilentCharsetDecoder,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
@@ -63,24 +68,26 @@ package object csv {
       6,
       channel,
       device,
-      charset,
       cols,
       fieldSeparator,
       quoteChar,
       recordSeparator,
       maxLines,
-      header
+      header,
+      charset,
+      bufferSize
     )
   def readDoubleFromChannel(
       channel: ReadableByteChannel,
       device: Device,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
       cols: Seq[Int] = Nil,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      charset: CharsetDecoder = org.saddle.io.csv.makeAsciiSilentCharsetDecoder,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
@@ -88,25 +95,27 @@ package object csv {
       7,
       channel,
       device,
-      charset,
       cols,
       fieldSeparator,
       quoteChar,
       recordSeparator,
       maxLines,
-      header
+      header,
+      charset,
+      bufferSize
     )
 
   def readLongFromFile(
       file: File,
       device: Device,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
       cols: Seq[Int] = Nil,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      charset: CharsetDecoder = org.saddle.io.csv.makeAsciiSilentCharsetDecoder,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
@@ -114,24 +123,26 @@ package object csv {
       4,
       file,
       device,
-      charset,
       cols,
       fieldSeparator,
       quoteChar,
       recordSeparator,
       maxLines,
-      header
+      header,
+      charset,
+      bufferSize
     )
   def readFloatFromFile(
       file: File,
       device: Device,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
       cols: Seq[Int] = Nil,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      charset: CharsetDecoder = org.saddle.io.csv.makeAsciiSilentCharsetDecoder,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
@@ -139,24 +150,26 @@ package object csv {
       6,
       file,
       device,
-      charset,
       cols,
       fieldSeparator,
       quoteChar,
       recordSeparator,
       maxLines,
-      header
+      header,
+      charset,
+      bufferSize
     )
   def readDoubleFromFile(
       file: File,
       device: Device,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
       cols: Seq[Int] = Nil,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      charset: CharsetDecoder = org.saddle.io.csv.makeAsciiSilentCharsetDecoder,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] =
@@ -164,26 +177,28 @@ package object csv {
       7,
       file,
       device,
-      charset,
       cols,
       fieldSeparator,
       quoteChar,
       recordSeparator,
       maxLines,
-      header
+      header,
+      charset,
+      bufferSize
     )
 
   def readFromFile(
       scalarType: Byte,
       file: File,
       device: Device,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
       cols: Seq[Int] = Nil,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      charset: CharsetDecoder = org.saddle.io.csv.makeAsciiSilentCharsetDecoder,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] = {
@@ -194,113 +209,377 @@ package object csv {
         scalarType,
         channel,
         device,
-        charset,
         cols,
         fieldSeparator,
         quoteChar,
         recordSeparator,
         maxLines,
-        header
+        header,
+        charset,
+        bufferSize
       )
     } finally {
       fis.close
     }
   }
+
+  /** Parse CSV files according to RFC 4180
+    *
+    * @param scalarType
+    *   4=Long, 6=Float, 7=Double
+    * @param channel
+    * @param device
+    * @param cols
+    *   The column offsets to parse (if empty, parse everything)
+    * @param fieldSeparator
+    *   The separator; default is comma
+    * @param quoteChar
+    *   Within matching quotes, treat separChar as normal char; default is
+    *   double-quote
+    * @param recordSeparator
+    *   Record separator (line ending)
+    * @param maxLines
+    *   The maximum number of records that will be read from the file. Includes
+    *   header.
+    * @param header
+    *   indicates whether the first line should be set aside
+    * @param charset
+    * @param bufferSize
+    */
   def readFromChannel(
       scalarType: Byte,
       channel: ReadableByteChannel,
       device: Device,
-      charset: CharsetDecoder = asciiSilentCharsetDecoder,
       cols: Seq[Int] = Nil,
       fieldSeparator: Char = ',',
       quoteChar: Char = '"',
       recordSeparator: String = "\r\n",
       maxLines: Long = Long.MaxValue,
-      header: Boolean = false
+      header: Boolean = false,
+      charset: CharsetDecoder = org.saddle.io.csv.makeAsciiSilentCharsetDecoder,
+      bufferSize: Int = 8192
   )(implicit
       scope: Scope
   ): Either[String, (Option[List[String]], STen)] = {
-    val (append, allocBuffer, copy) = typeSpecificLambdas(scalarType)
-    val source = org.saddle.io.csv
-      .readChannel(channel, bufferSize = 65536, charset = charset)
+    val (copy) = typeSpecificLambdas(scalarType)
+    val locs = Set(cols: _*).toArray[Int].sorted
 
-    var locs = Set(cols: _*).toArray[Int].sorted
+    val callback = new BufferCallback(locs, maxLines, header, scalarType)
 
-    var bufdata: Seq[Buffer[_]] = null
+    val done: Option[String] = org.saddle.io.csv.parse(
+      channel = channel,
+      callback = callback,
+      bufferSize = bufferSize,
+      charset = charset,
+      fieldSeparator = fieldSeparator,
+      quoteChar = quoteChar,
+      recordSeparator = recordSeparator
+    )
 
-    def prepare(headerLength: Int) = {
-      if (locs.length == 0) locs = (0 until headerLength).toArray
-      bufdata = for { _ <- locs.toSeq } yield allocBuffer()
-    }
+    done match {
+      case Some(error) => Left(error)
+      case None =>
+        val colIndex = if (header) Some(callback.headerFields) else None
 
-    def addToBuffer(s: String, buf: Int) = {
-      append(s, bufdata(buf))
-    }
+        if (locs.length > 0 && callback.headerLocFields != locs.length) {
 
-    val done = org.saddle.io.csv.parseFromIteratorCallback(
-      source,
-      cols,
-      fieldSeparator,
-      quoteChar,
-      recordSeparator,
-      maxLines,
-      header
-    )(prepare, addToBuffer)
-
-    done.flatMap { colIndex =>
-      val columns = bufdata map { b =>
-        val arrays = b.toArrays
-        Scope { implicit scope =>
-          STen.cat(arrays.map { array => copy(array) }, 0)
-        }
-      }
-      if (columns.map(_.shape(0)).distinct.size != 1)
-        Left(s"Uneven length ${columns.map(_.shape(0)).toVector} columns")
-      else {
-        val stacked = STen.stack(columns, 1)
-        val t2 = if (device != CPU) {
-          device.to(stacked)
-        } else stacked
-        Right((colIndex.map(_.toList), t2))
-      }
-    }
-
-  }
-
-  def typeSpecificLambdas[S: Sc](scalarType: Byte) = scalarType match {
-    case 4 =>
-      val copy = (ar: Array[_]) =>
-        STen
-          .fromLongArray(ar.asInstanceOf[Array[Long]], List(ar.length), CPU)
-      val allocBuffer = () => Buffer.empty[Long](1024)
-      val parse = (s: String, buffer: Buffer[_]) => {
-        buffer.asInstanceOf[Buffer[Long]].+=(ScalarTagLong.parse(s))
-      }
-      (parse, allocBuffer, copy)
-    case 6 =>
-      val copy = (ar: Array[_]) =>
-        STen
-          .fromFloatArray(ar.asInstanceOf[Array[Float]], List(ar.length), CPU)
-      val allocBuffer = () => Buffer.empty[Float](1024)
-      val parse = (s: String, buffer: Buffer[_]) => {
-        buffer.asInstanceOf[Buffer[Float]].+=(ScalarTagFloat.parse(s))
-      }
-      (parse, allocBuffer, copy)
-    case 7 =>
-      val copy = (ar: Array[_]) =>
-        STen
-          .fromDoubleArray(
-            ar.asInstanceOf[Array[Double]],
-            List(ar.length),
-            CPU,
-            DoublePrecision
+          Left(
+            s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${callback.allHeaderFields
+              .mkString("[", ", ", "]")}"
           )
-      val allocBuffer = () => Buffer.empty[Double](1024)
-      val parse = (s: String, buffer: Buffer[_]) => {
-        buffer.asInstanceOf[Buffer[Double]].+=(ScalarTagDouble.parse(s))
-      }
-      (parse, allocBuffer, copy)
+        } else {
+          val sten = {
+            val arrays = callback.bufdata.toArrays
+            Scope { implicit scope =>
+              STen
+                .cat(arrays.map { array => copy(array) }, 0)
+                .reshape(-1L, callback.headerLocFields.toLong)
+            }
+          }
+          val t2 = if (device != CPU) {
+            device.to(sten)
+          } else sten
+          Right((colIndex.map(_.toList), t2))
+        }
+    }
 
   }
- 
+
+  private[lamp] class BufferCallback(
+      locs: Array[Int],
+      maxLines: Long,
+      header: Boolean,
+      scalarType: Byte
+  ) extends org.saddle.io.csv.Callback {
+
+    private val locsIdx = org.saddle.Index(locs)
+
+    val headerFields = scala.collection.mutable.ArrayBuffer[String]()
+    val allHeaderFields = scala.collection.mutable.ArrayBuffer[String]()
+
+    val bufdata = scalarType match {
+      case 4 => Buffer.empty[Long](1024)
+      case 6 => Buffer.empty[Float](1024)
+      case 7 => Buffer.empty[Double](1024)
+    }
+
+    var headerAllFields = 0
+    var headerLocFields = 0
+
+    private val emptyLoc = locs.length == 0
+
+    private var loc = 0
+    private var line = 0L
+
+    def apply(
+        s: Array[Char],
+        from: Array[Int],
+        to: Array[Int],
+        len: Int
+    ): org.saddle.io.csv.Control = {
+      scalarType match {
+        case 4 => applyLong(s, from, to, len)
+        case 6 => applyFloat(s, from, to, len)
+        case 7 => applyDouble(s, from, to, len)
+      }
+    }
+    private def applyLong(
+        s: Array[Char],
+        from: Array[Int],
+        to: Array[Int],
+        len: Int
+    ): org.saddle.io.csv.Control = {
+      var i = 0
+
+      var error = false
+      var errorString = ""
+
+      if (len == -2) {
+        error = true
+        errorString =
+          s"Unclosed quote after line $line (not necessarily in that line)"
+      }
+
+      while (i < len && line < maxLines && !error) {
+        val fromi = from(i)
+        val toi = to(i)
+        val ptoi = math.abs(toi)
+        if (line == 0) {
+          allHeaderFields.append(new String(s, fromi, ptoi - fromi))
+          headerAllFields += 1
+
+          if (emptyLoc || locsIdx.contains(loc)) {
+            headerLocFields += 1
+          }
+        }
+
+        if (emptyLoc || locsIdx.contains(loc)) {
+          if (header && line == 0) {
+            headerFields.append(new String(s, fromi, ptoi - fromi))
+          } else {
+            if (loc >= headerAllFields) {
+              error = true
+              errorString =
+                s"Too long line ${line + 1} (1-based). Expected $headerAllFields fields, got ${loc + 1}."
+            } else {
+              import scala.Predef.{wrapRefArray => _}
+              bufdata
+                .asInstanceOf[Buffer[Long]]
+                .+=(ScalarTagLong.parse(s, fromi, ptoi))
+            }
+          }
+        }
+
+        if (toi < 0) {
+          if (line == 0 && !emptyLoc && headerLocFields != locs.length) {
+            error = true
+            errorString =
+              s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${allHeaderFields
+                .mkString("[", ", ", "]")}"
+          }
+          if (loc < headerAllFields - 1) {
+            error = true
+            errorString =
+              s"Too short line ${line + 1} (1-based). Expected $headerAllFields fields, got ${loc + 1}."
+          }
+
+          loc = 0
+          line += 1
+        } else loc += 1
+        i += 1
+      }
+
+      if (error) org.saddle.io.csv.Error(errorString)
+      else if (line >= maxLines) org.saddle.io.csv.Done
+      else org.saddle.io.csv.Next
+    }
+    private def applyFloat(
+        s: Array[Char],
+        from: Array[Int],
+        to: Array[Int],
+        len: Int
+    ): org.saddle.io.csv.Control = {
+      var i = 0
+
+      var error = false
+      var errorString = ""
+
+      if (len == -2) {
+        error = true
+        errorString =
+          s"Unclosed quote after line $line (not necessarily in that line)"
+      }
+
+      while (i < len && line < maxLines && !error) {
+        val fromi = from(i)
+        val toi = to(i)
+        val ptoi = math.abs(toi)
+        if (line == 0) {
+          allHeaderFields.append(new String(s, fromi, ptoi - fromi))
+          headerAllFields += 1
+          if (emptyLoc || locsIdx.contains(loc)) {
+            headerLocFields += 1
+          }
+        }
+
+        if (emptyLoc || locsIdx.contains(loc)) {
+          if (header && line == 0) {
+            headerFields.append(new String(s, fromi, ptoi - fromi))
+          } else {
+            if (loc >= headerAllFields) {
+              error = true
+              errorString =
+                s"Too long line ${line + 1} (1-based). Expected $headerAllFields fields, got ${loc + 1}."
+            } else {
+              import scala.Predef.{wrapRefArray => _}
+              bufdata
+                .asInstanceOf[Buffer[Float]]
+                .+=(ScalarTagFloat.parse(s, fromi, ptoi))
+            }
+          }
+        }
+
+        if (toi < 0) {
+          if (line == 0 && !emptyLoc && headerLocFields != locs.length) {
+            error = true
+            errorString =
+              s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${allHeaderFields
+                .mkString("[", ", ", "]")}"
+          }
+          if (loc < headerAllFields - 1) {
+            error = true
+            errorString =
+              s"Too short line ${line + 1} (1-based). Expected $headerAllFields fields, got ${loc + 1}."
+          }
+
+          loc = 0
+          line += 1
+        } else loc += 1
+        i += 1
+      }
+
+      if (error) org.saddle.io.csv.Error(errorString)
+      else if (line >= maxLines) org.saddle.io.csv.Done
+      else org.saddle.io.csv.Next
+    }
+    private def applyDouble(
+        s: Array[Char],
+        from: Array[Int],
+        to: Array[Int],
+        len: Int
+    ): org.saddle.io.csv.Control = {
+      var i = 0
+
+      var error = false
+      var errorString = ""
+
+      if (len == -2) {
+        error = true
+        errorString =
+          s"Unclosed quote after line $line (not necessarily in that line)"
+      }
+
+      while (i < len && line < maxLines && !error) {
+        val fromi = from(i)
+        val toi = to(i)
+        val ptoi = math.abs(toi)
+        if (line == 0) {
+          allHeaderFields.append(new String(s, fromi, ptoi - fromi))
+          headerAllFields += 1
+          if (emptyLoc || locsIdx.contains(loc)) {
+            headerLocFields += 1
+          }
+        }
+
+        if (emptyLoc || locsIdx.contains(loc)) {
+          if (header && line == 0) {
+            headerFields.append(new String(s, fromi, ptoi - fromi))
+          } else {
+            if (loc >= headerAllFields) {
+              error = true
+              errorString =
+                s"Too long line ${line + 1} (1-based). Expected $headerAllFields fields, got ${loc + 1}."
+            } else {
+              import scala.Predef.{wrapRefArray => _}
+              bufdata
+                .asInstanceOf[Buffer[Double]]
+                .+=(ScalarTagDouble.parse(s, fromi, ptoi))
+            }
+          }
+        }
+
+        if (toi < 0) {
+          if (line == 0 && !emptyLoc && headerLocFields != locs.length) {
+            error = true
+            errorString =
+              s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${allHeaderFields
+                .mkString("[", ", ", "]")}"
+          }
+          if (loc < headerAllFields - 1) {
+            error = true
+            errorString =
+              s"Too short line ${line + 1} (1-based). Expected $headerAllFields fields, got ${loc + 1}."
+          }
+
+          loc = 0
+          line += 1
+        } else loc += 1
+        i += 1
+      }
+
+      if (error) org.saddle.io.csv.Error(errorString)
+      else if (line >= maxLines) org.saddle.io.csv.Done
+      else org.saddle.io.csv.Next
+    }
+
+  }
+
+  private[csv] def typeSpecificLambdas[S: Sc](scalarType: Byte) =
+    scalarType match {
+      case 4 =>
+        val copy = (ar: Array[_]) =>
+          STen
+            .fromLongArray(ar.asInstanceOf[Array[Long]], List(ar.length), CPU)
+
+        (copy)
+      case 6 =>
+        val copy = (ar: Array[_]) =>
+          STen
+            .fromFloatArray(ar.asInstanceOf[Array[Float]], List(ar.length), CPU)
+
+        (copy)
+      case 7 =>
+        val copy = (ar: Array[_]) =>
+          STen
+            .fromDoubleArray(
+              ar.asInstanceOf[Array[Double]],
+              List(ar.length),
+              CPU,
+              DoublePrecision
+            )
+
+        (copy)
+
+    }
+
 }
