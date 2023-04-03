@@ -25,11 +25,11 @@ class EndToEndClassificationSuite extends AnyFunSuite {
 
   def parseDataset(file: File) = {
     // org.saddle.csv.CsvPa
-    val src = scala.io.Source.fromInputStream(
+    val src = 
       new java.util.zip.GZIPInputStream(new java.io.FileInputStream(file))
-    )
+    
     val frame = org.saddle.csv.CsvParser
-      .parseSourceWithHeader[Double](
+      .parseInputStreamWithHeader[Double](
         src,
         recordSeparator = "\n",
         fieldSeparator = '\t'
