@@ -105,9 +105,7 @@ package object kmeans {
       scope: Scope
   ) = {
 
-    val i = instances.device.to(
-      STen.randint(0, instances.sizes(0), List(1), STenOptions.l)
-    )
+    val i = instances.device.to(STen.randint(0, instances.sizes(0), List(1), STenOptions.l))
     val init = instances.indexSelect(0, i)
 
     kmeansPlusPlusExtendTo(instances, init, centers)

@@ -302,5 +302,5 @@ package object csv {
       (parse, allocBuffer, copy)
 
   }
-
+ 
 }

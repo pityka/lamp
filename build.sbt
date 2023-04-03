@@ -209,7 +209,7 @@ lazy val table = project
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-parse" % "0.3.5",
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
-    )
+    ),
     // coverageEnabled := true
   )
   .dependsOn(data)

@@ -11,8 +11,7 @@ import org.saddle.index._
 import lamp.saddle._
 
 class TableSuite extends AnyFunSuite {
-  implicit def AssertionIsMovable: EmptyMovable[Assertion] =
-    Movable.empty[Assertion]
+  implicit def AssertionIsMovable: EmptyMovable[Assertion] = Movable.empty[Assertion]
 
   val csvText = """hint,hfloat,htime,hbool,htext
 1,1.5,2020-01-01T00:00:00Z,false,"something, something"
@@ -148,6 +147,7 @@ NA,NA,NA,NA,NA
       val table = makeTable3
       val table2 = makeTable2
 
+
       val right = table.equijoin(0, table2, 0, RightJoin)
       val left = table.equijoin(0, table2, 0, LeftJoin)
       val outer = table.equijoin(0, table2, 0, OuterJoin)
@@ -226,14 +226,12 @@ NA,NA,NA,NA,NA
     Scope.root { implicit scope =>
       val table = makeTable1
       val table2 = makeTable2
-
-      val joined = table.join(table2, 2) { t =>
-        Column((t(1).values + 3d) gt t(6).values)
-      }
+      
+      val joined = table.join(table2,2){t => Column((t(1).values+3d) gt t(6).values)}
       assert(joined.numRows == 3)
       assert(joined.numCols == 7)
-      assert(joined.colAt(1).values.toFloatVec == Vec(2.5, 3.0, 3.0))
-      assert(joined.colAt(6).values.toFloatVec == Vec(4.5, 5.5, 4.5))
+      assert(joined.colAt(1).values.toFloatVec == Vec(2.5,3.0,3.0))
+      assert(joined.colAt(6).values.toFloatVec == Vec(4.5,5.5,4.5))
       ()
     }
   }
@@ -309,9 +307,7 @@ NA,NA,NA,NA,NA
   test("rfilter") {
     Scope.root { implicit scope =>
       val table = makeTable1
-      val filtered = table.rfilter()(r =>
-        r.first("htext").get.asInstanceOf[String] == "something,"
-      )
+      val filtered = table.rfilter()(r => r.first("htext").get.asInstanceOf[String] == "something,")
 
       assert(filtered.numRows == 1)
       assert(filtered.numCols == 5)
@@ -457,9 +453,7 @@ NA,NA,NA,NA,NA
   test("csv writer") {
     Scope.root { implicit scope =>
       val table = makeTable1
-      val rendered = lamp.table.csv
-        .renderToCSVString(table, recordSeparator = "\n")
-        .dropRight(1)
+      val rendered = lamp.table.csv.renderToCSVString(table, recordSeparator = "\n").dropRight(1)
       assert(csvText == rendered)
       ()
     }
@@ -502,10 +496,10 @@ NA,NA,NA,NA,NA
   test("binary writer") {
     Scope.root { implicit scope =>
       val table = makeTable1
-      val tmp = java.io.File.createTempFile("test", "table")
+      val tmp = java.io.File.createTempFile("test","table")
       import cats.effect.unsafe.implicits.global
 
-      lamp.table.io.writeTableToFile(table, tmp).unsafeRunSync().toOption.get
+      lamp.table.io.writeTableToFile(table,tmp).unsafeRunSync().toOption.get 
       val readBack = lamp.table.io.readTableFromFile(tmp)
       assert(readBack.equalDeep(table))
       tmp.delete
