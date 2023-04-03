@@ -139,7 +139,7 @@ sealed trait Constant extends Variable {
 }
 
 object Constant {
-  implicit val movable  : Movable[Constant] =
+  implicit val movable: Movable[Constant] =
     Movable.nonEmpty[Constant] {
       case p: ConstantWithGrad    => List(p.value.value, p.pd.value)
       case p: ConstantWithoutGrad => List(p.value.value)
@@ -158,7 +158,7 @@ case class VariableNonConstant(
 }
 
 object VariableNonConstant {
-  implicit val movable : Movable[VariableNonConstant] =
+  implicit val movable: Movable[VariableNonConstant] =
     Movable.nonEmpty[VariableNonConstant](p =>
       p.wengert.flatMap {
         case ConstantWithGrad(value, pd)       => List(value.value, pd.value)
@@ -520,6 +520,6 @@ case class GraphMemoryAllocationReport(
   private def gb(l: Long) = f"${(l.toDouble * 1e-9)}%.4f"
   override def toString =
     s"#par=$parameterTensorCount(${gb(parameterTensorStorage)}GB);#const=$constantTensorCount(${gb(
-      constantTensorStorage
-    )}GB);#act=$intermediateTensorCount(${gb(intermediateTensorStorage)}GB)"
+        constantTensorStorage
+      )}GB);#act=$intermediateTensorCount(${gb(intermediateTensorStorage)}GB)"
 }

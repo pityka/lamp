@@ -7,7 +7,8 @@ import lamp.Scope
 import org.scalatest.compatible.Assertion
 
 class AdamWSuite extends AnyFunSuite {
-  implicit def AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
+  implicit def AssertionIsMovable: lamp.EmptyMovable[Assertion] =
+    lamp.Movable.empty[Assertion]
 
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }

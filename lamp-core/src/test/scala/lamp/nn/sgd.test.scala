@@ -8,7 +8,8 @@ import lamp.saddle._
 import org.scalatest.compatible.Assertion
 
 class SGDSuite extends AnyFunSuite {
-implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
+  implicit val AssertionIsMovable: lamp.EmptyMovable[Assertion] =
+    lamp.Movable.empty[Assertion]
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }

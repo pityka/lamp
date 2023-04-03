@@ -19,15 +19,15 @@ import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
-import lamp.saddle._ 
+import lamp.saddle._
 
 class EndToEndClassificationSuite extends AnyFunSuite {
 
   def parseDataset(file: File) = {
     // org.saddle.csv.CsvPa
-    val src = 
+    val src =
       new java.util.zip.GZIPInputStream(new java.io.FileInputStream(file))
-    
+
     val frame = org.saddle.csv.CsvParser
       .parseInputStreamWithHeader[Double](
         src,
