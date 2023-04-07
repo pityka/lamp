@@ -369,20 +369,6 @@ lazy val example_bert = project
   )
   .dependsOn(core, data, saddlecompat)
 
-lazy val example_translation = project
-  .in(file("example-translation"))
-  .settings(commonSettings: _*)
-  .settings(
-    publishArtifact := false,
-    publish / skip := true,
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
-      "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.outr" %% "scribe" % scribeVersion
-    )
-  )
-  .dependsOn(core, data, saddlecompat)
-
 lazy val example_arxiv = project
   .in(file("example-arxiv"))
   .settings(commonSettings: _*)
@@ -424,7 +410,6 @@ lazy val docs = project
         example_cifar100,
         example_cifar100_distributed,
         example_timemachine,
-        example_translation,
         e2etest
       ))
   )
@@ -453,7 +438,6 @@ lazy val root = project
     example_cifar100,
     example_cifar100_distributed,
     example_timemachine,
-    example_translation,
     example_arxiv,
     example_bert,
     e2etest
