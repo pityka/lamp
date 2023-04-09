@@ -60,6 +60,7 @@ object EmptyMovable {
   implicit def FloatIsMovable: EmptyMovable[Float] = Movable.empty[Float]
   implicit def BooleanIsMovable: EmptyMovable[Boolean] = Movable.empty[Boolean]
   implicit def IntIsMovable: EmptyMovable[Int] = Movable.empty[Int]
+  implicit def CharIsMovable: EmptyMovable[Char] = Movable.empty[Char]
   implicit def LongIsMovable: EmptyMovable[Long] = Movable.empty[Long]
   implicit def ShortIsMovable: EmptyMovable[Short] = Movable.empty[Short]
   implicit def ByteIsMovable: EmptyMovable[Byte] = Movable.empty[Byte]

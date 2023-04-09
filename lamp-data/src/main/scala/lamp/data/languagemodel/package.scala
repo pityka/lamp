@@ -17,7 +17,7 @@ package object languagemodel {
   def autoregressiveInference(
       model: LanguageModelModule,
       modelBlockSize: Int,
-      prefix: Array[Short],
+      prefix: Array[Char],
       length: Int,
       temperature: Double
   )(scope: Scope): IO[Array[Short]] = {
@@ -46,13 +46,13 @@ package object languagemodel {
       )
     }
 
-    def makeBatch(prefix: Array[Short]) =
+    def makeBatch(prefix: Array[Char]) =
       BatchStream.single(scopeInResource.map { implicit scope =>
         NonEmptyBatch(makeInput(prefix))
       })
 
     def single(
-        prefix: Array[Short]
+        prefix: Array[Char]
     )(implicit scope: Scope): IO[LanguageModelOutputNonVariable] =
       IOLoops
         .runBatchStream(
@@ -67,7 +67,7 @@ package object languagemodel {
         )
         .map(_.head)
 
-    def loop(n: Int, acc: Array[Short])(scope: Scope): IO[Array[Short]] =
+    def loop(n: Int, acc: Array[Char])(scope: Scope): IO[Array[Char]] =
       if (n == 0) IO.pure(acc)
       else
         Scope
@@ -82,7 +82,7 @@ package object languagemodel {
                 false
               )
               assert(sample.numel == 1)
-              val next = sample.toLongArray.head.toShort
+              val next = sample.toLongArray.head.toChar
               next
             }
           }
@@ -95,7 +95,7 @@ package object languagemodel {
   def autoregressiveMinibatchesFromCorpus(
       minibatchSize: Int,
       numBatches: Int,
-      corpus: Array[Short],
+      corpus: Array[Char],
       blockLength: Int
   ) = {
     def makeNonEmptyBatch(device: Device) = {
