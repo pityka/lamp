@@ -1,0 +1,1 @@
+example-autoregressivelm/target/universal/stage/bin/example_autoregressivelm --wiki2 datasets/wikitext/wikitext-2-v1.zip

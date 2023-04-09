@@ -56,6 +56,15 @@ object StateIO {
     )
   }
 
+  /**
+    * Reads LoopState from file
+    * 
+    * Returned value may be passed to training loop constructors to initialize loop state
+    *
+    * @param file file on disk
+    * @param device device onto which to load tensors
+    * @return LoopState
+    */
   def readFromFile(file: File, device: Device)(implicit
       scope: Scope
   ): LoopState = {
@@ -215,6 +224,9 @@ object StateIO {
     )
   }
 
+  /** Writes loop state into file 
+    * 
+    */
   def writeToFile(
       file: File,
       state: LoopState,
@@ -257,7 +269,9 @@ object StateIO {
 
   }
 
-  def stateToFile(file: File) = { (state: LoopState) =>
+  /** Returns a function which returns an IO writing the loop state to file 
+    */
+  def stateToFile(file: File): LoopState => IO[Unit] = { (state: LoopState) =>
     IO.blocking { writeToFile(file, state, 16384) }
   }
 }

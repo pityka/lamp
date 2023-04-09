@@ -368,6 +368,21 @@ lazy val example_bert = project
     )
   )
   .dependsOn(core, data, saddlecompat)
+  
+lazy val example_autoregressivelm = project
+  .in(file("example-autoregressivelm"))
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    publish / skip := true,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.1.0",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
+      "com.outr" %% "scribe" % scribeVersion
+    )
+  )
+  .dependsOn(core, data, saddlecompat)
+  .enablePlugins(JavaAppPackaging)
 
 lazy val example_arxiv = project
   .in(file("example-arxiv"))
@@ -407,6 +422,7 @@ lazy val docs = project
       (inAnyProject -- inProjects(
         example_arxiv,
         example_bert,
+        example_autoregressivelm,
         example_cifar100,
         example_cifar100_distributed,
         example_timemachine,

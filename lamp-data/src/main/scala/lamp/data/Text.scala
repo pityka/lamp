@@ -156,6 +156,7 @@ object Text {
         .map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
     }
   }
+  
   def charsToIntegers(text: String) = {
     val chars = text.toSeq
       .groupBy(identity)
