@@ -14,7 +14,7 @@ import cats.effect.IO
 
 package object languagemodel {
 
-  def inference(
+  def autoregressiveInference(
       model: LanguageModelModule,
       modelBlockSize: Int,
       prefix: Array[Short],
@@ -38,9 +38,14 @@ package object languagemodel {
 
       val positions = STen.fromLongArray(Array(prefix.length)).unsqueeze(0)
 
+      val maxLength = {
+        val single = STen.arange_l(0, modelBlockSize, 1).unsqueeze(0)
+        single.repeat(List(1, 1))
+      }
+
       LanguageModelInput(
         tokens = const(tokens),
-        maxLength = None,
+        maxLength = Some(maxLength),
         positions = Some(positions)
       )
     }

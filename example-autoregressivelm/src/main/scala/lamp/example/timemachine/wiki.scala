@@ -208,7 +208,7 @@ object Train extends App {
         val modelAsEval = model.languageModel.asEval
 
         val inferred = lamp.data.languagemodel
-          .inference(
+          .autoregressiveInference(
             modelAsEval,
             modelBlockSize = maxLength,
             prefix = config.extend.get.getBytes("US-ASCII").map(_.toShort),
