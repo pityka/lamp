@@ -117,15 +117,35 @@ object Train extends App {
       scribe.info(s"Config: $config")
       val filesInZip = readFromZip(config.wiki2)
 
-      val trainCorpus =
-        filesInZip("wikitext-2/wiki.train.tokens").map(_.toShort)
+      val rawTrainCorpus =
+        filesInZip("wikitext-2/wiki.train.tokens")
 
-    
+      val trainedEncoding =
+        lamp.data.bytesegmentencoding.train(
+          corpus = rawTrainCorpus.take(100000),
+          vocabularyMin = 1,
+          vocabularyMax = 255,
+          maxMergedSegmentLength = 4
+        )
 
-     
+      config.checkpointSave.foreach { file =>
+        lamp.data.bytesegmentencoding.saveEncodingToFile(
+          new File(file + ".bytesegmentencoding.json"),
+          trainedEncoding
+        )
+
+      }
+
+      def encode(raw: Array[Byte]): Array[Char] =
+        lamp.data.bytesegmentencoding
+          .encode(raw, trainedEncoding, 0.toChar)
+
+      val trainCorpus = encode(rawTrainCorpus)
 
       val validCorpus =
-          filesInZip("wikitext-2/wiki.valid.tokens").map(_.toShort)
+        encode(
+          filesInZip("wikitext-2/wiki.valid.tokens")
+        )
 
       val maxLength = config.maxLength
       Scope.root { implicit scope =>
@@ -203,7 +223,21 @@ object Train extends App {
       scribe.info(s"Config: $config")
       scribe.info(s"Inference mode. Extending '${config.extend.get}'")
 
-      
+      val trainedEncoding =
+        lamp.data.bytesegmentencoding.readEncodingFromFile(
+          new File(config.checkpointLoad.get + ".bytesegmentencoding.json")
+        )
+
+      def encode(raw: Array[Byte]): Array[Char] =
+        lamp.data.bytesegmentencoding
+          .encode(raw, trainedEncoding, 0.toChar)
+
+      def decode(tokens: Array[Char]): Array[Byte] =
+        lamp.data.bytesegmentencoding.decode(
+          tokens,
+          trainedEncoding,
+          '?'.toByte
+        )
 
       val maxLength = config.maxLength
       Scope.root { implicit scope =>
@@ -226,18 +260,19 @@ object Train extends App {
 
         val rawPrefix = config.extend.get.getBytes("US-ASCII")
 
+        val encodedPrefix = encode(rawPrefix)
 
         val inferred = lamp.data.languagemodel
           .autoregressiveInference(
             modelAsEval,
             modelBlockSize = maxLength,
-            prefix = rawPrefix.map(_.toShort),
+            prefix = encodedPrefix,
             length = 30,
             temperature = config.samplingTemperature
           )(scope)
           .unsafeRunSync()
 
-        val decoded = inferred.map(_.toByte)
+        val decoded = decode(inferred)
 
         scribe.info(s"Extended: '${new String(decoded)}'")
 

@@ -59,3 +59,12 @@ case class SimpleThenSWALoopState(
 object LoopState {
   implicit val codec: JsonValueCodec[LoopState] = JsonCodecMaker.make
 }
+
+
+case class ByteSegmentEncoding(
+  encoding: Vector[(Vector[Byte], Char)]
+)
+
+object ByteSegmentEncoding {
+  implicit val codec: JsonValueCodec[ByteSegmentEncoding] = JsonCodecMaker.make
+}
