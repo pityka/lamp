@@ -8,3 +8,6 @@
 example-arxiv/*
 *scala
 *tasty
+
+test_data/*
+website/*

@@ -35,13 +35,13 @@ object Train extends App {
     val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
       maxLength = maxLength,
       vocabularySize = 256,
-      numBlocks = 2,
-      embeddingDim = 32,
-      attentionHiddenPerHeadDim = 8,
-      attentionNumHeads = 4,
-      encoderMlpHiddenDim = 32,
+      numBlocks = 12,
+      embeddingDim = 768,
+      attentionHiddenPerHeadDim = 64,
+      attentionNumHeads = 12,
+      encoderMlpHiddenDim = 768,
       dropout = 0d,
-      padToken = -1000L,
+      padToken = 255L,
       tOpt = tensorOptions,
       linearized = false
     )
@@ -136,7 +136,7 @@ object Train extends App {
             .asInstanceOf[SimpleLoopState]
         }
 
-        scribe.info("Learnable parameters: " + model.module.learnableParameters)
+        scribe.info(f"Learnable parameters: ${model.module.learnableParameters}%,d")
 
         val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
@@ -165,7 +165,7 @@ object Train extends App {
             optimizerFactory = optimizer,
             trainBatchesOverEpoch = trainEpochs,
             validationBatchesOverEpoch = Some(validEpochs),
-            epochs = 10,
+            epochs = config.epochs,
             initState = checkpointedState,
             logger = Some(scribe.Logger("training")),
             validationFrequency = 1,
