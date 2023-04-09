@@ -149,7 +149,19 @@ object LanguageModelLoss {
 case class LanguageModelOutput(
     encoded: Variable,
     languageModelScores: Variable
+) {
+  def toSTen =
+    LanguageModelOutputNonVariable(encoded.value, languageModelScores.value)
+}
+case class LanguageModelOutputNonVariable(
+    encoded: STen,
+    languageModelScores: STen
 )
+
+object LanguageModelOutputNonVariable {
+  implicit val movable: Movable[LanguageModelOutputNonVariable] =
+    Movable.by(v => (v.encoded, v.languageModelScores))
+}
 
 case class LanguageModelModule(
     tokenEmbedding: Embedding,

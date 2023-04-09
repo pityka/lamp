@@ -23,11 +23,31 @@ case class CliConfig(
     numBatchesPerEpoch: Int = 100,
     maxLength: Int = 128,
     checkpointSave: Option[String] = None,
-    checkpointLoad: Option[String] = None
+    checkpointLoad: Option[String] = None,
+    extend: Option[String] = None
 )
 
 object Train extends App {
   scribe.info("Logger start")
+
+  def allocateModel(device: Device, maxLength: Int)(implicit scope: Scope) = {
+    val tensorOptions = device.options(SinglePrecision)
+    val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
+      maxLength = maxLength,
+      vocabularySize = 256,
+      numBlocks = 2,
+      embeddingDim = 32,
+      attentionHiddenPerHeadDim = 8,
+      attentionNumHeads = 4,
+      encoderMlpHiddenDim = 32,
+      dropout = 0d,
+      padToken = -1000L,
+      tOpt = tensorOptions,
+      linearized = false
+    )
+    SupervisedModel(net, LossFunctions.Identity)
+  }
+
   import scopt.OParser
   val builder = OParser.builder[CliConfig]
   val parser1 = {
@@ -39,6 +59,7 @@ object Train extends App {
       opt[Int]("validation-batch").action((x, c) =>
         c.copy(validationBatchSize = x)
       ),
+      opt[String]("extend").action((x, c) => c.copy(extend = Some(x))),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
       opt[Int]("batches-per-epoch").action((x, c) =>
         c.copy(numBatchesPerEpoch = x)
@@ -83,7 +104,7 @@ object Train extends App {
   }
 
   OParser.parse(parser1, args, CliConfig()) match {
-    case Some(config) =>
+    case Some(config) if config.extend.isEmpty =>
       scribe.info(s"Config: $config")
       val filesInZip = readFromZip(config.wiki2)
 
@@ -102,29 +123,11 @@ object Train extends App {
         val device =
           if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
 
-        def allocateModel(device: Device) = {
-          val tensorOptions = device.options(SinglePrecision)
-          val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
-            maxLength = maxLength,
-            vocabularySize = 256,
-            numBlocks = 2,
-            embeddingDim = 32,
-            attentionHiddenPerHeadDim = 8,
-            attentionNumHeads = 4,
-            encoderMlpHiddenDim = 32,
-            dropout = 0d,
-            padToken = -1000L,
-            tOpt = tensorOptions,
-            linearized = false
-          )
-          SupervisedModel(net, LossFunctions.Identity)
-        }
-
-        val model = allocateModel(device)
+        val model = allocateModel(device, maxLength)
 
         val extraModels = config.gpus.drop(1).map { deviceNum =>
           val device = CudaDevice(deviceNum)
-          allocateModel(device)
+          allocateModel(device, maxLength)
         }
 
         val checkpointedState = config.checkpointLoad.map { state =>
@@ -180,6 +183,43 @@ object Train extends App {
 
         println(trainedModel)
 
+      }
+    case Some(config) =>
+      scribe.info(s"Config: $config")
+      scribe.info(s"Inference mode. Extending '${config.extend.get}'")
+
+      val maxLength = config.maxLength
+      Scope.root { implicit scope =>
+        val device =
+          if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
+
+        val model = allocateModel(device, maxLength = maxLength).module
+
+        val checkpointedState = config.checkpointLoad
+          .map { state =>
+            StateIO
+              .readFromFile(new File(state), device)
+              .asInstanceOf[SimpleLoopState]
+          }
+          .getOrElse(throw new RuntimeException("Can't load"))
+
+        model.load(checkpointedState.model)
+
+        val modelAsEval = model.languageModel.asEval
+
+        val inferred = lamp.data.languagemodel
+          .inference(
+            modelAsEval,
+            modelBlockSize = maxLength,
+            prefix = config.extend.get.getBytes("US-ASCII").map(_.toShort),
+            length = 30,
+            padToken = 255
+          )(scope)
+          .unsafeRunSync()
+
+        scribe.info(s"Extended: '${new String(inferred.map(_.toByte))}'")
+
+        ()
       }
     case _ =>
     // arguments are bad, error message will have been displayed
