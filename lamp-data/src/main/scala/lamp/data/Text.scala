@@ -156,8 +156,8 @@ object Text {
         .map(v => v.toSeq.map(l => vocab(l.toInt)).mkString)
     }
   }
-  
-  def charsToIntegers(text: String) = {
+
+  def charsToIntegers(text: String): (Map[Char, Int], Vector[Int]) = {
     val chars = text.toSeq
       .groupBy(identity)
       .toSeq
@@ -176,7 +176,7 @@ object Text {
       text: String,
       minimumTokenId: Int,
       minimumFrequency: Int
-  ) = {
+  ): (Array[Int], Map[String, Int]) = {
     val words = text
       .split("\\s+")
 
@@ -196,7 +196,8 @@ object Text {
 
     (words.map(w => vocab.getOrElse(w, minimumTokenId)), vocab)
   }
-  def charsToIntegers(text: String, chars: Map[Char, Int]) = {
+
+  def charsToIntegers(text: String, chars: Map[Char, Int]): Vector[Int] = {
 
     text.map(c => chars(c)).toVector
   }
@@ -281,110 +282,6 @@ object Text {
           Array.range(0, numSamples * timeSteps, timeSteps)
         )
       )
-      .grouped(minibatchSize)
-      .toList
-      .map(_.toArray)
-      .dropRight(1)
-
-    scribe.info(
-      s"Total batches: ${idx.size}. Each $timeSteps token long and has $minibatchSize examples."
-    )
-    assert(idx.forall(_.size == minibatchSize))
-    BatchStream.fromIndices(idx.toArray)(makeNonEmptyBatch)
-
-  }
-
-  /** Yields tensors of shape (time step x batch size)
-    * @param text
-    *   pairs of (source,destination) units
-    */
-  def minibatchesForSeq2Seq(
-      text: IndexedSeq[(Vector[Long], Vector[Long])],
-      minibatchSize: Int,
-      timeSteps: Int,
-      pad: Long,
-      rng: scala.util.Random
-  ): BatchStream[((Variable, Variable), STen), Int, Unit] = {
-    def makeNonEmptyBatch(idx: Array[Int], device: Device) =
-      BatchStream.scopeInResource.map { implicit scope =>
-        val pairs = idx.map { i =>
-          val segmentSource =
-            text(i)._1
-              .take(timeSteps)
-              .padTo(timeSteps, pad.toLong)
-          val segmentDestination =
-            text(i)._2
-              .take(timeSteps)
-              .padTo(timeSteps, pad.toLong)
-          val segmentTarget =
-            text(i)._2
-              .drop(1)
-              .take(timeSteps)
-              .padTo(timeSteps, pad.toLong)
-          assert(segmentSource.length == segmentTarget.length)
-          assert(segmentSource.length == segmentTarget.length)
-          assert(segmentSource.length == segmentDestination.length)
-          assert(segmentSource.length == timeSteps)
-
-          (
-            segmentSource,
-            segmentDestination,
-            segmentTarget
-          )
-
-        }
-
-        val flattenedSource =
-          TensorHelpers
-            .fromLongArray(pairs.flatMap(_._1).toArray, device)
-        val viewedSource = ATen._unsafe_view(
-          flattenedSource,
-          Array(idx.size.toLong, timeSteps.toLong)
-        )
-        val transposedSource =
-          ATen.transpose(viewedSource, 0, 1)
-        val flattenedDest =
-          TensorHelpers
-            .fromLongArray(pairs.flatMap(_._2).toArray, device)
-        val viewedDest = ATen._unsafe_view(
-          flattenedDest,
-          Array(idx.size.toLong, timeSteps.toLong)
-        )
-        val transposedDest =
-          ATen.transpose(viewedDest, 0, 1)
-        val flattenedTarget =
-          TensorHelpers.fromLongArray(pairs.flatMap(_._3).toArray, device)
-        val viewedTarget = ATen._unsafe_view(
-          flattenedTarget,
-          Array(idx.size.toLong, timeSteps.toLong)
-        )
-        val transposedTarget = ATen.transpose(viewedTarget, 0, 1)
-
-        Tensor.releaseAll(
-          Array(
-            viewedTarget,
-            viewedSource,
-            viewedDest,
-            flattenedTarget,
-            flattenedSource,
-            flattenedDest
-          )
-        )
-
-        StreamControl(
-          (
-            (
-              const(STen.owned(transposedSource)),
-              const(STen.owned(transposedDest))
-            ),
-            STen.owned(transposedTarget)
-          )
-        )
-
-      }
-
-    val idx = rng
-      .shuffle(ArraySeq.unsafeWrapArray(Array.range(0, text.size)))
       .grouped(minibatchSize)
       .toList
       .map(_.toArray)
