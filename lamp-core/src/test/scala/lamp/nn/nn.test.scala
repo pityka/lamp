@@ -694,13 +694,13 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
     )
   }
 
-  testGradientAndValueNDGeneric[(Variable, STen), Variable, TransformerEncoder](
+  testGradientAndValueNDGeneric[(Variable, Option[STen]), Variable, TransformerEncoder](
     "transformer encoder ",
     false
   )(
     nd2x3x2,
     v =>
-      (v, STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free)),
+      (v, Option(STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free))),
     v => v,
     implicit pool => {
       aten.Tensor.manual_seed(123)
@@ -710,7 +710,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
       val attentionNumHeads = 5
       val mlpHiddenDim = 7
       val dropout = 0d
-      val padToken = -999L
+      // val padToken = -999L
       val tOpt = STenOptions.d
       TransformerEncoder.apply(
         List(
@@ -743,7 +743,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
               dropout = dropout,
               train = true,
               numHeads = attentionNumHeads,
-              padToken = padToken,
+              // padToken = padToken,
               linearized = false
             ),
             layerNorm1 = lamp.nn.LayerNorm(normalizedShape = List(2L), tOpt),
@@ -760,13 +760,13 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
     },
     0d
   )
-  testGradientAndValueNDGeneric[(Variable, STen), Variable, TransformerEncoder](
+  testGradientAndValueNDGeneric[(Variable, Option[STen]), Variable, TransformerEncoder](
     "linearized transformer encoder ",
     false
   )(
     nd2x3x2,
     v =>
-      (v, STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free)),
+      (v, Option(STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free))),
     v => v,
     implicit pool => {
       aten.Tensor.manual_seed(123)
@@ -776,7 +776,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
       val attentionNumHeads = 5
       val mlpHiddenDim = 7
       val dropout = 0d
-      val padToken = -999L
+      // val padToken = -999L
       val tOpt = STenOptions.d
       TransformerEncoder.apply(
         List(
@@ -809,7 +809,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
               dropout = dropout,
               train = true,
               numHeads = attentionNumHeads,
-              padToken = padToken,
+              // padToken = padToken,
               linearized = true
             ),
             layerNorm1 = LayerNorm(List(2), tOpt),
