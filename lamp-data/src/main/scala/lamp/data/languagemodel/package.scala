@@ -20,11 +20,11 @@ package object languagemodel {
       prefix: Array[Char],
       length: Int,
       temperature: Double
-  )(scope: Scope): IO[Array[Short]] = {
+  )(scope: Scope): IO[Array[Char]] = {
     assert(prefix.length < modelBlockSize)
     assert(temperature > 0d)
 
-    def makeInput(prefix: Array[Short])(implicit scope: Scope) = {
+    def makeInput(prefix: Array[Char])(implicit scope: Scope) = {
       val tokens =
         STen
           .fromLongArray(
