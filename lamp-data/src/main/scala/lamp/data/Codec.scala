@@ -13,11 +13,3 @@ trait Codec {
   def saveToFile(file:File) : Unit
 }
 
-object NoCodec extends Codec with CodecFactory[Codec] {
-
-  def train(corpus: Array[Byte]) = NoCodec
-  def encode(in: Array[Byte]) : Array[Char] = in.map(_.toChar)
-  def decode(encoded: Array[Char]) : Array[Byte] = encoded.map(_.toByte)
-  def saveToFile(file:File) : Unit = ()
-  def readFromFile(file:File) : Codec = NoCodec
-}
