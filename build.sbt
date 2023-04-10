@@ -377,11 +377,13 @@ lazy val example_autoregressivelm = project
     publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.1.0",
+      "com.typesafe.akka" %% "akka-actor" % "2.6.20",
+      "com.typesafe.akka" %% "akka-remote" % "2.6.20",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
   )
-  .dependsOn(core, data, saddlecompat)
+  .dependsOn(core, data, saddlecompat, akkacommunicator)
   .enablePlugins(JavaAppPackaging)
 
 lazy val example_arxiv = project
