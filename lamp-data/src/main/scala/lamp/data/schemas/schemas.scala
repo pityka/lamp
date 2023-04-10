@@ -62,7 +62,8 @@ object LoopState {
 
 
 case class ByteSegmentEncoding(
-  encoding: Vector[(Vector[Byte], Char)]
+  encoding: Vector[(Vector[Byte], Char)],
+  unknownToken: Char,unknownByte: Byte
 )
 
 object ByteSegmentEncoding {

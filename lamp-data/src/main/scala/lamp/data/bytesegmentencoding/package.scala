@@ -9,22 +9,23 @@ package object bytesegmentencoding {
 
   def saveEncodingToFile(
       file: File,
-      encoding: Vector[(Vector[Byte], Char)]
+      encoding: Vector[(Vector[Byte], Char)],
+      unknownToken: Char,
+      unknownByte: Byte
   ): Unit = {
     val fos = new java.io.FileOutputStream(file)
     try {
       com.github.plokhotnyuk.jsoniter_scala.core
-        .writeToStream(ByteSegmentEncoding(encoding), fos)
+        .writeToStream(ByteSegmentEncoding(encoding, unknownToken,unknownByte), fos)
     } finally { fos.close }
   }
   def readEncodingFromFile(
       file: File
-  ): Vector[(Vector[Byte], Char)] = {
+  ): ByteSegmentEncoding = {
     val fis = new java.io.FileInputStream(file)
     try {
       com.github.plokhotnyuk.jsoniter_scala.core
         .readFromStream[ByteSegmentEncoding](fis)
-        .encoding
     } finally { fis.close }
   }
 
