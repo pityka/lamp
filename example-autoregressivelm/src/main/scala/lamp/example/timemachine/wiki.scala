@@ -27,7 +27,16 @@ case class CliConfig(
     checkpointSave: Option[String] = None,
     checkpointLoad: Option[String] = None,
     extend: Option[String] = None,
-    extendLength: Int = 50
+    extendLength: Int = 50,
+    // config for distributed training
+    distributed: Boolean = false,
+    gpu: Int = 0,
+    rank: Int = 0,
+    nranks: Int = 0,
+    rootAddress: String = "",
+    rootPort: Int = 28888,
+    myAddress: String = "",
+    myPort: Int = 28888
 )
 
 object Train extends App {
@@ -149,7 +158,9 @@ object Train extends App {
         }
 
       scribe.info(
-        s"Trained encoding. Kmers: \n ${codec.asInstanceOf[ByteSegmentCodec].trained
+        s"Trained encoding. Kmers: \n ${codec
+          .asInstanceOf[ByteSegmentCodec]
+          .trained
           .map { case (pattern, sub) =>
             new String(pattern.toArray) -> sub.toInt
           }
@@ -171,71 +182,186 @@ object Train extends App {
         s"Valid corpus length: ${validCorpus.length} bytes"
       )
 
-      Scope.root { implicit scope =>
-        val device =
-          if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
+      if (config.distributed) {
+        Scope.root { implicit scope =>
+          scribe.info(s"Distributed training rank: ${config.rank} nrank:${config.nranks} gpu:${config.gpu}")
+          val device = CudaDevice(config.gpu)
+          val model = allocateModel(device)
 
-        val model = allocateModel(device)
-
-        val extraModels = config.gpus.drop(1).map { deviceNum =>
-          val device = CudaDevice(deviceNum)
-          allocateModel(device)
-        }
-
-        val checkpointedState = config.checkpointLoad.map { state =>
-          StateIO
-            .readFromFile(new File(state), device)
-            .asInstanceOf[SimpleLoopState]
-        }
-
-        scribe.info(
-          f"Learnable parameters: ${model.module.learnableParameters}%,d"
-        )
-
-        val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
-          lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
-            minibatchSize = config.trainBatchSize,
-            numBatches = config.numBatchesPerEpoch,
-            corpus = trainCorpus,
-            blockLength = contextLength
-          )
-        val validEpochs = (_: IOLoops.TrainingLoopContext) =>
-          lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
-            minibatchSize = config.trainBatchSize,
-            numBatches = config.numBatchesPerEpoch,
-            corpus = validCorpus,
-            blockLength = contextLength
-          )
-
-        val optimizer = AdamW.factory(
-          weightDecay = simple(config.weightDecay),
-          learningRate = simple(config.learningRate),
-          clip = Some(1d)
-        )
-
-        val (_, trainedModel, _, _, _) = IOLoops
-          .epochs(
-            model = model,
-            optimizerFactory = optimizer,
-            trainBatchesOverEpoch = trainEpochs,
-            validationBatchesOverEpoch = Some(validEpochs),
-            epochs = config.epochs,
-            initState = checkpointedState,
-            logger = Some(scribe.Logger("training")),
-            validationFrequency = 1,
-            dataParallelModels = extraModels,
-            checkpointState = Some((state: LoopState, _: Unit) =>
-              config.checkpointSave
-                .map { file =>
-                  StateIO.stateToFile(new File(file))(state)
-                }
-                .getOrElse(IO.unit)
+          val actorSystem = akka.actor.ActorSystem(
+            name = s"lm-${config.rank}",
+            config = Some(
+              com.typesafe.config.ConfigFactory.parseString(
+                s"""
+akka {
+  actor {
+    provider = remote 
+  }
+  remote {
+    artery {
+      transport = tcp 
+      canonical.hostname = "${config.myAddress}"
+      canonical.port = ${config.myPort}
+    }
+  }
+}
+                """
+              )
             )
           )
-          .unsafeRunSync()
-        scribe.info("Training done.")
 
-        println(trainedModel)
+          val trainEpochs = () =>
+            lamp.data.languagemodel
+              .autoregressiveMinibatchesFromCorpus(
+                minibatchSize = config.trainBatchSize,
+                numBatches = config.numBatchesPerEpoch,
+                corpus = trainCorpus,
+                blockLength = contextLength
+              )
+              .withoutEmptyBatches
+              .everyNth(n = config.nranks, offset = config.rank)
+
+          val validEpochs = () =>
+            lamp.data.languagemodel
+              .autoregressiveMinibatchesFromCorpus(
+                minibatchSize = config.trainBatchSize,
+                numBatches = config.numBatchesPerEpoch,
+                corpus = validCorpus,
+                blockLength = contextLength
+              )
+              .withoutEmptyBatches
+              .everyNth(n = config.nranks, offset = config.rank)
+
+          val program = if (config.rank == 0) {
+
+            val optimizer = AdamW.factory(
+              weightDecay = simple(config.weightDecay),
+              learningRate = simple(config.learningRate),
+              clip = Some(1d)
+            )
+
+            // val checkpointedState = config.checkpointLoad.map { state =>
+            //   StateIO
+            //     .readFromFile(new File(state), device)
+            //     .asInstanceOf[SimpleLoopState]
+            // }
+
+            val comm = new lamp.distributed.akka.AkkaCommunicationServer(
+              actorSystem
+            )
+            lamp.data.distributed.driveDistributedTraining(
+              nranks = config.nranks,
+              gpu = config.gpu,
+              controlCommunication = comm,
+              model = model,
+              optimizerFactory = optimizer,
+              trainBatches = trainEpochs,
+              validationBatches = validEpochs,
+              maxEpochs = config.epochs
+              // initState = checkpointedState,
+              // checkpointState = Some((state: LoopState, _: Unit) =>
+              //   config.checkpointSave
+              //     .map { file =>
+              //       StateIO.stateToFile(new File(file))(state)
+              //     }
+              //     .getOrElse(IO.unit)
+              // )
+            )
+
+          } else {
+            import scala.concurrent.duration._
+            val comm = new lamp.distributed.akka.AkkaCommunicationClient(
+              actorSystem,
+              config.rootAddress,
+              config.rootPort,
+              "cifar-0",
+              600 seconds
+            )
+
+            lamp.data.distributed.followDistributedTraining(
+              rank = config.rank,
+              nranks = config.nranks,
+              gpu = config.gpu,
+              controlCommunication = comm,
+              model = model,
+              trainBatches = trainEpochs,
+              validationBatches = validEpochs
+            )
+
+          }
+
+          program.unsafeRunSync()
+          actorSystem.terminate()
+          ()
+        }
+
+      } else {
+
+        Scope.root { implicit scope =>
+          val device =
+            if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
+
+          val model = allocateModel(device)
+
+          val extraModels = config.gpus.drop(1).map { deviceNum =>
+            val device = CudaDevice(deviceNum)
+            allocateModel(device)
+          }
+
+          val checkpointedState = config.checkpointLoad.map { state =>
+            StateIO
+              .readFromFile(new File(state), device)
+              .asInstanceOf[SimpleLoopState]
+          }
+
+          scribe.info(
+            f"Learnable parameters: ${model.module.learnableParameters}%,d"
+          )
+
+          val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
+            lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
+              minibatchSize = config.trainBatchSize,
+              numBatches = config.numBatchesPerEpoch,
+              corpus = trainCorpus,
+              blockLength = contextLength
+            )
+          val validEpochs = (_: IOLoops.TrainingLoopContext) =>
+            lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
+              minibatchSize = config.trainBatchSize,
+              numBatches = config.numBatchesPerEpoch,
+              corpus = validCorpus,
+              blockLength = contextLength
+            )
+
+          val optimizer = AdamW.factory(
+            weightDecay = simple(config.weightDecay),
+            learningRate = simple(config.learningRate),
+            clip = Some(1d)
+          )
+
+          val (_, _, _, _, _) = IOLoops
+            .epochs(
+              model = model,
+              optimizerFactory = optimizer,
+              trainBatchesOverEpoch = trainEpochs,
+              validationBatchesOverEpoch = Some(validEpochs),
+              epochs = config.epochs,
+              initState = checkpointedState,
+              logger = Some(scribe.Logger("training")),
+              validationFrequency = 1,
+              dataParallelModels = extraModels,
+              checkpointState = Some((state: LoopState, _: Unit) =>
+                config.checkpointSave
+                  .map { file =>
+                    StateIO.stateToFile(new File(file))(state)
+                  }
+                  .getOrElse(IO.unit)
+              )
+            )
+            .unsafeRunSync()
+          scribe.info("Training done.")
+
+        }
 
       }
     case Some(config) =>
