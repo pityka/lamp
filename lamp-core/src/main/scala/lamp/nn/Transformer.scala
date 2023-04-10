@@ -131,7 +131,7 @@ case class TransformerEncoderBlock(
     val (input, maxLength) = x
     val a1 = attention.forward((input, input, input, maxLength))
     val a2 = layerNorm1(a1.dropout(dropout, train) + input)
-    val a3 = mm1((mm1(a2, w1) + b1).relu, w2) + b2
+    val a3 = mm1((mm1(a2, w1) + b1).gelu, w2) + b2
 
     val a4 = layerNorm2(a3.dropout(dropout, train) + a3)
     a4
