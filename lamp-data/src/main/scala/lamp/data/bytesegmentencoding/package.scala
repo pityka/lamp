@@ -31,15 +31,15 @@ package object bytesegmentencoding {
   def decode(
       encoded: Array[Char],
       encoding: Vector[(Vector[Byte], Char)],
-      unknown: Byte
+      unknown: Option[Byte]
   ): Array[Byte] = {
     val map = encoding.map(_.swap).toMap
-    encoded.flatMap(ch => map.get(ch).getOrElse(Vector(unknown)))
+    encoded.flatMap(ch => map.get(ch).getOrElse(Vector(unknown.get)))
   }
   def encode(
       corpus: Array[Byte],
       encoding: Vector[(Vector[Byte], Char)],
-      unknownToken: Char
+      unknownToken: Option[Char]
   ): Array[Char] = {
 
     val maxMergedSegmentLength = encoding.map(_._1.size).max
@@ -51,13 +51,13 @@ package object bytesegmentencoding {
     var j = 0
     while (i < n) {
       j = i + 1
-      var encoded = unknownToken
+      var encoded = unknownToken.get
       var priority = Int.MaxValue
       var usedJ = j
       while (j < i + maxMergedSegmentLength * 2 && j <= n) {
         val slice = corpus.slice(i, j).toVector
         val (a0, priority0) =
-          map.get(slice).getOrElse((unknownToken, Int.MaxValue))
+          map.get(slice).getOrElse((unknownToken.get, Int.MaxValue))
         if (priority0 < priority) {
           encoded = a0
           priority = priority0

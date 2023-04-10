@@ -128,6 +128,8 @@ object Train extends App {
           maxMergedSegmentLength = 4
         )
 
+      scribe.info(s"Trained encoding. Top kmers: \n ${trainedEncoding.take(20).mkString("\n")}")
+
       config.checkpointSave.foreach { file =>
         lamp.data.bytesegmentencoding.saveEncodingToFile(
           new File(file + ".bytesegmentencoding.json"),
@@ -138,7 +140,7 @@ object Train extends App {
 
       def encode(raw: Array[Byte]): Array[Char] =
         lamp.data.bytesegmentencoding
-          .encode(raw, trainedEncoding, 0.toChar)
+          .encode(raw, trainedEncoding, Some(0.toChar))
 
       val trainCorpus = encode(rawTrainCorpus)
 
@@ -146,6 +148,8 @@ object Train extends App {
         encode(
           filesInZip("wikitext-2/wiki.valid.tokens")
         )
+
+      
 
       val maxLength = config.maxLength
       Scope.root { implicit scope =>
@@ -230,13 +234,13 @@ object Train extends App {
 
       def encode(raw: Array[Byte]): Array[Char] =
         lamp.data.bytesegmentencoding
-          .encode(raw, trainedEncoding, 0.toChar)
+          .encode(raw, trainedEncoding, Some(0.toChar))
 
       def decode(tokens: Array[Char]): Array[Byte] =
         lamp.data.bytesegmentencoding.decode(
           tokens,
           trainedEncoding,
-          '?'.toByte
+          Some('?'.toByte)
         )
 
       val maxLength = config.maxLength
