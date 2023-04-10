@@ -19,28 +19,23 @@ package object languagemodel {
       modelBlockSize: Int,
       prefix: Array[Short],
       length: Int,
-      padToken: Long,
       temperature: Double
   )(scope: Scope): IO[Array[Short]] = {
     assert(prefix.length < modelBlockSize)
+    assert(temperature > 0d)
 
-    def pad(v: Array[Long], paddedLength: Int, padElem: Long) = {
-      val t = v.++(Array.fill(paddedLength - v.length)(padElem))
-      assert(t.length == paddedLength)
-      t
-    }
     def makeInput(prefix: Array[Short])(implicit scope: Scope) = {
       val tokens =
         STen
           .fromLongArray(
-            pad(prefix.map(_.toLong), modelBlockSize, padToken)
+            prefix.map(_.toLong).take(modelBlockSize)
           )
           .unsqueeze(0)
 
-      val positions = STen.fromLongArray(Array(prefix.length-1)).unsqueeze(0)
+      val positions = STen.fromLongArray(Array(tokens.shape(1) - 1)).unsqueeze(0)
 
       val maxLength = {
-        val single = STen.arange_l(0, modelBlockSize, 1).unsqueeze(0)
+        val single = STen.arange_l(0, tokens.shape(1), 1).unsqueeze(0)
         single.repeat(List(1, 1))
       }
 
@@ -77,11 +72,15 @@ package object languagemodel {
       else
         Scope
           .bracket(scope) { implicit scope =>
-            val prefix = acc.takeRight(modelBlockSize - 1)
+            val prefix = acc.takeRight(modelBlockSize)
             single(prefix).map { output =>
               val probs = output.languageModelScores.exp.view(1, -1)
 
-              val sample = STen.multinomial((probs/temperature).logSoftMax(1).exp, 1, false)
+              val sample = STen.multinomial(
+                (probs / temperature).logSoftMax(1).exp,
+                1,
+                false
+              )
               assert(sample.numel == 1)
               val next = sample.toLongArray.head.toShort
               next
