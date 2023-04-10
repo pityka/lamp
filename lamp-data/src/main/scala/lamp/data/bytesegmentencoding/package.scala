@@ -52,7 +52,7 @@ package object bytesegmentencoding {
     var j = 0
     while (i < n) {
       j = i + 1
-      var encoded = unknownToken
+      var encoded = map.get(Vector(corpus(i))).map(_._1).getOrElse(unknownToken)
       var priority = Int.MaxValue
       var usedJ = 1
       while (j < i + maxMergedSegmentLength && j <= n) {

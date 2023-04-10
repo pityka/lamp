@@ -12,18 +12,18 @@ import java.util.zip.ZipInputStream
 import java.io.File
 import cats.effect.IO
 import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
+import lamp.data.bytesegmentencoding.ByteSegmentCodec
 
 case class CliConfig(
     gpus: Seq[Int] = Nil,
     wiki2: String = "",
     trainBatchSize: Int = 64,
-    epochs: Int = 2000,
+    epochs: Int = 10000,
     learningRate: Double = 0.0001,
     weightDecay: Double = 0.0,
     samplingTemperature: Double = 1.0,
     dropout: Double = 0.0,
     numBatchesPerEpoch: Int = 100,
-    maxLength: Int = 128,
     checkpointSave: Option[String] = None,
     checkpointLoad: Option[String] = None,
     extend: Option[String] = None,
@@ -33,23 +33,25 @@ case class CliConfig(
 object Train extends App {
   scribe.info("Logger start")
 
-  val vocabularySize = 512
+  val vocabularySize = 64
+
+  val contextLength = 256
 
   val codecFactory = ByteSegmentCodecFactory(
     vocabularyMin = 1,
     vocabularyMax = (vocabularySize - 1).toChar,
-    maxMergedSegmentLength = 3,
+    maxMergedSegmentLength = 1,
     unknownToken = 0.toChar,
     unknownByte = '?'.toByte
   )
 
-  def allocateModel(device: Device, maxLength: Int)(implicit scope: Scope) = {
+  def allocateModel(device: Device)(implicit scope: Scope) = {
     val tensorOptions = device.options(SinglePrecision)
-    val embeddingDim = 512
+    val embeddingDim = 384
     val layers = 6
-    val numHeads = 16
+    val numHeads = 6
     val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
-      maxLength = maxLength,
+      maxLength = contextLength,
       vocabularySize = vocabularySize,
       numBlocks = layers,
       embeddingDim = embeddingDim,
@@ -78,7 +80,6 @@ object Train extends App {
       opt[Int]("batches-per-epoch").action((x, c) =>
         c.copy(numBatchesPerEpoch = x)
       ),
-      opt[Int]("max-length").action((x, c) => c.copy(maxLength = x)),
       opt[Double]("learning-rate").action((x, c) => c.copy(learningRate = x)),
       opt[Double]("weight-decay").action((x, c) => c.copy(weightDecay = x)),
       opt[Double]("dropout").action((x, c) => c.copy(dropout = x)),
@@ -147,13 +148,13 @@ object Train extends App {
           bpe
         }
 
-      // scribe.info(
-      //   s"Trained encoding. Kmers: \n ${bpe.trainedEncoding
-      //     .map { case (pattern, sub) =>
-      //       new String(pattern.toArray) -> sub.toInt
-      //     }
-      //     .mkString("\n")}"
-      // )
+      scribe.info(
+        s"Trained encoding. Kmers: \n ${codec.asInstanceOf[ByteSegmentCodec].trained
+          .map { case (pattern, sub) =>
+            new String(pattern.toArray) -> sub.toInt
+          }
+          .mkString("\n")}"
+      )
 
       val trainCorpus = codec.encode(rawTrainCorpus)
 
@@ -170,16 +171,15 @@ object Train extends App {
         s"Valid corpus length: ${validCorpus.length} bytes"
       )
 
-      val maxLength = config.maxLength
       Scope.root { implicit scope =>
         val device =
           if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
 
-        val model = allocateModel(device, maxLength)
+        val model = allocateModel(device)
 
         val extraModels = config.gpus.drop(1).map { deviceNum =>
           val device = CudaDevice(deviceNum)
-          allocateModel(device, maxLength)
+          allocateModel(device)
         }
 
         val checkpointedState = config.checkpointLoad.map { state =>
@@ -197,14 +197,14 @@ object Train extends App {
             minibatchSize = config.trainBatchSize,
             numBatches = config.numBatchesPerEpoch,
             corpus = trainCorpus,
-            blockLength = maxLength
+            blockLength = contextLength
           )
         val validEpochs = (_: IOLoops.TrainingLoopContext) =>
           lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
             minibatchSize = config.trainBatchSize,
             numBatches = config.numBatchesPerEpoch,
             corpus = validCorpus,
-            blockLength = maxLength
+            blockLength = contextLength
           )
 
         val optimizer = AdamW.factory(
@@ -246,11 +246,10 @@ object Train extends App {
       )
       val codec = codecFactory.readFromFile(bpeFile.get)
 
-      val maxLength = config.maxLength
       Scope.root { implicit scope =>
         val device = CPU
 
-        val model = allocateModel(device, maxLength = maxLength).module
+        val model = allocateModel(device).module
 
         val checkpointedState = config.checkpointLoad
           .map { state =>
@@ -271,7 +270,7 @@ object Train extends App {
         val inferred = lamp.data.languagemodel
           .autoregressiveInference(
             modelAsEval,
-            modelBlockSize = maxLength,
+            modelBlockSize = contextLength,
             prefix = encodedPrefix,
             length = config.extendLength,
             temperature = config.samplingTemperature
