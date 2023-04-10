@@ -21,14 +21,13 @@ package object languagemodel {
       length: Int,
       temperature: Double
   )(scope: Scope): IO[Array[Char]] = {
-    assert(prefix.length < modelBlockSize)
     assert(temperature > 0d)
 
     def makeInput(prefix: Array[Char])(implicit scope: Scope) = {
       val tokens =
         STen
           .fromLongArray(
-            prefix.map(_.toLong).take(modelBlockSize)
+            prefix.map(_.toLong)
           )
           .unsqueeze(0)
 
@@ -77,7 +76,8 @@ package object languagemodel {
               val probs = output.languageModelScores.exp.view(1, -1)
 
               val sample = STen.multinomial(
-                (probs / temperature).logSoftMax(1).exp,
+                probs,
+                // (probs / temperature).logSoftMax(1).exp,
                 1,
                 false
               )

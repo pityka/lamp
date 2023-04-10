@@ -31,15 +31,15 @@ package object bytesegmentencoding {
   def decode(
       encoded: Array[Char],
       encoding: Vector[(Vector[Byte], Char)],
-      unknown: Option[Byte]
+      unknown: Byte
   ): Array[Byte] = {
     val map = encoding.map(_.swap).toMap
-    encoded.flatMap(ch => map.get(ch).getOrElse(Vector(unknown.get)))
+    encoded.flatMap(ch => map.get(ch).getOrElse(Vector(unknown)))
   }
   def encode(
       corpus: Array[Byte],
       encoding: Vector[(Vector[Byte], Char)],
-      unknownToken: Option[Char]
+      unknownToken: Char
   ): Array[Char] = {
 
     val maxMergedSegmentLength = encoding.map(_._1.size).max
@@ -51,13 +51,13 @@ package object bytesegmentencoding {
     var j = 0
     while (i < n) {
       j = i + 1
-      var encoded = unknownToken.get
+      var encoded = unknownToken
       var priority = Int.MaxValue
-      var usedJ = j
-      while (j < i + maxMergedSegmentLength * 2 && j <= n) {
+      var usedJ = 1
+      while (j < i + maxMergedSegmentLength && j <= n) {
         val slice = corpus.slice(i, j).toVector
         val (a0, priority0) =
-          map.get(slice).getOrElse((unknownToken.get, Int.MaxValue))
+          map.get(slice).getOrElse((unknownToken, Int.MaxValue))
         if (priority0 < priority) {
           encoded = a0
           priority = priority0
@@ -107,12 +107,15 @@ package object bytesegmentencoding {
       i += 1
     }
     val vocabSize = vocabularyMax - vocabularyMin
-    frequencies.toVector
-      .sortBy(v => -1 * v._2 * v._1.size)
-      .take(vocabSize)
-      .map(_._1)
-      .zipWithIndex
+    val singles = frequencies.keySet.toVector.filter(_.size == 1)
+    val nonSingles = frequencies.filter(_._1.size > 1)
+    val r = (singles ++ nonSingles.toVector
+      .sortBy(v => -1 * v._2)
+      .take(vocabSize - singles.size)
+      .map(_._1)).zipWithIndex
       .map(v => (v._1, (v._2 + vocabularyMin).toChar))
+    assert(r.map(_._2).max <= vocabularyMax)
+    r
   }
 
 }

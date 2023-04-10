@@ -15,9 +15,8 @@ import cats.effect.IO
 case class CliConfig(
     gpus: Seq[Int] = Nil,
     wiki2: String = "",
-    trainBatchSize: Int = 32,
-    validationBatchSize: Int = 32,
-    epochs: Int = 1000,
+    trainBatchSize: Int = 64,
+    epochs: Int = 2000,
     learningRate: Double = 0.0001,
     weightDecay: Double = 0.0,
     samplingTemperature: Double = 1.0,
@@ -26,11 +25,14 @@ case class CliConfig(
     maxLength: Int = 128,
     checkpointSave: Option[String] = None,
     checkpointLoad: Option[String] = None,
-    extend: Option[String] = None
+    extend: Option[String] = None,
+    extendLength: Int = 50
 )
 
 object Train extends App {
   scribe.info("Logger start")
+
+  val vocabularySize = 512
 
   def allocateModel(device: Device, maxLength: Int)(implicit scope: Scope) = {
     val tensorOptions = device.options(SinglePrecision)
@@ -39,12 +41,12 @@ object Train extends App {
     val numHeads = 16
     val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
       maxLength = maxLength,
-      vocabularySize = 256,
+      vocabularySize = vocabularySize,
       numBlocks = layers,
       embeddingDim = embeddingDim,
       attentionHiddenPerHeadDim = embeddingDim / numHeads,
       attentionNumHeads = numHeads,
-      encoderMlpHiddenDim = embeddingDim,
+      encoderMlpHiddenDim = embeddingDim * 4,
       dropout = 0d,
       padToken = -1000L,
       tOpt = tensorOptions,
@@ -61,10 +63,8 @@ object Train extends App {
       opt[Seq[Int]]("gpus").action((x, c) => c.copy(gpus = x)),
       opt[String]("wiki2").action((x, c) => c.copy(wiki2 = x)),
       opt[Int]("train-batch").action((x, c) => c.copy(trainBatchSize = x)),
-      opt[Int]("validation-batch").action((x, c) =>
-        c.copy(validationBatchSize = x)
-      ),
       opt[String]("extend").action((x, c) => c.copy(extend = Some(x))),
+      opt[Int]("extend-length").action((x, c) => c.copy(extendLength = x)),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
       opt[Int]("batches-per-epoch").action((x, c) =>
         c.copy(numBatchesPerEpoch = x)
@@ -101,6 +101,7 @@ object Train extends App {
       val str = scala.io.Source
         .fromInputStream(zis)(asciiSilentCharsetDecoder)
         .getLines()
+        .map(_.toLowerCase())
         .toSeq
         .mkString("\n")
         .getBytes("US-ASCII")
@@ -115,48 +116,63 @@ object Train extends App {
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) if config.extend.isEmpty =>
       scribe.info(s"Config: $config")
+      val bpeFile = config.checkpointSave.map(file =>
+        new File(file + ".bytesegmentencoding.json")
+      )
       val filesInZip = readFromZip(config.wiki2)
 
       val rawTrainCorpus =
         filesInZip("wikitext-2/wiki.train.tokens")
 
       val trainedEncoding =
-        lamp.data.bytesegmentencoding.train(
-          corpus = rawTrainCorpus.take(100000),
-          vocabularyMin = 1,
-          vocabularyMax = 255,
-          maxMergedSegmentLength = 4
-        )
+        if (bpeFile.isDefined && bpeFile.get.canRead)
+          lamp.data.bytesegmentencoding.readEncodingFromFile(bpeFile.get)
+        else {
+          val bpe = lamp.data.bytesegmentencoding.train(
+            corpus = rawTrainCorpus.take(100000),
+            vocabularyMin = 1,
+            vocabularyMax = (vocabularySize - 1).toChar,
+            maxMergedSegmentLength = 3
+          )
+          config.checkpointSave.foreach { file =>
+            lamp.data.bytesegmentencoding.saveEncodingToFile(
+              new File(file + ".bytesegmentencoding.json"),
+              bpe
+            )
 
-      scribe.info(s"Trained encoding. Top kmers: \n ${trainedEncoding.take(20).mkString("\n")}")
+          }
+          bpe
+        }
 
-      config.checkpointSave.foreach { file =>
-        lamp.data.bytesegmentencoding.saveEncodingToFile(
-          new File(file + ".bytesegmentencoding.json"),
-          trainedEncoding
-        )
-
-      }
+      scribe.info(
+        s"Trained encoding. Kmers: \n ${trainedEncoding
+          .map { case (pattern, sub) =>
+            new String(pattern.toArray) -> sub.toInt
+          }
+          .mkString("\n")}"
+      )
 
       def encode(raw: Array[Byte]): Array[Char] =
         lamp.data.bytesegmentencoding
-          .encode(raw, trainedEncoding, Some(0.toChar))
+          .encode(raw, trainedEncoding, 0.toChar)
 
       val trainCorpus = encode(rawTrainCorpus)
+
+      scribe.info(
+        s"Train corpus length: ${trainCorpus.length} bytes"
+      )
 
       val validCorpus =
         encode(
           filesInZip("wikitext-2/wiki.valid.tokens")
         )
 
-      
+      scribe.info(
+        s"Valid corpus length: ${validCorpus.length} bytes"
+      )
 
       val maxLength = config.maxLength
       Scope.root { implicit scope =>
-        scribe.info(
-          s"Train corpus length: ${trainCorpus.length} bytes"
-        )
-
         val device =
           if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
 
@@ -226,27 +242,28 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
       scribe.info(s"Inference mode. Extending '${config.extend.get}'")
-
+      val bpeFile = config.checkpointSave.map(file =>
+        new File(file + ".bytesegmentencoding.json")
+      )
       val trainedEncoding =
         lamp.data.bytesegmentencoding.readEncodingFromFile(
-          new File(config.checkpointLoad.get + ".bytesegmentencoding.json")
+          bpeFile.get
         )
 
       def encode(raw: Array[Byte]): Array[Char] =
         lamp.data.bytesegmentencoding
-          .encode(raw, trainedEncoding, Some(0.toChar))
+          .encode(raw, trainedEncoding, 0.toChar)
 
       def decode(tokens: Array[Char]): Array[Byte] =
         lamp.data.bytesegmentencoding.decode(
           tokens,
           trainedEncoding,
-          Some('?'.toByte)
+          '?'.toByte
         )
 
       val maxLength = config.maxLength
       Scope.root { implicit scope =>
-        val device =
-          if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
+        val device = CPU
 
         val model = allocateModel(device, maxLength = maxLength).module
 
@@ -271,10 +288,12 @@ object Train extends App {
             modelAsEval,
             modelBlockSize = maxLength,
             prefix = encodedPrefix,
-            length = 30,
+            length = config.extendLength,
             temperature = config.samplingTemperature
           )(scope)
           .unsafeRunSync()
+
+        println(inferred.map(_.toInt).toVector)
 
         val decoded = decode(inferred)
 
