@@ -233,7 +233,6 @@ object Train extends App {
             modelBlockSize = maxLength,
             prefix = rawPrefix.map(_.toShort),
             length = 30,
-            padToken = 255,
             temperature = config.samplingTemperature
           )(scope)
           .unsafeRunSync()
