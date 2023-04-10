@@ -31,7 +31,8 @@ package object languagemodel {
           )
           .unsqueeze(0)
 
-      val positions = STen.fromLongArray(Array(tokens.shape(1) - 1)).unsqueeze(0)
+      val positions =
+        STen.fromLongArray(Array(tokens.shape(1) - 1)).unsqueeze(0)
 
       val maxLength = {
         val single = STen.arange_l(0, tokens.shape(1), 1).unsqueeze(0)
@@ -73,11 +74,10 @@ package object languagemodel {
           .bracket(scope) { implicit scope =>
             val prefix = acc.takeRight(modelBlockSize)
             single(prefix).map { output =>
-              val probs = output.languageModelScores.exp.view(1, -1)
-
+              val probs = (output.languageModelLogits/temperature).logSoftMax(2).exp.view(1, -1)
+              
               val sample = STen.multinomial(
                 probs,
-                // (probs / temperature).logSoftMax(1).exp,
                 1,
                 false
               )

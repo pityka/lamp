@@ -52,7 +52,7 @@ case class LanguageModelLoss(
     val (l1, _) =
       loss
         .apply(
-          output.languageModelScores.flatten(0, 1),
+          output.languageModelLogits.logSoftMax(dim = 2).flatten(0, 1),
           x.languageModelTarget.view(-1L)
         )
 
@@ -148,19 +148,19 @@ object LanguageModelLoss {
   */
 case class LanguageModelOutput(
     encoded: Variable,
-    languageModelScores: Variable
+    languageModelLogits: Variable
 ) {
   def toSTen =
-    LanguageModelOutputNonVariable(encoded.value, languageModelScores.value)
+    LanguageModelOutputNonVariable(encoded.value, languageModelLogits.value)
 }
 case class LanguageModelOutputNonVariable(
     encoded: STen,
-    languageModelScores: STen
+    languageModelLogits: STen
 )
 
 object LanguageModelOutputNonVariable {
   implicit val movable: Movable[LanguageModelOutputNonVariable] =
-    Movable.by(v => (v.encoded, v.languageModelScores))
+    Movable.by(v => (v.encoded, v.languageModelLogits))
 }
 
 case class LanguageModelModule(
@@ -195,11 +195,11 @@ case class LanguageModelModule(
           )
       )
 
-    val lmScores =
-      lmHead.forward(encoderOutputAtPredictionPositions).logSoftMax(dim = 2)
+    val logits =
+      lmHead.forward(encoderOutputAtPredictionPositions)
     LanguageModelOutput(
       encoded = encoded,
-      languageModelScores = lmScores
+      languageModelLogits = logits
     )
   }
 

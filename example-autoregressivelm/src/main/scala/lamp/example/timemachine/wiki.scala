@@ -242,7 +242,7 @@ object Train extends App {
     case Some(config) =>
       scribe.info(s"Config: $config")
       scribe.info(s"Inference mode. Extending '${config.extend.get}'")
-      val bpeFile = config.checkpointSave.map(file =>
+      val bpeFile = config.checkpointLoad.map(file =>
         new File(file + ".bytesegmentencoding.json")
       )
       val trainedEncoding =
