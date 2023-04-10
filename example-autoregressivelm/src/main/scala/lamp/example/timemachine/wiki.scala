@@ -11,6 +11,7 @@ import java.io.FileInputStream
 import java.util.zip.ZipInputStream
 import java.io.File
 import cats.effect.IO
+import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
 
 case class CliConfig(
     gpus: Seq[Int] = Nil,
@@ -33,6 +34,14 @@ object Train extends App {
   scribe.info("Logger start")
 
   val vocabularySize = 512
+
+  val codecFactory = ByteSegmentCodecFactory(
+    vocabularyMin = 1,
+    vocabularyMax = (vocabularySize - 1).toChar,
+    maxMergedSegmentLength = 3,
+    unknownToken = 0.toChar,
+    unknownByte = '?'.toByte
+  )
 
   def allocateModel(device: Device, maxLength: Int)(implicit scope: Scope) = {
     val tensorOptions = device.options(SinglePrecision)
@@ -116,7 +125,7 @@ object Train extends App {
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) if config.extend.isEmpty =>
       scribe.info(s"Config: $config")
-      val bpeFile = config.checkpointSave.map(file =>
+      val bpeFile = config.checkpointLoad.map(file =>
         new File(file + ".bytesegmentencoding.json")
       )
       val filesInZip = readFromZip(config.wiki2)
@@ -124,46 +133,36 @@ object Train extends App {
       val rawTrainCorpus =
         filesInZip("wikitext-2/wiki.train.tokens")
 
-      val trainedEncoding =
+      val codec =
         if (bpeFile.isDefined && bpeFile.get.canRead)
-          lamp.data.bytesegmentencoding.readEncodingFromFile(bpeFile.get)
+          codecFactory.readFromFile(bpeFile.get)
         else {
-          val bpe = lamp.data.bytesegmentencoding.train(
-            corpus = rawTrainCorpus.take(100000),
-            vocabularyMin = 1,
-            vocabularyMax = (vocabularySize - 1).toChar,
-            maxMergedSegmentLength = 3
+          val bpe = codecFactory.train(
+            corpus = rawTrainCorpus.take(200000)
           )
           config.checkpointSave.foreach { file =>
-            lamp.data.bytesegmentencoding.saveEncodingToFile(
-              new File(file + ".bytesegmentencoding.json"),
-              bpe
-            )
+            bpe.saveToFile(new File(file + ".bytesegmentencoding.json"))
 
           }
           bpe
         }
 
-      scribe.info(
-        s"Trained encoding. Kmers: \n ${trainedEncoding
-          .map { case (pattern, sub) =>
-            new String(pattern.toArray) -> sub.toInt
-          }
-          .mkString("\n")}"
-      )
+      // scribe.info(
+      //   s"Trained encoding. Kmers: \n ${bpe.trainedEncoding
+      //     .map { case (pattern, sub) =>
+      //       new String(pattern.toArray) -> sub.toInt
+      //     }
+      //     .mkString("\n")}"
+      // )
 
-      def encode(raw: Array[Byte]): Array[Char] =
-        lamp.data.bytesegmentencoding
-          .encode(raw, trainedEncoding, 0.toChar)
-
-      val trainCorpus = encode(rawTrainCorpus)
+      val trainCorpus = codec.encode(rawTrainCorpus)
 
       scribe.info(
         s"Train corpus length: ${trainCorpus.length} bytes"
       )
 
       val validCorpus =
-        encode(
+        codec.encode(
           filesInZip("wikitext-2/wiki.valid.tokens")
         )
 
@@ -245,21 +244,7 @@ object Train extends App {
       val bpeFile = config.checkpointLoad.map(file =>
         new File(file + ".bytesegmentencoding.json")
       )
-      val trainedEncoding =
-        lamp.data.bytesegmentencoding.readEncodingFromFile(
-          bpeFile.get
-        )
-
-      def encode(raw: Array[Byte]): Array[Char] =
-        lamp.data.bytesegmentencoding
-          .encode(raw, trainedEncoding, 0.toChar)
-
-      def decode(tokens: Array[Char]): Array[Byte] =
-        lamp.data.bytesegmentencoding.decode(
-          tokens,
-          trainedEncoding,
-          '?'.toByte
-        )
+      val codec = codecFactory.readFromFile(bpeFile.get)
 
       val maxLength = config.maxLength
       Scope.root { implicit scope =>
@@ -281,7 +266,7 @@ object Train extends App {
 
         val rawPrefix = config.extend.get.getBytes("US-ASCII")
 
-        val encodedPrefix = encode(rawPrefix)
+        val encodedPrefix = codec.encode(rawPrefix)
 
         val inferred = lamp.data.languagemodel
           .autoregressiveInference(
@@ -295,7 +280,7 @@ object Train extends App {
 
         println(inferred.map(_.toInt).toVector)
 
-        val decoded = decode(inferred)
+        val decoded = codec.decode(inferred)
 
         scribe.info(s"Extended: '${new String(decoded)}'")
 
