@@ -19,7 +19,8 @@ package object languagemodel {
       modelBlockSize: Int,
       prefix: Array[Short],
       length: Int,
-      padToken: Long
+      padToken: Long,
+      temperature: Double
   )(scope: Scope): IO[Array[Short]] = {
     assert(prefix.length < modelBlockSize)
 
@@ -36,7 +37,7 @@ package object languagemodel {
           )
           .unsqueeze(0)
 
-      val positions = STen.fromLongArray(Array(prefix.length)).unsqueeze(0)
+      val positions = STen.fromLongArray(Array(prefix.length-1)).unsqueeze(0)
 
       val maxLength = {
         val single = STen.arange_l(0, modelBlockSize, 1).unsqueeze(0)
@@ -80,7 +81,7 @@ package object languagemodel {
             single(prefix).map { output =>
               val probs = output.languageModelScores.exp.view(1, -1)
 
-              val sample = STen.multinomial(probs, 1, false)
+              val sample = STen.multinomial((probs/temperature).logSoftMax(1).exp, 1, false)
               assert(sample.numel == 1)
               val next = sample.toLongArray.head.toShort
               next

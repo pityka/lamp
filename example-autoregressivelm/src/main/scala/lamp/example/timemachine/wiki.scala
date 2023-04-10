@@ -19,6 +19,8 @@ case class CliConfig(
     validationBatchSize: Int = 32,
     epochs: Int = 1000,
     learningRate: Double = 0.0001,
+    weightDecay: Double = 0.0,
+    samplingTemperature: Double = 1.0,
     dropout: Double = 0.0,
     numBatchesPerEpoch: Int = 100,
     maxLength: Int = 128,
@@ -32,16 +34,19 @@ object Train extends App {
 
   def allocateModel(device: Device, maxLength: Int)(implicit scope: Scope) = {
     val tensorOptions = device.options(SinglePrecision)
+    val embeddingDim = 512
+    val layers = 6
+    val numHeads = 16
     val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
       maxLength = maxLength,
       vocabularySize = 256,
-      numBlocks = 12,
-      embeddingDim = 768,
-      attentionHiddenPerHeadDim = 64,
-      attentionNumHeads = 12,
-      encoderMlpHiddenDim = 768,
+      numBlocks = layers,
+      embeddingDim = embeddingDim,
+      attentionHiddenPerHeadDim = embeddingDim / numHeads,
+      attentionNumHeads = numHeads,
+      encoderMlpHiddenDim = embeddingDim,
       dropout = 0d,
-      padToken = 255L,
+      padToken = -1000L,
       tOpt = tensorOptions,
       linearized = false
     )
@@ -66,7 +71,11 @@ object Train extends App {
       ),
       opt[Int]("max-length").action((x, c) => c.copy(maxLength = x)),
       opt[Double]("learning-rate").action((x, c) => c.copy(learningRate = x)),
+      opt[Double]("weight-decay").action((x, c) => c.copy(weightDecay = x)),
       opt[Double]("dropout").action((x, c) => c.copy(dropout = x)),
+      opt[Double]("sampling-temperature").action((x, c) =>
+        c.copy(samplingTemperature = x)
+      ),
       opt[String]("checkpoint-save").action((x, c) =>
         c.copy(checkpointSave = Some(x))
       ),
@@ -111,8 +120,12 @@ object Train extends App {
       val trainCorpus =
         filesInZip("wikitext-2/wiki.train.tokens").map(_.toShort)
 
+    
+
+     
+
       val validCorpus =
-        filesInZip("wikitext-2/wiki.valid.tokens").map(_.toShort)
+          filesInZip("wikitext-2/wiki.valid.tokens").map(_.toShort)
 
       val maxLength = config.maxLength
       Scope.root { implicit scope =>
@@ -136,7 +149,9 @@ object Train extends App {
             .asInstanceOf[SimpleLoopState]
         }
 
-        scribe.info(f"Learnable parameters: ${model.module.learnableParameters}%,d")
+        scribe.info(
+          f"Learnable parameters: ${model.module.learnableParameters}%,d"
+        )
 
         val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
           lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
@@ -153,8 +168,8 @@ object Train extends App {
             blockLength = maxLength
           )
 
-        val optimizer = RAdam.factory(
-          weightDecay = simple(0.00),
+        val optimizer = AdamW.factory(
+          weightDecay = simple(config.weightDecay),
           learningRate = simple(config.learningRate),
           clip = Some(1d)
         )
@@ -188,6 +203,8 @@ object Train extends App {
       scribe.info(s"Config: $config")
       scribe.info(s"Inference mode. Extending '${config.extend.get}'")
 
+      
+
       val maxLength = config.maxLength
       Scope.root { implicit scope =>
         val device =
@@ -207,17 +224,23 @@ object Train extends App {
 
         val modelAsEval = model.languageModel.asEval
 
+        val rawPrefix = config.extend.get.getBytes("US-ASCII")
+
+
         val inferred = lamp.data.languagemodel
           .autoregressiveInference(
             modelAsEval,
             modelBlockSize = maxLength,
-            prefix = config.extend.get.getBytes("US-ASCII").map(_.toShort),
+            prefix = rawPrefix.map(_.toShort),
             length = 30,
-            padToken = 255
+            padToken = 255,
+            temperature = config.samplingTemperature
           )(scope)
           .unsafeRunSync()
 
-        scribe.info(s"Extended: '${new String(inferred.map(_.toByte))}'")
+        val decoded = inferred.map(_.toByte)
+
+        scribe.info(s"Extended: '${new String(decoded)}'")
 
         ()
       }
