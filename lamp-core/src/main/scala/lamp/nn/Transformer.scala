@@ -13,12 +13,17 @@ import lamp.Device
 
 /** TransformerEncoder module
   *
-  * Input is `(data, tokens)` where `data` is (batch, num tokens, in dimension),
-  * double tensor `tokens` is (batch,num tokens) long tensor.
+  * Does *not* include initial embedding or position encoding.
   *
-  * Output is (bach, num tokens, out dimension)
+  * Input is `(data, maxLength)` where `data` is (batch, sequence, input
+  * dimension), double tensor `maxLength` is a 1D or 2D long tensor used for
+  * attention masking.
   *
-  * The sole purpose of `tokens` is to carry over the padding
+  * Attention masking is implemented similarly to chapter 11.3.2.1 in d2l.ai
+  * v1.0.0-beta0. It supports unmasked attention, attention on variable length
+  * input, and left-to-right attention.
+  *
+  * Output is (bach, sequence, output dimension)
   */
 case class TransformerEncoder(
     blocks: Seq[TransformerEncoderBlock]
@@ -47,16 +52,11 @@ object TransformerEncoder {
 
   }
 
-  /** Factory for the encoder module of transformer Does *not* include embedding
-    * and positional encoding
-    *
-    * Input is `(data, tokens)` where `data` is (batch, num tokens, in
-    * dimension), double tensor `tokens` is (batch,num tokens) long tensor.
-    *
-    * The sole purpose of `tokens` is to carry over the padding
+  /** Factory for the encoder module of transformer. Does *not* include initial
+    * embedding or position encoding.
     *
     * @param numBlocks
-    *   number of transformer blocks to create
+    *   number of transformer blocks to create (layers)
     * @param in
     *   input dimension
     * @param attentionHiddenPerHeadDim
@@ -98,8 +98,14 @@ object TransformerEncoder {
     )
 }
 
-/** A single block of the transformer encoder as defined in Fig 10.7.1 in d2l
-  * v0.16
+/** A single block of the transformer self attention encoder as defined in Fig
+  * 11.7.1 in d2l v1.0.0-beta0, except it uses GELU for nonlinearity
+  *
+  * Input is `(data, maxLength)` where `data` is (batch, sequence, input
+  * dimension), double tensor `maxLength` is a 1D or 2D long tensor used for
+  * attention masking.
+  *
+  * Output is (bach, sequence, output dimension)
   */
 case class TransformerEncoderBlock(
     attention: MultiheadAttention,
@@ -141,6 +147,7 @@ case class TransformerEncoderBlock(
 
 object TransformerEncoderBlock {
 
+  /* Factory of a single transformer block */
   def apply[S: Sc](
       in: Int,
       attentionHiddenPerHeadDim: Int,
@@ -208,8 +215,6 @@ object TransformerEncoderBlock {
   * Input: (query,key,value,tokens) where query: batch x num queries x query dim
   * key: batch x num k-v x key dim value: batch x num k-v x key value tokens:
   * batch x num queries, long type
-  *
-  * Tokens is used to carry over padding information and ignore the padding
   */
 case class MultiheadAttention(
     wQ: Constant,
@@ -220,7 +225,10 @@ case class MultiheadAttention(
     train: Boolean,
     numHeads: Int,
     linearized: Boolean
-) extends GenericModule[(Variable, Variable, Variable, Option[STen]), Variable] {
+) extends GenericModule[
+      (Variable, Variable, Variable, Option[STen]),
+      Variable
+    ] {
 
   override val state = List(
     wQ -> MultiheadAttention.WeightsQ,
@@ -337,7 +345,7 @@ object MultiheadAttention {
         tensorOptions = maskable.options
       )
       .view(1, 1, -1) ge maxLength.unsqueeze(2)
-    
+
     maskable.maskFill(
       lamp.autograd.const(mask),
       fill
@@ -402,6 +410,8 @@ object MultiheadAttention {
     *
     * if maxLength is 1D: (batch,query,key) locations where maxLength(batch) >
     * query are ignored
+    *
+    * See chapter 11.3.3 in d2l v1.0.0-beta0
     *
     * @param query
     *   batch x num queries x key dim
@@ -470,11 +480,13 @@ object MultiheadAttention {
     val maskable = (keys.swish1 + 1).dropout(dropout, trainDropout)
 
     // zero out some keys either due to padding or dropout
-    val kF = maxLength.fold(maskable)(mx => sequenceMask(
-      maxLength = mx,
-      maskable = maskable,
-      fill = 0d
-    ))
+    val kF = maxLength.fold(maskable)(mx =>
+      sequenceMask(
+        maxLength = mx,
+        maskable = maskable,
+        fill = 0d
+      )
+    )
 
     val tmp1 = kF.transpose(1, 2).bmm(values)
     val tmp2 = kF.sum(dim = List(1), keepDim = true).transpose(1, 2)
@@ -487,7 +499,11 @@ object MultiheadAttention {
 
   /** Multi-head scaled dot product attention
     *
-    * (batch,query) locations where tokens(batch,query) == pad are ignored
+    * See chapter 11.5 in d2l v1.0.0-beta0
+    *
+    * Attention masking is implemented similarly to chapter 11.3.2.1 in d2l.ai
+    * v1.0.0-beta0. It supports unmasked attention, attention on variable length
+    * input, and left-to-right attention.
     *
     * @param query
     *   batch x num queries x dq
@@ -507,6 +523,9 @@ object MultiheadAttention {
     *   hidden x po
     * @param numHeads
     *   number of output heads, must be divisible by hidden
+    * @param linearized
+    *   if true uses linearized attention. if false used scaled dot product
+    *   attention
     * @return
     *   batch x num queries x po
     */
@@ -602,6 +621,14 @@ object MultiheadAttention {
 
 object PositionalEmbedding {
 
+  /** The trigonometric position encoding from https://arxiv.org/abs/1706.03762
+    *
+    * @param sequenceLength
+    * @param dimension
+    *   output dimension of the encoding
+    * @param device
+    * @param precision
+    */
   def vaswani[S: Sc](
       sequenceLength: Int,
       dimension: Int,
@@ -628,8 +655,14 @@ object PositionalEmbedding {
     STen.fromDoubleArray(m, List(sequenceLength, dimension), device, precision)
   }
 
-  /** p(i,j) = min(maxDist,abs(i-j)) returns the first `dimension` left singular
-    * vectors of the row normalized p
+  /** Linearly decomposed sequence distance encoding
+    *
+    * @param maxDistance
+    * @param dimension
+    *   output dimension
+    * @return
+    *   the first `dimension` left singular vectors of the row normalized p
+    *   where p(i,j) = min(maxDist,abs(i-j))
     */
   def simpleSequence(
       sequenceLength: Int,
@@ -669,7 +702,15 @@ object PositionalEmbedding {
   }
 }
 
-/** Gradients are not computed for `positionalEmbedding`
+/** A module with positional and token embeddings
+  *
+  * Token embeddings are lookup embeddings. Positional embeddings are supplied
+  * as a constant. They are supposed to come from a fixed unlearned derivation
+  * of the positions.
+  *
+  * Token and positional embeddings are summed.
+  *
+  * Gradients are not computed for `positionalEmbedding`
   */
 case class TransformerEmbedding(
     embedding: lamp.nn.Embedding,

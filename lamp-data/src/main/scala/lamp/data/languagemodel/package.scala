@@ -12,8 +12,26 @@ import lamp.nn.languagemodel.LanguageModelOutput
 import lamp.nn.GenericFun
 import cats.effect.IO
 
+/** Data loader and inference utilities for the language model module in
+  * lamp.nn.langaugemodel
+  */
 package object languagemodel {
 
+  /** Recursive single next token inference of LanguageModelModule
+    *
+    * @param model
+    * @param modelBlockSize
+    *   also known as context length or maximum length of model
+    * @param prefix
+    *   The inference starts from this prefix sequence
+    * @param length
+    *   Length of inference. Each inferred token is appended to the prefix and
+    *   fed back to the model after truncating to modelBlockSize from the right.
+    * @param temperature
+    *   Sampling temperature. 1.0 means no change from model output, <1 less
+    *   random, >1 more random.
+    * @return
+    */
   def autoregressiveInference(
       model: LanguageModelModule,
       modelBlockSize: Int,
@@ -22,7 +40,7 @@ package object languagemodel {
       temperature: Double
   )(scope: Scope): IO[Array[Char]] = {
     assert(temperature > 0d)
-
+    val device = model.lmHead.weights.value.device 
     def makeInput(prefix: Array[Char])(implicit scope: Scope) = {
       val tokens =
         STen
@@ -40,9 +58,9 @@ package object languagemodel {
       }
 
       LanguageModelInput(
-        tokens = const(tokens),
-        maxLength = Some(maxLength),
-        positions = Some(positions)
+        tokens = const(device.to(tokens)),
+        maxLength = Some(device.to(maxLength)),
+        positions = Some(device.to(positions))
       )
     }
 
@@ -74,8 +92,11 @@ package object languagemodel {
           .bracket(scope) { implicit scope =>
             val prefix = acc.takeRight(modelBlockSize)
             single(prefix).map { output =>
-              val probs = (output.languageModelLogits/temperature).logSoftMax(2).exp.view(1, -1)
-              
+              val probs = (output.languageModelLogits / temperature)
+                .logSoftMax(2)
+                .exp
+                .view(1, -1)
+
               val sample = STen.multinomial(
                 probs,
                 1,
@@ -92,6 +113,20 @@ package object languagemodel {
 
   }
 
+  /** Creates random minibatches of fixed size from an in memory corpus. The
+    * attention mask is set up for autoregressive (left-to-right / causal)
+    * attention.
+    *
+    * @param minibatchSize
+    *   Number of sequences in the minibatch
+    * @param numBatches
+    *   Number of minibatches to generate
+    * @param corpus
+    *   Tokens of corpus
+    * @param blockLength
+    *   Length of sequences, also known as context length
+    * @return
+    */
   def autoregressiveMinibatchesFromCorpus(
       minibatchSize: Int,
       numBatches: Int,

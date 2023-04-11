@@ -16,7 +16,10 @@ package object bytesegmentencoding {
     val fos = new java.io.FileOutputStream(file)
     try {
       com.github.plokhotnyuk.jsoniter_scala.core
-        .writeToStream(ByteSegmentEncoding(encoding, unknownToken,unknownByte), fos)
+        .writeToStream(
+          ByteSegmentEncoding(encoding, unknownToken, unknownByte),
+          fos
+        )
     } finally { fos.close }
   }
   def readEncodingFromFile(
@@ -43,8 +46,29 @@ package object bytesegmentencoding {
       unknownToken: Char
   ): Array[Char] = {
 
+    def pack(v: Array[Byte]): Long = {
+      var l = 0L
+      var i = 0
+      while (i < v.length) {
+        l |= ((v(i) & 255) << (8 * i))
+        i += 1
+      }
+      l |= (v.length.toByte & 255) << 56
+      l
+    }
+    def pack1(v: Byte): Long = {
+      var l = 0L
+      l |= v & 255
+      l |= (1.toByte) << 56
+      l
+    }
+
     val maxMergedSegmentLength = encoding.map(_._1.size).max
-    val map = encoding.zipWithIndex.map(v => (v._1._1, (v._1._2, v._2))).toMap
+    val map = scala.collection.mutable.LongMap(
+      encoding.zipWithIndex
+        .map(v => (pack(v._1._1.toArray), (v._1._2, v._2))): _*
+    )
+
     val n = corpus.length
     val output = Array.ofDim[Char](corpus.length)
     var outputCursor = 0
@@ -52,19 +76,25 @@ package object bytesegmentencoding {
     var j = 0
     while (i < n) {
       j = i + 1
-      var encoded = map.get(Vector(corpus(i))).map(_._1).getOrElse(unknownToken)
+      var encoded = map.get(pack1(corpus(i))) match {
+        case None         => unknownToken
+        case Some((x, _)) => x
+      }
       var priority = Int.MaxValue
       var usedJ = 1
       while (j < i + maxMergedSegmentLength && j <= n) {
-        val slice = corpus.slice(i, j).toVector
-        val (a0, priority0) =
-          map.get(slice).getOrElse((unknownToken, Int.MaxValue))
-        if (priority0 < priority) {
-          encoded = a0
-          priority = priority0
-          usedJ = slice.length
+        val slice = pack(corpus.slice(i, j))
+        if (map.contains(slice)) {
+          val (a0, priority0) =
+            map(slice)
+          if (priority0 < priority) {
+            encoded = a0
+            priority = priority0
+            usedJ = j - i
+          }
         }
         j += 1
+
       }
       output(outputCursor) = encoded
       outputCursor += 1
