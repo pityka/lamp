@@ -1,4 +1,4 @@
-package lamp.example.autoregressivelm
+package lamp.example.timemachine
 
 import lamp._
 import lamp.nn._
@@ -8,7 +8,6 @@ import java.nio.charset.CodingErrorAction
 import java.nio.charset.Charset
 import cats.effect.unsafe.implicits.global
 import java.io.FileInputStream
-import java.util.zip.ZipInputStream
 import java.io.File
 import cats.effect.IO
 import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
@@ -16,8 +15,10 @@ import lamp.data.bytesegmentencoding.ByteSegmentCodec
 
 case class CliConfig(
     gpus: Seq[Int] = Nil,
-    wiki2: String = "",
-    trainBatchSize: Int = 64,
+    trainFile: String = "",
+    validFile: String = "",
+    fileMaxLength: Int = Int.MaxValue - 100,
+    trainBatchSize: Int = 12,
     epochs: Int = 10000,
     learningRate: Double = 0.0001,
     weightDecay: Double = 0.0,
@@ -28,6 +29,7 @@ case class CliConfig(
     checkpointLoad: Option[String] = None,
     extend: Option[String] = None,
     extendLength: Int = 50,
+    gradientAccumSteps: Int = 5,
     // config for distributed training
     distributed: Boolean = false,
     gpu: Int = 0,
@@ -42,23 +44,23 @@ case class CliConfig(
 object Train extends App {
   scribe.info("Logger start")
 
-  val vocabularySize = 64
+  val vocabularySize = 2048
 
   val contextLength = 256
 
   val codecFactory = ByteSegmentCodecFactory(
     vocabularyMin = 1,
     vocabularyMax = (vocabularySize - 1).toChar,
-    maxMergedSegmentLength = 1,
+    maxMergedSegmentLength = 5,
     unknownToken = 0.toChar,
     unknownByte = '?'.toByte
   )
 
   def allocateModel(device: Device)(implicit scope: Scope) = {
     val tensorOptions = device.options(SinglePrecision)
-    val embeddingDim = 384
-    val layers = 6
-    val numHeads = 6
+    val embeddingDim = 768
+    val layers = 12
+    val numHeads = 12
     val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
       maxLength = contextLength,
       vocabularySize = vocabularySize,
@@ -72,6 +74,9 @@ object Train extends App {
       tOpt = tensorOptions,
       linearized = false
     )
+    scribe.info(
+      s"Allocated model on $device . embedding=$embeddingDim layers=$layers num-heads=$numHeads"
+    )
     SupervisedModel(net, LossFunctions.Identity)
   }
 
@@ -80,12 +85,31 @@ object Train extends App {
   val parser1 = {
     import builder._
     OParser.sequence(
-      opt[Seq[Int]]("gpus").action((x, c) => c.copy(gpus = x)),
-      opt[String]("wiki2").action((x, c) => c.copy(wiki2 = x)),
-      opt[Int]("train-batch").action((x, c) => c.copy(trainBatchSize = x)),
-      opt[String]("extend").action((x, c) => c.copy(extend = Some(x))),
-      opt[Int]("extend-length").action((x, c) => c.copy(extendLength = x)),
+      programName("languagemodel example"),
+      head("trains an autoregressive language model"),
+      opt[Seq[Int]]("gpus")
+        .action((x, c) => c.copy(gpus = x))
+        .text("list of gpus or empty for cpu"),
+      opt[String]("train-file")
+        .action((x, c) => c.copy(trainFile = x))
+        .text("file containing ascii bytes"),
+      opt[String]("valid-file")
+        .action((x, c) => c.copy(validFile = x))
+        .text("file containing ascii bytes"),
+      opt[Int]("batch-size").action((x, c) => c.copy(trainBatchSize = x)),
+      opt[String]("extend")
+        .action((x, c) => c.copy(extend = Some(x)))
+        .text("Turns on inference model. Extend this text in inference mode"),
+      opt[Int]("extend-length")
+        .action((x, c) => c.copy(extendLength = x))
+        .text("extend this number of tkens in inference model"),
+      opt[Int]("train-file-max-length").action((x, c) =>
+        c.copy(fileMaxLength = x)
+      ),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
+      opt[Int]("gradient-accum-steps").action((x, c) =>
+        c.copy(gradientAccumSteps = x)
+      ),
       opt[Int]("batches-per-epoch").action((x, c) =>
         c.copy(numBatchesPerEpoch = x)
       ),
@@ -111,25 +135,17 @@ object Train extends App {
     .onMalformedInput(CodingErrorAction.REPLACE)
     .onUnmappableCharacter(CodingErrorAction.REPLACE)
 
-  def readFromZip(zip: String): Map[String, Array[Byte]] = {
-    val zis = new ZipInputStream(new FileInputStream(zip));
-    var ze = zis.getNextEntry();
-    val map = scala.collection.mutable.Map.empty[String, Array[Byte]]
-    while (ze != null) {
-      val name = ze.getName()
-      val str = scala.io.Source
-        .fromInputStream(zis)(asciiSilentCharsetDecoder)
-        .getLines()
-        .map(_.toLowerCase())
-        .toSeq
-        .mkString("\n")
-        .getBytes("US-ASCII")
-      map += ((name, str))
-      ze = zis.getNextEntry
+  def readFromFile(file: String, maxLength: Int): Array[Byte] = {
+    val zis = new FileInputStream(file)
 
+    val buffer = zis.readNBytes(maxLength)
+    val b2 = Array.ofDim[Byte](buffer.length)
+    var i = 0
+    while (i < b2.length) {
+      b2(i) = buffer(i).toChar.toLower.toByte
+      i += 1
     }
-    map.toMap
-
+    b2
   }
 
   OParser.parse(parser1, args, CliConfig()) match {
@@ -138,17 +154,18 @@ object Train extends App {
       val bpeFile = config.checkpointLoad.map(file =>
         new File(file + ".bytesegmentencoding.json")
       )
-      val filesInZip = readFromZip(config.wiki2)
 
       val rawTrainCorpus =
-        filesInZip("wikitext-2/wiki.train.tokens")
+        readFromFile(config.trainFile, config.fileMaxLength)
+
+      scribe.info(f"Read raw corpus ${rawTrainCorpus.length}%,d")
 
       val codec =
         if (bpeFile.isDefined && bpeFile.get.canRead)
           codecFactory.readFromFile(bpeFile.get)
         else {
           val bpe = codecFactory.train(
-            corpus = rawTrainCorpus.take(200000)
+            corpus = rawTrainCorpus.take(300000)
           )
           config.checkpointSave.foreach { file =>
             bpe.saveToFile(new File(file + ".bytesegmentencoding.json"))
@@ -170,21 +187,23 @@ object Train extends App {
       val trainCorpus = codec.encode(rawTrainCorpus)
 
       scribe.info(
-        s"Train corpus length: ${trainCorpus.length} bytes"
+        s"Train corpus length: ${trainCorpus.length} tokens"
       )
 
       val validCorpus =
         codec.encode(
-          filesInZip("wikitext-2/wiki.valid.tokens")
+          readFromFile(config.validFile, config.fileMaxLength)
         )
 
       scribe.info(
-        s"Valid corpus length: ${validCorpus.length} bytes"
+        s"Valid corpus length: ${validCorpus.length} tokens"
       )
 
       if (config.distributed) {
         Scope.root { implicit scope =>
-          scribe.info(s"Distributed training rank: ${config.rank} nrank:${config.nranks} gpu:${config.gpu}")
+          scribe.info(
+            s"Distributed training rank: ${config.rank} nrank:${config.nranks} gpu:${config.gpu}"
+          )
           val device = CudaDevice(config.gpu)
           val model = allocateModel(device)
 
@@ -350,6 +369,7 @@ akka {
               logger = Some(scribe.Logger("training")),
               validationFrequency = 1,
               dataParallelModels = extraModels,
+              accumulateGradientOverNBatches = config.gradientAccumSteps,
               checkpointState = Some((state: LoopState, _: Unit) =>
                 config.checkpointSave
                   .map { file =>
@@ -373,7 +393,8 @@ akka {
       val codec = codecFactory.readFromFile(bpeFile.get)
 
       Scope.root { implicit scope =>
-        val device = CPU
+        val device =
+          if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
 
         val model = allocateModel(device).module
 
