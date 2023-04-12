@@ -87,6 +87,16 @@ object Writer {
           assert(arr.length == numel)
           if (numel > 0) { assert(t.value.copyToLongArray(arr)) }
           arr
+        case 3 =>
+          val arr = Array.ofDim[Int]((end - start).toInt)
+          assert(arr.length == numel)
+          if (numel > 0) { assert(t.value.copyToIntArray(arr)) }
+          arr
+        case 2 =>
+          val arr = Array.ofDim[Short]((end - start).toInt)
+          assert(arr.length == numel)
+          if (numel > 0) { assert(t.value.copyToShortArray(arr)) }
+          arr
         case 1 =>
           val arr = Array.ofDim[Byte]((end - start).toInt)
           assert(arr.length == numel)
@@ -102,6 +112,8 @@ object Writer {
     case 7     => Right(8)
     case 6     => Right(4)
     case 4     => Right(8)
+    case 3     => Right(4)
+    case 2     => Right(2)
     case 1     => Right(1)
     case other => Left(s"Type $other not supported.")
   }
@@ -139,6 +151,12 @@ object Writer {
           case 4 =>
             bb.asLongBuffer().put(arr.asInstanceOf[Array[Long]])
             bb.position(bb.position() + arr.length * 8)
+          case 3 =>
+            bb.asIntBuffer().put(arr.asInstanceOf[Array[Int]])
+            bb.position(bb.position() + arr.length * 4)
+          case 2 =>
+            bb.asShortBuffer().put(arr.asInstanceOf[Array[Short]])
+            bb.position(bb.position() + arr.length * 2)
           case 1 =>
             bb.put(arr.asInstanceOf[Array[Byte]])
             

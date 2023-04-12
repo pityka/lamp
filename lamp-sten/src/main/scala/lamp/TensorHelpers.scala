@@ -83,6 +83,46 @@ object TensorHelpers {
       t2
     } else t
   }
+  def fromIntArray(
+      arr: Array[Int],
+      dim: Seq[Long],
+      device: Device
+  ) = {
+    require(
+      arr.length == dim.foldLeft(1L)(_ * _).toInt,
+      s"incorrect dimensions $dim got ${arr.length} elements."
+    )
+    val t = ATen.zeros(
+      dim.toArray,
+      STenOptions.i.value
+    )
+    assert(t.copyFromIntArray(arr))
+    if (device != CPU) {
+      val t2 = device.to(t)
+      t.release
+      t2
+    } else t
+  }
+  def fromShortArray(
+      arr: Array[Short],
+      dim: Seq[Long],
+      device: Device
+  ) = {
+    require(
+      arr.length == dim.foldLeft(1L)(_ * _).toInt,
+      s"incorrect dimensions $dim got ${arr.length} elements."
+    )
+    val t = ATen.zeros(
+      dim.toArray,
+      STenOptions.sh.value
+    )
+    assert(t.copyFromShortArray(arr))
+    if (device != CPU) {
+      val t2 = device.to(t)
+      t.release
+      t2
+    } else t
+  }
   def fromLongArray(
       arr: Array[Long],
       device: Device
@@ -202,6 +242,44 @@ object TensorHelpers {
       )
       val arr = Array.ofDim[Long](t.numel.toInt)
       assert(t.copyToLongArray(arr))
+      arr
+    } finally {
+      if (t != t0) { t.release }
+    }
+  }
+
+  def toIntArray(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      assert(
+        t.scalarTypeByte == 3,
+        s"Expected Int Tensor. Got scalartype: ${t.scalarTypeByte}"
+      )
+      assert(
+        t.numel <= Int.MaxValue,
+        "Tensor too long to fit into a java array"
+      )
+      val arr = Array.ofDim[Int](t.numel.toInt)
+      assert(t.copyToIntArray(arr))
+      arr
+    } finally {
+      if (t != t0) { t.release }
+    }
+  }
+
+  def toShortArray(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      assert(
+        t.scalarTypeByte == 2,
+        s"Expected Short Tensor. Got scalartype: ${t.scalarTypeByte}"
+      )
+      assert(
+        t.numel <= Int.MaxValue,
+        "Tensor too long to fit into a java array"
+      )
+      val arr = Array.ofDim[Short](t.numel.toInt)
+      assert(t.copyToShortArray(arr))
       arr
     } finally {
       if (t != t0) { t.release }

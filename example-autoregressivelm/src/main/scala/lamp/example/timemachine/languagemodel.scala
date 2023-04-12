@@ -26,7 +26,6 @@ case class CliConfig(
     dropout: Double = 0.0,
     numBatchesPerEpoch: Int = 100,
     checkpointSave: Option[String] = None,
-    checkpointLoad: Option[String] = None,
     extend: Option[String] = None,
     extendLength: Int = 50,
     gradientAccumSteps: Int = 5,
@@ -44,14 +43,14 @@ case class CliConfig(
 object Train extends App {
   scribe.info("Logger start")
 
-  val vocabularySize = 2048
+  val vocabularySize = 50304
 
   val contextLength = 256
 
   val codecFactory = ByteSegmentCodecFactory(
-    vocabularyMin = 1,
+    vocabularyMin = 10,
     vocabularyMax = (vocabularySize - 1).toChar,
-    maxMergedSegmentLength = 5,
+    maxMergedSegmentLength = 10,
     unknownToken = 0.toChar,
     unknownByte = '?'.toByte
   )
@@ -59,7 +58,7 @@ object Train extends App {
   def allocateModel(device: Device)(implicit scope: Scope) = {
     val tensorOptions = device.options(SinglePrecision)
     val embeddingDim = 768
-    val layers = 12
+    val layers = 6
     val numHeads = 12
     val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
       maxLength = contextLength,
@@ -119,11 +118,8 @@ object Train extends App {
       opt[Double]("sampling-temperature").action((x, c) =>
         c.copy(samplingTemperature = x)
       ),
-      opt[String]("checkpoint-save").action((x, c) =>
+      opt[String]("checkpoint").action((x, c) =>
         c.copy(checkpointSave = Some(x))
-      ),
-      opt[String]("checkpoint-load").action((x, c) =>
-        c.copy(checkpointLoad = Some(x))
       )
     )
 
@@ -147,11 +143,30 @@ object Train extends App {
     }
     b2
   }
+  def saveTokens(file: File, array: => Array[Char]): Unit = {
+    Scope.root { implicit scope =>
+      val t = STen.fromShortArray(array.map(_.toShort),List(array.size),CPU)
+      lamp.data.Writer
+        .writeTensorsIntoFile(List(t), file)
+        .unsafeRunSync()
+        .toOption
+        .get
+    }
+  }
+  def readTokens(file: File): Array[Char] = {
+    Scope.unsafe { implicit scope =>
+      lamp.data.Reader
+        .readTensorsFromFile(file, CPU, false)
+        .head
+        .toShortArray
+        .map(_.toChar)
+    }
+  }
 
   OParser.parse(parser1, args, CliConfig()) match {
     case Some(config) if config.extend.isEmpty =>
       scribe.info(s"Config: $config")
-      val bpeFile = config.checkpointLoad.map(file =>
+      val bpeFile = config.checkpointSave.map(file =>
         new File(file + ".bytesegmentencoding.json")
       )
 
@@ -162,13 +177,13 @@ object Train extends App {
 
       val codec =
         if (bpeFile.isDefined && bpeFile.get.canRead)
-          codecFactory.readFromFile(bpeFile.get)
+          codecFactory.readFromFile(bpeFile.get).unsafeRunSync()
         else {
           val bpe = codecFactory.train(
             corpus = rawTrainCorpus.take(300000)
           )
           config.checkpointSave.foreach { file =>
-            bpe.saveToFile(new File(file + ".bytesegmentencoding.json"))
+            bpe.saveToFile(new File(file + ".bytesegmentencoding.json")).unsafeRunSync()
 
           }
           bpe
@@ -184,16 +199,30 @@ object Train extends App {
           .mkString("\n")}"
       )
 
-      val trainCorpus = codec.encode(rawTrainCorpus)
+      def encodeOrRead(corpus: Array[Byte], file: File) =
+        if (file.canRead) {
+          scribe.info(s"Reading tokens file $file")
+          readTokens(file)
+        }
+        else {
+          scribe.info(s"Encoding corpus")
+          val enc = codec.encode(corpus)
+          scribe.info(s"Saving tokens into $file")
+          saveTokens(file, enc)
+          enc
+        }
+
+      val trainCorpus =
+        encodeOrRead(rawTrainCorpus, new File(config.trainFile + ".tokens"))
 
       scribe.info(
         s"Train corpus length: ${trainCorpus.length} tokens"
       )
 
-      val validCorpus =
-        codec.encode(
-          readFromFile(config.validFile, config.fileMaxLength)
-        )
+      val validCorpus = encodeOrRead(
+        readFromFile(config.validFile, config.fileMaxLength),
+        new File(config.validFile + ".tokens")
+      )
 
       scribe.info(
         s"Valid corpus length: ${validCorpus.length} tokens"
@@ -327,10 +356,14 @@ akka {
             allocateModel(device)
           }
 
-          val checkpointedState = config.checkpointLoad.map { state =>
-            StateIO
-              .readFromFile(new File(state), device)
-              .asInstanceOf[SimpleLoopState]
+          val checkpointedState = config.checkpointSave.flatMap { state =>
+            if (new File(state).canRead()) {
+              Some(
+                StateIO
+                  .readFromFile(new File(state), device)
+                  .asInstanceOf[SimpleLoopState]
+              )
+            } else None
           }
 
           scribe.info(
@@ -387,10 +420,10 @@ akka {
     case Some(config) =>
       scribe.info(s"Config: $config")
       scribe.info(s"Inference mode. Extending '${config.extend.get}'")
-      val bpeFile = config.checkpointLoad.map(file =>
+      val bpeFile = config.checkpointSave.map(file =>
         new File(file + ".bytesegmentencoding.json")
       )
-      val codec = codecFactory.readFromFile(bpeFile.get)
+      val codec = codecFactory.readFromFile(bpeFile.get).unsafeRunSync()
 
       Scope.root { implicit scope =>
         val device =
@@ -398,7 +431,7 @@ akka {
 
         val model = allocateModel(device).module
 
-        val checkpointedState = config.checkpointLoad
+        val checkpointedState = config.checkpointSave
           .map { state =>
             StateIO
               .readFromFile(new File(state), device)

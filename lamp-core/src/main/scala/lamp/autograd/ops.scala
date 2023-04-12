@@ -1316,7 +1316,7 @@ case class BinaryCrossEntropyWithLogitsLoss(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
         // -[ pos * y * (1 -sigmoid(x)) - (1 - y) sigmoid(x)] * grad
-        
+
         val t = if (posWeights.isDefined) {
           val t = posWeights.get * target
           val t2 = t + 1.0
@@ -2329,6 +2329,68 @@ case class ElementWiseMaximum(scope: Scope, a: Variable, b: Variable)
   val mask = a.value.equ(value.value)(scope)
   val maskneg = mask.not(scope)
 
+}
+
+case class ScaledDotProductAttention(
+    scope: Scope,
+    query: Variable,
+    key: Variable,
+    valueIn: Variable,
+    isCausal: Boolean
+) extends Op {
+
+  val (v0, lse) = STen.scaledDotProductAttention(
+    query.value,
+    key.value,
+    valueIn.value,
+    isCausal
+  )(scope)
+  val value = Variable(this, v0)(scope)
+
+  val params = List(
+    query.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val (gQ, _, _) = STen.scaledDotProductAttentionBackward(
+          p,
+          query.value,
+          key.value,
+          valueIn.value,
+          v0,
+          lse,
+          isCausal
+        )
+        out += gQ
+      }
+    },
+    key.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val (_, gK, _) = STen.scaledDotProductAttentionBackward(
+          p,
+          query.value,
+          key.value,
+          valueIn.value,
+          v0,
+          lse,
+          isCausal
+        )
+        out += gK
+      }
+    },
+    value.zipBackward { (p, out) =>
+      Scope.root { implicit scope =>
+        val (_, _, gV) = STen.scaledDotProductAttentionBackward(
+          p,
+          query.value,
+          key.value,
+          valueIn.value,
+          v0,
+          lse,
+          isCausal
+        )
+        out += gV
+      }
+    }
+  )
 }
 
 case class Debug(

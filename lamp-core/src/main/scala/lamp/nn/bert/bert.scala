@@ -526,7 +526,8 @@ object BertEncoder {
           out = embeddingDim,
           dropout = dropout,
           tOpt = tOpt,
-          linearized = linearized
+          linearized = linearized,
+          gptOrder = false
         )
       )
     )

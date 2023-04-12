@@ -1,6 +1,7 @@
 package lamp.data.bytesegmentencoding
 
 import java.io.File
+import cats.effect.IO
 
 case class ByteSegmentCodec(
     trained: Vector[(Vector[Byte], Char)],
@@ -19,8 +20,10 @@ case class ByteSegmentCodec(
       trained,
       unknownByte
     )
-  def saveToFile(file: File): Unit = lamp.data.bytesegmentencoding
+  def saveToFile(file: File): IO[Unit] = IO.blocking{
+    lamp.data.bytesegmentencoding
     .saveEncodingToFile(file, trained, unknownToken, unknownByte)
+  }.uncancelable
 
 }
 case class ByteSegmentCodecFactory(
@@ -40,11 +43,11 @@ case class ByteSegmentCodecFactory(
       unknownByte
     )
 
-  def readFromFile(file: File): ByteSegmentCodec = {
+  def readFromFile(file: File): IO[ByteSegmentCodec] = IO.blocking{
     val r = lamp.data.bytesegmentencoding.readEncodingFromFile(file)
     ByteSegmentCodec(
-      r.encoding,
-      r.unknownToken,
+      r.encoding.map(v => (v._1, v._2.toChar)),
+      r.unknownToken.toChar,
       r.unknownByte
     )
   }

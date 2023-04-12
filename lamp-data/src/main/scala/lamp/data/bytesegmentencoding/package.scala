@@ -17,7 +17,11 @@ package object bytesegmentencoding {
     try {
       com.github.plokhotnyuk.jsoniter_scala.core
         .writeToStream(
-          ByteSegmentEncoding(encoding, unknownToken, unknownByte),
+          ByteSegmentEncoding(
+            encoding.map(v => (v._1, v._2.toInt)),
+            unknownToken.toInt,
+            unknownByte
+          ),
           fos
         )
     } finally { fos.close }
@@ -138,7 +142,7 @@ package object bytesegmentencoding {
       i += 1
     }
     val vocabSize = vocabularyMax - vocabularyMin
-    val singles = frequencies.keySet.toVector.filter(_.size == 1)
+    val singles = frequencies.keySet.toVector.filter(_.size == 1).distinct
     val nonSingles = frequencies.filter(_._1.size > 1)
     val r = (singles ++ nonSingles.toVector
       .sortBy(v => -1 * v._2)
