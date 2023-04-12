@@ -200,7 +200,7 @@ object LanguageModelOutputNonVariable {
 /** Transformer based language model module
   *
   * Initial embedding is the sum of token and position embedding. Token
-  * embedding is a lookup embedding. Position embedding is also a lookup
+  * embedding is a learned embedding. Position embedding is also a learned
   * embedding (not sinusoidal etc).
   *
   * Initial embeddings are fed into layers of transformer blocks. Attention
@@ -214,10 +214,10 @@ case class LanguageModelModule(
     tokenEmbedding: Embedding,
     positionEmbedding: Embedding,
     encoder: TransformerEncoder,
-    lmHead: Linear
+    finalNorm: LayerNorm
 ) extends GenericModule[LanguageModelInput, LanguageModelOutput] {
   def state =
-    tokenEmbedding.state ++ positionEmbedding.state ++ encoder.state ++ lmHead.state
+    tokenEmbedding.state ++ positionEmbedding.state ++ encoder.state ++ finalNorm.state // ++ lmHead.state
 
   def forward[S: Sc](x: LanguageModelInput): LanguageModelOutput = {
 
@@ -226,7 +226,7 @@ case class LanguageModelModule(
     )
     val embedded =
       tokenEmbedding.forward(x.tokens) + positionEmbedding.forward(pos)
-    val encoded = encoder.forward((embedded, x.maxLength))
+    val encoded = finalNorm(encoder.forward((embedded, x.maxLength)))
 
     val encoderOutputAtPredictionPositions =
       x.positions.fold(encoded)(positions =>
@@ -242,8 +242,13 @@ case class LanguageModelModule(
           )
       )
 
+    def mm1(a: Variable, b: Variable) = {
+      val shape = a.shape
+      a.view(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
+    }
+
     val logits =
-      lmHead.forward(encoderOutputAtPredictionPositions)
+      mm1(encoderOutputAtPredictionPositions, tokenEmbedding.weights.t)
     LanguageModelOutput(
       encoded = encoded,
       languageModelLogits = logits
@@ -284,13 +289,10 @@ object LanguageModelModule {
       mlpHiddenDim = encoderMlpHiddenDim,
       dropout = dropout,
       tOpt = tOpt,
-      linearized = linearized
+      linearized = linearized,
+      gptOrder = true
     ),
-    lmHead = Linear(
-      in = embeddingDim,
-      out = vocabularySize,
-      tOpt = tOpt
-    )
+    finalNorm = LayerNorm(List(embeddingDim.toLong), tOpt)
   )
 
   implicit val trainingMode: TrainingMode[LanguageModelModule] = TrainingMode
@@ -300,17 +302,22 @@ object LanguageModelModule {
           tokenEmbedding = m.tokenEmbedding.asEval,
           positionEmbedding = m.positionEmbedding.asEval,
           encoder = m.encoder.asEval,
-          lmHead = m.lmHead.asEval
+          finalNorm = m.finalNorm.asEval
         ),
       m =>
         m.copy(
           tokenEmbedding = m.tokenEmbedding.asTraining,
           positionEmbedding = m.positionEmbedding.asTraining,
           encoder = m.encoder.asTraining,
-          lmHead = m.lmHead.asTraining
+          finalNorm = m.finalNorm.asTraining
         )
     )
   implicit val load: Load[LanguageModelModule] =
-    Load.compose(_.tokenEmbedding, _.positionEmbedding, _.encoder, _.lmHead)
+    Load.compose(
+      _.tokenEmbedding,
+      _.positionEmbedding,
+      _.encoder,
+      _.finalNorm
+    )
 
 }

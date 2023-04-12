@@ -40,7 +40,7 @@ package object languagemodel {
       temperature: Double
   )(scope: Scope): IO[Array[Char]] = {
     assert(temperature > 0d)
-    val device = model.lmHead.weights.value.device 
+    val device = model.tokenEmbedding.weights.value.device 
     def makeInput(prefix: Array[Char])(implicit scope: Scope) = {
       val tokens =
         STen

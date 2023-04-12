@@ -7,7 +7,10 @@ import java.io.File
 import java.io.FileOutputStream
 import lamp.STen
 import java.io.FileInputStream
+import lamp.nn.LearningRateSchedule
 
+/** Helpers to read and write training loop state
+  */
 object StateIO {
 
   private def readSimpleLoopStateDescriptor(
@@ -29,7 +32,7 @@ object StateIO {
       s.minValidationLoss,
       minValid,
       s.learningCurve.map { case (epoch, train, smoothedValid, valid) =>
-        (epoch, train, smoothedValid.flatMap{a => valid.map(b => (a,b))})
+        (epoch, train, smoothedValid.flatMap { a => valid.map(b => (a, b)) })
       }
     )
   }
@@ -56,14 +59,17 @@ object StateIO {
     )
   }
 
-  /**
-    * Reads LoopState from file
-    * 
-    * Returned value may be passed to training loop constructors to initialize loop state
+  /** Reads LoopState from file
     *
-    * @param file file on disk
-    * @param device device onto which to load tensors
-    * @return LoopState
+    * Returned value may be passed to training loop constructors to initialize
+    * loop state
+    *
+    * @param file
+    *   file on disk
+    * @param device
+    *   device onto which to load tensors
+    * @return
+    *   LoopState
     */
   def readFromFile(file: File, device: Device)(implicit
       scope: Scope
@@ -224,8 +230,7 @@ object StateIO {
     )
   }
 
-  /** Writes loop state into file 
-    * 
+  /** Writes loop state into file
     */
   def writeToFile(
       file: File,
@@ -269,9 +274,34 @@ object StateIO {
 
   }
 
-  /** Returns a function which returns an IO writing the loop state to file 
+  /** Returns a function which returns an IO writing the loop state to file
     */
   def stateToFile(file: File): LoopState => IO[Unit] = { (state: LoopState) =>
-    IO.blocking { writeToFile(file, state, 16384) }
+    IO.blocking {
+      writeToFile(file, state, 16384)
+    }.uncancelable
+  }
+
+  def reduceLROnPlateauStateToFile(
+      file: File
+  ): LearningRateSchedule.ReduceLROnPlateauState => IO[Unit] = {
+    (state: LearningRateSchedule.ReduceLROnPlateauState) =>
+      IO.blocking {
+        val fos = new java.io.FileOutputStream(file)
+        try {
+          import lamp.data.schemas.LearningRateScheduleSchemas._
+          com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(state, fos)
+        } finally { fos.close }
+      }.uncancelable
+  }
+  def reduceLROnPlateauStateFromFile(
+      file: File
+  ): IO[LearningRateSchedule.ReduceLROnPlateauState] = IO.blocking {
+    val fos = new java.io.FileInputStream(file)
+    try {
+      import lamp.data.schemas.LearningRateScheduleSchemas._
+      com.github.plokhotnyuk.jsoniter_scala.core
+        .readFromStream[LearningRateSchedule.ReduceLROnPlateauState](fos)
+    } finally { fos.close }
   }
 }

@@ -80,7 +80,8 @@ object TransformerEncoder {
       mlpHiddenDim: Int,
       dropout: Double,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      gptOrder: Boolean
   ): TransformerEncoder =
     TransformerEncoder(
       0 until numBlocks map (_ =>
@@ -92,18 +93,36 @@ object TransformerEncoder {
           out = in,
           dropout = dropout,
           tOpt = tOpt,
-          linearized = linearized
+          linearized = linearized,
+          gptOrder = gptOrder
         )
       )
     )
 }
 
-/** A single block of the transformer self attention encoder as defined in Fig
-  * 11.7.1 in d2l v1.0.0-beta0, except it uses GELU for nonlinearity
+/** A single block of the transformer self attention encoder using GELU
   *
   * Input is `(data, maxLength)` where `data` is (batch, sequence, input
   * dimension), double tensor `maxLength` is a 1D or 2D long tensor used for
   * attention masking.
+  *
+  * The order of operations depends on gptOrder param. If `gptOrder` is true
+  * then:
+  *   - y = attention(norm(input))+input
+  *   - result = mlp(norm(y))+y
+  *   - Note that in this case there is no normalization at the end of the
+  *     transformer. One may wants to add one separately. This is how GPT2 is
+  *     defined in hugging face or nanoGPT.
+  *   - Note that the residual connection has a path which does not flow through
+  *     the normalization.
+  *
+  * If `gptOrder` is false then:
+  *   - y = norm(attention(input)+input )
+  *   - result = norm(mlp(y)+y)
+  *   - This follows chapter 11.7 in d2l.ai v1.0.0-beta0. (Same as in
+  *     https://arxiv.org/pdf/1706.03762.pdf)
+  *   - Note that the residual connection has a path which flows through the
+  *     normalization.
   *
   * Output is (bach, sequence, output dimension)
   */
@@ -116,7 +135,8 @@ case class TransformerEncoderBlock(
     w2: Constant,
     b2: Constant,
     dropout: Double,
-    train: Boolean
+    train: Boolean,
+    gptOrder: Boolean
 ) extends GenericModule[(Variable, Option[STen]), Variable] {
 
   def state =
@@ -135,12 +155,21 @@ case class TransformerEncoderBlock(
     }
 
     val (input, maxLength) = x
-    val a1 = attention.forward((input, input, input, maxLength))
-    val a2 = layerNorm1(a1.dropout(dropout, train) + input)
-    val a3 = mm1((mm1(a2, w1) + b1).gelu, w2) + b2
+    if (gptOrder) {
+      val a1 = layerNorm1(input.dropout(dropout, train))
+      val a2 = attention.forward((a1, a1, a1, maxLength)) + input
+      val a3 = layerNorm2(a2.dropout(dropout, train))
+      val a4 = mm1((mm1(a3, w1) + b1).gelu, w2) + b2 + a2
 
-    val a4 = layerNorm2(a3.dropout(dropout, train) + a3)
-    a4
+      a4
+    } else {
+      val a1 = attention.forward((input, input, input, maxLength))
+      val a2 = layerNorm1(a1.dropout(dropout, train) + input)
+      val a3 = mm1((mm1(a2, w1) + b1).gelu, w2) + b2
+
+      val a4 = layerNorm2(a3.dropout(dropout, train) + a3)
+      a4
+    }
   }
 
 }
@@ -156,7 +185,8 @@ object TransformerEncoderBlock {
       out: Int,
       dropout: Double,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      gptOrder: Boolean
   ): TransformerEncoderBlock =
     TransformerEncoderBlock(
       attention = MultiheadAttention(
@@ -170,6 +200,7 @@ object TransformerEncoderBlock {
         tOpt = tOpt,
         linearized = linearized
       ),
+      gptOrder = gptOrder,
       layerNorm1 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       layerNorm2 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       w1 = initLinear(in, mlpHiddenDim, tOpt),
@@ -212,9 +243,11 @@ object TransformerEncoderBlock {
 
 /** Multi-head scaled dot product attention module
   *
-  * Input: (query,key,value,tokens) where query: batch x num queries x query dim
-  * key: batch x num k-v x key dim value: batch x num k-v x key value tokens:
-  * batch x num queries, long type
+  * Input: (query,key,value,maxLength) where
+  *   - query: batch x num queries x query dim
+  *   - key: batch x num k-v x key dim
+  *   - value: batch x num k-v x key value
+  *   - maxLength: 1D or 2D long tensor for attention masking
   */
 case class MultiheadAttention(
     wQ: Constant,

@@ -1,6 +1,7 @@
 package lamp.data.schemas
 import com.github.plokhotnyuk.jsoniter_scala.macros._
 import com.github.plokhotnyuk.jsoniter_scala.core._
+import lamp.nn
 
 case class TensorDescriptor(
     dims: Seq[Long],
@@ -39,7 +40,7 @@ case class SimpleLoopState(
     lastValidationLoss: Option[Double],
     minValidationLoss: Option[Double],
     minValidationLossModel: Option[(Int, TensorList)],
-    learningCurve: List[(Int, Double, Option[Double],Option[Double])]
+    learningCurve: List[(Int, Double, Option[Double], Option[Double])]
 ) extends LoopState
 case class SWALoopState(
     model: TensorList,
@@ -60,12 +61,18 @@ object LoopState {
   implicit val codec: JsonValueCodec[LoopState] = JsonCodecMaker.make
 }
 
-
 case class ByteSegmentEncoding(
-  encoding: Vector[(Vector[Byte], Char)],
-  unknownToken: Char,unknownByte: Byte
+    encoding: Vector[(Vector[Byte], Int)],
+    unknownToken: Int,
+    unknownByte: Byte
 )
 
 object ByteSegmentEncoding {
   implicit val codec: JsonValueCodec[ByteSegmentEncoding] = JsonCodecMaker.make
+}
+
+object LearningRateScheduleSchemas {
+  implicit val codec
+      : JsonValueCodec[nn.LearningRateSchedule.ReduceLROnPlateauState] =
+    JsonCodecMaker.make
 }

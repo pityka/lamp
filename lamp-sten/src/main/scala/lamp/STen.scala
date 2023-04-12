@@ -14,6 +14,12 @@ import aten.CudaStream
   */
 object STen {
 
+  /** A tensor option specifying CPU and int */
+  val iOptions = STenOptions(aten.TensorOptions.i)
+
+  /** A tensor option specifying CPU and short */
+  val shOptions = STenOptions(aten.TensorOptions.sh)
+
   /** A tensor option specifying CPU and double */
   val dOptions = STenOptions(aten.TensorOptions.d)
 
@@ -34,6 +40,24 @@ object STen {
   def fromLongArray[S: Sc](ar: Array[Long], dim: Seq[Long], device: Device) =
     if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.l))
     else TensorHelpers.fromLongArray(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
+  def fromIntArray[S: Sc](
+      ar: Array[Int],
+      dim: Seq[Long],
+      device: Device
+  ): STen =
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.i))
+    else TensorHelpers.fromIntArray(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
+  def fromShortArray[S: Sc](
+      ar: Array[Short],
+      dim: Seq[Long],
+      device: Device
+  ): STen =
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.sh))
+    else TensorHelpers.fromShortArray(ar, dim, device).owned
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromLongArray[S: Sc](ar: Array[Long]): STen =
@@ -457,6 +481,43 @@ object STen {
   def to_dense_backward[S: Sc](gradOutput: STen, input: STen) =
     ATen.to_dense_backward(gradOutput.value, input.value).owned
 
+  def scaledDotProductAttention[S: Sc](
+      query: STen,
+      key: STen,
+      value: STen,
+      isCausal: Boolean
+  ) = {
+    val (a, b) = ATen._scaled_dot_product_efficient_attention(
+      query.value,
+      key.value,
+      value.value,
+      true,
+      isCausal
+    )
+    (owned(a), owned(b))
+  }
+  def scaledDotProductAttentionBackward[S: Sc](
+    gradOutput: STen,
+      query: STen,
+      key: STen,
+      value: STen,
+      out: STen,
+      logsumexp: STen,
+      isCausal: Boolean
+  ) = {
+    val (a, b,c) = ATen._scaled_dot_product_efficient_attention_backward(
+      gradOutput.value,
+      query.value,
+      key.value,
+      value.value,
+      out.value,
+      logsumexp.value,
+      isCausal,
+      false
+    )
+    (owned(a), owned(b),owned(c))
+  }
+
   def smooth_l1_loss_backward[S: Sc](
       gradOutput: STen,
       self: STen,
@@ -465,7 +526,13 @@ object STen {
       beta: Double
   ) =
     ATen
-      .smooth_l1_loss_backward_0(gradOutput.value, self.value, target.value, reduction, beta)
+      .smooth_l1_loss_backward_0(
+        gradOutput.value,
+        self.value,
+        target.value,
+        reduction,
+        beta
+      )
       .owned
   def mse_loss_backward[S: Sc](
       gradOutput: STen,
@@ -547,6 +614,12 @@ case class STenOptions(value: aten.TensorOptions) {
   import STenOptions._
 
   /** Returns a copy with dtype set to long */
+  def toShort[S: Sc] = value.toShort.owned
+
+  /** Returns a copy with dtype set to long */
+  def toInt[S: Sc] = value.toInt.owned
+
+  /** Returns a copy with dtype set to long */
   def toLong[S: Sc] = value.toLong.owned
 
   /** Returns a copy with dtype set to double */
@@ -571,6 +644,8 @@ case class STenOptions(value: aten.TensorOptions) {
   def mps[S: Sc] = value.device(STenOptions.deviceTypeMps, 0).owned
 
   def isDouble = value.isDouble
+  def isInt = value.isInt
+  def isShort = value.isShort
   def isFloat = value.isFloat
   def isByte = value.isByte
   def isLong = value.isLong
@@ -594,6 +669,12 @@ object STenOptions {
 
   /** Returns an tensor option specifying CPU and float */
   def f = STen.fOptions
+
+  /** Returns an tensor option specifying CPU and long */
+  def i = STen.iOptions
+
+  /** Returns an tensor option specifying CPU and long */
+  def sh = STen.shOptions
 
   /** Returns an tensor option specifying CPU and long */
   def l = STen.lOptions
@@ -720,6 +801,12 @@ case class STen private (
   /** Returns true if data type is double */
   def isDouble = Scope.root { implicit scope => options.isDouble }
 
+  /** Returns true if data type is short */
+  def isShort = Scope.root { implicit scope => options.isShort }
+
+  /** Returns true if data type is int */
+  def isInt = Scope.root { implicit scope => options.isInt }
+
   /** Returns true if data type is float */
   def isFloat = Scope.root { implicit scope => options.isFloat }
 
@@ -744,7 +831,11 @@ case class STen private (
   /** Returns the byte representation of the data type
     *
     * The mapping is:
+    *   - 1 for Byte
+    *   - 2 for Short
+    *   - 3 for Int
     *   - 4 for Long
+    *   - 5 for Half
     *   - 6 for Float
     *   - 7 for Double
     */
@@ -911,6 +1002,8 @@ case class STen private (
     case 6 => castToFloat
     case 5 => castToHalf
     case 4 => castToLong
+    case 3 => castToInt
+    case 2 => castToShort
     case 1 => castToByte
   }
 
@@ -927,6 +1020,12 @@ case class STen private (
 
   /** Casts to long */
   def castToLong[S: Sc] = owned(ATen._cast_Long(value, true))
+
+  /** Casts to short */
+  def castToShort[S: Sc] = owned(ATen._cast_Short(value, true))
+
+  /** Casts to int */
+  def castToInt[S: Sc] = owned(ATen._cast_Int(value, true))
 
   /** Casts to half */
   def castToHalf[S: Sc] = owned(ATen._cast_Half(value, true))
@@ -1632,7 +1731,8 @@ case class STen private (
   def dropout_(p: Double, training: Boolean): Unit =
     ATen.dropout_(value, p, training)
 
-  def frobeniusNorm[S: Sc](dim: Seq[Int], keepDim: Boolean) = ATen.frobenius_norm(value, dim.map(_.toLong).toArray, keepDim).owned
+  def frobeniusNorm[S: Sc](dim: Seq[Int], keepDim: Boolean) =
+    ATen.frobenius_norm(value, dim.map(_.toLong).toArray, keepDim).owned
 
   /** @param fullMatrices
     *   whether to return reduced or full matrices (in case of non-square input)
@@ -1712,6 +1812,8 @@ case class STen private (
   def toDoubleArray = TensorHelpers.toDoubleArray(value)
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
+  def toIntArray = TensorHelpers.toIntArray(value)
+  def toShortArray = TensorHelpers.toShortArray(value)
 
   def isPinned = if (aten.Tensor.hasCuda()) value.is_pinned() else false
 
