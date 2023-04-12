@@ -50,15 +50,15 @@ object Train extends App {
   val codecFactory = ByteSegmentCodecFactory(
     vocabularyMin = 10,
     vocabularyMax = (vocabularySize - 1).toChar,
-    maxMergedSegmentLength = 10,
+    maxMergedSegmentLength = 7,
     unknownToken = 0.toChar,
-    unknownByte = '?'.toByte
+    unknownByte = '?'.toByte,
   )
 
   def allocateModel(device: Device)(implicit scope: Scope) = {
     val tensorOptions = device.options(SinglePrecision)
     val embeddingDim = 768
-    val layers = 6
+    val layers = 12
     val numHeads = 12
     val net = lamp.nn.languagemodel.LanguageModelLoss.apply(
       maxLength = contextLength,
