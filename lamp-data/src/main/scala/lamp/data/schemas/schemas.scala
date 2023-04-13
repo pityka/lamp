@@ -31,7 +31,9 @@ object TensorList {
   implicit val codec: JsonValueCodec[TensorList] = JsonCodecMaker.make
 }
 
-sealed trait LoopState
+sealed trait LoopState {
+  def locations: Seq[String]
+}
 
 case class SimpleLoopState(
     model: TensorList,
@@ -41,7 +43,12 @@ case class SimpleLoopState(
     minValidationLoss: Option[Double],
     minValidationLossModel: Option[(Int, TensorList)],
     learningCurve: List[(Int, Double, Option[Double], Option[Double])]
-) extends LoopState
+) extends LoopState {
+  def locations = List(
+    model.location,
+    optimizer.location
+  ) ++ minValidationLossModel.toList.map(_._2.location)
+}
 case class SWALoopState(
     model: TensorList,
     optimizer: TensorList,
@@ -51,11 +58,18 @@ case class SWALoopState(
     numberOfAveragedModels: Int,
     averagedModels: Option[TensorList],
     learningCurve: List[(Int, Double, Option[Double])]
-) extends LoopState
+) extends LoopState {
+  def locations = List(
+    model.location,
+    optimizer.location
+  ) ++ averagedModels.toList.map(_.location)
+}
 case class SimpleThenSWALoopState(
     simple: SimpleLoopState,
     swa: Option[SWALoopState]
-) extends LoopState
+) extends LoopState {
+  def locations: Seq[String] = simple.locations ++ swa.toList.flatMap(_.locations)
+}
 
 object LoopState {
   implicit val codec: JsonValueCodec[LoopState] = JsonCodecMaker.make
