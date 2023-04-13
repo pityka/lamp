@@ -61,6 +61,7 @@ class GradientSuite extends AnyFunSuite {
   val mat3x1 = Mat(Vec(1d, 2d, 3d))
   val mat1x3 = Mat(Vec(1d, 2d, 3d)).T
   val mat3x1_2 = Mat(Vec(2d, 3d, 4d))
+  val mat1x64 = Mat(vec.ones(64))
   def t2x3 = lamp.saddle.fromMat(mat2x3)(Scope.free)
   val mat2x3_2 = Mat(Vec(-1d, 2d), Vec(3d, -4d), Vec(5d, 6d))
   def t3x2 = t2x3.transpose(0, 1)(Scope.free)
@@ -93,6 +94,26 @@ class GradientSuite extends AnyFunSuite {
 
   }
 
+  def testGradientAndValueCudaOnly(
+      id: String
+  )(m: Mat[Double], expectedValue: Double, eps: Double = 1e-6)(
+      fun: (Mat[Double], Boolean) => (Double, Option[Mat[Double]])
+  ) = {
+    test(id + ": gradient is correct", CudaTest) {
+
+      def diffNum(m: Mat[Double]) = diff(m, eps)(m => fun(m, false)._1)
+      def diffAuto(m: Mat[Double]) = {
+        fun(m, true)._2.get
+      }
+      assert(
+        Vec(fun(m, false)._1).roundTo(4) == Vec(expectedValue).roundTo(
+          4
+        )
+      )
+
+      assert(diffAuto(m).roundTo(4) == diffNum(m).roundTo(4))
+    }
+  }
   def testGradientAndValue(
       id: String
   )(m: Mat[Double], expectedValue: Double, eps: Double = 1e-6)(
@@ -195,6 +216,63 @@ class GradientSuite extends AnyFunSuite {
     }
   }
 
+    testGradientAndValueCudaOnly("scaled dot product attention - by q")(mat1x64, 64d) { (m, doBackprop) =>
+    Scope.root { implicit scope =>
+      val device = lamp.CudaDevice(0)
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1,8,1,8).castToFloat )
+      val q = param(mSTen+0.0)
+      val k = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
+      val v = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
+      val r = new ScaledDotProductAttention(scope,q,k,v,false).value 
+
+      val L =r.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        lamp.CPU.to(L.value).toMat.raw(0),
+        q.partialDerivative.map(t => t.reshape(-1,1).toMat)
+      )
+    }
+  }
+    testGradientAndValueCudaOnly("scaled dot product attention - by k")(mat1x64, 64d) { (m, doBackprop) =>
+    Scope.root { implicit scope =>
+      val device = lamp.CudaDevice(0)
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1,8,1,8).castToFloat )
+      val q = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
+      val k = param(mSTen+0.0)
+      val v = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
+      val r = new ScaledDotProductAttention(scope,q,k,v,false).value 
+
+      val L =r.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        lamp.CPU.to(L.value).toMat.raw(0),
+        k.partialDerivative.map(t => t.reshape(-1,1).toMat)
+      )
+    }
+  }
+    testGradientAndValueCudaOnly("scaled dot product attention - by v")(mat1x64, 64d) { (m, doBackprop) =>
+    Scope.root { implicit scope =>
+      val device = lamp.CudaDevice(0)
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1,8,1,8).castToFloat )
+      val q = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
+      val k = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
+      val v = param(mSTen+0.0)
+      val r = new ScaledDotProductAttention(scope,q,k,v,false).value 
+
+      val L =r.sum
+      if (doBackprop) {
+        L.backprop()
+      }
+      (
+        lamp.CPU.to(L.value).toMat.raw(0),
+        v.partialDerivative.map(t => t.reshape(-1,1).toMat)
+      )
+    }
+  }
   testGradientAndValue("sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
@@ -735,6 +813,7 @@ class GradientSuite extends AnyFunSuite {
         )
       }
   }
+  
   testGradientAndValue("mm - right")(mat2x3, 450d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
