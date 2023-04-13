@@ -351,7 +351,7 @@ object MultiheadAttention {
 
   }
 
-  /** Masks the maskable(i,j,k) cell iff k > maxLength(i,j)
+  /** Masks the maskable(i,j,k) cell iff k >= maxLength(i,j)
     *
     * Masks some elements on the last (3rd) axis of maskable
     *
@@ -386,7 +386,7 @@ object MultiheadAttention {
 
   }
 
-  /** Masks the maskable(i,j,k) cell iff k > maxLength(i)
+  /** Masks the maskable(i,j,k) cell iff k >= maxLength(i)
     *
     * @param maxLength
     *   batch, type Long

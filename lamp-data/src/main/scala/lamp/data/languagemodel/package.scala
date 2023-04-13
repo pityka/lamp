@@ -40,7 +40,7 @@ package object languagemodel {
       temperature: Double
   )(scope: Scope): IO[Array[Char]] = {
     assert(temperature > 0d)
-    val device = model.tokenEmbedding.weights.value.device 
+    val device = model.tokenEmbedding.weights.value.device
     def makeInput(prefix: Array[Char])(implicit scope: Scope) = {
       val tokens =
         STen
@@ -53,7 +53,7 @@ package object languagemodel {
         STen.fromLongArray(Array(tokens.shape(1) - 1)).unsqueeze(0)
 
       val maxLength = {
-        val single = STen.arange_l(0, tokens.shape(1), 1).unsqueeze(0)
+        val single = STen.arange_l(1, tokens.shape(1) + 1, 1).unsqueeze(0)
         single.repeat(List(1, 1))
       }
 
@@ -165,7 +165,7 @@ package object languagemodel {
           )
 
           val maxLength = {
-            val single = STen.arange_l(0, blockLength, 1).unsqueeze(0)
+            val single = STen.arange_l(1, blockLength + 1, 1).unsqueeze(0)
             single.repeat(List(minibatchSize, 1))
           }
 
