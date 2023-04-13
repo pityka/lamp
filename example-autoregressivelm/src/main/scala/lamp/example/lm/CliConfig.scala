@@ -31,9 +31,8 @@ case class CliConfig(
     myAddress: String = "",
     myPort: Int = 28888
 ) {
-  val bpeFile = checkpointSave.map(file =>
-        new File(file + ".bytesegmentencoding.json")
-      )
+  val bpeFile =
+    checkpointSave.map(file => new File(file + ".bytesegmentencoding.json"))
 }
 
 object CliParser {
@@ -41,7 +40,7 @@ object CliParser {
   def runCli(args: List[String])(b: CliConfig => IO[ExitCode]): IO[ExitCode] = {
     OParser.parse(parser1, args, CliConfig()) match {
       case Some(config) => b(config)
-      case _ => IO.pure(ExitCode(1))
+      case _            => IO.pure(ExitCode(1))
     }
   }
 
