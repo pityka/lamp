@@ -105,12 +105,12 @@ object StateIO {
   ) = {
     val modelLocation = s"${file.getName}.model"
     val modelChannel = new FileOutputStream(
-      new File(file.getParentFile(), modelLocation),
+      new File(file.getParentFile(), modelLocation + ".tmp"),
       false
     ).getChannel
     val optimizerLocation = s"${file.getName}.optimizer"
     val optimizerChannel = new FileOutputStream(
-      new File(file.getParentFile(), optimizerLocation),
+      new File(file.getParentFile(), optimizerLocation + ".tmp"),
       false
     ).getChannel
     val modelDescriptor = Writer
@@ -136,7 +136,7 @@ object StateIO {
     val minValidDescriptor = s.minValidationLossModel.map { case (a, ts) =>
       val location = s"${file.getName}.minvalidmodel"
       val channel = new FileOutputStream(
-        new File(file.getParentFile(), location),
+        new File(file.getParentFile(), location + ".tmp"),
         false
       ).getChannel
       val descriptor = Writer
@@ -149,8 +149,17 @@ object StateIO {
         )
         .toOption
         .get
+      new File(file.getParentFile(), location + ".tmp").renameTo(
+        new File(file.getParentFile(), location)
+      )
       (a, descriptor)
     }
+    new File(file.getParentFile(), optimizerLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), optimizerLocation)
+    )
+    new File(file.getParentFile(), modelLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), modelLocation)
+    )
 
     schemas.SimpleLoopState(
       modelDescriptor,
@@ -171,12 +180,12 @@ object StateIO {
   ) = {
     val modelLocation = s"${file.getName}.model"
     val modelChannel = new FileOutputStream(
-      new File(file.getParentFile(), modelLocation),
+      new File(file.getParentFile(), modelLocation + ".tmp"),
       false
     ).getChannel
     val optimizerLocation = s"${file.getName}.optimizer"
     val optimizerChannel = new FileOutputStream(
-      new File(file.getParentFile(), optimizerLocation),
+      new File(file.getParentFile(), optimizerLocation + ".tmp"),
       false
     ).getChannel
     val modelDescriptor = Writer
@@ -199,6 +208,12 @@ object StateIO {
       )
       .toOption
       .get
+    new File(file.getParentFile(), optimizerLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), optimizerLocation)
+    )
+    new File(file.getParentFile(), modelLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), modelLocation)
+    )
     val averageDescriptor = s.averagedModels.map { case ts =>
       val location = s"${file.getName}.averagemodel"
       val channel = new FileOutputStream(
@@ -215,6 +230,9 @@ object StateIO {
         )
         .toOption
         .get
+      new File(file.getParentFile(), location + ".tmp").renameTo(
+        new File(file.getParentFile(), location)
+      )
       descriptor
     }
 
@@ -267,9 +285,11 @@ object StateIO {
           )
         )
     }
-    val fos = new java.io.FileOutputStream(file)
+    val tmp = new File(file.getAbsolutePath() + ".tmp")
+    val fos = new java.io.FileOutputStream(tmp)
     try {
       com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(descriptor, fos)
+      tmp.renameTo(file)
     } finally { fos.close }
 
   }

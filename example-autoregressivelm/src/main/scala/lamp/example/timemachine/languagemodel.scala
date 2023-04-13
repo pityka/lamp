@@ -20,6 +20,7 @@ case class CliConfig(
     fileMaxLength: Int = Int.MaxValue - 100,
     trainBatchSize: Int = 12,
     epochs: Int = 10000,
+    beta2: Double = 0.95,
     learningRate: Double = 0.0001,
     weightDecay: Double = 0.0,
     samplingTemperature: Double = 1.0,
@@ -43,8 +44,23 @@ case class CliConfig(
 object Train extends App {
   scribe.info("Logger start")
 
-  val vocabularySize = 50304
+  /** Shuts down the cats effect runtime, waiting indefinitely
+    */
+  def installShutdownHook() = {
+    val hook = new Thread(() => global.shutdown.apply())
 
+    try {
+      Runtime.getRuntime.addShutdownHook(hook)
+    } catch {
+      case _: IllegalStateException =>
+        // we're already being shut down
+        global.shutdown.apply()
+    }
+  }
+
+  installShutdownHook()
+
+  val vocabularySize = 50304
   val contextLength = 256
 
   val codecFactory = ByteSegmentCodecFactory(
@@ -52,7 +68,7 @@ object Train extends App {
     vocabularyMax = (vocabularySize - 1).toChar,
     maxMergedSegmentLength = 7,
     unknownToken = 0.toChar,
-    unknownByte = '?'.toByte,
+    unknownByte = '?'.toByte
   )
 
   def allocateModel(device: Device)(implicit scope: Scope) = {
@@ -114,6 +130,7 @@ object Train extends App {
       ),
       opt[Double]("learning-rate").action((x, c) => c.copy(learningRate = x)),
       opt[Double]("weight-decay").action((x, c) => c.copy(weightDecay = x)),
+      opt[Double]("beta2").action((x, c) => c.copy(beta2 = x)),
       opt[Double]("dropout").action((x, c) => c.copy(dropout = x)),
       opt[Double]("sampling-temperature").action((x, c) =>
         c.copy(samplingTemperature = x)
@@ -145,7 +162,7 @@ object Train extends App {
   }
   def saveTokens(file: File, array: => Array[Char]): Unit = {
     Scope.root { implicit scope =>
-      val t = STen.fromShortArray(array.map(_.toShort),List(array.size),CPU)
+      val t = STen.fromShortArray(array.map(_.toShort), List(array.size), CPU)
       lamp.data.Writer
         .writeTensorsIntoFile(List(t), file)
         .unsafeRunSync()
@@ -183,7 +200,9 @@ object Train extends App {
             corpus = rawTrainCorpus.take(300000)
           )
           config.checkpointSave.foreach { file =>
-            bpe.saveToFile(new File(file + ".bytesegmentencoding.json")).unsafeRunSync()
+            bpe
+              .saveToFile(new File(file + ".bytesegmentencoding.json"))
+              .unsafeRunSync()
 
           }
           bpe
@@ -203,8 +222,7 @@ object Train extends App {
         if (file.canRead) {
           scribe.info(s"Reading tokens file $file")
           readTokens(file)
-        }
-        else {
+        } else {
           scribe.info(s"Encoding corpus")
           val enc = codec.encode(corpus)
           scribe.info(s"Saving tokens into $file")
@@ -285,6 +303,7 @@ akka {
             val optimizer = AdamW.factory(
               weightDecay = simple(config.weightDecay),
               learningRate = simple(config.learningRate),
+              beta2 = simple(config.beta2),
               clip = Some(1d)
             )
 
@@ -369,6 +388,9 @@ akka {
           scribe.info(
             f"Learnable parameters: ${model.module.learnableParameters}%,d"
           )
+          scribe.info(s"List of parameters: ${model.module.parameters
+            .map(v => v._2.getClass -> v._1.value.numel)
+            .mkString("\n")}")
 
           val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
             lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
@@ -386,8 +408,16 @@ akka {
             )
 
           val optimizer = AdamW.factory(
-            weightDecay = simple(config.weightDecay),
+            weightDecay = lamp.nn.DependentHyperparameter(0d) {
+              case TransformerEncoderBlock.Weights1 => config.weightDecay
+              case TransformerEncoderBlock.Weights2 => config.weightDecay
+              case MultiheadAttention.WeightsK      => config.weightDecay
+              case MultiheadAttention.WeightsQ      => config.weightDecay
+              case MultiheadAttention.WeightsV      => config.weightDecay
+              case MultiheadAttention.WeightsO      => config.weightDecay
+            },
             learningRate = simple(config.learningRate),
+            beta2 = simple(config.beta2),
             clip = Some(1d)
           )
 

@@ -11,7 +11,7 @@ object AdamW {
       weightDecay: OptimizerHyperparameter,
       learningRate: OptimizerHyperparameter = simple(0.001),
       beta1: OptimizerHyperparameter = simple(0.9),
-      beta2: OptimizerHyperparameter = simple(0.999),
+      beta2: OptimizerHyperparameter = simple(0.95),
       eps: Double = 1e-8,
       clip: Option[Double] = None,
       debias: Boolean = true
