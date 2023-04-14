@@ -299,7 +299,7 @@ object StateIO {
   def stateToFile(file: File): LoopState => IO[Unit] = { (state: LoopState) =>
     IO.blocking {
       writeToFile(file, state, 16384)
-    }.uncancelable
+    }
   }
 
   def reduceLROnPlateauStateToFile(
@@ -312,7 +312,7 @@ object StateIO {
           import lamp.data.schemas.LearningRateScheduleSchemas._
           com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(state, fos)
         } finally { fos.close }
-      }.uncancelable
+      }
   }
   def reduceLROnPlateauStateFromFile(
       file: File
