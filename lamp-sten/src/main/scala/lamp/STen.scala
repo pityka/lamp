@@ -37,6 +37,11 @@ object STen {
   }
 
   /** Returns a tensor with the given content and shape on the given device */
+  def fromByteArray[S: Sc](ar: Array[Byte], dim: Seq[Long], device: Device) =
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.b))
+    else TensorHelpers.fromByteArray(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromLongArray[S: Sc](ar: Array[Long], dim: Seq[Long], device: Device) =
     if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.l))
     else TensorHelpers.fromLongArray(ar, dim, device).owned
@@ -99,7 +104,7 @@ object STen {
     * @param length
     *   byte length of the data
     * @param scalarTypeByte
-    *   scalar type (long=4,half=5,float=6,double=7)
+    *   scalar type (byte=1,short=2,int=3,long=4,half=5,float=6,double=7)
     * @param pin
     *   if true the mapped segment will be page locked with mlock(2)
     * @return
@@ -487,17 +492,20 @@ object STen {
       value: STen,
       isCausal: Boolean
   ) = {
-    val (a, b) = ATen._scaled_dot_product_efficient_attention(
+    val (a, b) = ATen._efficient_attention_forward(
       query.value,
       key.value,
       value.value,
+      None,
+      None,
+      Long.MinValue,
       true,
       isCausal
     )
     (owned(a), owned(b))
   }
   def scaledDotProductAttentionBackward[S: Sc](
-    gradOutput: STen,
+      gradOutput: STen,
       query: STen,
       key: STen,
       value: STen,
@@ -505,7 +513,7 @@ object STen {
       logsumexp: STen,
       isCausal: Boolean
   ) = {
-    val (a, b,c) = ATen._scaled_dot_product_efficient_attention_backward(
+    val (a, b, c) = ATen._efficient_attention_backward(
       gradOutput.value,
       query.value,
       key.value,
@@ -515,7 +523,7 @@ object STen {
       isCausal,
       false
     )
-    (owned(a), owned(b),owned(c))
+    (owned(a), owned(b), owned(c))
   }
 
   def smooth_l1_loss_backward[S: Sc](
@@ -1812,6 +1820,7 @@ case class STen private (
   def toDoubleArray = TensorHelpers.toDoubleArray(value)
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
+  def toByteArray = TensorHelpers.toByteArray(value)
   def toIntArray = TensorHelpers.toIntArray(value)
   def toShortArray = TensorHelpers.toShortArray(value)
 

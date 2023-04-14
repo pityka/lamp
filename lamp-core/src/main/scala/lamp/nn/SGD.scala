@@ -21,9 +21,11 @@ case class SGDW(
     learningRate: OptimizerHyperparameter,
     weightDecay: OptimizerHyperparameter,
     momentum: Option[OptimizerHyperparameter] = None,
-    clip: Option[Double] = None
+    clip0: Option[Double] = None
 ) extends Optimizer {
   val scope = Scope.free
+    val clip = clip0.map(theta => STen.scalarDouble(theta,parameters.head._1.options(scope))(scope))
+
   val velocity: Seq[Option[(STen, OptimizerHyperparameter)]] =
     parameters.toList.map { case (param, _) =>
       momentum.map { m =>

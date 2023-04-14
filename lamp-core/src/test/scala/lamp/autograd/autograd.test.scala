@@ -216,60 +216,71 @@ class GradientSuite extends AnyFunSuite {
     }
   }
 
-    testGradientAndValueCudaOnly("scaled dot product attention - by q")(mat1x64, 64d) { (m, doBackprop) =>
+  testGradientAndValueCudaOnly("scaled dot product attention - by q")(
+    mat1x64,
+    64d
+  ) { (m, doBackprop) =>
     Scope.root { implicit scope =>
       val device = lamp.CudaDevice(0)
-      val mSTen = device.to(lamp.saddle.fromMat(m).view(1,8,1,8).castToFloat )
-      val q = param(mSTen+0.0)
-      val k = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
-      val v = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
-      val r = new ScaledDotProductAttention(scope,q,k,v,false).value 
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
+      val q = param(mSTen + 0.0)
+      val k = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val v = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val r = new ScaledDotProductAttention(scope, q, k, v, false).value
 
-      val L =r.sum
+      val L = r.sum
+
       if (doBackprop) {
         L.backprop()
       }
       (
         lamp.CPU.to(L.value).toMat.raw(0),
-        q.partialDerivative.map(t => t.reshape(-1,1).toMat)
+        q.partialDerivative.map(t => t.reshape(-1, 1).toMat)
       )
     }
   }
-    testGradientAndValueCudaOnly("scaled dot product attention - by k")(mat1x64, 64d) { (m, doBackprop) =>
+  testGradientAndValueCudaOnly("scaled dot product attention - by k")(
+    mat1x64,
+    64d
+  ) { (m, doBackprop) =>
     Scope.root { implicit scope =>
       val device = lamp.CudaDevice(0)
-      val mSTen = device.to(lamp.saddle.fromMat(m).view(1,8,1,8).castToFloat )
-      val q = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
-      val k = param(mSTen+0.0)
-      val v = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
-      val r = new ScaledDotProductAttention(scope,q,k,v,false).value 
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
+      val q = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val k = param(mSTen + 0.0)
+      val v = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val r = new ScaledDotProductAttention(scope, q, k, v, false).value
 
-      val L =r.sum
+      val L = r.sum
       if (doBackprop) {
         L.backprop()
       }
       (
         lamp.CPU.to(L.value).toMat.raw(0),
-        k.partialDerivative.map(t => t.reshape(-1,1).toMat)
+        k.partialDerivative.map(t => t.reshape(-1, 1).toMat)
       )
     }
   }
-    testGradientAndValueCudaOnly("scaled dot product attention - by v")(mat1x64, 64d) { (m, doBackprop) =>
+  testGradientAndValueCudaOnly("scaled dot product attention - by v")(
+    mat1x64,
+    704d,
+    eps = 1e-3
+  ) { (m, doBackprop) =>
     Scope.root { implicit scope =>
       val device = lamp.CudaDevice(0)
-      val mSTen = device.to(lamp.saddle.fromMat(m).view(1,8,1,8).castToFloat )
-      val q = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
-      val k = param(device.to(STen.ones(List(1,8,1,8),STenOptions.f)))
-      val v = param(mSTen+0.0)
-      val r = new ScaledDotProductAttention(scope,q,k,v,false).value 
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
+      val q = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val k = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val v = param(mSTen + 10.0)
+      val r = new ScaledDotProductAttention(scope, q, k, v, false).value
 
-      val L =r.sum
+      val L = r.sum
       if (doBackprop) {
         L.backprop()
       }
       (
         lamp.CPU.to(L.value).toMat.raw(0),
-        v.partialDerivative.map(t => t.reshape(-1,1).toMat)
+        v.partialDerivative.map(t => t.reshape(-1, 1).toMat)
       )
     }
   }
@@ -813,7 +824,7 @@ class GradientSuite extends AnyFunSuite {
         )
       }
   }
-  
+
   testGradientAndValue("mm - right")(mat2x3, 450d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))

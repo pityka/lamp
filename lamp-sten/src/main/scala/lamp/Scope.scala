@@ -76,6 +76,10 @@ object EmptyMovable {
   @scala.annotation.nowarn
   implicit def SeqIsMovable[T: EmptyMovable]: EmptyMovable[Seq[T]] =
     Movable.empty
+    
+  @scala.annotation.nowarn
+  implicit def ArrayIsMovable[T: EmptyMovable]: EmptyMovable[Array[T]] =
+    Movable.empty
 
   @scala.annotation.nowarn
   implicit def t2[T1: EmptyMovable, T2: EmptyMovable]: EmptyMovable[(T1, T2)] =

@@ -290,7 +290,8 @@ object LanguageModelModule {
       dropout = dropout,
       tOpt = tOpt,
       linearized = linearized,
-      gptOrder = true
+      gptOrder = true,
+      causalMask = true
     ),
     finalNorm = LayerNorm(List(embeddingDim.toLong), tOpt)
   )

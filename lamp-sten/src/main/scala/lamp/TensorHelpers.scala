@@ -123,6 +123,26 @@ object TensorHelpers {
       t2
     } else t
   }
+  def fromByteArray(
+      arr: Array[Byte],
+      dim: Seq[Long],
+      device: Device
+  ) = {
+    require(
+      arr.length == dim.foldLeft(1L)(_ * _).toInt,
+      s"incorrect dimensions $dim got ${arr.length} elements."
+    )
+    val t = ATen.zeros(
+      dim.toArray,
+      STenOptions.b.value
+    )
+    assert(t.copyFromByteArray(arr))
+    if (device != CPU) {
+      val t2 = device.to(t)
+      t.release
+      t2
+    } else t
+  }
   def fromLongArray(
       arr: Array[Long],
       device: Device
@@ -229,6 +249,24 @@ object TensorHelpers {
 
   }
 
+  def toByteArray(t0: Tensor) = {
+    val t = if (t0.isCuda) t0.cpu else t0
+    try {
+      assert(
+        t.scalarTypeByte == 1,
+        s"Expected Byte Tensor. Got scalartype: ${t.scalarTypeByte}"
+      )
+      assert(
+        t.numel <= Int.MaxValue,
+        "Tensor too long to fit into a java array"
+      )
+      val arr = Array.ofDim[Byte](t.numel.toInt)
+      assert(t.copyToByteArray(arr))
+      arr
+    } finally {
+      if (t != t0) { t.release }
+    }
+  }
   def toLongArray(t0: Tensor) = {
     val t = if (t0.isCuda) t0.cpu else t0
     try {

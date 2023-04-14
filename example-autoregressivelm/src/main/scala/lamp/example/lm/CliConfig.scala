@@ -8,8 +8,8 @@ case class CliConfig(
     gpus: Seq[Int] = Nil,
     trainFile: String = "",
     validFile: String = "",
-    fileMaxLength: Int = Int.MaxValue - 100,
-    trainBatchSize: Int = 12,
+    fileMaxLength: Long = Long.MaxValue - 100,
+    trainBatchSize: Int = 8,
     epochs: Int = 10000,
     beta2: Double = 0.95,
     learningRate: Double = 0.0001,
@@ -21,6 +21,7 @@ case class CliConfig(
     extend: Option[String] = None,
     extendLength: Int = 50,
     gradientAccumSteps: Int = 5,
+    parallelism: Int = 64,
     // config for distributed training
     distributed: Boolean = false,
     gpu: Int = 0,
@@ -60,6 +61,7 @@ object CliParser {
         .action((x, c) => c.copy(validFile = x))
         .text("file containing ascii bytes"),
       opt[Int]("batch-size").action((x, c) => c.copy(trainBatchSize = x)),
+      opt[Int]("parallelism").action((x, c) => c.copy(parallelism = x)),
       opt[String]("extend")
         .action((x, c) => c.copy(extend = Some(x)))
         .text("Turns on inference model. Extend this text in inference mode"),

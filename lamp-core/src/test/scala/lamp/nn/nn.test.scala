@@ -652,7 +652,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
         else STenOptions.d
       val t = STen.ones(List(1, 2, 3), topt)
       val t2 = STen.ones(List(1, 2), topt)
-      gradientClippingInPlace(Seq(Some(t), Some(t2)), 2.1)
+      gradientClippingInPlace(Seq(Some(t), Some(t2)), STen.scalarDouble(2.1,topt))
       assert(
         NDArray.tensorToNDArray(t.value).toVec.roundTo(4) == NDArray(
           Array(0.7424621202458749, 0.7424621202458749, 0.7424621202458749,
@@ -744,7 +744,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
               train = true,
               numHeads = attentionNumHeads,
               // padToken = padToken,
-              linearized = false,
+              linearized = false,causalMask = false
               ),
               gptOrder = false,
             layerNorm1 = lamp.nn.LayerNorm(normalizedShape = List(2L), tOpt),
@@ -810,7 +810,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
               dropout = dropout,
               train = true,
               numHeads = attentionNumHeads,
-              linearized = true,
+              linearized = true,causalMask = false
               ),
               gptOrder = false,
             layerNorm1 = LayerNorm(List(2), tOpt),

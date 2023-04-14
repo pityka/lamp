@@ -527,7 +527,8 @@ object BertEncoder {
           dropout = dropout,
           tOpt = tOpt,
           linearized = linearized,
-          gptOrder = false
+          gptOrder = false,
+          causalMask = false
         )
       )
     )

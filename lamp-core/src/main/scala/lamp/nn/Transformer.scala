@@ -10,6 +10,7 @@ import lamp.STenOptions
 import lamp.Scope
 import lamp.FloatingPointPrecision
 import lamp.Device
+import lamp.autograd.ScaledDotProductAttention
 
 /** TransformerEncoder module
   *
@@ -81,7 +82,8 @@ object TransformerEncoder {
       dropout: Double,
       tOpt: STenOptions,
       linearized: Boolean,
-      gptOrder: Boolean
+      gptOrder: Boolean,
+      causalMask: Boolean
   ): TransformerEncoder =
     TransformerEncoder(
       0 until numBlocks map (_ =>
@@ -94,7 +96,8 @@ object TransformerEncoder {
           dropout = dropout,
           tOpt = tOpt,
           linearized = linearized,
-          gptOrder = gptOrder
+          gptOrder = gptOrder,
+          causalMask = causalMask
         )
       )
     )
@@ -186,7 +189,8 @@ object TransformerEncoderBlock {
       dropout: Double,
       tOpt: STenOptions,
       linearized: Boolean,
-      gptOrder: Boolean
+      gptOrder: Boolean,
+      causalMask: Boolean
   ): TransformerEncoderBlock =
     TransformerEncoderBlock(
       attention = MultiheadAttention(
@@ -198,7 +202,8 @@ object TransformerEncoderBlock {
         numHeads = attentionNumHeads,
         dropout = dropout,
         tOpt = tOpt,
-        linearized = linearized
+        linearized = linearized,
+        causalMask = causalMask
       ),
       gptOrder = gptOrder,
       layerNorm1 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
@@ -257,7 +262,8 @@ case class MultiheadAttention(
     dropout: Double,
     train: Boolean,
     numHeads: Int,
-    linearized: Boolean
+    linearized: Boolean,
+    causalMask: Boolean
 ) extends GenericModule[
       (Variable, Variable, Variable, Option[STen]),
       Variable
@@ -287,7 +293,8 @@ case class MultiheadAttention(
       wValues = wV,
       wOutput = wO,
       numHeads = numHeads,
-      linearized = linearized
+      linearized = linearized,
+      causalMask = causalMask
     )
   }
 
@@ -303,7 +310,8 @@ object MultiheadAttention {
       dropout: Double,
       numHeads: Int,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      causalMask: Boolean
   ): MultiheadAttention = MultiheadAttention(
     wQ = initLinear(dQ, hiddenPerHead * numHeads, tOpt),
     wK = initLinear(dK, hiddenPerHead * numHeads, tOpt),
@@ -312,7 +320,8 @@ object MultiheadAttention {
     dropout = dropout,
     train = true,
     numHeads = numHeads,
-    linearized = linearized
+    linearized = linearized,
+    causalMask = causalMask
   )
   case object WeightsQ extends LeafTag
   case object WeightsK extends LeafTag
@@ -431,7 +440,7 @@ object MultiheadAttention {
     val maskedInput = sequenceMask(
       maxLength = maxLength,
       maskable = input,
-      fill = -1000000d
+      fill = Double.NegativeInfinity
     )
     maskedInput.logSoftMax(2).exp
   }
@@ -574,7 +583,8 @@ object MultiheadAttention {
       wValues: Variable,
       wOutput: Variable,
       numHeads: Int,
-      linearized: Boolean
+      linearized: Boolean,
+      causalMask: Boolean
   ) = {
 
     def mm1(a: Variable, b: Variable) = {
@@ -613,40 +623,67 @@ object MultiheadAttention {
     // batch x num k-v x hidden
     val v1 = mm1(values, wValues)
 
-    // (batch * numHeads) x num queries x hidden/numHeads
-    val q1t: Variable = transposeIn(q1, numHeads)
-    // (batch * numHeads) x num k-v x hidden/numHeads
-    val k1t: Variable = transposeIn(k1, numHeads)
-    // (batch * numHeads) x num k-v x hidden/numHeads
-    val v1t: Variable = transposeIn(v1, numHeads)
+    val isCuda = q1.value.isCuda
+    val nQ = q1.shape(1)
+    val nK = k1.shape(1)
+    val nV = v1.shape(1)
+    val nB = q1.shape(0)
+    val aligned =
+      nQ % 8 == 0 && nK % 8 == 0 && nV % 8 == 0
 
-    // (batch * numHeads) x num queries OR (batch * numHeads)
-    val maxLengthRepated = maxLength.map(_.repeat(List(numHeads, 1)))
+    val useEfficientAttentionKernel =
+      isCuda && aligned && !linearized && causalMask && (dropout == 0d || !trainDropout)
 
-    // (batch * h) x num queries x hidden/h
-    val output =
-      if (linearized)
-        linearizedAttention(
-          q1t,
-          k1t,
-          v1t,
-          maxLengthRepated,
-          dropout,
-          trainDropout
-        )
-      else
-        scaledDotProductAttention(
-          q1t,
-          k1t,
-          v1t,
-          maxLengthRepated,
-          dropout,
-          trainDropout
-        )
+    val attention =
+      if (useEfficientAttentionKernel)
+        new ScaledDotProductAttention(
+          implicitly[Scope],
+          q1.view(List(nB, nQ, numHeads, -1)),
+          k1.view(List(nB, nQ, numHeads, -1)),
+          v1.view(List(nB, nQ, numHeads, -1)),
+          causalMask
+        ).value
+          .flatten(2, 3)
+      else {
+
+        // (batch * numHeads) x num queries x hidden/numHeads
+        val q1t: Variable = transposeIn(q1, numHeads)
+        // (batch * numHeads) x num k-v x hidden/numHeads
+        val k1t: Variable = transposeIn(k1, numHeads)
+        // (batch * numHeads) x num k-v x hidden/numHeads
+        val v1t: Variable = transposeIn(v1, numHeads)
+
+        // (batch * numHeads) x num queries OR (batch * numHeads)
+        val maxLengthRepated = maxLength.map(_.repeat(List(numHeads, 1)))
+
+        // (batch * h) x num queries x hidden/h
+        val output =
+          if (linearized)
+            linearizedAttention(
+              q1t,
+              k1t,
+              v1t,
+              maxLengthRepated,
+              dropout,
+              trainDropout
+            )
+          else
+            scaledDotProductAttention(
+              q1t,
+              k1t,
+              v1t,
+              maxLengthRepated,
+              dropout,
+              trainDropout
+            )
+
+        // batch x num queries x hidden
+        val outputConcat: Variable = transposeOut(output, numHeads)
+        outputConcat
+      }
 
     // batch x num queries x hidden
-    val outputConcat: Variable = transposeOut(output, numHeads)
-    mm1(outputConcat, wOutput)
+    mm1(attention, wOutput)
 
   }
 

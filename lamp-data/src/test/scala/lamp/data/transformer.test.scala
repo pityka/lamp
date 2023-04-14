@@ -107,7 +107,8 @@ class TransformerSuite extends AnyFunSuite {
               // padToken = vocab.size,
               tOpt = tOpt,
               linearized = false,
-              gptOrder = false
+              gptOrder = false,
+              causalMask = false
             ),
             GenericFun[Variable, Variable] { implicit scope => x =>
               x.view(List(x.shape(0), -1))
