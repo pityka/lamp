@@ -23,7 +23,7 @@ case class ByteSegmentCodec(
   def saveToFile(file: File): IO[Unit] = IO.blocking{
     lamp.data.bytesegmentencoding
     .saveEncodingToFile(file, trained, unknownToken, unknownByte)
-  }.uncancelable
+  }
 
 }
 case class ByteSegmentCodecFactory(
