@@ -9,8 +9,8 @@ import cats.effect.IO
 object Train {
   def train(
       config: CliConfig,
-      trainTokens: Array[Char],
-      validTokens: Array[Char]
+      trainTokens: STen,
+      validTokens: STen
   )(implicit scope: Scope): IO[Unit] = Scope.bracket(scope) { implicit scope =>
     val device =
       if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU

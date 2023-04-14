@@ -13,14 +13,12 @@ object Main extends IOApp {
     CliParser.runCli(args.toList) {
       case config if config.extend.isEmpty =>
         scribe.info(s"Config: $config")
-
-        for {
-          corpora <- Util.prepareCorpora(config)
-          _ <- Scope.inResource.use(scope =>
-            Train.train(config, corpora._1, corpora._2)(scope)
-          )
-
-        } yield ExitCode(0)
+        Scope.inResource.use(scope =>
+          for {
+            corpora <- Util.prepareCorpora(config)(scope)
+            _ <- Train.train(config, corpora._1, corpora._2)(scope)
+          } yield ExitCode(0)
+        )
 
       case config =>
         scribe.info(s"Config: $config")

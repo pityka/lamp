@@ -83,6 +83,7 @@ trait Op {
     *   example.
     */
   val params: List[(Variable, (STen, STen) => Unit)]
+  val joinedBackward: Option[STen => Unit] = None
 }
 
 object Variable {
@@ -139,7 +140,7 @@ sealed trait Constant extends Variable {
 }
 
 object Constant {
-  implicit val movable  : Movable[Constant] =
+  implicit val movable: Movable[Constant] =
     Movable.nonEmpty[Constant] {
       case p: ConstantWithGrad    => List(p.value.value, p.pd.value)
       case p: ConstantWithoutGrad => List(p.value.value)
@@ -158,7 +159,7 @@ case class VariableNonConstant(
 }
 
 object VariableNonConstant {
-  implicit val movable : Movable[VariableNonConstant] =
+  implicit val movable: Movable[VariableNonConstant] =
     Movable.nonEmpty[VariableNonConstant](p =>
       p.wengert.flatMap {
         case ConstantWithGrad(value, pd)       => List(value.value, pd.value)
@@ -265,23 +266,30 @@ sealed trait Variable {
     if (partialDerivative.isDefined) {
       partialDerivative.get.fill_(1d)
       wengert.foreach { v =>
-        v.op.foreach(_.params.foreach { case (v1, computeGrad) =>
-          v1.accumulateGrad(v.partialDerivative.get, computeGrad)
-
-        })
+        v.op.foreach { operator =>
+          if (operator.joinedBackward.isEmpty) {
+            operator.params.foreach { case (v1, computeGrad) =>
+              if (v1.needsGrad) {
+                computeGrad(v.partialDerivative.get,v1.partialDerivative.get)
+              }
+            }
+          } else {
+              operator.joinedBackward.get(v.partialDerivative.get)
+          }
+        }
       }
     }
 
   }
 
   /** Returns a pair of this instance and the supplied function */
-  def zipBackward(fn: (STen, STen) => Unit) = (this, fn)
+  private[autograd] def zipBackward(fn: (STen, STen) => Unit) = (this, fn)
+  private[autograd] def zipNoBackward = zipBackward((_,_) => ())
 
-  private def accumulateGrad(
-      incoming: STen,
-      computeGrad: (STen, STen) => Unit
+  private[autograd] def accumulateGrad(
+      grad: STen,
   ) = if (needsGrad) {
-    computeGrad(incoming, partialDerivative.get)
+    partialDerivative.get += grad
   }
 
   import lamp.{scope => extractScope}
@@ -418,7 +426,7 @@ sealed trait Variable {
   def smoothL1Loss[S: Sc](
       target: STen,
       reduction: Reduction = Mean,
-      beta : Double = 1.0
+      beta: Double = 1.0
   ) =
     new SmoothL1Loss(extractScope, this, target, reduction, beta).value
   def squaredFrobenius[S: Sc] =
@@ -490,7 +498,9 @@ object Autograd {
       if (marks.contains(n.id)) ()
       else {
         if (currentParents.contains(n.id)) {
-          println(s"error: loop to ${n.id}")
+          System.err.println(
+            s"lamp autograd error: cycle detected with node (${n.id},${n.op}). This is an error in the framework. Operator's backward code might be ill defined."
+          )
           ()
         } else {
           currentParents = currentParents + n.id

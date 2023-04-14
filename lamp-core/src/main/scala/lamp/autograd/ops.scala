@@ -1080,15 +1080,19 @@ case class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
     extends Op {
 
   val params = List(
-    a.zipBackward { (p, out) => out.addcmulSelf(p, mask, 1d) }
+    a.zipBackward { (p, out) =>
+      if (prob > 0.0) { out.addcmulSelf(p, mask, 1d) }
+    }
   )
-  val mask = {
-    val ones = STen.onesLike(a.value)(scope)
-    ones.dropout_(prob, train)
-    ones
-  }
+  val mask =
+    if (prob <= 0.0) null
+    else {
+      val ones = STen.onesLike(a.value)(scope)
+      ones.dropout_(prob, train)
+      ones
+    }
   val value =
-    Variable(this, a.value.*(mask)(scope))(scope)
+    Variable(this, if (prob > 0.0) a.value.*(mask)(scope) else a.value)(scope)
 
 }
 
@@ -2347,50 +2351,27 @@ case class ScaledDotProductAttention(
   )(scope)
   val value = Variable(this, v0)(scope)
 
-  val params = List(
-    query.zipBackward { (p, out) =>
-      Scope.root { implicit scope =>
-        val (gQ, _, _) = STen.scaledDotProductAttentionBackward(
-          p,
-          query.value,
-          key.value,
-          valueIn.value,
-          v0,
-          lse,
-          isCausal
-        )
-        out += gQ
-      }
-    },
-    key.zipBackward { (p, out) =>
-      Scope.root { implicit scope =>
-        val (_, gK, _) = STen.scaledDotProductAttentionBackward(
-          p,
-          query.value,
-          key.value,
-          valueIn.value,
-          v0,
-          lse,
-          isCausal
-        )
-        out += gK
-      }
-    },
-    value.zipBackward { (p, out) =>
-      Scope.root { implicit scope =>
-        val (_, _, gV) = STen.scaledDotProductAttentionBackward(
-          p,
-          query.value,
-          key.value,
-          valueIn.value,
-          v0,
-          lse,
-          isCausal
-        )
-        out += gV
-      }
+  val params =
+    List(query.zipNoBackward, key.zipNoBackward, valueIn.zipNoBackward)
+  override val joinedBackward: Option[(STen => Unit)] = Some { p =>
+    Scope.root { implicit scope =>
+      val (gQ, gK, gV) = STen.scaledDotProductAttentionBackward(
+        p,
+        query.value,
+        key.value,
+        valueIn.value,
+        v0,
+        lse,
+        isCausal
+      )
+      query.accumulateGrad(gQ)
+      key.accumulateGrad(gK)
+      valueIn.accumulateGrad(gV)
+
     }
-  )
+
+  }
+
 }
 
 case class Debug(

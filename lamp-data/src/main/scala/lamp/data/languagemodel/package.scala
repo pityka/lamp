@@ -122,7 +122,7 @@ package object languagemodel {
     * @param numBatches
     *   Number of minibatches to generate
     * @param corpus
-    *   Tokens of corpus
+    *   Tokens of corpus 1D int32 tensor
     * @param blockLength
     *   Length of sequences, also known as context length
     * @return
@@ -130,16 +130,17 @@ package object languagemodel {
   def autoregressiveMinibatchesFromCorpus(
       minibatchSize: Int,
       numBatches: Int,
-      corpus: Array[Char],
+      corpus: STen,
       blockLength: Int
   ) = {
     def makeNonEmptyBatch(device: Device) = {
       scopeInResource.map { implicit scope =>
+        val corpusLength = corpus.shape(0)
         val (tokens, targets, maxLength) = Scope { implicit scope =>
           val starts = STen
             .randint(
               low = 0,
-              high = corpus.length - blockLength - 1,
+              high = corpusLength - blockLength - 1,
               size = List(minibatchSize),
               STenOptions.l
             )
@@ -149,17 +150,13 @@ package object languagemodel {
 
           val tokens = STen.stack(
             starts.map(i =>
-              STen.fromLongArray(
-                corpus.slice(i, i + blockLength).map(_.toLong)
-              )
+              corpus.slice(0L, i.toLong, i + blockLength, 1L).castToLong
             ),
             dim = 0
           )
           val targets = STen.stack(
             starts.map(i =>
-              STen.fromLongArray(
-                corpus.slice(i + 1, i + 1 + blockLength).map(_.toLong)
-              )
+              corpus.slice(0L, i + 1L, i + 1 + blockLength, 1L).castToLong
             ),
             dim = 0
           )

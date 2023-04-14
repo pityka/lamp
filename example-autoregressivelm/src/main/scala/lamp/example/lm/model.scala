@@ -6,7 +6,7 @@ import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
 object Model {
 
   val vocabularySize = 50304
-  val contextLength = 256
+  val contextLength = 1024
 
   val codecFactory = ByteSegmentCodecFactory(
     vocabularyMin = 10,
