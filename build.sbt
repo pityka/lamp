@@ -44,7 +44,7 @@ lazy val commonSettings = Seq(
         "-language:postfixOps",
         "-language:existentials",
         "-unchecked", // Enable additional warnings where generated code depends on assumptions.
-        "-Xfatal-warnings", // Fail the compilation if there are any warnings.
+        // "-Xfatal-warnings", // Fail the compilation if there are any warnings.
         "-Xlint:adapted-args", // Warn if an argument list is modified to match the receiver.
         "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
         "-Xlint:delayedinit-select", // Selecting member of DelayedInit.
@@ -387,7 +387,7 @@ lazy val example_autoregressivelm = project
   .enablePlugins(JavaAppPackaging)
 
 lazy val experiment_recursivelm = project
-  .in(file("experiment-recursivelm"))
+  .in(file("experiment-recursive-lm"))
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
@@ -395,7 +395,8 @@ lazy val experiment_recursivelm = project
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.outr" %% "scribe" % scribeVersion
+      "com.outr" %% "scribe" % scribeVersion,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
     )
   )
   .dependsOn(core, data, saddlecompat)

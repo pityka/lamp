@@ -1,10 +1,9 @@
-package lamp.example.lm
+package lamp.experiment.recursivelm
 
 import lamp._
 import lamp.data._
 import java.io.File
 
-import lamp.example.lm.Model
 object Inference {
   def inference(config: CliConfig, codec: Codec)(scope: Scope) =
     Scope.bracket(scope) { implicit scope =>
@@ -30,10 +29,11 @@ object Inference {
 
       val encodedPrefix = codec.encode(rawPrefix)
 
-      lamp.data.languagemodel
+      lamp.experiment.recursivelm.model.Sampling
         .autoregressiveInference(
           modelAsEval,
           modelBlockSize = Model.contextLength,
+          modelMemoryWidth = Model.memoryWidth,
           prefix = encodedPrefix,
           length = config.extendLength,
           temperature = config.samplingTemperature
