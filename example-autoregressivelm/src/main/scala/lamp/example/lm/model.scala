@@ -40,9 +40,9 @@ object Model {
       f"Allocated model on $device . embedding=$embeddingDim layers=$layers num-heads=$numHeads num-param=${net.learnableParameters}%,d"
     )
 
-    scribe.info(s"List of parameters: \n${net.parameters
-      .map(v => v._2.getClass -> v._1.value.numel)
-      .mkString("\n")}")
+    // scribe.info(s"List of parameters: \n${net.parameters
+    //   .map(v => v._2.getClass -> v._1.value.numel)
+    //   .mkString("\n")}")
     SupervisedModel(net, LossFunctions.Identity)
   }
 

@@ -146,7 +146,7 @@ package object languagemodel {
             )
             .toLongArray
             .toVector
-            .map(_.toInt)
+            .map(_.toLong)
 
           val tokens = STen.stack(
             starts.map(i =>
