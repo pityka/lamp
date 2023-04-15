@@ -7,16 +7,20 @@ import java.io.File
 import cats.effect.IO
 import lamp.data.Writer
 import java.io.FileOutputStream
+import lamp.Scope
+import lamp.data.SimpleLoopState
 
 case class LoopState(
-    epoch: Int,
-    lastValidationLoss: Option[Double],
-    minValidationLoss: Option[Double],
-    minValidationEpoch: Option[Int],
-    learningCurve: List[(Int, Double, Option[(Double, Double)])]
-)
-object LoopState {
-  implicit val movable: EmptyMovable[LoopState] = Movable.empty
+  epoch: Int,
+  lastValidationLoss: Option[Double],
+  minValidationLoss: Option[Double],
+  minValidationEpoch: Option[Int],
+  learningCurve: List[(Int, Double, Option[(Double, Double)])]
+  )
+  object LoopState {
+    implicit val movable: EmptyMovable[LoopState] = Movable.empty
+
+ 
 
   private def writeLoopStateDescriptor(
       s: LoopStateWithModelAndOptimizerData,
@@ -53,22 +57,22 @@ object LoopState {
       )
       .toOption
       .get
-      val location = s"${file.getName}.minvalidmodel"
-      val channel = new FileOutputStream(
-        new File(file.getParentFile(), location + ".tmp"),
-        false
-      ).getChannel
-      val minValidDescriptor = Writer
-        .writeTensorDataAndMakeDescriptor(
-          tensors = s.bestModel,
-          location,
-          dataChannel = channel,
-          bufferSize = bufferSize,
-          initialByteOffset = 0
-        )
-        .toOption
-        .get
-     
+    val location = s"${file.getName}.minvalidmodel"
+    val channel = new FileOutputStream(
+      new File(file.getParentFile(), location + ".tmp"),
+      false
+    ).getChannel
+    val minValidDescriptor = Writer
+      .writeTensorDataAndMakeDescriptor(
+        tensors = s.bestModel,
+        location,
+        dataChannel = channel,
+        bufferSize = bufferSize,
+        initialByteOffset = 0
+      )
+      .toOption
+      .get
+
     new File(file.getParentFile(), optimizerLocation + ".tmp").renameTo(
       new File(file.getParentFile(), optimizerLocation)
     )
@@ -97,13 +101,13 @@ object LoopState {
       bufferSize: Int = 16384
   ): Unit = {
 
-    val descriptor: lamp.data.schemas.LoopState = 
-        writeLoopStateDescriptor(
-          state,
-          file,
-          bufferSize
-        )
-   
+    val descriptor: lamp.data.schemas.LoopState =
+      writeLoopStateDescriptor(
+        state,
+        file,
+        bufferSize
+      )
+
     val tmp = new File(file.getAbsolutePath() + ".tmp")
     val fos = new java.io.FileOutputStream(tmp)
     try {
@@ -115,10 +119,13 @@ object LoopState {
 
   /** Returns a function which returns an IO writing the loop state to file
     */
-  def stateToFile(file: File): LoopStateWithModelAndOptimizerData => IO[Unit] = { (state: LoopStateWithModelAndOptimizerData) =>
-    IO.blocking {
-      writeToFile(file, state, 16384)
-    }
+  def stateToFile(
+      file: File
+  ): LoopStateWithModelAndOptimizerData => IO[Unit] = {
+    (state: LoopStateWithModelAndOptimizerData) =>
+      IO.blocking {
+        writeToFile(file, state, 16384)
+      }
   }
 }
 
@@ -128,3 +135,19 @@ case class LoopStateWithModelAndOptimizerData(
     optimizer: Seq[STen],
     bestModel: Seq[STen]
 )
+object LoopStateWithModelAndOptimizerData {
+   def apply(sl: SimpleLoopState)(implicit scope: Scope): LoopStateWithModelAndOptimizerData = {
+    LoopStateWithModelAndOptimizerData(
+      loopState = LoopState(
+        epoch = sl.epoch,
+        lastValidationLoss = sl.lastValidationLoss,
+        minValidationLoss = sl.minValidationLoss,
+        minValidationEpoch = sl.minValidationLossModel.map(_._1),
+        learningCurve = sl.learningCurve
+      ),
+      model = sl.model,
+      optimizer = sl.optimizer,
+      bestModel = sl.minValidationLossModel.map(v => v._2.map(t => STen.owned(t))).getOrElse(sl.model)
+    )
+  }
+}
