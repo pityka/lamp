@@ -1,47 +1,52 @@
-package lamp.example.lm
+package lamp.experiment.recursivelm
 
 import lamp._
 import java.io.File
 import cats.effect.IO
 import lamp.data.Codec
 import lamp.data.CodecFactory
+import java.io.FileInputStream
 
-import lamp.example.lm.Model
 object Util {
 
-  def prepareCorpora(config: CliConfig)(implicit scope: Scope) = Scope.bracket {
-    implicit scope =>
+  def prepareDocuments(config: CliConfig)(implicit scope: Scope) =
+    Scope.bracket { implicit scope =>
       for {
 
-        rawTrainCorpus <-
-          Util.readBytesFromFile(config.trainFile, config.fileMaxLength)
+        rawTrainDocuments <-
+          Util.readDocumentBytesFromFile(config.trainFile, config.fileMaxLength)
 
-        _ = scribe.info(f"Read raw corpus ${rawTrainCorpus.shape(0)}%,d")
+        _ = scribe.info(
+          f"Read raw corpus ${rawTrainDocuments.map(_.shape(0)).sum}%,d"
+        )
 
         codec <- Util.readOrTrainCodec(
           config.bpeFile,
-          rawTrainCorpus.slice(0, 0, 300000, 1).toByteArray,
+          STen
+            .cat(rawTrainDocuments.take(1000), dim = 0)
+            .slice(0, 0, 300000, 1)
+            .toByteArray,
           Model.codecFactory
         )
 
         trainCorpus <-
           Util.encodeOrReadTokens(
-            rawTrainCorpus,
+            rawTrainDocuments,
             new File(config.trainFile + ".tokens"),
             codec,
             config.parallelism
           )
 
         _ = scribe.info(
-          s"Train corpus length: ${trainCorpus.numel} tokens"
+          s"Train corpus length: ${trainCorpus.map(_.shape(0)).sum} tokens"
         )
 
         validCorpus <-
           Util
-            .readBytesFromFile(config.validFile, config.fileMaxLength)
-            .flatMap(corp =>
+            .readDocumentBytesFromFile(config.validFile, config.fileMaxLength)
+            .flatMap(docs =>
               Util.encodeOrReadTokens(
-                corp,
+                docs,
                 new File(config.validFile + ".tokens"),
                 codec,
                 config.parallelism
@@ -49,11 +54,11 @@ object Util {
             )
 
         _ = scribe.info(
-          s"Valid corpus length: ${validCorpus.numel} tokens"
+          s"Valid corpus length: ${validCorpus.map(_.shape(0)).sum} tokens"
         )
 
       } yield (trainCorpus, validCorpus)
-  }
+    }
 
   def readOrTrainCodec[T <: Codec](
       bpeFile: Option[File],
@@ -78,61 +83,75 @@ object Util {
       }.flatten
   }
 
-  def readBytesFromFile[S: Sc](file: String, maxLength: Long): IO[STen] =
+  case class PileSchema(text: String)
+  object PileSchema {
+    import com.github.plokhotnyuk.jsoniter_scala.macros._
+    import com.github.plokhotnyuk.jsoniter_scala.core._
+    implicit val codec: JsonValueCodec[PileSchema] = JsonCodecMaker.make
+
+  }
+
+  def readDocumentBytesFromFile[S: Sc](
+      file: String,
+      maxLength: Long
+  ): IO[Array[STen]] =
     IO.blocking {
-      val l = math.min(maxLength, new File(file).length())
-      STen.fromFile(
-        path = file,
-        offset = 0,
-        length = l,
-        scalarTypeByte = 1,
-        pin = false
-      )
+
+      val is = new FileInputStream(new File(file))
+      val buffer = org.saddle.Buffer.empty[STen]
+      var t = 0L
+      try {
+        com.github.plokhotnyuk.jsoniter_scala.core
+          .scanJsonValuesFromStream[PileSchema](is) { pileSchema =>
+            val bytes = pileSchema.text.getBytes("US-ASCII")
+            t += bytes.length
+            buffer.+=(STen.fromByteArray(bytes, dim = List(bytes.length), CPU))
+            t < maxLength
+          }
+        buffer.toArray
+      } finally {
+        is.close
+      }
+     
 
     }
-  def saveTokens(file: File, tokens: STen): IO[Unit] = {
+  def saveTokens(file: File, tokens: Seq[STen]): IO[Unit] = {
     lamp.data.Writer
-      .writeTensorsIntoFile(List(tokens), file)
+      .writeTensorsIntoFile(tokens, file)
       .map(_.toOption.get)
   }
-  def readTokens[S: Sc](file: File): STen = {
+  def readTokens[S: Sc](file: File): Array[STen] = {
     lamp.data.Reader
       .readTensorsFromFile(file, CPU, false)
-      .head // int32 signed
+      .toArray // int32 signed
   }
 
   /* Returns int32 tensor */
   def encodeOrReadTokens[S: Sc](
-      corpus: STen,
+      documents: Array[STen],
       file: File,
       codec: Codec,
       parallelism: Int
-  ): IO[STen] =
+  ): IO[Array[STen]] =
     if (file.canRead) {
       IO.blocking {
         scribe.info(s"Reading tokens file $file")
         readTokens(file)
+
       }
     } else {
       scribe.info(s"Encoding corpus")
       import cats.syntax.all._
-      val len = corpus.shape(0)
 
-      val chunkSize = 1024 * 1024L * 10
-      IO.parTraverseN(parallelism)((0L until len by chunkSize).toList) {
-        start =>
-          IO.blocking {
-            val slice = corpus
-              .slice(0, start, math.min(start + chunkSize, len), 1)
-              .toByteArray
-            val enc = codec.encode(slice).map(_.toInt)
-            STen.fromIntArray(enc, List(enc.length), CPU)
-          }
+      IO.parTraverseN(parallelism)(documents.toList) { document =>
+        IO.blocking {
+
+          val enc = codec.encode(document.toByteArray).map(_.toInt)
+          STen.fromIntArray(enc, List(enc.length), CPU)
+        }
       }.flatMap { list =>
-        val encoded = STen.cat(list, dim = 0)
-
         scribe.info(s"Saving tokens into $file")
-        saveTokens(file, encoded).map(_ => encoded)
+        saveTokens(file, list).map(_ => list.toArray)
       }
     }
 

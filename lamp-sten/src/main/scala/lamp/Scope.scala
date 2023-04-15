@@ -152,6 +152,9 @@ object Movable {
       def list(m: Either[T1, T2]) =
         m.fold(_.tensors, _.tensors)
     }
+  implicit def ArrayIsMovable[T: Movable]: Movable[Array[T]] = new Movable[Array[T]] {
+    def list(m: Array[T]) = m.flatMap(m => implicitly[Movable[T]].list(m)).toList
+  }
   implicit def SeqIsMovable[T: Movable]: Movable[Seq[T]] = new Movable[Seq[T]] {
     def list(m: Seq[T]) = m.flatMap(m => implicitly[Movable[T]].list(m)).toList
   }

@@ -1,4 +1,4 @@
-package lamp.example.lm
+package lamp.experiment.recursivelm
 
 import lamp._
 import lamp.nn._
@@ -6,12 +6,11 @@ import lamp.data._
 import java.io.File
 import cats.effect.IO
 
-import lamp.example.lm.Model
 object Train {
   def train(
       config: CliConfig,
-      trainTokens: STen,
-      validTokens: STen
+      trainDocuments: Array[STen],
+      validDocuments: Array[STen]
   )(implicit scope: Scope): IO[Unit] = Scope.bracket(scope) { implicit scope =>
     val device =
       if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
@@ -34,17 +33,17 @@ object Train {
     }
 
     val trainEpochs = (_: IOLoops.TrainingLoopContext) =>
-      lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
+      lamp.experiment.recursivelm.model.DataLoader.minibatchesFromDocuments(
         minibatchSize = config.trainBatchSize,
         numBatches = config.numBatchesPerEpoch,
-        corpus = trainTokens,
+        documents = trainDocuments,
         blockLength = Model.contextLength
       )
     val validEpochs = (_: IOLoops.TrainingLoopContext) =>
-      lamp.data.languagemodel.autoregressiveMinibatchesFromCorpus(
+      lamp.experiment.recursivelm.model.DataLoader.minibatchesFromDocuments(
         minibatchSize = config.trainBatchSize,
         numBatches = config.numBatchesPerEpoch,
-        corpus = validTokens,
+        documents = validDocuments,
         blockLength = Model.contextLength
       )
 

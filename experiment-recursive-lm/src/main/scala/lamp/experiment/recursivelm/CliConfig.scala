@@ -1,4 +1,4 @@
-package lamp.example.lm
+package lamp.experiment.recursivelm
 import scopt.OParser
 import cats.effect.IO
 import cats.effect.ExitCode
