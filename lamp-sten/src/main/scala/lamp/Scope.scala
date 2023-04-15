@@ -304,11 +304,14 @@ final class Scope private {
         releasable = resources.iterator.asScala.toList
         (last, Nil)
       } else {
-        val lastResources = movable.list(last)
+        val lastResources = new java.util.IdentityHashMap[Tensor,Boolean]
+         movable.list(last).foreach{tensor =>
+          lastResources.put(tensor,true)  
+        }
         val (movableResources, releasableResources) =
           resources.iterator.asScala.toList.partition(r =>
             r match {
-              case Left(r)  => lastResources.exists(v => v eq r)
+              case Left(r)  => lastResources.containsKey(r)
               case Right(_) => false
             }
           )
@@ -347,11 +350,14 @@ final class Scope private {
 
     op(this)
       .map { last =>
-        val lastResources = movable.list(last)
+        val lastResources = new java.util.IdentityHashMap[Tensor,Boolean]
+         movable.list(last).foreach{tensor =>
+          lastResources.put(tensor,true)  
+        }
         val (movables, releasable) =
           resources.iterator.asScala.toList.partition(r =>
             r match {
-              case Left(r)  => lastResources.exists(v => v eq r)
+              case Left(r)  => lastResources.containsKey(r)
               case Right(_) => false
             }
           )
