@@ -131,7 +131,8 @@ package object languagemodel {
       minibatchSize: Int,
       numBatches: Int,
       corpus: STen,
-      blockLength: Int
+      blockLength: Int,
+      createMaxLength: Boolean = true
   ) = {
     def makeNonEmptyBatch(device: Device) = {
       scopeInResource.map { implicit scope =>
@@ -161,17 +162,17 @@ package object languagemodel {
             dim = 0
           )
 
-          val maxLength = {
+          val maxLength = if (createMaxLength) {
             val single = STen.arange_l(1, blockLength + 1, 1).unsqueeze(0)
-            single.repeat(List(minibatchSize, 1))
-          }
+            Some(single.repeat(List(minibatchSize, 1)))
+          } else None
 
           device.withOtherStreamThenSync(synchronizeBefore = false) {
 
             (
               device.to(tokens),
               device.to(targets),
-              device.to(maxLength)
+              maxLength.map(device.to)
             )
           }
         }
@@ -179,7 +180,7 @@ package object languagemodel {
         val batch = LossInput(
           input = LanguageModelInput(
             tokens = const(tokens),
-            maxLength = Option(maxLength),
+            maxLength = maxLength,
             positions = None
           ),
           languageModelTarget = targets
