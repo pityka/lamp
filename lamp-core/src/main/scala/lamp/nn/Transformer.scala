@@ -632,7 +632,7 @@ object MultiheadAttention {
       nQ % 8 == 0 && nK % 8 == 0 && nV % 8 == 0
 
     val useEfficientAttentionKernel =
-      isCuda && aligned && !linearized && causalMask && (dropout == 0d || !trainDropout)
+      isCuda && aligned && !linearized && (causalMask || maxLength.isEmpty) && (dropout == 0d || !trainDropout)
 
     val attention =
       if (useEfficientAttentionKernel)
