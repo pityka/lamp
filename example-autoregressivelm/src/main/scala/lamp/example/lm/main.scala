@@ -9,6 +9,10 @@ import cats.effect.IOApp
 import lamp.example.lm.DistributedTrain
 import lamp.example.lm.Train
 
+import lamp.example.lm.Inference
+
+import lamp.example.lm.Model
+
 object Main extends IOApp {
   scribe.info("Logger start")
 

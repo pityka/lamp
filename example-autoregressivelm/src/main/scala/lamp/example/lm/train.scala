@@ -6,6 +6,7 @@ import lamp.data._
 import java.io.File
 import cats.effect.IO
 
+import lamp.example.lm.Model
 object Train {
   def train(
       config: CliConfig,

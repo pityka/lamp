@@ -6,6 +6,7 @@ import cats.effect.IO
 import lamp.data.Codec
 import lamp.data.CodecFactory
 
+import lamp.example.lm.Model
 object Util {
 
   def prepareCorpora(config: CliConfig)(implicit scope: Scope) = Scope.bracket {
@@ -79,7 +80,7 @@ object Util {
 
   def readBytesFromFile[S: Sc](file: String, maxLength: Long): IO[STen] =
     IO.blocking {
-      val l = math.min(maxLength,new File(file).length())
+      val l = math.min(maxLength, new File(file).length())
       STen.fromFile(
         path = file,
         offset = 0,
@@ -117,15 +118,16 @@ object Util {
       import cats.syntax.all._
       val len = corpus.shape(0)
 
-      val chunkSize = 1024*1024L*10
-      IO.parTraverseN(parallelism)((0L until len by chunkSize).toList) { start =>
-        IO.blocking {
-          val slice = corpus
-            .slice(0, start, math.min(start + chunkSize, len), 1)
-            .toByteArray
-          val enc = codec.encode(slice).map(_.toInt)
-          STen.fromIntArray(enc, List(enc.length), CPU)
-        }
+      val chunkSize = 1024 * 1024L * 10
+      IO.parTraverseN(parallelism)((0L until len by chunkSize).toList) {
+        start =>
+          IO.blocking {
+            val slice = corpus
+              .slice(0, start, math.min(start + chunkSize, len), 1)
+              .toByteArray
+            val enc = codec.encode(slice).map(_.toInt)
+            STen.fromIntArray(enc, List(enc.length), CPU)
+          }
       }.flatMap { list =>
         val encoded = STen.cat(list, dim = 0)
 
