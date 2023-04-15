@@ -4,6 +4,7 @@ import lamp._
 import lamp.data._
 import java.io.File
 
+import lamp.example.lm.Model
 object Inference {
   def inference(config: CliConfig, codec: Codec)(scope: Scope) =
     Scope.bracket(scope) { implicit scope =>

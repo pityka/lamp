@@ -7,6 +7,7 @@ import java.io.File
 import cats.effect.IO
 import lamp.data.distributed.LoopStateWithModelAndOptimizerData
 
+import lamp.example.lm.Model
 object DistributedTrain {
   def train(
       config: CliConfig,
