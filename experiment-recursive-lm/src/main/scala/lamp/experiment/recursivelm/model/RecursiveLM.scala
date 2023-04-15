@@ -56,23 +56,26 @@ case class LanguageModelLoss(
   def state = languageModel.state
   def forward[S: Sc](x: LossInput): Variable = {
 
+    
+
     val (_, likelihoods, targets) = x.tokensAndTarget.foldLeft(
       (Option.empty[Variable], Seq.empty[Variable], Seq.empty[STen])
     ) { case ((memory, prevLikelihoods, prevTargets), (tokens, target)) =>
       val input = LanguageModelInput(tokens, memory, None)
+      
       val output = languageModel.forward(input)
 
-      val likeLihoods =
+      val likelihoods =
         output.languageModelLogits
           .slice(dim = 1, start = memoryWidth, end = tokens.shape(1), 1)
           .logSoftMax(dim = 2)
           .flatten(0, 1)
       val targets = target
         .slice(dim = 1, start = memoryWidth, end = target.shape(1), 1)
-        .view(-1L)
+        .reshape(-1L)
       val memory2 =
         output.encoded.slice(dim = 1, start = 0, end = memoryWidth, step = 1)
-      (Some(memory2), prevLikelihoods :+ likeLihoods, prevTargets :+ targets)
+      (Some(memory2), prevLikelihoods :+ likelihoods, prevTargets :+ targets)
     }
 
     val (l1, _) =

@@ -37,14 +37,16 @@ object Train {
         minibatchSize = config.trainBatchSize,
         numBatches = config.numBatchesPerEpoch,
         documents = trainDocuments,
-        blockLength = Model.contextLength
+        blockLength = Model.contextLength,
+        recursionLength = Model.recursionLength
       )
     val validEpochs = (_: IOLoops.TrainingLoopContext) =>
       lamp.experiment.recursivelm.model.DataLoader.minibatchesFromDocuments(
         minibatchSize = config.trainBatchSize,
         numBatches = config.numBatchesPerEpoch,
         documents = validDocuments,
-        blockLength = Model.contextLength
+        blockLength = Model.contextLength,
+        recursionLength = Model.recursionLength
       )
 
     val optimizer = AdamW.factory(

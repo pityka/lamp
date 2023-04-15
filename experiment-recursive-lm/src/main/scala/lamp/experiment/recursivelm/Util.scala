@@ -23,7 +23,7 @@ object Util {
         codec <- Util.readOrTrainCodec(
           config.bpeFile,
           STen
-            .cat(rawTrainDocuments.take(1000), dim = 0)
+            .cat(rawTrainDocuments.take(1000).toVector, dim = 0)
             .slice(0, 0, 300000, 1)
             .toByteArray,
           Model.codecFactory
@@ -143,7 +143,7 @@ object Util {
       scribe.info(s"Encoding corpus")
       import cats.syntax.all._
 
-      IO.parTraverseN(parallelism)(documents.toList) { document =>
+      IO.parTraverseN(parallelism)(documents.toList.filter(_.shape(0) > 1024)) { document =>
         IO.blocking {
 
           val enc = codec.encode(document.toByteArray).map(_.toInt)

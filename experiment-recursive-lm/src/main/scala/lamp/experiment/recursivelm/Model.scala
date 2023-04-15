@@ -7,6 +7,7 @@ object Model {
 
   val vocabularySize = 128
   val contextLength = 64
+  val recursionLength = 4
   val memoryWidth = 32
 
   val codecFactory = ByteSegmentCodecFactory(
