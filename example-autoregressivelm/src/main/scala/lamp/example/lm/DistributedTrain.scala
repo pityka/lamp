@@ -24,7 +24,9 @@ object DistributedTrain {
       config = Some(
         com.typesafe.config.ConfigFactory.parseString(
           s"""
+          
 akka {
+  jvm-shutdown-hooks = off
   actor {
     provider = remote
   }
@@ -124,7 +126,7 @@ akka {
         actorSystem,
         config.rootAddress,
         config.rootPort,
-        "cifar-0",
+        "lm-0",
         600 seconds
       )
 

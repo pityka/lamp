@@ -87,7 +87,14 @@ object CliParser {
       ),
       opt[String]("checkpoint").action((x, c) =>
         c.copy(checkpointSave = Some(x))
-      )
+      ),
+      opt[Unit]("distributed").action((_, c) => c.copy(distributed = true)),
+      opt[Int]("rank").action((x, c) => c.copy(rank = x)),
+      opt[Int]("nranks").action((x, c) => c.copy(nranks = x)),
+      opt[String]("root-address").action((x, c) => c.copy(rootAddress = x)),
+      opt[Int]("root-port").action((x, c) => c.copy(rootPort = x)),
+      opt[String]("my-address").action((x, c) => c.copy(myAddress = x)),
+      opt[Int]("my-port").action((x, c) => c.copy(myPort = x))
     )
 
   }
