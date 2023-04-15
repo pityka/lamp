@@ -11,16 +11,14 @@ import lamp.Scope
 import lamp.data.SimpleLoopState
 
 case class LoopState(
-  epoch: Int,
-  lastValidationLoss: Option[Double],
-  minValidationLoss: Option[Double],
-  minValidationEpoch: Option[Int],
-  learningCurve: List[(Int, Double, Option[(Double, Double)])]
-  )
-  object LoopState {
-    implicit val movable: EmptyMovable[LoopState] = Movable.empty
-
- 
+    epoch: Int,
+    lastValidationLoss: Option[Double],
+    minValidationLoss: Option[Double],
+    minValidationEpoch: Option[Int],
+    learningCurve: List[(Int, Double, Option[(Double, Double)])]
+)
+object LoopState {
+  implicit val movable: EmptyMovable[LoopState] = Movable.empty
 
   private def writeLoopStateDescriptor(
       s: LoopStateWithModelAndOptimizerData,
@@ -57,15 +55,15 @@ case class LoopState(
       )
       .toOption
       .get
-    val location = s"${file.getName}.minvalidmodel"
+    val minValidLocation = s"${file.getName}.minvalidmodel"
     val channel = new FileOutputStream(
-      new File(file.getParentFile(), location + ".tmp"),
+      new File(file.getParentFile(), minValidLocation + ".tmp"),
       false
     ).getChannel
     val minValidDescriptor = Writer
       .writeTensorDataAndMakeDescriptor(
         tensors = s.bestModel,
-        location,
+        minValidLocation,
         dataChannel = channel,
         bufferSize = bufferSize,
         initialByteOffset = 0
@@ -79,6 +77,9 @@ case class LoopState(
     new File(file.getParentFile(), modelLocation + ".tmp").renameTo(
       new File(file.getParentFile(), modelLocation)
     )
+    new File(file.getParentFile(), minValidLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), minValidLocation)
+    )
 
     lamp.data.schemas.SimpleLoopState(
       modelDescriptor,
@@ -86,7 +87,7 @@ case class LoopState(
       s.loopState.epoch,
       s.loopState.lastValidationLoss,
       s.loopState.minValidationLoss,
-      Some(0 -> minValidDescriptor),
+      Some(s.loopState.minValidationEpoch.getOrElse(0) -> minValidDescriptor),
       s.loopState.learningCurve.map { case (epoch, train, valid) =>
         (epoch, train, valid.map(_._1), valid.map(_._2))
       }
@@ -136,7 +137,9 @@ case class LoopStateWithModelAndOptimizerData(
     bestModel: Seq[STen]
 )
 object LoopStateWithModelAndOptimizerData {
-   def apply(sl: SimpleLoopState)(implicit scope: Scope): LoopStateWithModelAndOptimizerData = {
+  def apply(
+      sl: SimpleLoopState
+  )(implicit scope: Scope): LoopStateWithModelAndOptimizerData = {
     LoopStateWithModelAndOptimizerData(
       loopState = LoopState(
         epoch = sl.epoch,
@@ -147,7 +150,9 @@ object LoopStateWithModelAndOptimizerData {
       ),
       model = sl.model,
       optimizer = sl.optimizer,
-      bestModel = sl.minValidationLossModel.map(v => v._2.map(t => STen.owned(t))).getOrElse(sl.model)
+      bestModel = sl.minValidationLossModel
+        .map(v => v._2.map(t => STen.owned(t)))
+        .getOrElse(sl.model)
     )
   }
 }
