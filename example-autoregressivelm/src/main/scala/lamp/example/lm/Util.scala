@@ -79,7 +79,7 @@ object Util {
   }
 
   def readBytesFromFile[S: Sc](file: String, maxLength: Long): IO[STen] =
-    IO.blocking {
+    IO.interruptible {
       val l = math.min(maxLength, new File(file).length())
       STen.fromFile(
         path = file,
@@ -121,7 +121,7 @@ object Util {
       val chunkSize = 1024 * 1024L * 10
       IO.parTraverseN(parallelism)((0L until len by chunkSize).toList) {
         start =>
-          IO.blocking {
+          IO.interruptible {
             val slice = corpus
               .slice(0, start, math.min(start + chunkSize, len), 1)
               .toByteArray

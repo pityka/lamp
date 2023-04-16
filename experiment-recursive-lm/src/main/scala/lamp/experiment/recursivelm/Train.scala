@@ -9,8 +9,8 @@ import cats.effect.IO
 object Train {
   def train(
       config: CliConfig,
-      trainDocuments: Array[STen],
-      validDocuments: Array[STen]
+      trainCorpus: STen,
+      validCorpus: STen
   )(implicit scope: Scope): IO[Unit] = Scope.bracket(scope) { implicit scope =>
     val device =
       if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
@@ -36,17 +36,17 @@ object Train {
       lamp.experiment.recursivelm.model.DataLoader.minibatchesFromDocuments(
         minibatchSize = config.trainBatchSize,
         numBatches = config.numBatchesPerEpoch,
-        documents = trainDocuments,
+        corpus = trainCorpus,
         blockLength = Model.contextLength,
-        recursionLength = Model.recursionLength
+        recursionLength = Model.recursionLength,
       )
     val validEpochs = (_: IOLoops.TrainingLoopContext) =>
       lamp.experiment.recursivelm.model.DataLoader.minibatchesFromDocuments(
         minibatchSize = config.trainBatchSize,
         numBatches = config.numBatchesPerEpoch,
-        documents = validDocuments,
+        corpus = validCorpus,
         blockLength = Model.contextLength,
-        recursionLength = Model.recursionLength
+        recursionLength = Model.recursionLength,
       )
 
     val optimizer = AdamW.factory(
