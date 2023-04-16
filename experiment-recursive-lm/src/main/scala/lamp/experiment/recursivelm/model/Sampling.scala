@@ -11,15 +11,15 @@ object Sampling {
   def autoregressiveInference(
       model: LanguageModelModule,
       modelBlockSize: Int,
-      modelMemoryWidth: Int,
       prefix: Array[Char],
       length: Int,
       temperature: Double
   )(scope: Scope): IO[Array[Char]] = {
     assert(temperature > 0d)
-    assert(prefix.size > modelMemoryWidth)
     val device = model.tokenEmbedding.weights.value.device
-    def makeInput(memory: STen, prefix: Array[Char])(implicit scope: Scope) = {
+    def makeInput(memory: Option[STen], prefix: Array[Char])(implicit
+        scope: Scope
+    ) = {
       val tokens =
         STen
           .fromLongArray(
@@ -32,19 +32,18 @@ object Sampling {
 
       LanguageModelInput(
         tokens = const(device.to(tokens)),
-        memory = const(memory),
-        positions = Some(device.to(positions)),
-        memoryWidth = modelMemoryWidth
+        memory = memory.map(const),
+        positions = Some(device.to(positions))
       )
     }
 
-    def makeBatch(memory: STen, prefix: Array[Char]) =
+    def makeBatch(memory: Option[STen], prefix: Array[Char]) =
       BatchStream.single(scopeInResource.map { implicit scope =>
         NonEmptyBatch(makeInput(memory, prefix))
       })
 
     def single(
-        memory: STen,
+        memory: Option[STen],
         prefix: Array[Char]
     )(implicit scope: Scope): IO[LanguageModelOutputNonVariable] =
       IOLoops
@@ -58,9 +57,11 @@ object Sampling {
             )
           )
         )
-        .map(_.head)
+        .map { v =>
+          v.head
+        }
 
-    def loop(n: Int, acc: Array[Char], memory: STen)(
+    def loop(n: Int, acc: Array[Char], memory: Option[STen])(
         scope: Scope
     ): IO[Array[Char]] =
       if (n == 0) IO.pure(acc)
@@ -81,24 +82,15 @@ object Sampling {
               )
               assert(sample.numel == 1)
               val next = sample.toLongArray.head.toChar
-              val memory = output.encoded.slice(
-                dim = 1,
-                start = 0,
-                end = modelMemoryWidth,
-                step = 1
-              )
+              val memory = output.memory
               (next, memory)
             }
           }
           .flatMap { case (next, memory) =>
-            loop(n - 1, acc :+ next, memory)(scope)
+            loop(n - 1, acc :+ next, Some(memory))(scope)
           }
 
-    val initMemory = STen.zeros(
-      List(1, modelMemoryWidth, model.tokenEmbedding.weights.sizes(1)),
-      device.options(SinglePrecision)(scope)
-    )(scope)
-    loop(length, prefix, initMemory)(scope)
+    loop(length, prefix, None)(scope)
 
   }
 }

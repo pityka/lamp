@@ -19,7 +19,7 @@ object Util {
 
         codec <- Util.readOrTrainCodec(
           config.bpeFile,
-          rawTrainCorpus.slice(0, 0, 300000, 1).toByteArray,
+          rawTrainCorpus.slice(0, 0, 1000000, 1).toByteArray.map(b => b.toChar.toLower.toByte),
           Model.codecFactory
         )
 
@@ -36,7 +36,8 @@ object Util {
         )
 
         validCorpus <-
-          Util
+          (if (config.validFile.isEmpty) IO.pure(Option.empty[STen])
+          else Util
             .readBytesFromFile(config.validFile, config.fileMaxLength)
             .flatMap(corp =>
               Util.encodeOrReadTokens(
@@ -45,10 +46,10 @@ object Util {
                 codec,
                 config.parallelism
               )
-            )
+            ).map(v => Option(v)))
 
         _ = scribe.info(
-          s"Valid corpus length: ${validCorpus.numel} tokens"
+          s"Valid corpus length: ${validCorpus.map(_.numel)} tokens"
         )
 
       } yield (trainCorpus, validCorpus)
@@ -123,7 +124,7 @@ object Util {
           IO.interruptible {
             val slice = corpus
               .slice(0, start, math.min(start + chunkSize, len), 1)
-              .toByteArray
+              .toByteArray.map(b => b.toChar.toLower.toByte)
             val enc = codec.encode(slice).map(_.toInt)
             STen.fromIntArray(enc, List(enc.length), CPU)
           }

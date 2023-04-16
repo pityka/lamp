@@ -264,7 +264,8 @@ object TransformerPairedEncoderDecoderBlock {
       dropout: Double,
       tOpt: STenOptions,
       linearized: Boolean,
-      decoderCausalMask: Boolean
+      decoderDecoderCausalMask: Boolean,
+      encoderDecoderCausalMask: Boolean
   ): TransformerPairedEncoderDecoderBlock =
     TransformerPairedEncoderDecoderBlock(
       encoder = TransformerEncoderBlock(
@@ -288,7 +289,8 @@ object TransformerPairedEncoderDecoderBlock {
         dropout = dropout,
         tOpt = tOpt,
         linearized = linearized,
-        causalMask = decoderCausalMask
+        decoderDecoderCausalMask = decoderDecoderCausalMask,
+        encoderDecoderCausalMask = encoderDecoderCausalMask
       )
     )
 
@@ -343,7 +345,8 @@ object Transformer {
       dropout: Double,
       tOpt: STenOptions,
       linearized: Boolean,
-      decoderCausalMask: Boolean
+      decoderDecoderCausalMask: Boolean,
+      encoderDecoderCausalMask: Boolean
   ): Transformer =
     Transformer(
       0 until numBlocks map (_ =>
@@ -356,7 +359,8 @@ object Transformer {
           dropout = dropout,
           tOpt = tOpt,
           linearized = linearized,
-          decoderCausalMask = decoderCausalMask
+          decoderDecoderCausalMask = decoderDecoderCausalMask,
+          encoderDecoderCausalMask = encoderDecoderCausalMask
         )
       )
     )
@@ -392,7 +396,8 @@ object TransformerDecoderBlock {
       dropout: Double,
       tOpt: STenOptions,
       linearized: Boolean,
-      causalMask: Boolean
+      decoderDecoderCausalMask: Boolean,
+      encoderDecoderCausalMask: Boolean
   ): TransformerDecoderBlock =
     TransformerDecoderBlock(
       attentionDecoderDecoder = MultiheadAttention(
@@ -405,7 +410,7 @@ object TransformerDecoderBlock {
         dropout = dropout,
         tOpt = tOpt,
         linearized = linearized,
-        causalMask = causalMask
+        causalMask = decoderDecoderCausalMask
       ),
       attentionEncoderDecoder = MultiheadAttention(
         dQ = in,
@@ -417,7 +422,7 @@ object TransformerDecoderBlock {
         dropout = dropout,
         tOpt = tOpt,
         linearized = linearized,
-        causalMask = false
+        causalMask = encoderDecoderCausalMask
       ),
       layerNorm1 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       layerNorm2 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
@@ -958,7 +963,11 @@ object MultiheadAttention {
         val v1t: Variable = transposeIn(v1, numHeads)
 
         // (batch * numHeads) x num queries OR (batch * numHeads)
-        val maxLengthRepated = maxLength.map(_.repeat(List(numHeads, 1)))
+        val maxLengthRepated = if (causalMask && maxLength.isEmpty) {
+          val single = STen.arange_l(1, nQ + 1, 1,q1t.options).unsqueeze(0)
+          Some(single.repeat(List(nB * numHeads, 1)))
+
+        } else maxLength.map(_.repeat(List(numHeads, 1)))
 
         // (batch * h) x num queries x hidden/h
         val output =
