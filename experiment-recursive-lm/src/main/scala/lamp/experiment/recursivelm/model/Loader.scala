@@ -20,8 +20,7 @@ object DataLoader {
            val start0 = rng.nextLong(N - blockLength * recursionLength * 2 - 1)
             val starts = {
               0 until recursionLength map { i =>
-                if (i == 0) start0
-                else  start0 + i*blockLength 
+                  start0 + i*blockLength 
               }
               
             }

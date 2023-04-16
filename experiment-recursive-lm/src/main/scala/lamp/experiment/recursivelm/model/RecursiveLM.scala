@@ -11,13 +11,12 @@ import lamp.STenOptions
 
 import lamp.autograd.Mean
 import lamp.Movable
-import lamp.SinglePrecision
 
 case class LanguageModelInput(
     tokens: Constant,
-    memory: Variable,
+    memory: Option[Variable],
     positions: Option[STen],
-    memoryWidth: Int
+    // memoryWidth: Int
 )
 
 object LanguageModelInput {
@@ -53,20 +52,15 @@ object LossInput {
 case class LanguageModelLoss(
     languageModel: LanguageModelModule,
     loss: LossFunction,
-    memoryWidth: Int,
     embeddingDim: Int
 ) extends GenericModule[LossInput, Variable] {
   def state = languageModel.state
   def forward[S: Sc](x: LossInput): Variable = {
 
-    val initMemory: Variable = {
-      val nb = x.tokensAndTarget.head._1.sizes(0)
-      const(STen.zeros(List(nb,memoryWidth,embeddingDim),x.tokensAndTarget.head._2.device.options(SinglePrecision)))
-    }
     val (_, likelihoods, targets) = x.tokensAndTarget.foldLeft(
-      (initMemory, Seq.empty[Variable], Seq.empty[STen])
+      (Option.empty[Variable], Seq.empty[Variable], Seq.empty[STen])
     ) { case ((memory, prevLikelihoods, prevTargets), (tokens, target)) =>
-      val input = LanguageModelInput(tokens, memory, None, memoryWidth)
+      val input = LanguageModelInput(tokens, memory, None)
 
       val output = languageModel.forward(input)
 
@@ -77,7 +71,7 @@ case class LanguageModelLoss(
       val targets = target
         .reshape(-1L)
       val memory2 = output.memory
-      (memory2, prevLikelihoods :+ likelihoods, prevTargets :+ targets)
+      (Some(memory2), prevLikelihoods :+ likelihoods, prevTargets :+ targets)
     }
 
     val (l1, _) =
@@ -122,7 +116,6 @@ object LanguageModelLoss {
     */
   def apply[S: Sc](
       maxLength: Int,
-      memoryWidth: Int,
       vocabularySize: Int,
       numBlocks: Int,
       embeddingDim: Int,
@@ -134,7 +127,6 @@ object LanguageModelLoss {
       tOpt: STenOptions,
       linearized: Boolean
   ): LanguageModelLoss = LanguageModelLoss(
-    memoryWidth = memoryWidth,
     embeddingDim = embeddingDim,
     languageModel = LanguageModelModule(
       maxLength = maxLength,
@@ -187,18 +179,19 @@ case class LanguageModelOutput(
     memory: Variable
 ) {
   def toSTen =
-    LanguageModelOutputNonVariable(encoded.value, languageModelLogits.value)
+    LanguageModelOutputNonVariable(encoded.value, languageModelLogits.value, memory.value)
 }
 
 /* Same as LanguageModelOutput but holds raw tensors, not variables */
 case class LanguageModelOutputNonVariable(
     encoded: STen,
-    languageModelLogits: STen
+    languageModelLogits: STen,
+    memory :STen
 )
 
 object LanguageModelOutputNonVariable {
   implicit val movable: Movable[LanguageModelOutputNonVariable] =
-    Movable.by(v => (v.encoded, v.languageModelLogits))
+    Movable.by(v => (v.encoded, v.languageModelLogits, v.memory))
 }
 
 /** Transformer based language model module
@@ -218,10 +211,11 @@ case class LanguageModelModule(
     tokenEmbedding: Embedding,
     positionEmbedding: Embedding,
     encoder: Zip3Transformer,
-    finalNorm: LayerNorm
+    finalNorm: LayerNorm,
+    memoryNorm: LayerNorm
 ) extends GenericModule[LanguageModelInput, LanguageModelOutput] {
   def state =
-    tokenEmbedding.state ++ positionEmbedding.state ++ encoder.state ++ finalNorm.state // ++ lmHead.state
+    tokenEmbedding.state ++ positionEmbedding.state ++ encoder.state ++ finalNorm.state ++ memoryNorm.state
 
   def forward[S: Sc](x: LanguageModelInput): LanguageModelOutput = {
 
@@ -230,12 +224,15 @@ case class LanguageModelModule(
     )
     val embedded =
       tokenEmbedding.forward(x.tokens) + positionEmbedding.forward(pos)
+    val memory = x.memory.getOrElse(embedded)
 
-    val (encodedTokens, newMemory) = encoder.forward((embedded, x.memory, None))
+    val (encodedTokens, newMemory) = encoder.forward((embedded, memory))
 
     val encoded = finalNorm(
       encodedTokens
     )
+
+    val normedMemroy = memoryNorm(newMemory)
 
     val encoderOutputAtPredictionPositions =
       x.positions.fold(encoded)(positions =>
@@ -261,7 +258,7 @@ case class LanguageModelModule(
     LanguageModelOutput(
       encoded = encoded,
       languageModelLogits = logits,
-      memory = newMemory
+      memory = normedMemroy
     )
   }
 
@@ -301,7 +298,8 @@ object LanguageModelModule {
       tOpt = tOpt,
       linearized = linearized
     ),
-    finalNorm = LayerNorm(List(embeddingDim.toLong), tOpt)
+    finalNorm = LayerNorm(List(embeddingDim.toLong), tOpt),
+    memoryNorm = LayerNorm(List(embeddingDim.toLong), tOpt)
   )
 
   implicit val trainingMode: TrainingMode[LanguageModelModule] = TrainingMode
@@ -311,14 +309,16 @@ object LanguageModelModule {
           tokenEmbedding = m.tokenEmbedding.asEval,
           positionEmbedding = m.positionEmbedding.asEval,
           encoder = m.encoder.asEval,
-          finalNorm = m.finalNorm.asEval
+          finalNorm = m.finalNorm.asEval,
+          memoryNorm = m.memoryNorm.asEval,
         ),
       m =>
         m.copy(
           tokenEmbedding = m.tokenEmbedding.asTraining,
           positionEmbedding = m.positionEmbedding.asTraining,
           encoder = m.encoder.asTraining,
-          finalNorm = m.finalNorm.asTraining
+          finalNorm = m.finalNorm.asTraining,
+          memoryNorm = m.memoryNorm.asTraining
         )
     )
   implicit val load: Load[LanguageModelModule] =
@@ -326,31 +326,34 @@ object LanguageModelModule {
       _.tokenEmbedding,
       _.positionEmbedding,
       _.encoder,
-      _.finalNorm
+      _.finalNorm,
+      _.memoryNorm
     )
 
 }
 
 case class Zipped3(
-    encoder: TransformerEncoderBlock,
+    // encoder: TransformerEncoderBlock,
     decoder1: TransformerDecoderBlock,
-    decoder2: TransformerDecoderBlock
+    decoder2: TransformerDecoderBlock,
+    norm: LayerNorm
 ) extends GenericModule[
-      (Variable, Variable, Option[STen]),
+      (Variable, Variable),
       (Variable, Variable)
     ] {
 
-  def state = encoder.state ++ decoder1.state ++ decoder2.state
+  def state = // encoder.state ++
+   decoder1.state ++ decoder2.state ++ norm.state
 
   def forward[S: Sc](
-      x: (Variable, Variable, Option[STen])
+      x: (Variable, Variable)
   ): (Variable, Variable) = {
 
-    val (decoderInput, encoderInput, maxLength) = x
-    val encoderOutput = encoder.forward((encoderInput, None))
+    val (decoderInput, encoderInput) = x
+    // val encoderOutput = encoder.forward((encoderInput, None))
     val decoder1Output =
-      decoder1.forward((decoderInput, encoderOutput, maxLength))
-    val decoder2Output = decoder2.forward((encoderInput, decoder1Output, None))
+      decoder1.forward((decoderInput, encoderInput, None))
+    val decoder2Output = decoder2.forward((encoderInput, norm(decoder1Output), None))
     (decoder1Output, decoder2Output)
 
   }
@@ -371,18 +374,18 @@ object Zipped3 {
       linearized: Boolean
   ): Zipped3 =
     Zipped3(
-      encoder = TransformerEncoderBlock(
-        in = in,
-        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-        attentionNumHeads = attentionNumHeads,
-        mlpHiddenDim = mlpHiddenDim,
-        out = out,
-        dropout = dropout,
-        tOpt = tOpt,
-        linearized = linearized,
-        gptOrder = true,
-        causalMask = false
-      ),
+      // encoder = TransformerEncoderBlock(
+      //   in = in,
+      //   attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+      //   attentionNumHeads = attentionNumHeads,
+      //   mlpHiddenDim = mlpHiddenDim,
+      //   out = out,
+      //   dropout = dropout,
+      //   tOpt = tOpt,
+      //   linearized = linearized,
+      //   gptOrder = true,
+      //   causalMask = false
+      // ),
       decoder1 = TransformerDecoderBlock(
         in = in,
         attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
@@ -392,7 +395,8 @@ object Zipped3 {
         dropout = dropout,
         tOpt = tOpt,
         linearized = linearized,
-        causalMask = true
+        decoderDecoderCausalMask = true,
+        encoderDecoderCausalMask = true,
       ),
       decoder2 = TransformerDecoderBlock(
         in = in,
@@ -403,8 +407,11 @@ object Zipped3 {
         dropout = dropout,
         tOpt = tOpt,
         linearized = linearized,
-        causalMask = false
-      )
+        decoderDecoderCausalMask = true,
+        encoderDecoderCausalMask = true,
+      ),
+          norm = LayerNorm(List(out.toLong), tOpt)
+
     )
 
   implicit val trainingMode: TrainingMode[Zipped3] =
@@ -412,35 +419,39 @@ object Zipped3 {
       .make[Zipped3](
         m =>
           m.copy(
-            encoder = m.encoder.asEval,
+            // encoder = m.encoder.asEval,
             decoder1 = m.decoder1.asEval,
-            decoder2 = m.decoder2.asEval
+            decoder2 = m.decoder2.asEval,
+            norm = m.norm.asEval,
           ),
         m =>
           m.copy(
-            encoder = m.encoder.asTraining,
+            // encoder = m.encoder.asTraining,
             decoder1 = m.decoder1.asTraining,
-            decoder2 = m.decoder2.asTraining
+            decoder2 = m.decoder2.asTraining,
+            norm = m.norm.asTraining
           )
       )
 
   implicit val load: Load[Zipped3] =
-    Load.compose(_.encoder, _.decoder1, _.decoder2)
+    Load.compose(
+      // _.encoder,
+     _.decoder1, _.decoder2,_.norm)
 }
 
 case class Zip3Transformer(
     blocks: Seq[Zipped3]
 ) extends GenericModule[
-      (Variable, Variable, Option[STen]),
+      (Variable, Variable),
       (Variable, Variable)
     ] {
   def state = blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
   def forward[S: Sc](
-      x: (Variable, Variable, Option[STen])
+      x: (Variable, Variable)
   ): (Variable, Variable) = {
-    val (decoderInput, encoderInput, maxLength) = x
+    val (decoderInput, encoderInput) = x
     blocks.foldLeft((decoderInput, encoderInput)) { (a, block) =>
-      block.forward((a._1, a._2, maxLength))
+      block.forward((a._1, a._2))
     }
   }
 }

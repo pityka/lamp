@@ -10,7 +10,7 @@ object Train {
   def train(
       config: CliConfig,
       trainCorpus: STen,
-      validCorpus: STen
+      validCorpus: Option[STen]
   )(implicit scope: Scope): IO[Unit] = Scope.bracket(scope) { implicit scope =>
     val device =
       if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
@@ -40,14 +40,14 @@ object Train {
         blockLength = Model.contextLength,
         recursionLength = Model.recursionLength,
       )
-    val validEpochs = (_: IOLoops.TrainingLoopContext) =>
+    val validEpochs = validCorpus.map(v =>(_: IOLoops.TrainingLoopContext) =>
       lamp.experiment.recursivelm.model.DataLoader.minibatchesFromDocuments(
         minibatchSize = config.trainBatchSize,
         numBatches = config.numBatchesPerEpoch,
-        corpus = validCorpus,
+        corpus = v,
         blockLength = Model.contextLength,
         recursionLength = Model.recursionLength,
-      )
+      ))
 
     val optimizer = AdamW.factory(
       weightDecay = lamp.nn.DependentHyperparameter(0d) {
@@ -68,7 +68,7 @@ object Train {
         model = model,
         optimizerFactory = optimizer,
         trainBatchesOverEpoch = trainEpochs,
-        validationBatchesOverEpoch = Some(validEpochs),
+        validationBatchesOverEpoch = validEpochs,
         epochs = config.epochs,
         initState = checkpointedState,
         logger = Some(scribe.Logger("training")),

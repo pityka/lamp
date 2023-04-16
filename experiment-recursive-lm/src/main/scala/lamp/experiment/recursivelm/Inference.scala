@@ -33,7 +33,6 @@ object Inference {
         .autoregressiveInference(
           modelAsEval,
           modelBlockSize = Model.contextLength,
-          modelMemoryWidth = Model.memoryWidth,
           prefix = encodedPrefix,
           length = config.extendLength,
           temperature = config.samplingTemperature
