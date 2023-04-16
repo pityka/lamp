@@ -8,7 +8,6 @@ object Model {
   val vocabularySize = 40 //50304
   val contextLength = 128
   val recursionLength = 4
-  val memoryWidth = 96
 
   val codecFactory = ByteSegmentCodecFactory(
     vocabularyMin = 0.toChar,
