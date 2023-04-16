@@ -5,15 +5,15 @@ import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
 
 object Model {
 
-  val vocabularySize = 128
-  val contextLength = 64
-  val recursionLength = 4
-  val memoryWidth = 32
+  val vocabularySize = 128 //50304
+  val contextLength = 128
+  val recursionLength = 2
+  val memoryWidth = 96
 
   val codecFactory = ByteSegmentCodecFactory(
     vocabularyMin = 10,
     vocabularyMax = (vocabularySize - 1).toChar,
-    maxMergedSegmentLength = 1,
+    maxMergedSegmentLength = 1,//7,
     unknownToken = 0.toChar,
     unknownByte = '?'.toByte
   )
@@ -22,9 +22,9 @@ object Model {
       scope: Scope
   ) = {
     val tensorOptions = device.options(SinglePrecision)
-    val embeddingDim = 768
-    val layers = 3
-    val numHeads = 12
+    val embeddingDim = 384//768
+    val layers = 6
+    val numHeads = 6//12
     val net = lamp.experiment.recursivelm.model.LanguageModelLoss.apply(
       maxLength = contextLength,
       vocabularySize = vocabularySize,
@@ -40,7 +40,7 @@ object Model {
       memoryWidth = memoryWidth
     )
     scribe.info(
-      f"Allocated model on $device . embedding=$embeddingDim layers=$layers num-heads=$numHeads num-param=${net.learnableParameters}%,d"
+      f"Allocated model on $device . embedding=$embeddingDim layers=$layers num-heads=$numHeads num-param=${net.learnableParameters}%,d "
     )
 
     // scribe.info(s"List of parameters: \n${net.parameters

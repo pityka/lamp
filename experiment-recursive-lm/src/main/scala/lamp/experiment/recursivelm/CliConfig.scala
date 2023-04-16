@@ -20,7 +20,7 @@ case class CliConfig(
     checkpointSave: Option[String] = None,
     extend: Option[String] = None,
     extendLength: Int = 50,
-    gradientAccumSteps: Int = 5,
+    gradientAccumSteps: Int = 1,
     parallelism: Int = 64,
    
 ) {
@@ -60,7 +60,7 @@ object CliParser {
       opt[Int]("extend-length")
         .action((x, c) => c.copy(extendLength = x))
         .text("extend this number of tkens in inference model"),
-      opt[Int]("train-file-max-length").action((x, c) =>
+      opt[Long]("train-file-max-length").action((x, c) =>
         c.copy(fileMaxLength = x)
       ),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),

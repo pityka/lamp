@@ -17,7 +17,7 @@ object Main extends IOApp {
         scribe.info(s"Config: $config")
         Scope.inResource.use(scope =>
           for {
-            corpora <- Util.prepareDocuments(config)(scope)
+            corpora <- Util.prepareCorpora(config)(scope)
             _ <-
                 Train.train(config, corpora._1, corpora._2)(scope)
           } yield ExitCode(0)
