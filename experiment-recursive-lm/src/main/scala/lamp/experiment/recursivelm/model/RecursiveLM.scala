@@ -15,7 +15,7 @@ import lamp.Movable
 case class LanguageModelInput(
     tokens: Constant,
     memory: Option[Variable],
-    positions: Option[STen],
+    positions: Option[STen]
     // memoryWidth: Int
 )
 
@@ -179,14 +179,18 @@ case class LanguageModelOutput(
     memory: Variable
 ) {
   def toSTen =
-    LanguageModelOutputNonVariable(encoded.value, languageModelLogits.value, memory.value)
+    LanguageModelOutputNonVariable(
+      encoded.value,
+      languageModelLogits.value,
+      memory.value
+    )
 }
 
 /* Same as LanguageModelOutput but holds raw tensors, not variables */
 case class LanguageModelOutputNonVariable(
     encoded: STen,
     languageModelLogits: STen,
-    memory :STen
+    memory: STen
 )
 
 object LanguageModelOutputNonVariable {
@@ -310,7 +314,7 @@ object LanguageModelModule {
           positionEmbedding = m.positionEmbedding.asEval,
           encoder = m.encoder.asEval,
           finalNorm = m.finalNorm.asEval,
-          memoryNorm = m.memoryNorm.asEval,
+          memoryNorm = m.memoryNorm.asEval
         ),
       m =>
         m.copy(
@@ -343,7 +347,7 @@ case class Zipped3(
     ] {
 
   def state = // encoder.state ++
-   decoder1.state ++ decoder2.state ++ norm.state
+    decoder1.state ++ decoder2.state ++ norm.state
 
   def forward[S: Sc](
       x: (Variable, Variable)
@@ -353,7 +357,8 @@ case class Zipped3(
     // val encoderOutput = encoder.forward((encoderInput, None))
     val decoder1Output =
       decoder1.forward((decoderInput, encoderInput, None))
-    val decoder2Output = decoder2.forward((encoderInput, norm(decoder1Output), None))
+    val decoder2Output =
+      decoder2.forward((encoderInput, norm(decoder1Output), None))
     (decoder1Output, decoder2Output)
 
   }
@@ -396,7 +401,7 @@ object Zipped3 {
         tOpt = tOpt,
         linearized = linearized,
         decoderDecoderCausalMask = true,
-        encoderDecoderCausalMask = true,
+        encoderDecoderCausalMask = true
       ),
       decoder2 = TransformerDecoderBlock(
         in = in,
@@ -408,10 +413,9 @@ object Zipped3 {
         tOpt = tOpt,
         linearized = linearized,
         decoderDecoderCausalMask = true,
-        encoderDecoderCausalMask = true,
+        encoderDecoderCausalMask = true
       ),
-          norm = LayerNorm(List(out.toLong), tOpt)
-
+      norm = LayerNorm(List(out.toLong), tOpt)
     )
 
   implicit val trainingMode: TrainingMode[Zipped3] =
@@ -422,7 +426,7 @@ object Zipped3 {
             // encoder = m.encoder.asEval,
             decoder1 = m.decoder1.asEval,
             decoder2 = m.decoder2.asEval,
-            norm = m.norm.asEval,
+            norm = m.norm.asEval
           ),
         m =>
           m.copy(
@@ -436,7 +440,10 @@ object Zipped3 {
   implicit val load: Load[Zipped3] =
     Load.compose(
       // _.encoder,
-     _.decoder1, _.decoder2,_.norm)
+      _.decoder1,
+      _.decoder2,
+      _.norm
+    )
 }
 
 case class Zip3Transformer(

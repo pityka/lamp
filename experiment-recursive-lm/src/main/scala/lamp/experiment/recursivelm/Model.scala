@@ -36,7 +36,6 @@ object Model {
       padToken = -1000L,
       tOpt = tensorOptions,
       linearized = false,
-      // memoryWidth = memoryWidth
     )
     scribe.info(
       f"Allocated model on $device . embedding=$embeddingDim layers=$layers num-heads=$numHeads num-param=${net.learnableParameters}%,d "
