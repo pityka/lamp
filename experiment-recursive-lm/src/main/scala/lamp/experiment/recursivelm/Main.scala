@@ -30,7 +30,7 @@ object Main extends IOApp {
         for {
           codec <- Model.codecFactory.readFromFile(config.bpeFile.get)
           _ <- Scope.inResource.use{scope =>
-            println(codec.trained.map(v => new String(v._1.toArray,"US-ASCII") -> v._2.toInt))
+            // println(codec.trained.map(v => new String(v._1.toArray,"US-ASCII") -> v._2.toInt))
             Inference.inference(config, codec)(scope)
           }
 

@@ -5,6 +5,7 @@ import java.io.File
 import cats.effect.IO
 import lamp.data.Codec
 import lamp.data.CodecFactory
+import lamp.data.IdentityCodec
 
 object Util {
 
@@ -19,7 +20,10 @@ object Util {
 
         codec <- Util.readOrTrainCodec(
           config.bpeFile,
-          rawTrainCorpus.slice(0, 0, 1000000, 1).toByteArray.map(b => b.toChar.toLower.toByte),
+          rawTrainCorpus
+            .slice(0, 0, 1000000, 1)
+            .toByteArray
+            .map(b => b.toChar.toLower.toByte),
           Model.codecFactory
         )
 
@@ -37,16 +41,18 @@ object Util {
 
         validCorpus <-
           (if (config.validFile.isEmpty) IO.pure(Option.empty[STen])
-          else Util
-            .readBytesFromFile(config.validFile, config.fileMaxLength)
-            .flatMap(corp =>
-              Util.encodeOrReadTokens(
-                corp,
-                new File(config.validFile + ".tokens"),
-                codec,
-                config.parallelism
-              )
-            ).map(v => Option(v)))
+           else
+             Util
+               .readBytesFromFile(config.validFile, config.fileMaxLength)
+               .flatMap(corp =>
+                 Util.encodeOrReadTokens(
+                   corp,
+                   new File(config.validFile + ".tokens"),
+                   codec,
+                   config.parallelism
+                 )
+               )
+               .map(v => Option(v)))
 
         _ = scribe.info(
           s"Valid corpus length: ${validCorpus.map(_.numel)} tokens"
@@ -124,15 +130,18 @@ object Util {
           IO.interruptible {
             val slice = corpus
               .slice(0, start, math.min(start + chunkSize, len), 1)
-              .toByteArray.map(b => b.toChar.toLower.toByte)
+              .toByteArray
+              .map(b => b.toChar.toLower.toByte)
             val enc = codec.encode(slice).map(_.toInt)
             STen.fromIntArray(enc, List(enc.length), CPU)
           }
       }.flatMap { list =>
         val encoded = STen.cat(list, dim = 0)
 
-        scribe.info(s"Saving tokens into $file")
-        saveTokens(file, encoded).map(_ => encoded)
+        if (codec != IdentityCodec) {
+          scribe.info(s"Saving tokens into $file")
+          saveTokens(file, encoded).map(_ => encoded)
+        } else IO.pure(encoded)
       }
     }
 
