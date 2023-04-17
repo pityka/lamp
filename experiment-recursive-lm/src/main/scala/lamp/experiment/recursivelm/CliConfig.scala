@@ -25,7 +25,7 @@ case class CliConfig(
    
 ) {
   val bpeFile =
-    checkpointSave.map(file => new File(file + ".bytesegmentencoding.json"))
+    checkpointSave.map(_ => new File(trainFile + ".bytesegmentencoding.json"))
 }
 
 object CliParser {

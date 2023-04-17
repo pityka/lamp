@@ -198,45 +198,43 @@ object LanguageModelOutputNonVariable {
     Movable.by(v => (v.encoded, v.languageModelLogits, v.memory))
 }
 
-/** Transformer based language model module
-  *
-  * Initial embedding is the sum of token and position embedding. Token
-  * embedding is a learned embedding. Position embedding is also a learned
-  * embedding (not sinusoidal etc).
-  *
-  * Initial embeddings are fed into layers of transformer blocks. Attention
-  * masking is governed by the input similarly as described in chapter 11.3.2.1
-  * in d2l v1.0.0-beta0.
-  *
-  * Selected sequence positions in the output of the transformer chain are
-  * linearly mapped back into the desired vocabulary size.
-  */
 case class LanguageModelModule(
     tokenEmbedding: Embedding,
     positionEmbedding: Embedding,
-    encoder: Zip3Transformer,
+    encoderDecoder: Transformer,
+    cross: Transformer,
     finalNorm: LayerNorm,
     memoryNorm: LayerNorm
 ) extends GenericModule[LanguageModelInput, LanguageModelOutput] {
   def state =
-    tokenEmbedding.state ++ positionEmbedding.state ++ encoder.state ++ finalNorm.state ++ memoryNorm.state
+    tokenEmbedding.state ++ positionEmbedding.state ++ encoderDecoder.state ++
+      cross.state ++
+      finalNorm.state ++ memoryNorm.state
 
   def forward[S: Sc](x: LanguageModelInput): LanguageModelOutput = {
 
     val pos = const(
       STen.arange_l(0, x.tokens.shape(1), 1, x.tokens.options).unsqueeze(0)
     )
+    val posEmbedding = positionEmbedding.forward(pos)
     val embedded =
-      tokenEmbedding.forward(x.tokens) + positionEmbedding.forward(pos)
-    val memory = x.memory.getOrElse(embedded)
+      tokenEmbedding.forward(x.tokens) + posEmbedding
+    val memory = x.memory.getOrElse(
+      posEmbedding * const(
+        STen.ones(List(x.tokens.shape(0), 1, 1), posEmbedding.options)
+      )
+    )
 
-    val (encodedTokens, newMemory) = encoder.forward((embedded, memory))
+    val encodedTokens =
+      encoderDecoder.forward((embedded, memory, None, None))
+
+    val crossedMemory = cross.forward((memory, encodedTokens, None, None))
 
     val encoded = finalNorm(
       encodedTokens
     )
 
-    val normedMemroy = memoryNorm(newMemory)
+    val normedMemroy = memoryNorm(crossedMemory)
 
     val encoderOutputAtPredictionPositions =
       x.positions.fold(encoded)(positions =>
@@ -292,7 +290,7 @@ object LanguageModelModule {
       dimensions = embeddingDim,
       tOpt = tOpt
     ),
-    encoder = Zip3Transformer(
+    encoderDecoder = Transformer(
       numBlocks = numBlocks,
       in = embeddingDim,
       attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
@@ -300,7 +298,21 @@ object LanguageModelModule {
       mlpHiddenDim = encoderMlpHiddenDim,
       dropout = dropout,
       tOpt = tOpt,
-      linearized = linearized
+      linearized = linearized,
+      decoderDecoderCausalMask = true,
+      encoderDecoderCausalMask = false
+    ),
+    cross = Transformer(
+      numBlocks = numBlocks,
+      in = embeddingDim,
+      attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+      attentionNumHeads = attentionNumHeads,
+      mlpHiddenDim = encoderMlpHiddenDim,
+      dropout = dropout,
+      tOpt = tOpt,
+      linearized = linearized,
+      decoderDecoderCausalMask = false,
+      encoderDecoderCausalMask = false
     ),
     finalNorm = LayerNorm(List(embeddingDim.toLong), tOpt),
     memoryNorm = LayerNorm(List(embeddingDim.toLong), tOpt)
@@ -312,7 +324,9 @@ object LanguageModelModule {
         m.copy(
           tokenEmbedding = m.tokenEmbedding.asEval,
           positionEmbedding = m.positionEmbedding.asEval,
-          encoder = m.encoder.asEval,
+          // encoder = m.encoder.asEval,
+          encoderDecoder = m.encoderDecoder.asEval,
+          cross = m.cross.asEval,
           finalNorm = m.finalNorm.asEval,
           memoryNorm = m.memoryNorm.asEval
         ),
@@ -320,7 +334,9 @@ object LanguageModelModule {
         m.copy(
           tokenEmbedding = m.tokenEmbedding.asTraining,
           positionEmbedding = m.positionEmbedding.asTraining,
-          encoder = m.encoder.asTraining,
+          // encoder = m.encoder.asTraining,
+          encoderDecoder = m.encoderDecoder.asTraining,
+          cross = m.cross.asTraining,
           finalNorm = m.finalNorm.asTraining,
           memoryNorm = m.memoryNorm.asTraining
         )
@@ -329,183 +345,11 @@ object LanguageModelModule {
     Load.compose(
       _.tokenEmbedding,
       _.positionEmbedding,
-      _.encoder,
+      _.encoderDecoder,
+      // _.encoder,
+      _.cross,
       _.finalNorm,
       _.memoryNorm
     )
 
-}
-
-case class Zipped3(
-    // encoder: TransformerEncoderBlock,
-    decoder1: TransformerDecoderBlock,
-    decoder2: TransformerDecoderBlock,
-    norm: LayerNorm
-) extends GenericModule[
-      (Variable, Variable),
-      (Variable, Variable)
-    ] {
-
-  def state = // encoder.state ++
-    decoder1.state ++ decoder2.state ++ norm.state
-
-  def forward[S: Sc](
-      x: (Variable, Variable)
-  ): (Variable, Variable) = {
-
-    val (decoderInput, encoderInput) = x
-    // val encoderOutput = encoder.forward((encoderInput, None))
-    val decoder1Output =
-      decoder1.forward((decoderInput, encoderInput, None))
-    val decoder2Output =
-      decoder2.forward((encoderInput, norm(decoder1Output), None))
-    (decoder1Output, decoder2Output)
-
-  }
-
-}
-
-object Zipped3 {
-
-  /* Factory of a single transformer block */
-  def apply[S: Sc](
-      in: Int,
-      attentionHiddenPerHeadDim: Int,
-      attentionNumHeads: Int,
-      mlpHiddenDim: Int,
-      out: Int,
-      dropout: Double,
-      tOpt: STenOptions,
-      linearized: Boolean
-  ): Zipped3 =
-    Zipped3(
-      // encoder = TransformerEncoderBlock(
-      //   in = in,
-      //   attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-      //   attentionNumHeads = attentionNumHeads,
-      //   mlpHiddenDim = mlpHiddenDim,
-      //   out = out,
-      //   dropout = dropout,
-      //   tOpt = tOpt,
-      //   linearized = linearized,
-      //   gptOrder = true,
-      //   causalMask = false
-      // ),
-      decoder1 = TransformerDecoderBlock(
-        in = in,
-        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-        attentionNumHeads = attentionNumHeads,
-        mlpHiddenDim = mlpHiddenDim,
-        out = out,
-        dropout = dropout,
-        tOpt = tOpt,
-        linearized = linearized,
-        decoderDecoderCausalMask = true,
-        encoderDecoderCausalMask = true
-      ),
-      decoder2 = TransformerDecoderBlock(
-        in = in,
-        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-        attentionNumHeads = attentionNumHeads,
-        mlpHiddenDim = mlpHiddenDim,
-        out = out,
-        dropout = dropout,
-        tOpt = tOpt,
-        linearized = linearized,
-        decoderDecoderCausalMask = true,
-        encoderDecoderCausalMask = true
-      ),
-      norm = LayerNorm(List(out.toLong), tOpt)
-    )
-
-  implicit val trainingMode: TrainingMode[Zipped3] =
-    TrainingMode
-      .make[Zipped3](
-        m =>
-          m.copy(
-            // encoder = m.encoder.asEval,
-            decoder1 = m.decoder1.asEval,
-            decoder2 = m.decoder2.asEval,
-            norm = m.norm.asEval
-          ),
-        m =>
-          m.copy(
-            // encoder = m.encoder.asTraining,
-            decoder1 = m.decoder1.asTraining,
-            decoder2 = m.decoder2.asTraining,
-            norm = m.norm.asTraining
-          )
-      )
-
-  implicit val load: Load[Zipped3] =
-    Load.compose(
-      // _.encoder,
-      _.decoder1,
-      _.decoder2,
-      _.norm
-    )
-}
-
-case class Zip3Transformer(
-    blocks: Seq[Zipped3]
-) extends GenericModule[
-      (Variable, Variable),
-      (Variable, Variable)
-    ] {
-  def state = blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
-  def forward[S: Sc](
-      x: (Variable, Variable)
-  ): (Variable, Variable) = {
-    val (decoderInput, encoderInput) = x
-    blocks.foldLeft((decoderInput, encoderInput)) { (a, block) =>
-      block.forward((a._1, a._2))
-    }
-  }
-}
-
-object Zip3Transformer {
-
-  /* Factory of a single transformer block */
-  def apply[S: Sc](
-      numBlocks: Int,
-      in: Int,
-      attentionHiddenPerHeadDim: Int,
-      attentionNumHeads: Int,
-      mlpHiddenDim: Int,
-      dropout: Double,
-      tOpt: STenOptions,
-      linearized: Boolean
-  ): Zip3Transformer =
-    Zip3Transformer(
-      0 until numBlocks map (_ =>
-        Zipped3(
-          in = in,
-          attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-          attentionNumHeads = attentionNumHeads,
-          mlpHiddenDim = mlpHiddenDim,
-          out = in,
-          dropout = dropout,
-          tOpt = tOpt,
-          linearized = linearized
-        )
-      )
-    )
-
-  implicit val trainingMode: TrainingMode[Zip3Transformer] =
-    TrainingMode
-      .make[Zip3Transformer](
-        m => m.copy(blocks = m.blocks.map(_.asEval)),
-        m => m.copy(blocks = m.blocks.map(_.asTraining))
-      )
-
-  implicit val load: Load[Zip3Transformer] = Load.make[Zip3Transformer] {
-    m => tensors =>
-      m.blocks.foldLeft((List[Unit](), tensors)) {
-        case ((acc, params), member) =>
-          val numParam = member.state.size
-          val loaded = member.load(params.take(numParam))
-          (acc.:+(loaded), params.drop(numParam))
-
-      }
-  }
 }
