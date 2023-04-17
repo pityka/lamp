@@ -102,6 +102,84 @@ object TransformerEncoder {
       )
     )
 }
+case class TransformerDecoder(
+    blocks: Seq[TransformerDecoderBlock]
+) extends GenericModule[(Variable, Variable, Option[STen]), Variable] {
+  def state = blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
+  def forward[S: Sc](x: (Variable, Variable, Option[STen])): Variable = {
+    val (input, encoderOutput, maxLength) = x
+    blocks.foldLeft(input) { (a, block) =>
+      block.forward((a, encoderOutput, maxLength))
+    }
+  }
+}
+object TransformerDecoder {
+  implicit val trainingMode: TrainingMode[TransformerDecoder] = TrainingMode
+    .make[TransformerDecoder](
+      m => m.copy(blocks = m.blocks.map(_.asEval)),
+      m => m.copy(blocks = m.blocks.map(_.asTraining))
+    )
+  implicit val load: Load[TransformerDecoder] = Load.make[TransformerDecoder] {
+    m => tensors =>
+      m.blocks.foldLeft((List[Unit](), tensors)) {
+        case ((acc, params), member) =>
+          val numParam = member.state.size
+          val loaded = member.load(params.take(numParam))
+          (acc.:+(loaded), params.drop(numParam))
+
+      }
+
+  }
+
+  /** Factory for the encoder module of transformer. Does *not* include initial
+    * embedding or position encoding.
+    *
+    * @param numBlocks
+    *   number of transformer blocks to create (layers)
+    * @param in
+    *   input dimension
+    * @param attentionHiddenPerHeadDim
+    *   size of hidden attention dimension of each attention head
+    * @param attentionNumHeads
+    *   number of attention heads
+    * @param mlpHiddenDim
+    *   size of hidden dimension of the two layer perceptron
+    * @param dropout
+    *   dropout rate
+    * @param tOpt
+    *   tensor options
+    * @return
+    *   a module
+    */
+  def apply[S: Sc](
+      numBlocks: Int,
+      in: Int,
+      attentionHiddenPerHeadDim: Int,
+      attentionNumHeads: Int,
+      mlpHiddenDim: Int,
+      dropout: Double,
+      tOpt: STenOptions,
+      linearized: Boolean,
+      decoderDecoderCausalMask: Boolean,
+      encoderDecoderCausalMask: Boolean
+  ): TransformerDecoder =
+    TransformerDecoder(
+      0 until numBlocks map (_ =>
+        TransformerDecoderBlock(
+          in = in,
+          attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+          attentionNumHeads = attentionNumHeads,
+          mlpHiddenDim = mlpHiddenDim,
+          out = in,
+          dropout = dropout,
+          tOpt = tOpt,
+          linearized = linearized,
+          decoderDecoderCausalMask = decoderDecoderCausalMask,
+          encoderDecoderCausalMask = encoderDecoderCausalMask
+        )
+      )
+    )
+}
 
 /** A single block of the transformer self attention encoder using GELU
   *
@@ -182,6 +260,7 @@ case class TransformerDecoderBlock(
     layerNorm1: LayerNorm,
     layerNorm2: LayerNorm,
     layerNorm3: LayerNorm,
+    layerNorm4: LayerNorm,
     w1: Constant,
     b1: Constant,
     w2: Constant,
@@ -191,7 +270,7 @@ case class TransformerDecoderBlock(
 ) extends GenericModule[(Variable, Variable, Option[STen]), Variable] {
 
   def state =
-    attentionDecoderDecoder.state ++ attentionEncoderDecoder.state ++ layerNorm1.state ++ layerNorm2.state ++ layerNorm3.state ++ Seq(
+    attentionDecoderDecoder.state ++ attentionEncoderDecoder.state ++ layerNorm1.state ++ layerNorm2.state ++ layerNorm3.state ++ layerNorm4.state ++ Seq(
       w1 -> TransformerEncoderBlock.Weights1,
       w2 -> TransformerEncoderBlock.Weights2,
       b1 -> TransformerEncoderBlock.Bias1,
@@ -210,126 +289,32 @@ case class TransformerDecoderBlock(
     val a2 =
       attentionDecoderDecoder.forward((a1, a1, a1, maxLength)) + decoderInput
     val a3 = layerNorm2(a2.dropout(dropout, train))
-    val a4 = attentionEncoderDecoder.forward(
-      (a3, encoderOutput, encoderOutput, None)
-    ) + a2
-    val a5 = layerNorm3(a4.dropout(dropout, train))
-    val a6 = mm1((mm1(a5, w1) + b1).gelu, w2) + b2 + a4
+    val a4 = layerNorm3(encoderOutput.dropout(dropout, train))
+    val a5 = a2 + attentionEncoderDecoder.forward((a3, a4, a4, None)) 
+    
+    val a6 = layerNorm4(a5.dropout(dropout, train))
+    val a7 = mm1((mm1(a6, w1) + b1).gelu, w2) + b2 + a5
 
-    a6
-
-  }
-
-}
-
-/** A paired transformer encoder and decoder block
-  *
-  * Similar to d2l.ai ch11.7
-  *
-  * The encoder has self attention. The decoder has self attention and
-  * encoder-decoder cross attention.
-  */
-case class TransformerPairedEncoderDecoderBlock(
-    encoder: TransformerEncoderBlock,
-    decoder: TransformerDecoderBlock
-) extends GenericModule[
-      (Variable, Variable, Option[STen]),
-      (Variable, Variable)
-    ] {
-
-  def state = encoder.state ++ decoder.state
-
-  def forward[S: Sc](
-      x: (Variable, Variable, Option[STen])
-  ): (Variable, Variable) = {
-
-    val (decoderInput, encoderInput, maxLength) = x
-    val encoderOutput = encoder.forward((encoderInput, None))
-    val decoderOutput =
-      decoder.forward((decoderInput, encoderOutput, maxLength))
-    (encoderOutput, decoderOutput)
+    a7
 
   }
 
 }
 
-object TransformerPairedEncoderDecoderBlock {
-
-  def apply[S: Sc](
-      in: Int,
-      attentionHiddenPerHeadDim: Int,
-      attentionNumHeads: Int,
-      mlpHiddenDim: Int,
-      out: Int,
-      dropout: Double,
-      tOpt: STenOptions,
-      linearized: Boolean,
-      decoderDecoderCausalMask: Boolean,
-      encoderDecoderCausalMask: Boolean
-  ): TransformerPairedEncoderDecoderBlock =
-    TransformerPairedEncoderDecoderBlock(
-      encoder = TransformerEncoderBlock(
-        in = in,
-        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-        attentionNumHeads = attentionNumHeads,
-        mlpHiddenDim = mlpHiddenDim,
-        out = out,
-        dropout = dropout,
-        tOpt = tOpt,
-        linearized = linearized,
-        gptOrder = true,
-        causalMask = false
-      ),
-      decoder = TransformerDecoderBlock(
-        in = in,
-        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-        attentionNumHeads = attentionNumHeads,
-        mlpHiddenDim = mlpHiddenDim,
-        out = out,
-        dropout = dropout,
-        tOpt = tOpt,
-        linearized = linearized,
-        decoderDecoderCausalMask = decoderDecoderCausalMask,
-        encoderDecoderCausalMask = encoderDecoderCausalMask
-      )
-    )
-
-  implicit val trainingMode
-      : TrainingMode[TransformerPairedEncoderDecoderBlock] =
-    TrainingMode
-      .make[TransformerPairedEncoderDecoderBlock](
-        m =>
-          m.copy(
-            encoder = m.encoder.asEval,
-            decoder = m.decoder.asEval
-          ),
-        m =>
-          m.copy(
-            encoder = m.encoder.asTraining,
-            decoder = m.decoder.asTraining
-          )
-      )
-
-  implicit val load: Load[TransformerPairedEncoderDecoderBlock] =
-    Load.compose(_.encoder, _.decoder)
-}
-
-/** An tower of encoder-decoder transfomer blocks
-  */
 case class Transformer(
-    blocks: Seq[TransformerPairedEncoderDecoderBlock]
+    encoder: TransformerEncoder,
+    decoder: TransformerDecoder
 ) extends GenericModule[
-      (Variable, Variable, Option[STen]),
-      (Variable, Variable)
+      (Variable, Variable, Option[STen], Option[STen]),
+      Variable
     ] {
-  def state = blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
+  def state = encoder.state ++ decoder.state
   def forward[S: Sc](
-      x: (Variable, Variable, Option[STen])
-  ): (Variable, Variable) = {
-    val (decoderInput, encoderInput, maxLength) = x
-    blocks.foldLeft((decoderInput, encoderInput)) { (a, block) =>
-      block.forward((a._1, a._2, maxLength))
-    }
+      x: (Variable, Variable, Option[STen], Option[STen])
+  ): Variable = {
+    val (decoderInput, encoderInput, decoderMaxLength, encoderMaxLength) = x
+    val encoderOutput = encoder.forward((encoderInput, encoderMaxLength))
+    decoder.forward((decoderInput, encoderOutput, decoderMaxLength))
   }
 }
 
@@ -345,43 +330,46 @@ object Transformer {
       dropout: Double,
       tOpt: STenOptions,
       linearized: Boolean,
-      decoderDecoderCausalMask: Boolean,
-      encoderDecoderCausalMask: Boolean
+      encoderCausalMask: Boolean = false,
+      decoderDecoderCausalMask: Boolean = true,
+      encoderDecoderCausalMask: Boolean = false
   ): Transformer =
     Transformer(
-      0 until numBlocks map (_ =>
-        TransformerPairedEncoderDecoderBlock(
-          in = in,
-          attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-          attentionNumHeads = attentionNumHeads,
-          mlpHiddenDim = mlpHiddenDim,
-          out = in,
-          dropout = dropout,
-          tOpt = tOpt,
-          linearized = linearized,
-          decoderDecoderCausalMask = decoderDecoderCausalMask,
-          encoderDecoderCausalMask = encoderDecoderCausalMask
-        )
+      TransformerEncoder(
+        numBlocks = numBlocks,
+        in = in,
+        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+        attentionNumHeads = attentionNumHeads,
+        mlpHiddenDim = mlpHiddenDim,
+        dropout = dropout,
+        tOpt = tOpt,
+        linearized = linearized,
+        gptOrder = true,
+        causalMask = encoderCausalMask
+      ),
+      TransformerDecoder(
+        numBlocks = numBlocks,
+        in = in,
+        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+        attentionNumHeads = attentionNumHeads,
+        mlpHiddenDim = mlpHiddenDim,
+        dropout = dropout,
+        tOpt = tOpt,
+        linearized = linearized,
+        decoderDecoderCausalMask = decoderDecoderCausalMask,
+        encoderDecoderCausalMask = encoderDecoderCausalMask
       )
     )
 
   implicit val trainingMode: TrainingMode[Transformer] =
     TrainingMode
       .make[Transformer](
-        m => m.copy(blocks = m.blocks.map(_.asEval)),
-        m => m.copy(blocks = m.blocks.map(_.asTraining))
+        m => m.copy(encoder = m.encoder.asEval, decoder = m.decoder.asEval),
+        m =>
+          m.copy(encoder = m.encoder.asTraining, decoder = m.decoder.asTraining)
       )
 
-  implicit val load: Load[Transformer] = Load.make[Transformer] {
-    m => tensors =>
-      m.blocks.foldLeft((List[Unit](), tensors)) {
-        case ((acc, params), member) =>
-          val numParam = member.state.size
-          val loaded = member.load(params.take(numParam))
-          (acc.:+(loaded), params.drop(numParam))
-
-      }
-  }
+  implicit val load: Load[Transformer] = Load.compose(_.encoder, _.decoder)
 }
 
 object TransformerDecoderBlock {
@@ -427,6 +415,7 @@ object TransformerDecoderBlock {
       layerNorm1 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       layerNorm2 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       layerNorm3 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
+      layerNorm4 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       w1 = initLinear(in, mlpHiddenDim, tOpt),
       b1 = param(STen.zeros(List(1, mlpHiddenDim), tOpt)),
       w2 = initLinear(mlpHiddenDim, out, tOpt),
@@ -474,9 +463,14 @@ object TransformerDecoderBlock {
           attenionStatesSize + m.layerNorm1.state.size + m.layerNorm2.state.size
         )
       )
+      m.layerNorm4.load(
+        tensors.drop(
+          attenionStatesSize + m.layerNorm1.state.size + m.layerNorm2.state.size + m.layerNorm3.state.size
+        )
+      )
 
       val remaining = tensors.drop(
-        attenionStatesSize + m.layerNorm1.state.size + m.layerNorm2.state.size + m.layerNorm3.state.size
+        attenionStatesSize + m.layerNorm1.state.size + m.layerNorm2.state.size + m.layerNorm3.state.size + m.layerNorm4.state.size
       )
       m.w1.value.copyFrom(remaining(0))
       m.w2.value.copyFrom(remaining(1))
@@ -964,7 +958,7 @@ object MultiheadAttention {
 
         // (batch * numHeads) x num queries OR (batch * numHeads)
         val maxLengthRepated = if (causalMask && maxLength.isEmpty) {
-          val single = STen.arange_l(1, nQ + 1, 1,q1t.options).unsqueeze(0)
+          val single = STen.arange_l(1, nQ + 1, 1, q1t.options).unsqueeze(0)
           Some(single.repeat(List(nB * numHeads, 1)))
 
         } else maxLength.map(_.repeat(List(numHeads, 1)))
