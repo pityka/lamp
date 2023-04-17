@@ -16,13 +16,7 @@ case class LanguageModelInput(
     tokens: Constant,
     memory: Option[Variable],
     positions: Option[STen]
-    // memoryWidth: Int
 )
-
-object LanguageModelInput {
-  // implicit val movable: Movable[LanguageModelInput] =
-  //   Movable.by(v => (v.tokens, v.memory, v.positions))
-}
 
 /** Language model input and target for loss calculation
   *
@@ -32,18 +26,9 @@ object LanguageModelInput {
   */
 case class LossInput(
     tokensAndTarget: Seq[(Constant, STen)]
-) {
-  // assert(
-  //   languageModelTarget.shape == positions
-  //     .map(_.shape)
-  //     .getOrElse(tokens.shape)
-  // )
-}
+)
 
-object LossInput {
-  // implicit val movable: Movable[LossInput] =
-  //   Movable.by(v => (v.input, v.languageModelTarget))
-}
+object LossInput
 
 /** Module with the language model and a loss
   *
@@ -172,6 +157,8 @@ object LanguageModelLoss {
   * @param languageModelLogits
   *   float tensor of size (batch, sequence length, vocabulary size) holds per
   *   token logits. Use logSoftMax(dim=2) to get log probabilities.
+  * @param memory
+  *   float tnesor of size same as encoded
   */
 case class LanguageModelOutput(
     encoded: Variable,
@@ -207,9 +194,12 @@ case class LanguageModelModule(
     memoryNorm: LayerNorm
 ) extends GenericModule[LanguageModelInput, LanguageModelOutput] {
   def state =
-    tokenEmbedding.state ++ positionEmbedding.state ++ encoderDecoder.state ++
+    tokenEmbedding.state ++
+      positionEmbedding.state ++
+      encoderDecoder.state ++
       cross.state ++
-      finalNorm.state ++ memoryNorm.state
+      finalNorm.state ++
+      memoryNorm.state
 
   def forward[S: Sc](x: LanguageModelInput): LanguageModelOutput = {
 
@@ -225,16 +215,10 @@ case class LanguageModelModule(
       )
     )
 
-    val encodedTokens =
-      encoderDecoder.forward((embedded, memory, None, None))
+    val encoded =
+      finalNorm(encoderDecoder.forward((embedded, memory, None, None)))
 
-    val crossedMemory = cross.forward((memory, encodedTokens, None, None))
-
-    val encoded = finalNorm(
-      encodedTokens
-    )
-
-    val normedMemroy = memoryNorm(crossedMemory)
+    val crossedMemory = memoryNorm(cross.forward((memory, encoded, None, None)))
 
     val encoderOutputAtPredictionPositions =
       x.positions.fold(encoded)(positions =>
@@ -260,7 +244,7 @@ case class LanguageModelModule(
     LanguageModelOutput(
       encoded = encoded,
       languageModelLogits = logits,
-      memory = normedMemroy
+      memory = crossedMemory
     )
   }
 
@@ -324,7 +308,6 @@ object LanguageModelModule {
         m.copy(
           tokenEmbedding = m.tokenEmbedding.asEval,
           positionEmbedding = m.positionEmbedding.asEval,
-          // encoder = m.encoder.asEval,
           encoderDecoder = m.encoderDecoder.asEval,
           cross = m.cross.asEval,
           finalNorm = m.finalNorm.asEval,
@@ -334,7 +317,6 @@ object LanguageModelModule {
         m.copy(
           tokenEmbedding = m.tokenEmbedding.asTraining,
           positionEmbedding = m.positionEmbedding.asTraining,
-          // encoder = m.encoder.asTraining,
           encoderDecoder = m.encoderDecoder.asTraining,
           cross = m.cross.asTraining,
           finalNorm = m.finalNorm.asTraining,
@@ -346,7 +328,6 @@ object LanguageModelModule {
       _.tokenEmbedding,
       _.positionEmbedding,
       _.encoderDecoder,
-      // _.encoder,
       _.cross,
       _.finalNorm,
       _.memoryNorm
