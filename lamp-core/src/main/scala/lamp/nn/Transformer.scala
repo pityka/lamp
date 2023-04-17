@@ -131,7 +131,7 @@ object TransformerDecoder {
 
   }
 
-  /** Factory for the encoder module of transformer. Does *not* include initial
+  /** Factory for the decoder module of transformer. Does *not* include initial
     * embedding or position encoding.
     *
     * @param numBlocks
@@ -290,8 +290,8 @@ case class TransformerDecoderBlock(
       attentionDecoderDecoder.forward((a1, a1, a1, maxLength)) + decoderInput
     val a3 = layerNorm2(a2.dropout(dropout, train))
     val a4 = layerNorm3(encoderOutput.dropout(dropout, train))
-    val a5 = a2 + attentionEncoderDecoder.forward((a3, a4, a4, None)) 
-    
+    val a5 = a2 + attentionEncoderDecoder.forward((a3, a4, a4, None))
+
     val a6 = layerNorm4(a5.dropout(dropout, train))
     val a7 = mm1((mm1(a6, w1) + b1).gelu, w2) + b2 + a5
 
