@@ -27,6 +27,9 @@ object Util {
           Model.codecFactory
         )
 
+                _ = scribe.info(s"Trained codec: $codec")
+
+
         trainCorpus <-
           Util.encodeOrReadTokens(
             rawTrainCorpus,

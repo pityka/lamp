@@ -2,13 +2,14 @@ package lamp.experiment.recursivelm.model
 import lamp.data._
 import lamp._
 import lamp.autograd.const
+import lamp.experiment.recursivelm.Model
 object DataLoader {
   def minibatchesFromDocuments(
       minibatchSize: Int,
       numBatches: Int,
       corpus: STen,
       blockLength: Int,
-      recursionLength: Int,
+      numberOfWindows: Int,
   ) = {
     val N = corpus.shape(0)
     val rng = scala.util.Random
@@ -17,15 +18,15 @@ object DataLoader {
         val (tokens, targets) = Scope { implicit scope =>
           val minibatches = 0 until minibatchSize map { _ =>
             
-           val start0 = rng.nextLong(N - blockLength * recursionLength * 2 - 1)
+           val start0 = rng.nextLong(N - blockLength * numberOfWindows  * 2 - 1)
             val starts = {
-              0 until recursionLength map { i =>
+              0 until (numberOfWindows ) map { i =>
                   start0 + i*blockLength 
               }
               
             }
 
-            starts.map { start =>
+            (starts.take(1)++starts.takeRight(1)).map { start =>
               val token = corpus
                 .slice(0, start.toLong, start.toLong + blockLength, 1L)
                 .castToLong
@@ -50,8 +51,8 @@ object DataLoader {
             .transpose
             .map(st => STen.stack(st, dim = 0))
 
-          assert(minibatchTargets.size == recursionLength)
-          assert(minibatchTokens.size == recursionLength)
+          assert(minibatchTargets.size == Model.recursionLength)
+          assert(minibatchTokens.size == Model.recursionLength)
 
           device.withOtherStreamThenSync(synchronizeBefore = false) {
 

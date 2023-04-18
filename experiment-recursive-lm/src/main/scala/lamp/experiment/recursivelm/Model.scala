@@ -1,31 +1,30 @@
 package lamp.experiment.recursivelm
 import lamp._
 import lamp.nn._
-// import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
-import lamp.data.IdentityCodecFactory
+import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
 
 object Model {
 
-  val vocabularySize = 256 //50304
+  val vocabularySize = 1024
   val contextLength = 128
-  val recursionLength = 4
+  val recursionLength = 2 // must be two or change Loader.scala
 
-  val codecFactory = IdentityCodecFactory
-  //   ByteSegmentCodecFactory(
-  //   vocabularyMin = 0.toChar,
-  //   vocabularyMax = vocabularySize.toChar,
-  //   maxMergedSegmentLength = 1,//7,
-  //   unknownToken = 0.toChar,
-  //   unknownByte = '}'.toByte
-  // )
+  val codecFactory =
+    ByteSegmentCodecFactory(
+      vocabularyMin = 0.toChar,
+      vocabularyMax = vocabularySize.toChar,
+      maxMergedSegmentLength = 7,
+      unknownToken = 0.toChar,
+      unknownByte = '}'.toByte
+    )
 
   def allocateModel(device: Device)(implicit
       scope: Scope
   ) = {
     val tensorOptions = device.options(SinglePrecision)
-    val embeddingDim = 384//768
-    val layers = 6
-    val numHeads = 6//12
+    val embeddingDim =  384
+    val layers = 12
+    val numHeads = 12
     val net = lamp.experiment.recursivelm.model.LanguageModelLoss.apply(
       maxLength = contextLength,
       vocabularySize = vocabularySize,
@@ -37,7 +36,7 @@ object Model {
       dropout = 0d,
       padToken = -1000L,
       tOpt = tensorOptions,
-      linearized = false,
+      linearized = false
     )
     scribe.info(
       f"Allocated model on $device . embedding=$embeddingDim layers=$layers num-heads=$numHeads num-param=${net.learnableParameters}%,d "
