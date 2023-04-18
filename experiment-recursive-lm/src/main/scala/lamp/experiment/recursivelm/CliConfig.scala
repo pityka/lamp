@@ -22,6 +22,7 @@ case class CliConfig(
     extendLength: Int = 50,
     gradientAccumSteps: Int = 1,
     parallelism: Int = 64,
+    windows: Int = 8
    
 ) {
   val bpeFile =
@@ -64,6 +65,7 @@ object CliParser {
         c.copy(fileMaxLength = x)
       ),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
+      opt[Int]("load-windows").action((x, c) => c.copy(windows = x)),
       opt[Int]("gradient-accum-steps").action((x, c) =>
         c.copy(gradientAccumSteps = x)
       ),

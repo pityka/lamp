@@ -68,7 +68,9 @@ object Sampling {
       else
         Scope
           .bracket(scope) { implicit scope =>
+           
             val prefix = acc.takeRight(modelBlockSize)
+            println("sample")
             single(memory, prefix).map { output =>
               val probs = (output.languageModelLogits / temperature)
                 .logSoftMax(2)
@@ -86,11 +88,33 @@ object Sampling {
               (next, memory)
             }
           }
-          .flatMap { case (next, memory) =>
-            loop(n - 1, acc :+ next, Some(memory))(scope)
+          .flatMap { case (next, memory2) =>
+            loop(n - 1, acc :+ next, Some(memory2))(scope)
+          }
+    def loop1(acc: Array[Char], memory: Option[STen])(
+        scope: Scope
+    ): IO[Option[STen]] =
+      if (acc.size == modelBlockSize) IO.pure(memory)
+      else
+        Scope
+          .bracket(scope) { implicit scope =>
+           
+            val prefix = acc.take(modelBlockSize)
+            println("feed memory ")
+            single(memory, prefix).map { output =>
+           
+              val memory = output.memory
+              ( memory)
+            }
+          }
+          .flatMap { case ( memory) =>
+            loop1( acc.drop(1), Some(memory))(scope)
           }
 
-    loop(length, prefix, None)(scope)
+          assert(prefix.length >= modelBlockSize)
+        loop1(prefix,None)(scope).flatMap{ memory =>
+    loop(length, prefix, memory)(scope)
+        }
 
   }
 }

@@ -8,6 +8,8 @@ case class ByteSegmentCodec(
     unknownToken: Char,
     unknownByte: Byte
 ) extends lamp.data.Codec {
+
+  override def toString() = s"ByteSegmentCodec(unknownToken=${unknownToken.toInt},unknownByte=$unknownByte,trained(top1000)=${trained.map(v => v._1.map(_.toChar).mkString -> v._2.toInt).take(1000).mkString("\n","\n","\n")})"
   def encode(in: Array[Byte]): Array[Char] =
     lamp.data.bytesegmentencoding.encode(
       corpus = in,
