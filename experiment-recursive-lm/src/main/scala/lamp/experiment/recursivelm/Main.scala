@@ -10,6 +10,7 @@ import cats.effect.IOApp
 
 object Main extends IOApp {
   scribe.info("Logger start")
+  aten.Tensor.allowtf32(true)
 
   override def run(args: List[String]): IO[ExitCode] =
     CliParser.runCli(args.toList) {

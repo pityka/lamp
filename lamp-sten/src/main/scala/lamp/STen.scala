@@ -636,6 +636,9 @@ case class STenOptions(value: aten.TensorOptions) {
   /** Returns a copy with dtype set to float */
   def toFloat[S: Sc] = value.toFloat.owned
 
+  /** Returns a copy with dtype set to half */
+  def toHalf[S: Sc] = value.toHalf.owned
+
   /** Returns a copy with dtype set to a value compatible with Scala's Byte */
   def toByte[S: Sc] = value.toByte.owned
 

@@ -38,7 +38,7 @@ object Train {
         numBatches = config.numBatchesPerEpoch,
         corpus = trainCorpus,
         blockLength = Model.contextLength,
-        numberOfWindows = config.windows,
+        numberOfWindows = Model.recursionLength,
       )
     val validEpochs = validCorpus.map(v =>(_: IOLoops.TrainingLoopContext) =>
       lamp.experiment.recursivelm.model.DataLoader.minibatchesFromDocuments(
@@ -46,7 +46,7 @@ object Train {
         numBatches = config.numBatchesPerEpoch,
         corpus = v,
         blockLength = Model.contextLength,
-        numberOfWindows = config.windows,
+        numberOfWindows = Model.recursionLength,
       ))
 
     val optimizer = AdamW.factory(

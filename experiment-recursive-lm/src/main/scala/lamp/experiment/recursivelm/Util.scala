@@ -96,7 +96,7 @@ object Util {
         length = l,
         scalarTypeByte = 1,
         pin = false
-      )
+      ).max(STen.scalarLong(0,STenOptions.l))
 
     }
   def saveTokens(file: File, tokens: STen): IO[Unit] = {

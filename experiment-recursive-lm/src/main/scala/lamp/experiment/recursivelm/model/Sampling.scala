@@ -100,7 +100,6 @@ object Sampling {
           .bracket(scope) { implicit scope =>
            
             val prefix = acc.take(modelBlockSize)
-            println("feed memory ")
             single(memory, prefix).map { output =>
            
               val memory = output.memory
@@ -111,10 +110,11 @@ object Sampling {
             loop1( acc.drop(1), Some(memory))(scope)
           }
 
-          assert(prefix.length >= modelBlockSize)
+          if (prefix.length >= modelBlockSize) {
         loop1(prefix,None)(scope).flatMap{ memory =>
     loop(length, prefix, memory)(scope)
         }
+      } else loop(length, prefix, None)(scope)
 
   }
 }

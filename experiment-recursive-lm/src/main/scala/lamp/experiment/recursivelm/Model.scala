@@ -2,30 +2,34 @@ package lamp.experiment.recursivelm
 import lamp._
 import lamp.nn._
 import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
+import lamp.data.IdentityCodec
+import lamp.data.IdentityCodecFactory
 
 object Model {
 
-  val vocabularySize = 1024
+  val vocabularySize = 256
   val contextLength = 128
   val recursionLength = 2 // must be two or change Loader.scala
+  val memoryWidth = 128
 
-  val codecFactory =
-    ByteSegmentCodecFactory(
-      vocabularyMin = 0.toChar,
-      vocabularyMax = vocabularySize.toChar,
-      maxMergedSegmentLength = 7,
-      unknownToken = 0.toChar,
-      unknownByte = '}'.toByte
-    )
+  val codecFactory = IdentityCodecFactory
+    // ByteSegmentCodecFactory(
+    //   vocabularyMin = 0.toChar,
+    //   vocabularyMax = vocabularySize.toChar,
+    //   maxMergedSegmentLength = 7,
+    //   unknownToken = 0.toChar,
+    //   unknownByte = '}'.toByte
+    // )
 
   def allocateModel(device: Device)(implicit
       scope: Scope
   ) = {
     val tensorOptions = device.options(SinglePrecision)
-    val embeddingDim =  384
+    val embeddingDim =  768
     val layers = 12
     val numHeads = 12
     val net = lamp.experiment.recursivelm.model.LanguageModelLoss.apply(
+      memoryWidth = memoryWidth,
       maxLength = contextLength,
       vocabularySize = vocabularySize,
       numBlocks = layers,

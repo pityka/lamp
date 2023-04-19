@@ -892,7 +892,7 @@ object MultiheadAttention {
 
     def mm1(a: Variable, b: Variable) = {
       val shape = a.shape
-      a.view(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
+      a.reshape(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
     }
 
     // in a x b x c
