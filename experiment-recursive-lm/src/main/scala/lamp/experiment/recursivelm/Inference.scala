@@ -26,8 +26,7 @@ object Inference {
       val modelAsEval = model.languageModel.asEval
 
       val rawPrefix = {
-        val s = config.extend.get.getBytes("US-ASCII")
-        Array.empty[Byte].padTo(Model.contextLength - s.length,' '.toByte) ++ s 
+        config.extend.get.getBytes("US-ASCII")
       }
 
       val encodedPrefix = codec.encode(rawPrefix)

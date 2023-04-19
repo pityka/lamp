@@ -110,10 +110,12 @@ object LanguageModelLoss {
       dropout: Double,
       padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      memoryWidth: Int
   ): LanguageModelLoss = LanguageModelLoss(
     embeddingDim = embeddingDim,
     languageModel = LanguageModelModule(
+      memoryWidth = memoryWidth,
       maxLength = maxLength,
       vocabularySize = vocabularySize,
       numBlocks = numBlocks,
@@ -188,63 +190,74 @@ object LanguageModelOutputNonVariable {
 case class LanguageModelModule(
     tokenEmbedding: Embedding,
     positionEmbedding: Embedding,
-    encoderDecoder: Transformer,
-    cross: Transformer,
+    encoderDecoder: TransformerEncoder,
+    // cross: Transformer,
     finalNorm: LayerNorm,
-    memoryNorm: LayerNorm
+    memoryWidth: Int
+    // memoryNorm: LayerNorm
 ) extends GenericModule[LanguageModelInput, LanguageModelOutput] {
   def state =
     tokenEmbedding.state ++
       positionEmbedding.state ++
       encoderDecoder.state ++
-      cross.state ++
-      finalNorm.state ++
-      memoryNorm.state
+      // cross.state ++
+      finalNorm.state
+  // memoryNorm.state
 
   def forward[S: Sc](x: LanguageModelInput): LanguageModelOutput = {
 
+    val nSeq = x.tokens.shape(1)
     val pos = const(
-      STen.arange_l(0, x.tokens.shape(1), 1, x.tokens.options).unsqueeze(0)
+      STen.arange_l(0, nSeq + 2*memoryWidth, 1, x.tokens.options).unsqueeze(0)
     )
     val posEmbedding = positionEmbedding.forward(pos)
-    val embedded =
-      tokenEmbedding.forward(x.tokens) + posEmbedding
+    val tokenEmbedded =
+      tokenEmbedding.forward(x.tokens)
     val memory = x.memory.getOrElse(
-      posEmbedding * const(
-        STen.ones(List(x.tokens.shape(0), 1, 1), posEmbedding.options)
+      const(
+        STen.zeros(
+          List(x.tokens.shape(0), memoryWidth, posEmbedding.shape(2)),
+          posEmbedding.options
+        )
       )
     )
 
-    val encoded =
-      finalNorm(encoderDecoder.forward((embedded, memory, None, None)))
+    val cat =
+      Variable.cat(List(memory, tokenEmbedded, memory), dim = 1) + posEmbedding
+    val encoded = finalNorm(encoderDecoder.forward((cat, None)))
 
-    val crossedMemory = memoryNorm(cross.forward((memory, encoded, None, None)))
+    val newMemory = encoded.slice(dim = 1, nSeq + memoryWidth, nSeq + memoryWidth * 2, 1)
+
+    val encodedTokens = encoded.slice(dim = 1, memoryWidth, nSeq +memoryWidth, 1)
 
     val encoderOutputAtPredictionPositions =
-      x.positions.fold(encoded)(positions =>
-        encoded
-          .view(List(-1, encoded.shape(2)))
+      x.positions.fold(encodedTokens)(positions =>
+        encodedTokens
+          .view(List(-1, encodedTokens.shape(2)))
           .indexSelect(dim = 0, index = const(positions.view(-1)))
           .view(
             List(
-              encoded.shape(0),
+              encodedTokens.shape(0),
               positions.shape(1),
-              encoded.shape(2)
+              encodedTokens.shape(2)
             )
           )
       )
 
     def mm1(a: Variable, b: Variable) = {
       val shape = a.shape
-      a.view(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
+      a
+        .reshape(List(-1, shape.last))
+        .mm(b)
+        .view(shape.dropRight(1) :+ -1L)
     }
 
     val logits =
       mm1(encoderOutputAtPredictionPositions, tokenEmbedding.weights.t)
     LanguageModelOutput(
-      encoded = encoded,
+      encoded = encodedTokens,
       languageModelLogits = logits,
-      memory = crossedMemory
+      memory = newMemory
     )
   }
 
@@ -262,19 +275,21 @@ object LanguageModelModule {
       encoderMlpHiddenDim: Int,
       dropout: Double,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      memoryWidth: Int
   ): LanguageModelModule = LanguageModelModule(
+    memoryWidth = memoryWidth,
     tokenEmbedding = Embedding.apply(
       classes = vocabularySize,
       dimensions = embeddingDim,
       tOpt = tOpt
     ),
     positionEmbedding = Embedding.apply(
-      classes = maxLength,
+      classes = maxLength + 2*memoryWidth,
       dimensions = embeddingDim,
       tOpt = tOpt
     ),
-    encoderDecoder = Transformer(
+    encoderDecoder = TransformerEncoder(
       numBlocks = numBlocks,
       in = embeddingDim,
       attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
@@ -283,23 +298,23 @@ object LanguageModelModule {
       dropout = dropout,
       tOpt = tOpt,
       linearized = linearized,
-      decoderDecoderCausalMask = true,
-      encoderDecoderCausalMask = false
+      gptOrder = true,
+      causalMask = true
     ),
-    cross = Transformer(
-      numBlocks = numBlocks,
-      in = embeddingDim,
-      attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
-      attentionNumHeads = attentionNumHeads,
-      mlpHiddenDim = encoderMlpHiddenDim,
-      dropout = dropout,
-      tOpt = tOpt,
-      linearized = linearized,
-      decoderDecoderCausalMask = false,
-      encoderDecoderCausalMask = false
-    ),
-    finalNorm = LayerNorm(List(embeddingDim.toLong), tOpt),
-    memoryNorm = LayerNorm(List(embeddingDim.toLong), tOpt)
+    // cross = Transformer(
+    //   numBlocks = numBlocks,
+    //   in = embeddingDim,
+    //   attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+    //   attentionNumHeads = attentionNumHeads,
+    //   mlpHiddenDim = encoderMlpHiddenDim,
+    //   dropout = dropout,
+    //   tOpt = tOpt,
+    //   linearized = linearized,
+    //   decoderDecoderCausalMask = false,
+    //   encoderDecoderCausalMask = false
+    // ),
+    finalNorm = LayerNorm(List(embeddingDim.toLong), tOpt)
+    // memoryNorm = LayerNorm(List(embeddingDim.toLong), tOpt)
   )
 
   implicit val trainingMode: TrainingMode[LanguageModelModule] = TrainingMode
@@ -309,18 +324,18 @@ object LanguageModelModule {
           tokenEmbedding = m.tokenEmbedding.asEval,
           positionEmbedding = m.positionEmbedding.asEval,
           encoderDecoder = m.encoderDecoder.asEval,
-          cross = m.cross.asEval,
-          finalNorm = m.finalNorm.asEval,
-          memoryNorm = m.memoryNorm.asEval
+          // cross = m.cross.asEval,
+          finalNorm = m.finalNorm.asEval
+          // memoryNorm = m.memoryNorm.asEval
         ),
       m =>
         m.copy(
           tokenEmbedding = m.tokenEmbedding.asTraining,
           positionEmbedding = m.positionEmbedding.asTraining,
           encoderDecoder = m.encoderDecoder.asTraining,
-          cross = m.cross.asTraining,
-          finalNorm = m.finalNorm.asTraining,
-          memoryNorm = m.memoryNorm.asTraining
+          // cross = m.cross.asTraining,
+          finalNorm = m.finalNorm.asTraining
+          // memoryNorm = m.memoryNorm.asTraining
         )
     )
   implicit val load: Load[LanguageModelModule] =
@@ -328,9 +343,9 @@ object LanguageModelModule {
       _.tokenEmbedding,
       _.positionEmbedding,
       _.encoderDecoder,
-      _.cross,
-      _.finalNorm,
-      _.memoryNorm
+      // _.cross,
+      _.finalNorm
+      // _.memoryNorm
     )
 
 }

@@ -26,7 +26,7 @@ object DataLoader {
               
             }
 
-            (starts.take(1)++starts.takeRight(1)).map { start =>
+            starts.map { start =>
               val token = corpus
                 .slice(0, start.toLong, start.toLong + blockLength, 1L)
                 .castToLong
