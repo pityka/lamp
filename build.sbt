@@ -122,7 +122,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+113-8aabaa1a+20230419-0949",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+113-8aabaa1a+20230419-2149",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"

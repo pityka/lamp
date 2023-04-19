@@ -32,6 +32,8 @@ object STen {
   /** A tensor option specifying CPU and byte */
   val bOptions = STenOptions(aten.TensorOptions.b())
 
+  val bf16Options = STenOptions(aten.TensorOptions.dtypeBF16)
+
   implicit class OwnedSyntax(t: Tensor) {
     def owned[S: Sc] = STen.owned(t)
   }
@@ -171,6 +173,7 @@ object STen {
             case 4 => STen.zeros(List(0), STenOptions.l)
             case 6 => STen.zeros(List(0), STenOptions.f)
             case 7 => STen.zeros(List(0), STenOptions.d)
+            case 15 => STen.zeros(List(0), STen.bf16Options)
           }
         }
       else
@@ -641,6 +644,7 @@ case class STenOptions(value: aten.TensorOptions) {
 
   /** Returns a copy with dtype set to a value compatible with Scala's Byte */
   def toByte[S: Sc] = value.toByte.owned
+  def toBF16[S: Sc] = value.toBF16.owned
 
   /** Returns a copy with device set to CPU */
   def cpu[S: Sc] = value.cpu.owned
@@ -692,6 +696,8 @@ object STenOptions {
 
   /** Returns an tensor option specifying CPU and double */
   def b = STen.bOptions
+  /** Returns an tensor option specifying CPU and double */
+  def bf16 = STen.bf16Options
 
   val deviceTypeCpu: Byte = 0
   val deviceTypeCuda: Byte = 1
