@@ -68,7 +68,7 @@ object CliParser {
       opt[Int]("extend-length")
         .action((x, c) => c.copy(extendLength = x))
         .text("extend this number of tkens in inference model"),
-      opt[Int]("train-file-max-length").action((x, c) =>
+      opt[Long]("train-file-max-length").action((x, c) =>
         c.copy(fileMaxLength = x)
       ),
       opt[Int]("epochs").action((x, c) => c.copy(epochs = x)),
