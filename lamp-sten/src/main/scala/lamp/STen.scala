@@ -169,10 +169,10 @@ object STen {
       if (length == 0)
         tensors.toVector.map { case (tpe, _, _) =>
           tpe match {
-            case 1 => STen.zeros(List(0), STenOptions.b)
-            case 4 => STen.zeros(List(0), STenOptions.l)
-            case 6 => STen.zeros(List(0), STenOptions.f)
-            case 7 => STen.zeros(List(0), STenOptions.d)
+            case 1  => STen.zeros(List(0), STenOptions.b)
+            case 4  => STen.zeros(List(0), STenOptions.l)
+            case 6  => STen.zeros(List(0), STenOptions.f)
+            case 7  => STen.zeros(List(0), STenOptions.d)
             case 15 => STen.zeros(List(0), STen.bf16Options)
           }
         }
@@ -457,6 +457,15 @@ object STen {
   ): Unit =
     ATen
       .addcmul_out(out.value, self.value, tensor1.value, tensor2.value, alpha)
+  def addcdivOut(
+      out: STen,
+      self: STen,
+      tensor1: STen,
+      tensor2: STen,
+      alpha: Double
+  ): Unit =
+    ATen
+      .addcdiv_out(out.value, self.value, tensor1.value, tensor2.value, alpha)
 
   def indexCopyOut(
       out: STen,
@@ -696,6 +705,7 @@ object STenOptions {
 
   /** Returns an tensor option specifying CPU and double */
   def b = STen.bOptions
+
   /** Returns an tensor option specifying CPU and double */
   def bf16 = STen.bf16Options
 
@@ -1015,13 +1025,14 @@ case class STen private (
   }
 
   def castToType[S: Sc](scalarType: Byte) = scalarType match {
-    case 7 => castToDouble
-    case 6 => castToFloat
-    case 5 => castToHalf
-    case 4 => castToLong
-    case 3 => castToInt
-    case 2 => castToShort
-    case 1 => castToByte
+    case 7  => castToDouble
+    case 6  => castToFloat
+    case 5  => castToHalf
+    case 4  => castToLong
+    case 3  => castToInt
+    case 2  => castToShort
+    case 1  => castToByte
+    case 15 => copyTo(options.toBF16)
   }
 
   /** Casts to byte. signed 8-bit integer (like Scala's Byte) This is called
@@ -1820,6 +1831,9 @@ case class STen private (
   }
 
   def toDense[S: Sc] = value.to_dense().owned
+
+  def to[S: Sc](options: STenOptions, nonBlocking: Boolean, copy: Boolean) =
+    value.to(options.value, nonBlocking, copy).owned
 
   def tril_(diagonal: Int = 0) = ATen.tril_out(value, value, diagonal.toLong)
   def tril[S: Sc](diagonal: Int = 0) = ATen.tril(value, diagonal.toLong).owned

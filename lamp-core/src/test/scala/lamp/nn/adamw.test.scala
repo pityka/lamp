@@ -92,6 +92,35 @@ class AdamWSuite extends AnyFunSuite {
       )
     }
   }
+  test1("AdamW - half") { cuda =>
+    Scope.root { implicit scope =>
+      val initParams = mat.ones(1, 2)
+      val params = lamp.saddle.fromMat(initParams, cuda).castToHalf
+      val gradients = lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda).castToHalf
+      val opt = AdamW(
+        parameters = List((params, NoTag)),
+        learningRate = simple(0.1d),
+        weightDecay = simple(0.00001),
+        beta1 = simple(0.999d),
+        beta2 = simple(0.9d),
+        mixedPrecision = true
+      )
+      opt.step(List(Some(gradients)), 1d)
+      val updatedParams1 = params.toMat
+      assert(
+        updatedParams1.roundTo(10) == Mat(
+          Vec(0.89990234375, 0.89990234375)
+        ).T.roundTo(10)
+      )
+      opt.step(List(Some(gradients)), 1d)
+      val updatedParams2 = params.toMat
+      assert(
+        updatedParams2.roundTo(10) == Mat(
+          Vec(0.7998046875, 0.7998046875)
+        ).T.roundTo(10)
+      )
+    }
+  }
   test1("Yogi") { cuda =>
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
