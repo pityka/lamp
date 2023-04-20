@@ -21,7 +21,7 @@ object Model {
   def allocateModel(device: Device)(implicit
       scope: Scope
   ) = {
-    val tensorOptions = device.options(SinglePrecision)//.toBF16
+    val tensorOptions = device.options(SinglePrecision).toBF16
     val embeddingDim = 768
     val layers = 12
     val numHeads = 12

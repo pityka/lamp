@@ -61,7 +61,8 @@ object Train {
       },
       learningRate = simple(config.learningRate),
       beta2 = simple(config.beta2),
-      clip = Some(1d)
+      clip = Some(1d),
+      mixedPrecision = true
     )
 
     IOLoops

@@ -1,7 +1,5 @@
 package lamp.nn
 
-import aten.Tensor
-import aten.ATen
 import lamp.STen
 import lamp.Scope
 import lamp.STenOptions
@@ -14,7 +12,8 @@ object AdamW {
       beta2: OptimizerHyperparameter = simple(0.95),
       eps: Double = 1e-8,
       clip: Option[Double] = None,
-      debias: Boolean = true
+      debias: Boolean = true,
+      mixedPrecision: Boolean = false
   ) =
     (parameters: Seq[(STen, PTag)]) =>
       AdamW(
@@ -25,7 +24,8 @@ object AdamW {
         beta2,
         eps,
         clip,
-        debias
+        debias,
+        mixedPrecision
       )
 }
 
@@ -40,15 +40,48 @@ case class AdamW(
     beta2: OptimizerHyperparameter = simple(0.999),
     eps: Double = 1e-8,
     clip0: Option[Double] = None,
-    debias: Boolean = true
+    debias: Boolean = true,
+    mixedPrecision: Boolean = false
 ) extends Optimizer {
-  val scope = Scope.free
-  val clip = clip0.map(theta => STen.scalarDouble(theta,parameters.head._1.options(scope))(scope))
+  val scope0 = Scope.free
+
+  def upCast(t: STen)(implicit scope: Scope) = {
+    if (!mixedPrecision) t
+    else
+      t.scalarTypeByte match {
+        case 5 | 15 => t.castToFloat
+        case _      => t
+      }
+  }
+  def downCast(t: STen, target: STen)(implicit scope: Scope) = {
+
+    target.scalarTypeByte match {
+      case 5  => t.castToType(5)
+      case 15 => t.castToType(15)
+      case _  => t
+    }
+  }
+
+  val clip = clip0.map(theta =>
+    STen.scalarDouble(theta, parameters.head._1.options(scope0))(scope0)
+  )
+  val workingCopy: List[Option[STen]] = parameters.toList.map {
+    case (param, _) =>
+      val copy = upCast(param)(scope0)
+      if (copy.eq(param)) None else Some(copy)
+  }
   val mt: List[STen] = parameters.toList.map { case (param, _) =>
-    STen.owned(Tensor.zeros_like(param.value))(scope)
+    implicit val scope = scope0
+    Scope { implicit scope =>
+      upCast(STen.zerosLike(param))
+    }
+
   }
   val vt: List[STen] = parameters.toList.map { case (param, _) =>
-    STen.owned(Tensor.zeros_like(param.value))(scope)
+    implicit val scope = scope0
+    Scope { implicit scope =>
+      upCast(STen.zerosLike(param))
+    }
   }
 
   def load(tensors: Seq[STen]) = {
@@ -60,70 +93,85 @@ case class AdamW(
   }
 
   var stepCount = 0L
-  val stepCountSTen = STen.scalarDouble(0, STenOptions.d)(scope)
-  def state = List(stepCountSTen) ++ mt ++ vt
+  val stepCountSTen = STen.scalarDouble(0, STenOptions.d)(scope0)
+  def state = List(stepCountSTen) ++ mt ++ vt ++ workingCopy.flatMap(_.toList)
   def release() = {
-    scope.release()
+    scope0.release()
   }
   def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
     clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
     stepCount += 1
     stepCountSTen += 1d
+
     parameters
       .zip(gradients)
       .zip(mt)
       .zip(vt)
-      .filter(_._1._1._2.isDefined)
+      .zip(workingCopy)
+      .filter(_._1._1._1._2.isDefined)
       .foreach {
-        case ((((_, _), None), _), _) =>
-          // won't happent, see filter above
-          ???
-        case ((((param, tag), Some(gradients)), mt), vt) =>
+
+        case (
+              ((((paramInModel, tag), Some(gradients0)), mt), vt),
+              paramWorkingCopy
+            ) =>
           val wd = weightDecay(tag)
           val b1 = beta1(tag)
           val b2 = beta2(tag)
           val lr = learningRate(tag)
 
-          // L7
-          mt.value.mul_(b1)
-          ATen.add_out(mt.value, mt.value, gradients.value, (1d - b1))
+          Scope.root { implicit scope =>
+            val gradients = upCast(gradients0)
+            // L7
+            mt *= b1
 
-          // L8
-          vt.value.mul_(b2)
-          ATen.addcmul_out(
-            vt.value,
-            vt.value,
-            gradients.value,
-            gradients.value,
-            1 - b2
-          )
+            STen.addOut(mt, mt, gradients, (1d - b1))
 
-          // L9-L12..
-          val denom = ATen.sqrt(vt.value)
-          denom.add_(eps, 1d)
+            // L8
+            vt *= b2
+            STen.addcmulOut(
+              vt,
+              vt,
+              gradients,
+              gradients,
+              1 - b2
+            )
 
-          val stepParam =
-            if (debias)
-              scheduleFactor * lr * math.sqrt(
-                (1 - math.pow(b2, stepCount.toDouble))
-              ) / (1 - math.pow(b1, stepCount.toDouble))
-            else scheduleFactor * lr
+            // L9-L12..
+            val denom = vt.sqrt
+            denom += eps
 
-          val stepWd = scheduleFactor * wd
+            val stepParam =
+              if (debias)
+                scheduleFactor * lr * math.sqrt(
+                  (1 - math.pow(b2, stepCount.toDouble))
+                ) / (1 - math.pow(b1, stepCount.toDouble))
+              else scheduleFactor * lr
 
-          if (wd != 0d) {
-            ATen.add_out(param.value, param.value, param.value, -1 * stepWd)
+            val stepWd = scheduleFactor * wd
+
+            val param = paramWorkingCopy.getOrElse(paramInModel)
+
+            if (wd != 0d) {
+              STen.addOut(param, param, param, -1 * stepWd)
+            }
+
+            STen.addcdivOut(
+              param,
+              param,
+              mt,
+              denom,
+              -1 * stepParam
+            )
+
+            if (!param.eq(paramInModel)) {
+              paramInModel.copyFrom(downCast(param, paramInModel))
+            }
+
           }
-
-          ATen.addcdiv_out(
-            param.value,
-            param.value,
-            mt.value,
-            denom,
-            -1 * stepParam
-          )
-
-          denom.release
+        case _ =>
+          // won't happen see filter above, suppressing warning
+          ???
       }
   }
 }
