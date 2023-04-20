@@ -7,6 +7,7 @@ import lamp.data.Codec
 import lamp.data.CodecFactory
 
 import lamp.example.lm.Model
+import lamp.data.IdentityCodec
 object Util {
 
   def prepareCorpora(config: CliConfig)(implicit scope: Scope) = Scope.bracket {
@@ -37,6 +38,8 @@ object Util {
         )
 
         validCorpus <-
+          (if (config.validFile.isEmpty) IO.pure(Option.empty[STen])
+          else 
           Util
             .readBytesFromFile(config.validFile, config.fileMaxLength)
             .flatMap(corp =>
@@ -46,10 +49,10 @@ object Util {
                 codec,
                 config.parallelism
               )
-            )
+            ).map(Option(_)))
 
         _ = scribe.info(
-          s"Valid corpus length: ${validCorpus.numel} tokens"
+          s"Valid corpus length: ${validCorpus.map(_.numel)} tokens"
         )
 
       } yield (trainCorpus, validCorpus)
@@ -87,7 +90,7 @@ object Util {
         length = l,
         scalarTypeByte = 1,
         pin = false
-      )
+      ).max(STen.scalarLong(0,STenOptions.l))
 
     }
   def saveTokens(file: File, tokens: STen): IO[Unit] = {

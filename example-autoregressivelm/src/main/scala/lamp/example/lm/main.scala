@@ -15,6 +15,7 @@ import lamp.example.lm.Model
 
 object Main extends IOApp {
   scribe.info("Logger start")
+  aten.Tensor.allowtf32(true)
 
   override def run(args: List[String]): IO[ExitCode] =
     CliParser.runCli(args.toList) {
@@ -26,7 +27,7 @@ object Main extends IOApp {
             _ <-
               if (!config.distributed)
                 Train.train(config, corpora._1, corpora._2)(scope)
-              else DistributedTrain.train(config, corpora._1, corpora._2)(scope)
+              else DistributedTrain.train(config, corpora._1, corpora._2.get)(scope)
           } yield ExitCode(0)
         )
 

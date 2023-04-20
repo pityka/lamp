@@ -2,24 +2,26 @@ package lamp.example.lm
 import lamp._
 import lamp.nn._
 import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
+import lamp.data.IdentityCodecFactory
 
 object Model {
 
-  val vocabularySize = 50304
-  val contextLength = 1024
+  val vocabularySize = 256
+  val contextLength = 384
 
-  val codecFactory = ByteSegmentCodecFactory(
-    vocabularyMin = 10,
-    vocabularyMax = (vocabularySize - 1).toChar,
-    maxMergedSegmentLength = 7,
-    unknownToken = 0.toChar,
-    unknownByte = '?'.toByte
-  )
+  val codecFactory = IdentityCodecFactory
+  //   ByteSegmentCodecFactory(
+  //   vocabularyMin = 10,
+  //   vocabularyMax = (vocabularySize - 1).toChar,
+  //   maxMergedSegmentLength = 7,
+  //   unknownToken = 0.toChar,
+  //   unknownByte = '?'.toByte
+  // )
 
   def allocateModel(device: Device)(implicit
       scope: Scope
   ) = {
-    val tensorOptions = device.options(SinglePrecision)
+    val tensorOptions = device.options(SinglePrecision)//.toBF16
     val embeddingDim = 768
     val layers = 12
     val numHeads = 12
