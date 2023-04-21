@@ -148,7 +148,7 @@ case class AdamW(
                 ) / (1 - math.pow(b1, stepCount.toDouble))
               else scheduleFactor * lr
 
-            val stepWd = scheduleFactor * wd
+            val stepWd = stepParam * wd
 
             val param = paramWorkingCopy.getOrElse(paramInModel)
 
