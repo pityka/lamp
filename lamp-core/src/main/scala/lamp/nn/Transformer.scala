@@ -196,6 +196,7 @@ object TransformerDecoder {
   *     defined in hugging face or nanoGPT.
   *   - Note that the residual connection has a path which does not flow through
   *     the normalization.
+  *   - + dimension wise learnable scale parameter in each residual path
   *
   * If `gptOrder` is false then:
   *   - y = norm(attention(input)+input )
@@ -204,6 +205,7 @@ object TransformerDecoder {
   *     https://arxiv.org/pdf/1706.03762.pdf)
   *   - Note that the residual connection has a path which flows through the
   *     normalization.
+  *
   *
   * Output is (bach, sequence, output dimension)
   */
@@ -215,6 +217,8 @@ case class TransformerEncoderBlock(
     b1: Constant,
     w2: Constant,
     b2: Constant,
+    scale1: Constant, 
+    scale2: Constant,
     dropout: Double,
     train: Boolean,
     gptOrder: Boolean
@@ -225,7 +229,9 @@ case class TransformerEncoderBlock(
       w1 -> TransformerEncoderBlock.Weights1,
       w2 -> TransformerEncoderBlock.Weights2,
       b1 -> TransformerEncoderBlock.Bias1,
-      b2 -> TransformerEncoderBlock.Bias2
+      b2 -> TransformerEncoderBlock.Bias2,
+      scale1 -> TransformerEncoderBlock.Scale1,
+      scale2 -> TransformerEncoderBlock.Scale2,
     )
 
   def forward[S: Sc](x: (Variable, Option[STen])): Variable = {
@@ -238,9 +244,9 @@ case class TransformerEncoderBlock(
     val (input, maxLength) = x
     if (gptOrder) {
       val a1 = layerNorm1(input.dropout(dropout, train))
-      val a2 = attention.forward((a1, a1, a1, maxLength)) + input
+      val a2 = attention.forward((a1, a1, a1, maxLength)) * scale1 + input
       val a3 = layerNorm2(a2.dropout(dropout, train))
-      val a4 = mm1((mm1(a3, w1) + b1).gelu, w2) + b2 + a2
+      val a4 = (mm1((mm1(a3, w1) + b1).gelu, w2) + b2) * scale2 + a2
 
       a4
     } else {
@@ -515,6 +521,8 @@ object TransformerEncoderBlock {
       b1 = param(STen.zeros(List(1, mlpHiddenDim), tOpt)),
       w2 = initLinear(mlpHiddenDim, out, tOpt),
       b2 = param(STen.zeros(List(1, out), tOpt)),
+      scale1 = param(STen.normal(0d,0.0001,List(in.toLong), tOpt)),
+      scale2 = param(STen.normal(0d,0.0001,List(in.toLong), tOpt)),
       dropout = dropout,
       train = true
     )
@@ -523,6 +531,8 @@ object TransformerEncoderBlock {
   object Weights2 extends LeafTag
   object Bias1 extends LeafTag
   object Bias2 extends LeafTag
+  object Scale1 extends LeafTag
+  object Scale2 extends LeafTag
 
   implicit val trainingMode: TrainingMode[TransformerEncoderBlock] =
     TrainingMode
@@ -545,6 +555,8 @@ object TransformerEncoderBlock {
       m.w2.value.copyFrom(remaining(1))
       m.b1.value.copyFrom(remaining(2))
       m.b2.value.copyFrom(remaining(3))
+      m.scale1.value.copyFrom(remaining(4))
+      m.scale2.value.copyFrom(remaining(5))
 
     }
 }
