@@ -44,7 +44,7 @@ lazy val commonSettings = Seq(
         "-language:postfixOps",
         "-language:existentials",
         "-unchecked", // Enable additional warnings where generated code depends on assumptions.
-        // "-Xfatal-warnings", // Fail the compilation if there are any warnings.
+        "-Xfatal-warnings", // Fail the compilation if there are any warnings.
         "-Xlint:adapted-args", // Warn if an argument list is modified to match the receiver.
         "-Xlint:constant", // Evaluation of a constant arithmetic expression results in an error.
         "-Xlint:delayedinit-select", // Selecting member of DelayedInit.
