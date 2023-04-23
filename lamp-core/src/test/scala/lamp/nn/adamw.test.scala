@@ -7,7 +7,8 @@ import lamp.Scope
 import org.scalatest.compatible.Assertion
 
 class AdamWSuite extends AnyFunSuite {
-  implicit def AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
+  implicit def AssertionIsMovable: lamp.EmptyMovable[Assertion] =
+    lamp.Movable.empty[Assertion]
 
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
@@ -80,14 +81,15 @@ class AdamWSuite extends AnyFunSuite {
       val updatedParams1 = params.toMat
       assert(
         updatedParams1.roundTo(10) == Mat(
-          Vec(0.899990006324555, 0.8999900042163701)
+          Vec(0.8996837785585381, 0.8996837764503532)
         ).T.roundTo(10)
       )
       opt.step(List(Some(gradients)), 1d)
       val updatedParams2 = params.toMat
+
       assert(
         updatedParams2.roundTo(10) == Mat(
-          Vec(0.7999810110128047, 0.7999810073752027)
+          Vec(0.7994876035234454, 0.7994875998862823)
         ).T.roundTo(10)
       )
     }
@@ -96,7 +98,8 @@ class AdamWSuite extends AnyFunSuite {
     Scope.root { implicit scope =>
       val initParams = mat.ones(1, 2)
       val params = lamp.saddle.fromMat(initParams, cuda).castToHalf
-      val gradients = lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda).castToHalf
+      val gradients =
+        lamp.saddle.fromMat(Mat(Vec(0.5, 0.75)).T, cuda).castToHalf
       val opt = AdamW(
         parameters = List((params, NoTag)),
         learningRate = simple(0.1d),
@@ -107,6 +110,7 @@ class AdamWSuite extends AnyFunSuite {
       )
       opt.step(List(Some(gradients)), 1d)
       val updatedParams1 = params.toMat
+
       assert(
         updatedParams1.roundTo(10) == Mat(
           Vec(0.89990234375, 0.89990234375)
@@ -116,7 +120,7 @@ class AdamWSuite extends AnyFunSuite {
       val updatedParams2 = params.toMat
       assert(
         updatedParams2.roundTo(10) == Mat(
-          Vec(0.7998046875, 0.7998046875)
+          Vec(0.79931640625, 0.79931640625)
         ).T.roundTo(10)
       )
     }
