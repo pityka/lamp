@@ -740,7 +740,7 @@ package object extratrees {
     var i = 0
     val n = vec.length
     val m = n / 2 + 1
-    val bufT = Buffer.empty[T](m)
+    val bufT = Buffer.empty[T](m) 
     val bufF = Buffer.empty[T](m)
     while (i < n) {
       val v: T = vec.raw(i)
