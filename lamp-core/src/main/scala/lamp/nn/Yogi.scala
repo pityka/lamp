@@ -42,10 +42,12 @@ case class Yogi(
     beta1: OptimizerHyperparameter = simple(0.9),
     beta2: OptimizerHyperparameter = simple(0.999),
     eps: Double = 1e-3,
-    clip: Option[Double] = None,
+    clip0: Option[Double] = None,
     debias: Boolean = true
 ) extends Optimizer {
   val scope = Scope.free
+    val clip = clip0.map(theta => STen.scalarDouble(theta,parameters.head._1.options(scope))(scope))
+
   val mt: List[STen] = parameters.toList.map { case (param, _) =>
     STen.owned(Tensor.zeros_like(param.value))(scope)
   }

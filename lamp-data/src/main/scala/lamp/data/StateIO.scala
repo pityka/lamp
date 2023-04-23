@@ -7,7 +7,10 @@ import java.io.File
 import java.io.FileOutputStream
 import lamp.STen
 import java.io.FileInputStream
+import lamp.nn.LearningRateSchedule
 
+/** Helpers to read and write training loop state
+  */
 object StateIO {
 
   private def readSimpleLoopStateDescriptor(
@@ -29,7 +32,7 @@ object StateIO {
       s.minValidationLoss,
       minValid,
       s.learningCurve.map { case (epoch, train, smoothedValid, valid) =>
-        (epoch, train, smoothedValid.flatMap{a => valid.map(b => (a,b))})
+        (epoch, train, smoothedValid.flatMap { a => valid.map(b => (a, b)) })
       }
     )
   }
@@ -56,6 +59,18 @@ object StateIO {
     )
   }
 
+  /** Reads LoopState from file
+    *
+    * Returned value may be passed to training loop constructors to initialize
+    * loop state
+    *
+    * @param file
+    *   file on disk
+    * @param device
+    *   device onto which to load tensors
+    * @return
+    *   LoopState
+    */
   def readFromFile(file: File, device: Device)(implicit
       scope: Scope
   ): LoopState = {
@@ -90,12 +105,12 @@ object StateIO {
   ) = {
     val modelLocation = s"${file.getName}.model"
     val modelChannel = new FileOutputStream(
-      new File(file.getParentFile(), modelLocation),
+      new File(file.getParentFile(), modelLocation + ".tmp"),
       false
     ).getChannel
     val optimizerLocation = s"${file.getName}.optimizer"
     val optimizerChannel = new FileOutputStream(
-      new File(file.getParentFile(), optimizerLocation),
+      new File(file.getParentFile(), optimizerLocation + ".tmp"),
       false
     ).getChannel
     val modelDescriptor = Writer
@@ -121,7 +136,7 @@ object StateIO {
     val minValidDescriptor = s.minValidationLossModel.map { case (a, ts) =>
       val location = s"${file.getName}.minvalidmodel"
       val channel = new FileOutputStream(
-        new File(file.getParentFile(), location),
+        new File(file.getParentFile(), location + ".tmp"),
         false
       ).getChannel
       val descriptor = Writer
@@ -134,8 +149,17 @@ object StateIO {
         )
         .toOption
         .get
+      new File(file.getParentFile(), location + ".tmp").renameTo(
+        new File(file.getParentFile(), location)
+      )
       (a, descriptor)
     }
+    new File(file.getParentFile(), optimizerLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), optimizerLocation)
+    )
+    new File(file.getParentFile(), modelLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), modelLocation)
+    )
 
     schemas.SimpleLoopState(
       modelDescriptor,
@@ -156,12 +180,12 @@ object StateIO {
   ) = {
     val modelLocation = s"${file.getName}.model"
     val modelChannel = new FileOutputStream(
-      new File(file.getParentFile(), modelLocation),
+      new File(file.getParentFile(), modelLocation + ".tmp"),
       false
     ).getChannel
     val optimizerLocation = s"${file.getName}.optimizer"
     val optimizerChannel = new FileOutputStream(
-      new File(file.getParentFile(), optimizerLocation),
+      new File(file.getParentFile(), optimizerLocation + ".tmp"),
       false
     ).getChannel
     val modelDescriptor = Writer
@@ -184,6 +208,12 @@ object StateIO {
       )
       .toOption
       .get
+    new File(file.getParentFile(), optimizerLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), optimizerLocation)
+    )
+    new File(file.getParentFile(), modelLocation + ".tmp").renameTo(
+      new File(file.getParentFile(), modelLocation)
+    )
     val averageDescriptor = s.averagedModels.map { case ts =>
       val location = s"${file.getName}.averagemodel"
       val channel = new FileOutputStream(
@@ -200,6 +230,9 @@ object StateIO {
         )
         .toOption
         .get
+      new File(file.getParentFile(), location + ".tmp").renameTo(
+        new File(file.getParentFile(), location)
+      )
       descriptor
     }
 
@@ -215,6 +248,8 @@ object StateIO {
     )
   }
 
+  /** Writes loop state into file
+    */
   def writeToFile(
       file: File,
       state: LoopState,
@@ -250,14 +285,43 @@ object StateIO {
           )
         )
     }
-    val fos = new java.io.FileOutputStream(file)
+    val tmp = new File(file.getAbsolutePath() + ".tmp")
+    val fos = new java.io.FileOutputStream(tmp)
     try {
       com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(descriptor, fos)
+      tmp.renameTo(file)
     } finally { fos.close }
 
   }
 
-  def stateToFile(file: File) = { (state: LoopState) =>
-    IO.blocking { writeToFile(file, state, 16384) }
+  /** Returns a function which returns an IO writing the loop state to file
+    */
+  def stateToFile(file: File): LoopState => IO[Unit] = { (state: LoopState) =>
+    IO.blocking {
+      writeToFile(file, state, 16384)
+    }
+  }
+
+  def reduceLROnPlateauStateToFile(
+      file: File
+  ): LearningRateSchedule.ReduceLROnPlateauState => IO[Unit] = {
+    (state: LearningRateSchedule.ReduceLROnPlateauState) =>
+      IO.blocking {
+        val fos = new java.io.FileOutputStream(file)
+        try {
+          import lamp.data.schemas.LearningRateScheduleSchemas._
+          com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(state, fos)
+        } finally { fos.close }
+      }
+  }
+  def reduceLROnPlateauStateFromFile(
+      file: File
+  ): IO[LearningRateSchedule.ReduceLROnPlateauState] = IO.blocking {
+    val fos = new java.io.FileInputStream(file)
+    try {
+      import lamp.data.schemas.LearningRateScheduleSchemas._
+      com.github.plokhotnyuk.jsoniter_scala.core
+        .readFromStream[LearningRateSchedule.ReduceLROnPlateauState](fos)
+    } finally { fos.close }
   }
 }

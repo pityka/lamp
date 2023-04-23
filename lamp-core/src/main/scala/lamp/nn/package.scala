@@ -71,38 +71,30 @@ package object nn {
 
   def gradientClippingInPlace(
       gradients: Seq[Option[STen]],
-      theta: Double
+      theta: STen
   ): Unit = {
-
-    val norm = Scope.root { implicit scope =>
-      STen
-        .stack(
-          gradients
-            .map {
-              case Some(g) =>
-                Some(g.pow(2d).sum)
-              case None => None
-            }
-            .collect { case Some(x) => x },
-          0
-        )
-        .sum
-        .sqrt
-        .toDoubleArray(0)
-    }
-    if (norm > theta) {
-      Scope.root { implicit scope =>
-        val scalar = STen.scalarDouble(
-          theta / norm,
-          gradients.find(_.isDefined).get.get.options
-        )
-        gradients.foreach {
-          case None =>
+    Scope.root { implicit scope =>
+      val one =
+        STen.ones(List(1), gradients.find(_.isDefined).flatten.get.options)
+      val sum =
+        STen.zeros(List(1), gradients.find(_.isDefined).flatten.get.options)
+      gradients
+        .foreach {
           case Some(g) =>
-            g *= scalar
+            sum += g.view(-1).norm2(List(0),false).pow(2d)
+          case None => None
         }
+      val norm = sum.sqrt
 
+      val scalar = theta / norm
+      val s2 = scalar.min(one)
+
+      gradients.foreach {
+        case None =>
+        case Some(g) =>
+          g *= s2
       }
+
     }
 
   }

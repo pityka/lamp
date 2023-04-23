@@ -6,12 +6,7 @@ import lamp.saddle._
 import org.scalatest.funsuite.AnyFunSuite
 import lamp.autograd.NDArraySyntax._
 import aten.ATen
-import lamp.autograd.{
-  BatchNorm => _,
-  BatchNorm2D => _,
-  Embedding => _,
-  _
-}
+import lamp.autograd.{BatchNorm => _, BatchNorm2D => _, Embedding => _, _}
 import org.scalatest.Tag
 import lamp.Scope
 import lamp.Sc
@@ -631,7 +626,9 @@ final class NNSuite extends AnyFunSuite {
         .value
       assert(output.shape == List(2, 3, 4))
       val target =
-        STen.owned(SaddleTensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong)))
+        STen.owned(
+          SaddleTensorHelpers.fromLongMat(mat.ones(2, 3).map(_.toLong))
+        )
       val loss = LossFunctions
         .SequenceNLL(
           4,
@@ -639,20 +636,26 @@ final class NNSuite extends AnyFunSuite {
         )(const(output), target)
         ._1
         .value
-      assert(SaddleTensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507)
+      assert(
+        SaddleTensorHelpers.toMat(loss.value).raw(0) == -0.9940025479340507
+      )
       ()
     }
   }
 
   test1("gradient clipping") { cuda =>
-implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
+    implicit val AssertionIsMovable: lamp.EmptyMovable[Assertion] =
+      lamp.Movable.empty[Assertion]
     Scope.root { implicit scope =>
       val topt =
         if (cuda) STenOptions.d.cuda
         else STenOptions.d
       val t = STen.ones(List(1, 2, 3), topt)
       val t2 = STen.ones(List(1, 2), topt)
-      gradientClippingInPlace(Seq(Some(t), Some(t2)), 2.1)
+      gradientClippingInPlace(
+        Seq(Some(t), Some(t2)),
+        STen.scalarDouble(2.1, topt)
+      )
       assert(
         NDArray.tensorToNDArray(t.value).toVec.roundTo(4) == NDArray(
           Array(0.7424621202458749, 0.7424621202458749, 0.7424621202458749,
@@ -694,13 +697,22 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
     )
   }
 
-  testGradientAndValueNDGeneric[(Variable, STen), Variable, TransformerEncoder](
+  testGradientAndValueNDGeneric[
+    (Variable, Option[STen]),
+    Variable,
+    TransformerEncoder
+  ](
     "transformer encoder ",
     false
   )(
     nd2x3x2,
     v =>
-      (v, STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free)),
+      (
+        v,
+        Option(
+          STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free)
+        )
+      ),
     v => v,
     implicit pool => {
       aten.Tensor.manual_seed(123)
@@ -710,7 +722,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
       val attentionNumHeads = 5
       val mlpHiddenDim = 7
       val dropout = 0d
-      val padToken = -999L
+      // val padToken = -999L
       val tOpt = STenOptions.d
       TransformerEncoder.apply(
         List(
@@ -743,15 +755,19 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
               dropout = dropout,
               train = true,
               numHeads = attentionNumHeads,
-              padToken = padToken,
-              linearized = false
+              // padToken = padToken,
+              linearized = false,
+              causalMask = false
             ),
+            gptOrder = false,
             layerNorm1 = lamp.nn.LayerNorm(normalizedShape = List(2L), tOpt),
             layerNorm2 = lamp.nn.LayerNorm(List(2L), tOpt),
             w1 = param(STen.ones(List(in, mlpHiddenDim), tOpt) * 2),
             b1 = param(STen.ones(List(1, mlpHiddenDim), tOpt) * 2),
             w2 = param(STen.ones(List(mlpHiddenDim, in), tOpt) * 2),
             b2 = param(STen.ones(List(1, in), tOpt)),
+            scale1 = param(STen.ones(List(in.toLong), tOpt)),
+            scale2 = param(STen.ones(List(in.toLong), tOpt)),
             dropout = dropout,
             train = true
           )
@@ -760,13 +776,22 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
     },
     0d
   )
-  testGradientAndValueNDGeneric[(Variable, STen), Variable, TransformerEncoder](
+  testGradientAndValueNDGeneric[
+    (Variable, Option[STen]),
+    Variable,
+    TransformerEncoder
+  ](
     "linearized transformer encoder ",
     false
   )(
     nd2x3x2,
     v =>
-      (v, STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free)),
+      (
+        v,
+        Option(
+          STen.owned(NDArray.tensorFromLongNDArray(nd2x3L, false))(Scope.free)
+        )
+      ),
     v => v,
     implicit pool => {
       aten.Tensor.manual_seed(123)
@@ -776,7 +801,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
       val attentionNumHeads = 5
       val mlpHiddenDim = 7
       val dropout = 0d
-      val padToken = -999L
+      // val padToken = -999L
       val tOpt = STenOptions.d
       TransformerEncoder.apply(
         List(
@@ -809,15 +834,18 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
               dropout = dropout,
               train = true,
               numHeads = attentionNumHeads,
-              padToken = padToken,
-              linearized = true
+              linearized = true,
+              causalMask = false
             ),
+            gptOrder = false,
             layerNorm1 = LayerNorm(List(2), tOpt),
             layerNorm2 = LayerNorm(List(2), tOpt),
             w1 = param(STen.ones(List(in, mlpHiddenDim), tOpt) * 2),
             b1 = param(STen.ones(List(1, mlpHiddenDim), tOpt) * 2),
             w2 = param(STen.ones(List(mlpHiddenDim, in), tOpt) * 2),
             b2 = param(STen.ones(List(1, in), tOpt)),
+            scale1 = param(STen.ones(List(in.toLong), tOpt)),
+            scale2 = param(STen.ones(List(in.toLong), tOpt)),
             dropout = dropout,
             train = true
           )

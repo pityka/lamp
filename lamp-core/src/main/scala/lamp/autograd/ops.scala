@@ -1080,15 +1080,19 @@ case class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
     extends Op {
 
   val params = List(
-    a.zipBackward { (p, out) => out.addcmulSelf(p, mask, 1d) }
+    a.zipBackward { (p, out) =>
+      if (prob > 0.0) { out.addcmulSelf(p, mask, 1d) }
+    }
   )
-  val mask = {
-    val ones = STen.onesLike(a.value)(scope)
-    ones.dropout_(prob, train)
-    ones
-  }
+  val mask =
+    if (prob <= 0.0) null
+    else {
+      val ones = STen.onesLike(a.value)(scope)
+      ones.dropout_(prob, train)
+      ones
+    }
   val value =
-    Variable(this, a.value.*(mask)(scope))(scope)
+    Variable(this, if (prob > 0.0) a.value.*(mask)(scope) else a.value)(scope)
 
 }
 
@@ -1197,11 +1201,12 @@ case class MseLoss(
       STen.mse_loss(input.value, targetViewed, reduction.asLong)(scope)
     )(scope)
 }
-case class L1Loss(
+case class SmoothL1Loss(
     scope: Scope,
     input: Variable,
     target: STen,
-    reduction: Reduction
+    reduction: Reduction,
+    beta: Double
 ) extends Op {
   assert(input.value.numel == target.numel)
 
@@ -1210,11 +1215,12 @@ case class L1Loss(
       Scope.root { implicit scope =>
         val tmp =
           STen.owned(
-            ATen.l1_loss_backward(
+            ATen.smooth_l1_loss_backward_0(
               p.value,
               input.value.value,
               targetViewed.value,
-              reduction.asLong
+              reduction.asLong,
+              beta
             )
           )
 
@@ -1228,7 +1234,12 @@ case class L1Loss(
     Variable(
       this,
       STen.owned(
-        ATen.l1_loss(input.value.value, targetViewed.value, reduction.asLong)
+        ATen.smooth_l1_loss_0(
+          input.value.value,
+          targetViewed.value,
+          reduction.asLong,
+          beta
+        )
       )(scope)
     )(scope)
 }
@@ -1308,18 +1319,28 @@ case class BinaryCrossEntropyWithLogitsLoss(
   val params = List(
     input.zipBackward { (p, out) =>
       Scope.root { implicit scope =>
-        val tmp =
-          STen.owned(
-            ATen.binary_cross_entropy_with_logits_backward(
-              p.value,
-              input.value.value,
-              target.value,
-              None,
-              posWeights.map(_.value),
-              reduction.asLong
-            )
-          )
-        out += tmp
+        // -[ pos * y * (1 -sigmoid(x)) - (1 - y) sigmoid(x)] * grad
+
+        val t = if (posWeights.isDefined) {
+          val t = posWeights.get * target
+          val t2 = t + 1.0
+          t2 -= target
+          t2 *= input.value.sigmoid
+          t2 -= t
+          t2
+        } else {
+          val t = input.value.sigmoid(scope)
+          t -= target
+          t
+        }
+
+        t *= p
+
+        if (reduction == Mean) {
+          t.*=(1d / input.value.numel.toDouble)
+        }
+
+        out += t
 
       }
     }
@@ -1350,7 +1371,7 @@ case class SquaredFrobeniusMatrixNorm(scope: Scope, a: Variable) extends Op {
   val value =
     Variable(
       this, {
-        val fr = a.value.frobeniusNorm(scope)
+        val fr = a.value.frobeniusNorm(Seq(-2, -1), false)(scope)
         fr.pow_(2d)
         fr
       }
@@ -2311,6 +2332,45 @@ case class ElementWiseMaximum(scope: Scope, a: Variable, b: Variable)
 
   val mask = a.value.equ(value.value)(scope)
   val maskneg = mask.not(scope)
+
+}
+
+case class ScaledDotProductAttention(
+    scope: Scope,
+    query: Variable,
+    key: Variable,
+    valueIn: Variable,
+    isCausal: Boolean
+) extends Op {
+
+  val (v0, lse) = STen.scaledDotProductAttention(
+    query.value,
+    key.value,
+    valueIn.value,
+    isCausal
+  )(scope)
+  val value = Variable(this, v0)(scope)
+
+  val params =
+    List(query.zipNoBackward, key.zipNoBackward, valueIn.zipNoBackward)
+  override val joinedBackward: Option[(STen => Unit)] = Some { p =>
+    Scope.root { implicit scope =>
+      val (gQ, gK, gV) = STen.scaledDotProductAttentionBackward(
+        p,
+        query.value,
+        key.value,
+        valueIn.value,
+        v0,
+        lse,
+        isCausal
+      )
+      query.accumulateGrad(gQ)
+      key.accumulateGrad(gK)
+      valueIn.accumulateGrad(gV)
+
+    }
+
+  }
 
 }
 

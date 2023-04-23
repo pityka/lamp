@@ -420,6 +420,28 @@ object BatchStream {
       }
 
     }
+  def fromFunctionWithBuffers[A, C](
+      numBatches: Int,
+      allocateBuffers1: Device => Resource[IO, C]
+  )(
+      makeNonEmptyBatch: (
+          C,
+          Device
+      ) => Resource[IO, StreamControl[A]]
+  ) =
+    new BatchStream[A, Int, C] {
+      def init = 0
+      def allocateBuffers(target: Device): Resource[IO, C] = allocateBuffers1(
+        target
+      )
+      def nextBatch(device: Device, buffers: C, counter: Int) = IO {
+        if (counter < numBatches)
+          (counter + 1, makeNonEmptyBatch(buffers, device))
+        else
+          (counter + 1, Resource.pure[IO, StreamControl[A]](EndStream))
+      }
+
+    }
   def fromIndices[A, C](
       indices: Array[Array[Int]]
   )(
@@ -429,6 +451,14 @@ object BatchStream {
       ) => Resource[IO, StreamControl[(A, STen)]]
   ) = fromIndicesWithBuffers(indices, _ => Resource.unit)((a, _, c) =>
     makeNonEmptyBatch(a, c)
+  )
+  def fromFunction[A, C](
+      numBatches: Int,
+      makeNonEmptyBatch: (
+          Device
+      ) => Resource[IO, StreamControl[(A, STen)]]
+  ) = fromFunctionWithBuffers(numBatches, _ => Resource.unit)((_, c) =>
+    makeNonEmptyBatch(c)
   )
 
   private[lamp] def scopeInResource =

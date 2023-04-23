@@ -32,13 +32,14 @@ object Shampoo {
 case class Shampoo(
     parameters: Seq[(STen, PTag)],
     learningRate: OptimizerHyperparameter = simple(0.001),
-    clip: Option[Double] = None,
+    clip0: Option[Double] = None,
     eps: Double = 1e-4,
     diagonalThreshold: Int = 256,
     updatePreconditionerEveryNIterations: Int = 100,
     momentum: OptimizerHyperparameter = simple(0d)
 ) extends Optimizer {
   val scope = Scope.free
+  val clip = clip0.map(theta => STen.scalarDouble(theta,parameters.head._1.options(scope))(scope))
 
   val lt: List[(STen, STen)] = parameters.toList.map { case (param, _) =>
     val dim1 = param.shape(0)

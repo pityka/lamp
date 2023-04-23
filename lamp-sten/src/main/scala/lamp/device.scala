@@ -38,8 +38,7 @@ case object HalfPrecision extends FloatingPointPrecision {
     aten.ATen._cast_Half(t, true)
   }
   def convertOption[S: Sc](t: STenOptions): STenOptions = {
-    // t.toHalf
-    ???
+    t.toHalf
   }
 }
 

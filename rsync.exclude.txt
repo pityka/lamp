@@ -6,5 +6,7 @@
 .bsp/*
 *class
 example-arxiv/*
-*scala
 *tasty
+checkpoint*
+test_data/*
+website/*

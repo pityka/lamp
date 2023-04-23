@@ -13,6 +13,9 @@ import scala.io.Codec
 import cats.effect.unsafe.implicits.global
 
 class TransformerSuite extends AnyFunSuite {
+
+
+
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }
@@ -91,6 +94,9 @@ class TransformerSuite extends AnyFunSuite {
                   .simpleSequence(15, 30, 15, device, precision)
               )
             ),
+            GenericFun[Variable, (Variable,Option[STen])] { _ => x =>
+              (x,None)
+            },
             lamp.nn.TransformerEncoder(
               numBlocks = 3,
               in = 45,
@@ -98,9 +104,11 @@ class TransformerSuite extends AnyFunSuite {
               attentionNumHeads = 3,
               mlpHiddenDim = 30,
               dropout = 0d,
-              padToken = vocab.size,
+              // padToken = vocab.size,
               tOpt = tOpt,
-              linearized = false
+              linearized = false,
+              gptOrder = false,
+              causalMask = false
             ),
             GenericFun[Variable, Variable] { implicit scope => x =>
               x.view(List(x.shape(0), -1))

@@ -29,9 +29,10 @@ object LossFunctions {
       (v, out.shape(0))
     }
   }
-  case object L1Loss extends LossFunction {
+  case class SmoothL1Loss(reduction: Reduction = Mean, beta: Double = 1.0)
+      extends LossFunction {
     def apply[S: Sc](out: Variable, target: STen) = {
-      val v = out.l1Loss(target)
+      val v = out.smoothL1Loss(target, reduction, beta)
       (v, out.shape(0))
     }
   }

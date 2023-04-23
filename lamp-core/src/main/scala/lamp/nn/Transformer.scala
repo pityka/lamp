@@ -10,51 +10,54 @@ import lamp.STenOptions
 import lamp.Scope
 import lamp.FloatingPointPrecision
 import lamp.Device
+import lamp.autograd.ScaledDotProductAttention
 
 /** TransformerEncoder module
   *
-  * Input is `(data, tokens)` where `data` is (batch, num tokens, in dimension),
-  * double tensor `tokens` is (batch,num tokens) long tensor.
+  * Does *not* include initial embedding or position encoding.
   *
-  * Output is (bach, num tokens, out dimension)
+  * Input is `(data, maxLength)` where `data` is (batch, sequence, input
+  * dimension), double tensor `maxLength` is a 1D or 2D long tensor used for
+  * attention masking.
   *
-  * The sole purpose of `tokens` is to carry over the padding
+  * Attention masking is implemented similarly to chapter 11.3.2.1 in d2l.ai
+  * v1.0.0-beta0. It supports unmasked attention, attention on variable length
+  * input, and left-to-right attention.
+  *
+  * Output is (bach, sequence, output dimension)
   */
 case class TransformerEncoder(
     blocks: Seq[TransformerEncoderBlock]
-) extends GenericModule[(Variable, STen), Variable] {
+) extends GenericModule[(Variable, Option[STen]), Variable] {
   def state = blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
-  def forward[S: Sc](x: (Variable, STen)): Variable = {
-    val (input, tokens) = x
-    blocks.foldLeft(input) { (a, block) => block.forward((a, tokens)) }
+  def forward[S: Sc](x: (Variable, Option[STen])): Variable = {
+    val (input, maxLength) = x
+    blocks.foldLeft(input) { (a, block) => block.forward((a, maxLength)) }
   }
 }
 object TransformerEncoder {
-  implicit val trainingMode : TrainingMode[TransformerEncoder] = TrainingMode
+  implicit val trainingMode: TrainingMode[TransformerEncoder] = TrainingMode
     .make[TransformerEncoder](
       m => m.copy(blocks = m.blocks.map(_.asEval)),
       m => m.copy(blocks = m.blocks.map(_.asTraining))
     )
-  implicit val load : Load[TransformerEncoder] = Load.make[TransformerEncoder] { m => tensors =>
-    m.blocks.foldLeft((List[Unit](), tensors)) { case ((acc, params), member) =>
-      val numParam = member.state.size
-      val loaded = member.load(params.take(numParam))
-      (acc.:+(loaded), params.drop(numParam))
+  implicit val load: Load[TransformerEncoder] = Load.make[TransformerEncoder] {
+    m => tensors =>
+      m.blocks.foldLeft((List[Unit](), tensors)) {
+        case ((acc, params), member) =>
+          val numParam = member.state.size
+          val loaded = member.load(params.take(numParam))
+          (acc.:+(loaded), params.drop(numParam))
 
-    }
+      }
 
   }
 
-  /** Factory for the encoder module of transformer Does *not* include embedding
-    * and positional encoding
-    *
-    * Input is `(data, tokens)` where `data` is (batch, num tokens, in
-    * dimension), double tensor `tokens` is (batch,num tokens) long tensor.
-    *
-    * The sole purpose of `tokens` is to carry over the padding
+  /** Factory for the encoder module of transformer. Does *not* include initial
+    * embedding or position encoding.
     *
     * @param numBlocks
-    *   number of transformer blocks to create
+    *   number of transformer blocks to create (layers)
     * @param in
     *   input dimension
     * @param attentionHiddenPerHeadDim
@@ -63,13 +66,8 @@ object TransformerEncoder {
     *   number of attention heads
     * @param mlpHiddenDim
     *   size of hidden dimension of the two layer perceptron
-    * @param out
-    *   output dimension
     * @param dropout
     *   dropout rate
-    * @param padToken
-    *   pad token, (batch, seq) positions where `tokens` == `padToken` are
-    *   ignored
     * @param tOpt
     *   tensor options
     * @return
@@ -82,9 +80,10 @@ object TransformerEncoder {
       attentionNumHeads: Int,
       mlpHiddenDim: Int,
       dropout: Double,
-      padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      gptOrder: Boolean,
+      causalMask: Boolean
   ): TransformerEncoder =
     TransformerEncoder(
       0 until numBlocks map (_ =>
@@ -95,16 +94,120 @@ object TransformerEncoder {
           mlpHiddenDim = mlpHiddenDim,
           out = in,
           dropout = dropout,
-          padToken = padToken,
           tOpt = tOpt,
-          linearized = linearized
+          linearized = linearized,
+          gptOrder = gptOrder,
+          causalMask = causalMask
+        )
+      )
+    )
+}
+case class TransformerDecoder(
+    blocks: Seq[TransformerDecoderBlock]
+) extends GenericModule[(Variable, Variable, Option[STen]), Variable] {
+  def state = blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
+  def forward[S: Sc](x: (Variable, Variable, Option[STen])): Variable = {
+    val (input, encoderOutput, maxLength) = x
+    blocks.foldLeft(input) { (a, block) =>
+      block.forward((a, encoderOutput, maxLength))
+    }
+  }
+}
+object TransformerDecoder {
+  implicit val trainingMode: TrainingMode[TransformerDecoder] = TrainingMode
+    .make[TransformerDecoder](
+      m => m.copy(blocks = m.blocks.map(_.asEval)),
+      m => m.copy(blocks = m.blocks.map(_.asTraining))
+    )
+  implicit val load: Load[TransformerDecoder] = Load.make[TransformerDecoder] {
+    m => tensors =>
+      m.blocks.foldLeft((List[Unit](), tensors)) {
+        case ((acc, params), member) =>
+          val numParam = member.state.size
+          val loaded = member.load(params.take(numParam))
+          (acc.:+(loaded), params.drop(numParam))
+
+      }
+
+  }
+
+  /** Factory for the decoder module of transformer. Does *not* include initial
+    * embedding or position encoding.
+    *
+    * @param numBlocks
+    *   number of transformer blocks to create (layers)
+    * @param in
+    *   input dimension
+    * @param attentionHiddenPerHeadDim
+    *   size of hidden attention dimension of each attention head
+    * @param attentionNumHeads
+    *   number of attention heads
+    * @param mlpHiddenDim
+    *   size of hidden dimension of the two layer perceptron
+    * @param dropout
+    *   dropout rate
+    * @param tOpt
+    *   tensor options
+    * @return
+    *   a module
+    */
+  def apply[S: Sc](
+      numBlocks: Int,
+      in: Int,
+      attentionHiddenPerHeadDim: Int,
+      attentionNumHeads: Int,
+      mlpHiddenDim: Int,
+      dropout: Double,
+      tOpt: STenOptions,
+      linearized: Boolean,
+      decoderDecoderCausalMask: Boolean,
+      encoderDecoderCausalMask: Boolean
+  ): TransformerDecoder =
+    TransformerDecoder(
+      0 until numBlocks map (_ =>
+        TransformerDecoderBlock(
+          in = in,
+          attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+          attentionNumHeads = attentionNumHeads,
+          mlpHiddenDim = mlpHiddenDim,
+          out = in,
+          dropout = dropout,
+          tOpt = tOpt,
+          linearized = linearized,
+          decoderDecoderCausalMask = decoderDecoderCausalMask,
+          encoderDecoderCausalMask = encoderDecoderCausalMask
         )
       )
     )
 }
 
-/** A single block of the transformer encoder as defined in Fig 10.7.1 in d2l
-  * v0.16
+/** A single block of the transformer self attention encoder using GELU
+  *
+  * Input is `(data, maxLength)` where `data` is (batch, sequence, input
+  * dimension), double tensor `maxLength` is a 1D or 2D long tensor used for
+  * attention masking.
+  *
+  * The order of operations depends on gptOrder param. If `gptOrder` is true
+  * then:
+  *   - y = attention(norm(input))+input
+  *   - result = mlp(norm(y))+y
+  *   - Note that in this case there is no normalization at the end of the
+  *     transformer. One may wants to add one separately. This is how GPT2 is
+  *     defined in hugging face or nanoGPT.
+  *   - Note that the residual connection has a path which does not flow through
+  *     the normalization.
+  *   - + dimension wise learnable scale parameter in each residual path
+  *
+  * If `gptOrder` is false then:
+  *   - y = norm(attention(input)+input )
+  *   - result = norm(mlp(y)+y)
+  *   - This follows chapter 11.7 in d2l.ai v1.0.0-beta0. (Same as in
+  *     https://arxiv.org/pdf/1706.03762.pdf)
+  *   - Note that the residual connection has a path which flows through the
+  *     normalization.
+  *
+  *
+  * Output is (bach, sequence, output dimension)
   */
 case class TransformerEncoderBlock(
     attention: MultiheadAttention,
@@ -114,38 +217,170 @@ case class TransformerEncoderBlock(
     b1: Constant,
     w2: Constant,
     b2: Constant,
+    scale1: Constant, 
+    scale2: Constant,
     dropout: Double,
-    train: Boolean
-) extends GenericModule[(Variable, STen), Variable] {
+    train: Boolean,
+    gptOrder: Boolean
+) extends GenericModule[(Variable, Option[STen]), Variable] {
 
   def state =
     attention.state ++ layerNorm1.state ++ layerNorm2.state ++ Seq(
       w1 -> TransformerEncoderBlock.Weights1,
       w2 -> TransformerEncoderBlock.Weights2,
       b1 -> TransformerEncoderBlock.Bias1,
-      b2 -> TransformerEncoderBlock.Bias2
+      b2 -> TransformerEncoderBlock.Bias2,
+      scale1 -> TransformerEncoderBlock.Scale1,
+      scale2 -> TransformerEncoderBlock.Scale2,
     )
 
-  def forward[S: Sc](x: (Variable, STen)): Variable = {
+  def forward[S: Sc](x: (Variable, Option[STen])): Variable = {
 
     def mm1(a: Variable, b: Variable) = {
       val shape = a.shape
       a.view(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
     }
 
-    val (input, tokens) = x
-    val a1 = attention.forward((input, input, input, tokens))
-    val a2 = layerNorm1(a1.dropout(dropout, train) + input)
-    val a3 = mm1((mm1(a2, w1) + b1).relu, w2) + b2
+    val (input, maxLength) = x
+    if (gptOrder) {
+      val a1 = layerNorm1(input.dropout(dropout, train))
+      val a2 = attention.forward((a1, a1, a1, maxLength)) * scale1 + input
+      val a3 = layerNorm2(a2.dropout(dropout, train))
+      val a4 = (mm1((mm1(a3, w1) + b1).gelu, w2) + b2) * scale2 + a2
 
-    val a4 = layerNorm2(a3.dropout(dropout, train) + a3)
-    a4
+      a4
+    } else {
+      val a1 = attention.forward((input, input, input, maxLength))
+      val a2 = layerNorm1(a1.dropout(dropout, train) + input)
+      val a3 = mm1((mm1(a2, w1) + b1).gelu, w2) + b2
+
+      val a4 = layerNorm2(a3.dropout(dropout, train) + a3)
+      a4
+    }
+  }
+
+}
+case class TransformerDecoderBlock(
+    attentionDecoderDecoder: MultiheadAttention,
+    attentionEncoderDecoder: MultiheadAttention,
+    layerNorm1: LayerNorm,
+    layerNorm2: LayerNorm,
+    layerNorm3: LayerNorm,
+    layerNorm4: LayerNorm,
+    w1: Constant,
+    b1: Constant,
+    w2: Constant,
+    b2: Constant,
+    dropout: Double,
+    train: Boolean
+) extends GenericModule[(Variable, Variable, Option[STen]), Variable] {
+
+  def state =
+    attentionDecoderDecoder.state ++ attentionEncoderDecoder.state ++ layerNorm1.state ++ layerNorm2.state ++ layerNorm3.state ++ layerNorm4.state ++ Seq(
+      w1 -> TransformerEncoderBlock.Weights1,
+      w2 -> TransformerEncoderBlock.Weights2,
+      b1 -> TransformerEncoderBlock.Bias1,
+      b2 -> TransformerEncoderBlock.Bias2
+    )
+
+  def forward[S: Sc](x: (Variable, Variable, Option[STen])): Variable = {
+
+    def mm1(a: Variable, b: Variable) = {
+      val shape = a.shape
+      a.view(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
+    }
+
+    val (decoderInput, encoderOutput, maxLength) = x
+    val a1 = layerNorm1(decoderInput.dropout(dropout, train))
+    val a2 =
+      attentionDecoderDecoder.forward((a1, a1, a1, maxLength)) + decoderInput
+    val a3 = layerNorm2(a2.dropout(dropout, train))
+    val a4 = layerNorm3(encoderOutput.dropout(dropout, train))
+    val a5 = a2 + attentionEncoderDecoder.forward((a3, a4, a4, None))
+
+    val a6 = layerNorm4(a5.dropout(dropout, train))
+    val a7 = mm1((mm1(a6, w1) + b1).gelu, w2) + b2 + a5
+
+    a7
+
   }
 
 }
 
-object TransformerEncoderBlock {
+case class Transformer(
+    encoder: TransformerEncoder,
+    decoder: TransformerDecoder
+) extends GenericModule[
+      (Variable, Variable, Option[STen], Option[STen]),
+      Variable
+    ] {
+  def state = encoder.state ++ decoder.state
+  def forward[S: Sc](
+      x: (Variable, Variable, Option[STen], Option[STen])
+  ): Variable = {
+    val (decoderInput, encoderInput, decoderMaxLength, encoderMaxLength) = x
+    val encoderOutput = encoder.forward((encoderInput, encoderMaxLength))
+    decoder.forward((decoderInput, encoderOutput, decoderMaxLength))
+  }
+}
 
+object Transformer {
+
+  /* Factory of a single transformer block */
+  def apply[S: Sc](
+      numBlocks: Int,
+      in: Int,
+      attentionHiddenPerHeadDim: Int,
+      attentionNumHeads: Int,
+      mlpHiddenDim: Int,
+      dropout: Double,
+      tOpt: STenOptions,
+      linearized: Boolean,
+      encoderCausalMask: Boolean = false,
+      decoderDecoderCausalMask: Boolean = true,
+      encoderDecoderCausalMask: Boolean = false
+  ): Transformer =
+    Transformer(
+      TransformerEncoder(
+        numBlocks = numBlocks,
+        in = in,
+        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+        attentionNumHeads = attentionNumHeads,
+        mlpHiddenDim = mlpHiddenDim,
+        dropout = dropout,
+        tOpt = tOpt,
+        linearized = linearized,
+        gptOrder = true,
+        causalMask = encoderCausalMask
+      ),
+      TransformerDecoder(
+        numBlocks = numBlocks,
+        in = in,
+        attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
+        attentionNumHeads = attentionNumHeads,
+        mlpHiddenDim = mlpHiddenDim,
+        dropout = dropout,
+        tOpt = tOpt,
+        linearized = linearized,
+        decoderDecoderCausalMask = decoderDecoderCausalMask,
+        encoderDecoderCausalMask = encoderDecoderCausalMask
+      )
+    )
+
+  implicit val trainingMode: TrainingMode[Transformer] =
+    TrainingMode
+      .make[Transformer](
+        m => m.copy(encoder = m.encoder.asEval, decoder = m.decoder.asEval),
+        m =>
+          m.copy(encoder = m.encoder.asTraining, decoder = m.decoder.asTraining)
+      )
+
+  implicit val load: Load[Transformer] = Load.compose(_.encoder, _.decoder)
+}
+
+object TransformerDecoderBlock {
+
+  /* Factory of a single transformer block */
   def apply[S: Sc](
       in: Int,
       attentionHiddenPerHeadDim: Int,
@@ -153,12 +388,13 @@ object TransformerEncoderBlock {
       mlpHiddenDim: Int,
       out: Int,
       dropout: Double,
-      padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
-  ): TransformerEncoderBlock =
-    TransformerEncoderBlock(
-      attention = MultiheadAttention(
+      linearized: Boolean,
+      decoderDecoderCausalMask: Boolean,
+      encoderDecoderCausalMask: Boolean
+  ): TransformerDecoderBlock =
+    TransformerDecoderBlock(
+      attentionDecoderDecoder = MultiheadAttention(
         dQ = in,
         dK = in,
         dV = in,
@@ -166,12 +402,26 @@ object TransformerEncoderBlock {
         out = in,
         numHeads = attentionNumHeads,
         dropout = dropout,
-        padToken = padToken,
         tOpt = tOpt,
-        linearized = linearized
+        linearized = linearized,
+        causalMask = decoderDecoderCausalMask
+      ),
+      attentionEncoderDecoder = MultiheadAttention(
+        dQ = in,
+        dK = in,
+        dV = in,
+        hiddenPerHead = attentionHiddenPerHeadDim,
+        out = in,
+        numHeads = attentionNumHeads,
+        dropout = dropout,
+        tOpt = tOpt,
+        linearized = linearized,
+        causalMask = encoderDecoderCausalMask
       ),
       layerNorm1 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       layerNorm2 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
+      layerNorm3 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
+      layerNorm4 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
       w1 = initLinear(in, mlpHiddenDim, tOpt),
       b1 = param(STen.zeros(List(1, mlpHiddenDim), tOpt)),
       w2 = initLinear(mlpHiddenDim, out, tOpt),
@@ -184,6 +434,105 @@ object TransformerEncoderBlock {
   object Weights2 extends LeafTag
   object Bias1 extends LeafTag
   object Bias2 extends LeafTag
+
+  implicit val trainingMode: TrainingMode[TransformerDecoderBlock] =
+    TrainingMode
+      .make[TransformerDecoderBlock](
+        m =>
+          m.copy(
+            train = false,
+            attentionEncoderDecoder = m.attentionEncoderDecoder.asEval,
+            attentionDecoderDecoder = m.attentionDecoderDecoder.asEval
+          ),
+        m =>
+          m.copy(
+            train = true,
+            attentionEncoderDecoder = m.attentionEncoderDecoder.asTraining,
+            attentionDecoderDecoder = m.attentionDecoderDecoder.asTraining
+          )
+      )
+
+  implicit val load: Load[TransformerDecoderBlock] =
+    Load.make[TransformerDecoderBlock] { m => tensors =>
+      m.attentionDecoderDecoder.load(tensors)
+      m.attentionEncoderDecoder.load(
+        tensors.drop(m.attentionDecoderDecoder.state.size)
+      )
+      val attenionStatesSize =
+        m.attentionDecoderDecoder.state.size + m.attentionEncoderDecoder.state.size
+      m.layerNorm1.load(tensors.drop(attenionStatesSize))
+      m.layerNorm2.load(
+        tensors.drop(attenionStatesSize + m.layerNorm1.state.size)
+      )
+      m.layerNorm3.load(
+        tensors.drop(
+          attenionStatesSize + m.layerNorm1.state.size + m.layerNorm2.state.size
+        )
+      )
+      m.layerNorm4.load(
+        tensors.drop(
+          attenionStatesSize + m.layerNorm1.state.size + m.layerNorm2.state.size + m.layerNorm3.state.size
+        )
+      )
+
+      val remaining = tensors.drop(
+        attenionStatesSize + m.layerNorm1.state.size + m.layerNorm2.state.size + m.layerNorm3.state.size + m.layerNorm4.state.size
+      )
+      m.w1.value.copyFrom(remaining(0))
+      m.w2.value.copyFrom(remaining(1))
+      m.b1.value.copyFrom(remaining(2))
+      m.b2.value.copyFrom(remaining(3))
+
+    }
+}
+
+object TransformerEncoderBlock {
+
+  /* Factory of a single transformer block */
+  def apply[S: Sc](
+      in: Int,
+      attentionHiddenPerHeadDim: Int,
+      attentionNumHeads: Int,
+      mlpHiddenDim: Int,
+      out: Int,
+      dropout: Double,
+      tOpt: STenOptions,
+      linearized: Boolean,
+      gptOrder: Boolean,
+      causalMask: Boolean
+  ): TransformerEncoderBlock =
+    TransformerEncoderBlock(
+      attention = MultiheadAttention(
+        dQ = in,
+        dK = in,
+        dV = in,
+        hiddenPerHead = attentionHiddenPerHeadDim,
+        out = in,
+        numHeads = attentionNumHeads,
+        dropout = dropout,
+        tOpt = tOpt,
+        linearized = linearized,
+        causalMask = causalMask
+      ),
+      gptOrder = gptOrder,
+      layerNorm1 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
+      layerNorm2 = lamp.nn.LayerNorm(List(in.toLong), tOpt),
+      w1 = initLinear(in, mlpHiddenDim, tOpt),
+      b1 = param(STen.zeros(List(1, mlpHiddenDim), tOpt)),
+      w2 = initLinear(mlpHiddenDim, out, tOpt),
+      b2 = param(STen.zeros(List(1, out), tOpt)),
+      scale1 = param(STen.normal(0d,0.0001,List(in.toLong), tOpt)),
+      scale2 = param(STen.normal(0d,0.0001,List(in.toLong), tOpt)),
+      dropout = dropout,
+      train = true
+    )
+
+  object Weights1 extends LeafTag
+  object Weights2 extends LeafTag
+  object Bias1 extends LeafTag
+  object Bias2 extends LeafTag
+  object Scale1 extends LeafTag
+  object Scale2 extends LeafTag
 
   implicit val trainingMode: TrainingMode[TransformerEncoderBlock] =
     TrainingMode
@@ -206,17 +555,19 @@ object TransformerEncoderBlock {
       m.w2.value.copyFrom(remaining(1))
       m.b1.value.copyFrom(remaining(2))
       m.b2.value.copyFrom(remaining(3))
+      m.scale1.value.copyFrom(remaining(4))
+      m.scale2.value.copyFrom(remaining(5))
 
     }
 }
 
 /** Multi-head scaled dot product attention module
   *
-  * Input: (query,key,value,tokens) where query: batch x num queries x query dim
-  * key: batch x num k-v x key dim value: batch x num k-v x key value tokens:
-  * batch x num queries, long type
-  *
-  * Tokens is used to carry over padding information and ignore the padding
+  * Input: (query,key,value,maxLength) where
+  *   - query: batch x num queries x query dim
+  *   - key: batch x num k-v x key dim
+  *   - value: batch x num k-v x key value
+  *   - maxLength: 1D or 2D long tensor for attention masking
   */
 case class MultiheadAttention(
     wQ: Constant,
@@ -226,9 +577,12 @@ case class MultiheadAttention(
     dropout: Double,
     train: Boolean,
     numHeads: Int,
-    padToken: Long,
-    linearized: Boolean
-) extends GenericModule[(Variable, Variable, Variable, STen), Variable] {
+    linearized: Boolean,
+    causalMask: Boolean
+) extends GenericModule[
+      (Variable, Variable, Variable, Option[STen]),
+      Variable
+    ] {
 
   override val state = List(
     wQ -> MultiheadAttention.WeightsQ,
@@ -238,16 +592,15 @@ case class MultiheadAttention(
   )
 
   override def forward[S: Sc](
-      x: (Variable, Variable, Variable, STen)
+      x: (Variable, Variable, Variable, Option[STen])
   ): Variable = {
-    val (q, k, v, tokens) = x
+    val (q, k, v, maxLength) = x
 
     MultiheadAttention.multiheadAttention(
       query = q,
       keys = k,
       values = v,
-      tokens = tokens,
-      padToken = padToken,
+      maxLength = maxLength,
       dropout = dropout,
       trainDropout = train,
       wQuery = wQ,
@@ -255,7 +608,8 @@ case class MultiheadAttention(
       wValues = wV,
       wOutput = wO,
       numHeads = numHeads,
-      linearized = linearized
+      linearized = linearized,
+      causalMask = causalMask
     )
   }
 
@@ -270,9 +624,9 @@ object MultiheadAttention {
       out: Int,
       dropout: Double,
       numHeads: Int,
-      padToken: Long,
       tOpt: STenOptions,
-      linearized: Boolean
+      linearized: Boolean,
+      causalMask: Boolean
   ): MultiheadAttention = MultiheadAttention(
     wQ = initLinear(dQ, hiddenPerHead * numHeads, tOpt),
     wK = initLinear(dK, hiddenPerHead * numHeads, tOpt),
@@ -281,8 +635,8 @@ object MultiheadAttention {
     dropout = dropout,
     train = true,
     numHeads = numHeads,
-    padToken = padToken,
-    linearized = linearized
+    linearized = linearized,
+    causalMask = causalMask
   )
   case object WeightsQ extends LeafTag
   case object WeightsK extends LeafTag
@@ -302,28 +656,86 @@ object MultiheadAttention {
       }
     )
 
-  /** @param tokens
-    *   batch x seq , type long
-    * @param maskable
-    *   batch x seq x ???
-    * @param pad
-    * @param fill
-    * @return
-    *   batch x seq x ??? where (seq,batch,:) is set to fill if
-    *   tokens(seq,batch)== maskedToken
+  /** Masks on the 3rd axis of maskable depending on the dimensions of maxLength
+    *
+    * if maxLength is 2D: (batch,query,key) locations where
+    * maxLength(batch,query) > key are ignored.
+    *
+    * if maxLength is 1D: (batch,query,key) locations where maxLength(batch) >
+    * query are ignored
     */
   def sequenceMask[S: Sc](
-      tokens: STen,
+      maxLength: STen,
       maskable: Variable,
-      pad: Long,
       fill: Double
   ) = {
-    assert(tokens.shape(1) == maskable.shape(1))
-    assert(tokens.shape(0) == maskable.shape(0))
-    assert(tokens.shape.size == 2)
-    val mask = tokens.equ(pad)
+    if (maxLength.shape.size == 2)
+      sequenceMaskValidLength2D(maxLength, maskable, fill)
+    else sequenceMaskValidLength1D(maxLength, maskable, fill)
+
+  }
+
+  /** Masks the maskable(i,j,k) cell iff k >= maxLength(i,j)
+    *
+    * Masks some elements on the last (3rd) axis of maskable
+    *
+    * @param maxLength
+    *   batch x seq, type Long
+    * @param maskable
+    *   batch x seq x ???
+    * @param fill
+    *   scalar
+    */
+  def sequenceMaskValidLength2D[S: Sc](
+      maxLength: STen,
+      maskable: Variable,
+      fill: Double
+  ) = {
+    assert(maxLength.shape(1) == maskable.shape(1))
+    assert(maxLength.shape(0) == maskable.shape(0))
+    assert(maxLength.shape.size == 2)
+    val mask = STen
+      .arange_l(
+        start = 0L,
+        end = maskable.shape(2),
+        step = 1L,
+        tensorOptions = maskable.options
+      )
+      .view(1, 1, -1) ge maxLength.unsqueeze(2)
+
     maskable.maskFill(
-      lamp.autograd.const(mask.view(mask.shape :+ 1L: _*)),
+      lamp.autograd.const(mask),
+      fill
+    )
+
+  }
+
+  /** Masks the maskable(i,j,k) cell iff k >= maxLength(i)
+    *
+    * @param maxLength
+    *   batch, type Long
+    * @param maskable
+    *   batch x seq x ???
+    * @param fill
+    *   scalar
+    */
+  def sequenceMaskValidLength1D[S: Sc](
+      maxLength: STen,
+      maskable: Variable,
+      fill: Double
+  ) = {
+    assert(maxLength.shape(0) == maskable.shape(0))
+    assert(maxLength.shape.size == 1)
+    val mask = (STen
+      .arange_l(
+        start = 0L,
+        end = maskable.shape(2),
+        step = 1L,
+        tensorOptions = maskable.options
+      )
+      .unsqueeze(0) ge maxLength.unsqueeze(1)).unsqueeze(1)
+    maskable.maskFill(
+      lamp.autograd.const(mask),
       fill
     )
 
@@ -331,30 +743,32 @@ object MultiheadAttention {
 
   /** @param input
     *   batch x seq x ???
-    * @param mask
-    *   scalar long
-    * @param tokens
-    *   batch x seq , long
+    * @param maxLength
+    *   batch x seq OR batch , long
     * @return
     *   batch x seq x ???
     */
   def maskedSoftmax[S: Sc](
       input: Variable,
-      pad: Long,
-      tokens: STen
+      maxLength: STen
   ) = {
     val maskedInput = sequenceMask(
-      tokens = tokens,
+      maxLength = maxLength,
       maskable = input,
-      pad = pad,
-      fill = -1000000d
+      fill = Double.NegativeInfinity
     )
     maskedInput.logSoftMax(2).exp
   }
 
   /** Scaled dot product attention
     *
-    * (batch,query) locations where tokens(batch,query) == pad are ignored
+    * if maxLength is 2D: (batch,query,key) locations where
+    * maxLength(batch,query) > key are ignored.
+    *
+    * if maxLength is 1D: (batch,query,key) locations where maxLength(batch) >
+    * query are ignored
+    *
+    * See chapter 11.3.3 in d2l v1.0.0-beta0
     *
     * @param query
     *   batch x num queries x key dim
@@ -362,10 +776,8 @@ object MultiheadAttention {
     *   batch x num k-v pairs x key dim
     * @param value
     *   batch x num k-v pairs x value dim
-    * @param tokens
-    *   batch x num queries , type long
-    * @param pad
-    *   scalar long
+    * @param maxLength
+    *   batch x num queries OR batch, type long
     * @return
     *   batch x num queries x value dim
     */
@@ -373,8 +785,7 @@ object MultiheadAttention {
       query: Variable,
       keys: Variable,
       values: Variable,
-      tokens: STen,
-      padToken: Long,
+      maxLength: Option[STen],
       dropout: Double,
       trainDropout: Boolean
   ) = {
@@ -384,7 +795,9 @@ object MultiheadAttention {
     val scores = query.bmm(keys.transpose(1, 2)) * (1d / math.sqrt(d.toDouble))
     // batch x num queries x num k-v pairs
     val weights =
-      maskedSoftmax(scores, padToken, tokens).dropout(dropout, trainDropout)
+      maxLength
+        .fold(scores)(mx => maskedSoftmax(scores, mx))
+        .dropout(dropout, trainDropout)
 
     weights.bmm(values)
 
@@ -397,7 +810,7 @@ object MultiheadAttention {
     * decomposition a more efficient configuration of the chained matrix
     * multiplication may be used: (Q Kt) V = Q (Kt V)
     *
-    * (batch,query) locations where tokens(batch,query) == pad are ignored
+    * applies masking according to maskedSoftmax
     *
     * @param query
     *   batch x num queries x key dim
@@ -405,10 +818,8 @@ object MultiheadAttention {
     *   batch x num k-v pairs x key dim
     * @param value
     *   batch x num k-v pairs x value dim
-    * @param tokens
-    *   batch x num queries , type long
-    * @param pad
-    *   scalar long
+    * @param maxLength
+    *   batch x num queries OR batch , type long
     * @return
     *   batch x num queries x value dim
     */
@@ -416,20 +827,22 @@ object MultiheadAttention {
       query: Variable,
       keys: Variable,
       values: Variable,
-      tokens: STen,
-      padToken: Long,
+      maxLength: Option[STen],
       dropout: Double,
       trainDropout: Boolean
   ) = {
 
     val qF = (query.swish1 + 1)
 
+    val maskable = (keys.swish1 + 1).dropout(dropout, trainDropout)
+
     // zero out some keys either due to padding or dropout
-    val kF = sequenceMask(
-      tokens,
-      (keys.swish1 + 1).dropout(dropout, trainDropout),
-      padToken,
-      0d
+    val kF = maxLength.fold(maskable)(mx =>
+      sequenceMask(
+        maxLength = mx,
+        maskable = maskable,
+        fill = 0d
+      )
     )
 
     val tmp1 = kF.transpose(1, 2).bmm(values)
@@ -443,7 +856,11 @@ object MultiheadAttention {
 
   /** Multi-head scaled dot product attention
     *
-    * (batch,query) locations where tokens(batch,query) == pad are ignored
+    * See chapter 11.5 in d2l v1.0.0-beta0
+    *
+    * Attention masking is implemented similarly to chapter 11.3.2.1 in d2l.ai
+    * v1.0.0-beta0. It supports unmasked attention, attention on variable length
+    * input, and left-to-right attention.
     *
     * @param query
     *   batch x num queries x dq
@@ -451,10 +868,8 @@ object MultiheadAttention {
     *   batch x num k-v pairs x dk
     * @param value
     *   batch x num k-v pairs x dv
-    * @param tokens
-    *   batch x num queries , type long
-    * @param pad
-    *   scalar long
+    * @param maxLength
+    *   batch x num queries OR batch , type long
     * @param wQuery
     *   dq x hidden
     * @param wKeys
@@ -465,6 +880,9 @@ object MultiheadAttention {
     *   hidden x po
     * @param numHeads
     *   number of output heads, must be divisible by hidden
+    * @param linearized
+    *   if true uses linearized attention. if false used scaled dot product
+    *   attention
     * @return
     *   batch x num queries x po
     */
@@ -472,8 +890,7 @@ object MultiheadAttention {
       query: Variable,
       keys: Variable,
       values: Variable,
-      tokens: STen,
-      padToken: Long,
+      maxLength: Option[STen],
       dropout: Double,
       trainDropout: Boolean,
       wQuery: Variable,
@@ -481,12 +898,13 @@ object MultiheadAttention {
       wValues: Variable,
       wOutput: Variable,
       numHeads: Int,
-      linearized: Boolean
+      linearized: Boolean,
+      causalMask: Boolean
   ) = {
 
     def mm1(a: Variable, b: Variable) = {
       val shape = a.shape
-      a.view(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
+      a.reshape(List(-1, shape.last)).mm(b).view(shape.dropRight(1) :+ -1L)
     }
 
     // in a x b x c
@@ -520,42 +938,71 @@ object MultiheadAttention {
     // batch x num k-v x hidden
     val v1 = mm1(values, wValues)
 
-    // (batch * numHeads) x num queries x hidden/numHeads
-    val q1t: Variable = transposeIn(q1, numHeads)
-    // (batch * numHeads) x num k-v x hidden/numHeads
-    val k1t: Variable = transposeIn(k1, numHeads)
-    // (batch * numHeads) x num k-v x hidden/numHeads
-    val v1t: Variable = transposeIn(v1, numHeads)
+    val isCuda = q1.value.isCuda
+    val nQ = q1.shape(1)
+    val nK = k1.shape(1)
+    val nV = v1.shape(1)
+    val nB = q1.shape(0)
+    val aligned =
+      nQ % 8 == 0 && nK % 8 == 0 && nV % 8 == 0
 
-    // (batch * numHeads) x num queries
-    val tokensRepeated = tokens.repeat(List(numHeads, 1))
+    val useEfficientAttentionKernel =
+      isCuda && aligned && nQ == nK && !linearized && (causalMask || maxLength.isEmpty) && (dropout == 0d || !trainDropout)
 
-    // (batch * h) x num queries x hidden/h
-    val output =
-      if (linearized)
-        linearizedAttention(
-          q1t,
-          k1t,
-          v1t,
-          tokensRepeated,
-          padToken,
-          dropout,
-          trainDropout
-        )
-      else
-        scaledDotProductAttention(
-          q1t,
-          k1t,
-          v1t,
-          tokensRepeated,
-          padToken,
-          dropout,
-          trainDropout
-        )
+    val attention =
+      if (useEfficientAttentionKernel)
+        new ScaledDotProductAttention(
+          implicitly[Scope],
+          q1.view(List(nB, nQ, numHeads, -1)),
+          k1.view(List(nB, nQ, numHeads, -1)),
+          v1.view(List(nB, nQ, numHeads, -1)),
+          causalMask
+        ).value
+          .flatten(2, 3)
+      else {
+
+        // (batch * numHeads) x num queries x hidden/numHeads
+        val q1t: Variable = transposeIn(q1, numHeads)
+        // (batch * numHeads) x num k-v x hidden/numHeads
+        val k1t: Variable = transposeIn(k1, numHeads)
+        // (batch * numHeads) x num k-v x hidden/numHeads
+        val v1t: Variable = transposeIn(v1, numHeads)
+
+        // (batch * numHeads) x num queries OR (batch * numHeads)
+        val maxLengthRepated = if (causalMask && maxLength.isEmpty) {
+          val single = STen.arange_l(1, nQ + 1, 1, q1t.options).unsqueeze(0)
+          Some(single.repeat(List(nB * numHeads, 1)))
+
+        } else maxLength.map(_.repeat(List(numHeads, 1)))
+
+        // (batch * h) x num queries x hidden/h
+        val output =
+          if (linearized)
+            linearizedAttention(
+              q1t,
+              k1t,
+              v1t,
+              maxLengthRepated,
+              dropout,
+              trainDropout
+            )
+          else
+            scaledDotProductAttention(
+              q1t,
+              k1t,
+              v1t,
+              maxLengthRepated,
+              dropout,
+              trainDropout
+            )
+
+        // batch x num queries x hidden
+        val outputConcat: Variable = transposeOut(output, numHeads)
+        outputConcat
+      }
 
     // batch x num queries x hidden
-    val outputConcat: Variable = transposeOut(output, numHeads)
-    mm1(outputConcat, wOutput)
+    mm1(attention, wOutput)
 
   }
 
@@ -563,6 +1010,14 @@ object MultiheadAttention {
 
 object PositionalEmbedding {
 
+  /** The trigonometric position encoding from https://arxiv.org/abs/1706.03762
+    *
+    * @param sequenceLength
+    * @param dimension
+    *   output dimension of the encoding
+    * @param device
+    * @param precision
+    */
   def vaswani[S: Sc](
       sequenceLength: Int,
       dimension: Int,
@@ -589,8 +1044,14 @@ object PositionalEmbedding {
     STen.fromDoubleArray(m, List(sequenceLength, dimension), device, precision)
   }
 
-  /** p(i,j) = min(maxDist,abs(i-j)) returns the first `dimension` left singular
-    * vectors of the row normalized p
+  /** Linearly decomposed sequence distance encoding
+    *
+    * @param maxDistance
+    * @param dimension
+    *   output dimension
+    * @return
+    *   the first `dimension` left singular vectors of the row normalized p
+    *   where p(i,j) = min(maxDist,abs(i-j))
     */
   def simpleSequence(
       sequenceLength: Int,
@@ -630,18 +1091,26 @@ object PositionalEmbedding {
   }
 }
 
-/** Gradients are not computed for `positionalEmbedding`
+/** A module with positional and token embeddings
+  *
+  * Token embeddings are lookup embeddings. Positional embeddings are supplied
+  * as a constant. They are supposed to come from a fixed unlearned derivation
+  * of the positions.
+  *
+  * Token and positional embeddings are summed.
+  *
+  * Gradients are not computed for `positionalEmbedding`
   */
 case class TransformerEmbedding(
     embedding: lamp.nn.Embedding,
     addPositionalEmbedding: Boolean,
     positionalEmbedding: Constant
-) extends GenericModule[Variable, (Variable, STen)] {
+) extends GenericModule[Variable, Variable] {
   def state =
     List(
       positionalEmbedding -> TransformerEmbedding.Embedding
     ) ++ embedding.state
-  def forward[S: Sc](x: Variable): (Variable, STen) = {
+  def forward[S: Sc](x: Variable): Variable = {
     val embedded = embedding.forward(x)
     val viewed = positionalEmbedding.view(1L +: positionalEmbedding.shape)
     val withPos =
@@ -651,19 +1120,21 @@ case class TransformerEmbedding(
           const(viewed.value.repeat(List(embedded.shape(0), 1L, 1L))),
           2
         )
-    (withPos, x.value)
+    withPos
   }
 }
 object TransformerEmbedding {
   case object Embedding extends LeafTag
-  implicit val trainingMode : TrainingMode[TransformerEmbedding] = TrainingMode.make[TransformerEmbedding](
-    m => m.copy(embedding = m.embedding.asEval),
-    m => m.copy(embedding = m.embedding.asTraining)
-  )
-  implicit val load : Load[TransformerEmbedding] = Load.make[TransformerEmbedding] { m => tensors =>
-    m.positionalEmbedding.value.copyFrom(tensors(0))
-    m.embedding.load(tensors.drop(1))
+  implicit val trainingMode: TrainingMode[TransformerEmbedding] =
+    TrainingMode.make[TransformerEmbedding](
+      m => m.copy(embedding = m.embedding.asEval),
+      m => m.copy(embedding = m.embedding.asTraining)
+    )
+  implicit val load: Load[TransformerEmbedding] =
+    Load.make[TransformerEmbedding] { m => tensors =>
+      m.positionalEmbedding.value.copyFrom(tensors(0))
+      m.embedding.load(tensors.drop(1))
 
-  }
+    }
 
 }

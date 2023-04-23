@@ -121,7 +121,8 @@ package object bert {
           cpy(pad(maskedBertTokens, maxLength, padToken)),
           cpy(pad(bertSegments, maxLength, 0)),
           cpy(pad(mlmPositions, maxNumPredictionPositions, 0)),
-          cpy(pad(mlmTarget, maxNumPredictionPositions, padToken))
+          cpy(pad(mlmTarget, maxNumPredictionPositions, padToken)),
+          bertTokens.length.toLong
         )
 
       }
@@ -143,7 +144,7 @@ package object bert {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       assert(idx.nonEmpty)
       scopeInResource.map { implicit scope =>
-        val (tokens, segments, positions, mlmTargets, nsTargets) = Scope {
+        val (tokens, segments, positions, mlmTargets, nsTargets,tokenMaxLength) = Scope {
           implicit scope =>
             val ps = ArraySeq.unsafeWrapArray(idx).flatMap { paragraphIdx =>
               prepareParagraph(
@@ -170,6 +171,7 @@ package object bert {
             val bertSegments = STen.stack(dim = 0, tensors = ps.map(_._3))
             val mlmPositions = STen.stack(dim = 0, tensors = ps.map(_._4))
             val mlmTarget = STen.stack(dim = 0, tensors = ps.map(_._5))
+            val tokenMaxLength = STen.fromLongArray(ps.map(_._6).toArray)
 
             device.withOtherStreamThenSync(synchronizeBefore = false) {
 
@@ -178,7 +180,8 @@ package object bert {
                 device.to(bertSegments),
                 device.to(mlmPositions),
                 device.to(mlmTarget),
-                device.to(nextSentenceTarget)
+                device.to(nextSentenceTarget),
+                device.to(tokenMaxLength),
               )
             }
         }
@@ -187,7 +190,8 @@ package object bert {
           input = BertPretrainInput(
             tokens = const(tokens),
             segments = const(segments),
-            positions = positions
+            positions = positions,
+            maxLength = Option(tokenMaxLength)
           ),
           maskedLanguageModelTarget = mlmTargets,
           wholeSentenceTarget = nsTargets

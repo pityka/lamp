@@ -1,5 +1,4 @@
 package lamp.data
-import java.nio.ByteOrder
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 import java.io.File
@@ -17,13 +16,12 @@ import lamp.data.schemas.TensorList
   * This format is similar to the ONNX external tensor serialization format, but
   * it uses JSON rather then protobuf.
   *
-  * Format specification
-  * ==================== 
-  * Sequences of tensors are serialized into a JSON
-  * descriptor and a data blob. The schema of the descriptor is the case class
-  * lamp.data.schemas.TensorList. The location field in this schema holds a path
-  * to the data blob. If this the location a relative POSIX then it is relative
-  * to the file path where the descriptor itself is written.
+  * Format specification \==================== Sequences of tensors are
+  * serialized into a JSON descriptor and a data blob. The schema of the
+  * descriptor is the case class lamp.data.schemas.TensorList. The location
+  * field in this schema holds a path to the data blob. If this the location a
+  * relative POSIX then it is relative to the file path where the descriptor
+  * itself is written.
   *
   * The descriptor may be embedded into larger JSON structures.
   *
@@ -41,8 +39,8 @@ object Writer {
       dataChannel: WritableByteChannel,
       initialByteOffset: Long,
       bufferSize: Int
-  ): Either[String,TensorList] = {
-    writeTensorDataIntoChannel(tensors, dataChannel, bufferSize).map {
+  ): Either[String, TensorList] = {
+    Right(writeTensorDataIntoChannel(tensors, dataChannel, bufferSize)).map {
       offsets =>
         val tensorDescriptors =
           offsets.zip(tensors).map { case ((offset, length, _), tensor) =>
@@ -65,46 +63,23 @@ object Writer {
     }
   }
 
-  private def tensorToArray(tensor0: STen, start: Long, end: Long) =
+  private def tensorToArray(
+      tensor0: STen,
+      start: Long,
+      end: Long
+  ): Array[Byte] =
     Scope.unsafe { implicit scope =>
       val section = tensor0.view(-1).slice(0, start, end, 1)
       val t = if (section.isCPU) section else section.copyToDevice(lamp.CPU)
-      val numel = t.numel
-      val array = (t.scalarTypeByte match {
-        case 7 =>
-          val arr = Array.ofDim[Double]((end - start).toInt)
-          assert(arr.length == numel)
-          if (numel > 0) { assert(t.value.copyToDoubleArray(arr)) }
-          arr
-        case 6 =>
-          val arr = Array.ofDim[Float]((end - start).toInt)
-          assert(arr.length == numel)
-          if (numel > 0) { assert(t.value.copyToFloatArray(arr)) }
+      val byteLength = (t.numel * tensor0.value.elementSize())
+      assert(byteLength < Int.MaxValue - 100)
 
-          arr
-        case 4 =>
-          val arr = Array.ofDim[Long]((end - start).toInt)
-          assert(arr.length == numel)
-          if (numel > 0) { assert(t.value.copyToLongArray(arr)) }
-          arr
-        case 1 =>
-          val arr = Array.ofDim[Byte]((end - start).toInt)
-          assert(arr.length == numel)
-          if (numel > 0) { assert(t.value.copyToByteArray(arr)) }
-          arr
-      })
+      val arr = Array.ofDim[Byte](byteLength.toInt)
+      if (byteLength > 0) { assert(t.value.copyToByteArray(arr)) }
 
-      array
+      arr
 
     }
-
-  private[data] def width(scalarTagByte: Byte) = (scalarTagByte: Byte) match {
-    case 7     => Right(8)
-    case 6     => Right(4)
-    case 4     => Right(8)
-    case 1     => Right(1)
-    case other => Left(s"Type $other not supported.")
-  }
 
   /** Returns pair of (data length, total bytes written). Total bytes is data +
     * pad. Pad pads to multiple of 8.
@@ -113,68 +88,41 @@ object Writer {
       tensor: STen,
       channel: WritableByteChannel,
       bufferSize: Int
-  ): Either[String, (Long, Long)] = {
-    width(tensor.scalarTypeByte).map { width =>
-      val elems = tensor.numel
-      val bL = bufferSize.toLong
-      val bb = ByteBuffer
-        .allocate(bufferSize * width)
-        .order(ByteOrder.LITTLE_ENDIAN)
-      1L to (elems / bL + 1) foreach { i =>
-        val start = (i - 1) * bufferSize
-        val end = math.min(elems, i * bufferSize)
+  ): (Long, Long) = {
+    val width = tensor.elementSize
+    val elems = tensor.numel
 
-        val arr: Array[_] =
-          tensorToArray(tensor, start, end)
+    val bL = bufferSize.toLong
+    1L to (elems / bL + 1) foreach { i =>
+      val start = (i - 1) * bufferSize
+      val end = math.min(elems, i * bufferSize)
 
-        tensor.scalarTypeByte match {
-          case 7 =>
-            bb.asDoubleBuffer().put(arr.asInstanceOf[Array[Double]])
-            bb.position(bb.position() + arr.length * 8)
+      val arr: Array[Byte] =
+        tensorToArray(tensor, start, end)
 
-          case 6 =>
-            bb.asFloatBuffer().put(arr.asInstanceOf[Array[Float]])
-            bb.position(bb.position() + arr.length * 4)
-
-          case 4 =>
-            bb.asLongBuffer().put(arr.asInstanceOf[Array[Long]])
-            bb.position(bb.position() + arr.length * 8)
-          case 1 =>
-            bb.put(arr.asInstanceOf[Array[Byte]])
-            
-        }
-
-        writeFully(bb, channel)
-      }
-      val dataLength = elems * width.toLong
-      val padLength = (8 - dataLength % 8) % 8
-      if (padLength > 0) {
-        val bb = ByteBuffer
-          .allocate(padLength.toInt)
-          .position(padLength.toInt)
-          .asInstanceOf[ByteBuffer]
-        writeFully(
-          bb,
-          channel
-        )
-      }
-      (dataLength, dataLength + padLength)
+      writeFully(ByteBuffer.wrap(arr), channel)
     }
+    val dataLength = elems * width
+    val padLength = (8 - dataLength % 8) % 8
+    if (padLength > 0) {
+      val bb = ByteBuffer
+        .allocate(padLength.toInt)
+        .asInstanceOf[ByteBuffer]
+      writeFully(
+        bb,
+        channel
+      )
+    }
+    (dataLength, dataLength + padLength)
 
   }
 
   private def writeFully(bb: ByteBuffer, channel: WritableByteChannel) = {
-    bb.flip
     while (bb.hasRemaining) {
       channel.write(bb)
     }
     bb.rewind
   }
-
-  private def sequence[A, B](s: Seq[Either[A, B]]): Either[A, Seq[B]] =
-    if (s.forall(_.isRight))
-      Right(s.map(_.toOption.get))
-    else s.find(_.isLeft).get.asInstanceOf[Left[A, Seq[B]]]
 
   /** Returns list of (offset, length) in bytes
     */
@@ -182,19 +130,18 @@ object Writer {
       tensors: Seq[STen],
       channel: WritableByteChannel,
       bufferSize: Int
-  ): Either[String, Seq[(Long, Long, Long)]] =
-    sequence(tensors.map { case t =>
+  ): Seq[(Long, Long, Long)] = {
+    val lengths = tensors.map { case t =>
       writeTensorIntoChannel(t, channel, bufferSize)
-    })
-      .map { lengths =>
-        (lengths
-          .map(_._2)
-          .scanLeft(0L)(_ + _)
-          .dropRight(1) zip lengths.map(_._1) zip lengths.map(_._2)).map {
-          case ((offset, dataLength), paddedLength) =>
-            (offset, dataLength, paddedLength)
-        }
-      }
+    }
+    (lengths
+      .map(_._2)
+      .scanLeft(0L)(_ + _)
+      .dropRight(1) zip lengths.map(_._1) zip lengths.map(_._2)).map {
+      case ((offset, dataLength), paddedLength) =>
+        (offset, dataLength, paddedLength)
+    }
+  }
 
   def writeTensorsIntoFile(
       tensors: Seq[STen],

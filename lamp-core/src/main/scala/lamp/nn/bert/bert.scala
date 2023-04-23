@@ -122,7 +122,6 @@ object BertLoss {
       attentionHiddenPerHeadDim = attentionHiddenPerHeadDim,
       bertEncoderMlpHiddenDim = bertEncoderMlpHiddenDim,
       dropout = dropout,
-      padToken = padToken,
       tOpt = tOpt,
       linearized = linearized,
       positionEmbedding = positionEmbedding
@@ -131,7 +130,7 @@ object BertLoss {
       numClasses = vocabularySize,
       classWeights = STen.ones(List(vocabularySize), tOpt),
       reduction = Mean,
-      ignore = padToken
+      ignore = padToken // not sure this is needed 
     ),
     wholeSentenceLoss = LossFunctions.BCEWithLogits(
       posWeights = None,
@@ -167,6 +166,8 @@ object BertLoss {
   *   - Positions: Long tensor of size (batch, mask size (variable)). Values are
   *     indices in [0,sequence length) selecting masked sequence positions. They
   *     never select positions of cls, sep, pad.
+  *   - maxLength: 1D long tensor of size (sequence length). Values are in [0,sequence_length]. 
+  *     Tokens at positions higher or equal than the sequence length are ignored.
   *
   * @param tokens
   * @param segments
@@ -175,12 +176,13 @@ object BertLoss {
 case class BertPretrainInput(
     tokens: Constant,
     segments: Constant,
-    positions: STen
+    positions: STen,
+    maxLength: Option[STen]
 )
 
 object BertPretrainInput {
   implicit val movable: Movable[BertPretrainInput] =
-    Movable.by(v => (v.tokens, v.segments, v.positions))
+    Movable.by(v => (v.tokens, v.segments, v.positions, v.maxLength))
 }
 
 /** Output of BERT
@@ -213,7 +215,7 @@ case class BertPretrainModule(
 
   def forward[S: Sc](x: BertPretrainInput): BertPretrainOutput = {
 
-    val encoded = encoder.forward((x.tokens, x.segments))
+    val encoded = encoder.forward((x.tokens, x.segments, x.maxLength))
     val mlmScores = mlm.forward((encoded, x.positions)).logSoftMax(dim = 2)
     val encodedClsPosition = encoded.select(dim = 1, index = 0)
     val binaryScore =
@@ -251,7 +253,6 @@ object BertPretrainModule {
       attentionNumHeads: Int,
       bertEncoderMlpHiddenDim: Int,
       dropout: Double,
-      padToken: Long,
       tOpt: STenOptions,
       linearized: Boolean,
       positionEmbedding: Option[STen]
@@ -266,7 +267,6 @@ object BertPretrainModule {
       attentionNumHeads = attentionNumHeads,
       mlpHiddenDim = bertEncoderMlpHiddenDim,
       dropout = dropout,
-      padToken = padToken,
       tOpt = tOpt,
       linearized = linearized,
       positionEmbedding = positionEmbedding
@@ -377,8 +377,8 @@ object MaskedLanguageModelModule {
 
 /** BertEncoder module
   *
-  * Input is `(tokens, segments)` where `tokens` and `segments` are both
-  * (batch,num tokens) long tensor.
+  * Input is `(tokens, segments, maxLength)` where `tokens` and `segments` are both
+  * (batch,num tokens) long tensor. maxLength is a 1D long tensor indicating the length of input sequences
   *
   * Output is (batch, num tokens, out dimension)
   */
@@ -387,13 +387,13 @@ case class BertEncoder(
     segmentEmbedding: Embedding,
     positionalEmbedding: Constant,
     blocks: Seq[TransformerEncoderBlock]
-) extends GenericModule[(Variable, Variable), Variable] {
+) extends GenericModule[(Variable, Variable, Option[STen]), Variable] {
   def state = tokenEmbedding.state ++ segmentEmbedding.state ++ List(
     positionalEmbedding ->
       BertEncoder.PositionalEmbeddingWeight
   ) ++ blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
-  def forward[S: Sc](x: (Variable, Variable)): Variable = {
-    val (tokens, segments) = x
+  def forward[S: Sc](x: (Variable, Variable, Option[STen])): Variable = {
+    val (tokens, segments, maxLength) = x
     val embedded = tokenEmbedding.forward(tokens) + segmentEmbedding.forward(
       segments
     ) + positionalEmbedding.slice(
@@ -402,7 +402,7 @@ case class BertEncoder(
       end = tokens.shape(1),
       step = 1
     )
-    blocks.foldLeft(embedded) { (a, block) => block.forward((a, tokens.value)) }
+    blocks.foldLeft(embedded) { (a, block) => block.forward((a, maxLength)) }
   }
 }
 object BertEncoder {
@@ -474,9 +474,6 @@ object BertEncoder {
     *   output dimension
     * @param dropout
     *   dropout rate
-    * @param padToken
-    *   pad token, (batch, seq) positions where `tokens` == `padToken` are
-    *   ignored, padding is not the same as masking
     * @param tOpt
     *   tensor options
     * @param positionEmbedding optional float tensor of size (sequence length, embedding dimension)
@@ -495,7 +492,6 @@ object BertEncoder {
       attentionNumHeads: Int,
       mlpHiddenDim: Int,
       dropout: Double,
-      padToken: Long,
       tOpt: STenOptions,
       linearized: Boolean,
       positionEmbedding: Option[STen]
@@ -529,9 +525,10 @@ object BertEncoder {
           mlpHiddenDim = mlpHiddenDim,
           out = embeddingDim,
           dropout = dropout,
-          padToken = padToken,
           tOpt = tOpt,
-          linearized = linearized
+          linearized = linearized,
+          gptOrder = false,
+          causalMask = false
         )
       )
     )

@@ -40,7 +40,7 @@ package object distributed {
   def localDataParallelTrainingLoop[I, M <: GenericModule[
     I,
     Variable
-  ], LRState, BatchStreamState, BatchStreamBuffers](
+  ]: Load, LRState, BatchStreamState, BatchStreamBuffers](
       modelsWithDataStreams: Seq[
         (
             SupervisedModel[I, M],
@@ -58,12 +58,14 @@ package object distributed {
       ],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       maxEpochs: Int,
-      checkpointState: Option[(LoopState, LRState) => IO[Unit]] = None,
+      checkpointState: Option[
+        (LoopStateWithModelAndOptimizerData, LRState) => IO[Unit]
+      ] = None,
       validationFrequency: Int = 1,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule[LRState] =
         LearningRateSchedule.noop,
-      initState: Option[LoopState] = None,
+      initState: Option[LoopStateWithModelAndOptimizerData] = None,
       accumulateGradientOverNBatches: Int = 1,
       learningRateScheduleInitState: Option[LRState] = None,
       validationLossExponentialSmoothingFactor: Double = 1.0
@@ -144,11 +146,8 @@ package object distributed {
     *     single-process multi-gpu settings. A within process cats effect
     *     implementation is also provided for single-process multi-gpu settings.
     *
-    * For single process multi gpu settings lamp provides two mutually exclusive
-    * alternatives:
-    *   - The training loop in IOLoops (see the `dataParallelModels` argument of
-    *     IOLoops.epochs).
-    *   - ???
+    * When the training is complete, the best model is copied into the tensors
+    * of the supplied in SupervisedModel instance.
     *
     * @param nranks
     * @param gpu
@@ -172,7 +171,7 @@ package object distributed {
   def driveDistributedTraining[I, M <: GenericModule[
     I,
     Variable
-  ], LRState, BatchStreamState, BatchStreamBuffers](
+  ]: Load, LRState, BatchStreamState, BatchStreamBuffers](
       nranks: Int,
       gpu: Int,
       controlCommunication: DistributedCommunicationRoot,
@@ -189,12 +188,14 @@ package object distributed {
         BatchStreamBuffers
       ],
       maxEpochs: Int,
-      checkpointState: Option[(LoopState, LRState) => IO[Unit]] = None,
+      checkpointState: Option[
+        (LoopStateWithModelAndOptimizerData, LRState) => IO[Unit]
+      ] = None,
       validationFrequency: Int = 1,
       returnMinValidationLossModel: Seq[Int] = Nil,
       learningRateSchedule: LearningRateSchedule[LRState] =
         LearningRateSchedule.noop,
-      initState: Option[LoopState] = None,
+      initState: Option[LoopStateWithModelAndOptimizerData] = None,
       accumulateGradientOverNBatches: Int = 1,
       learningRateScheduleInitState: Option[LRState] = None,
       validationLossExponentialSmoothingFactor: Double = 1.0
@@ -213,10 +214,13 @@ package object distributed {
         }
 
       val optimizer = IO {
-
         optimizerFactory(
           model.module.parameters.map(v => (v._1.value, v._2))
         )
+      }
+
+      initState.foreach { case state =>
+        model.module.load(state.model)
       }
 
       def trainEpoch(
@@ -272,6 +276,11 @@ package object distributed {
         ncclComm <- ncclComm
         _ <- IO { scribe.info("Nccl clique is ready.") }
         optimizer <- optimizer
+        _ = {
+          initState.foreach { case state =>
+            optimizer.load(state.optimizer)
+          }
+        }
         modelIsSaved <- Ref.of[IO, Boolean](false)
         r <- epochs[LRState](
           maxEpochs = maxEpochs,
@@ -284,7 +293,7 @@ package object distributed {
           validationFrequency = validationFrequency,
           returnMinValidationLossModel = returnMinValidationLossModel,
           learningRateSchedule = learningRateSchedule,
-          initState = initState,
+          initState = initState.map(_.loopState),
           learningRateScheduleInitState = learningRateScheduleInitState,
           validationLossExponentialSmoothingFactor =
             validationLossExponentialSmoothingFactor,
@@ -293,8 +302,19 @@ package object distributed {
               ncclComm
             )
           ),
-          checkpointState = checkpointState,
-          saveModel = IO {
+          checkpointState = checkpointState.map { fun =>
+            val f2 = (ls: LoopState, lr: LRState) => {
+              val both = LoopStateWithModelAndOptimizerData(
+                ls,
+                model.module.state.map(_._1.value),
+                optimizer.state,
+                clonedModelState
+              )
+              fun(both, lr)
+            }
+            f2
+          },
+          saveMinValidationLossModel = IO {
             model.module.state.map(_._1.value).zip(clonedModelState).foreach {
               case (src, dst) =>
                 dst.copyFrom(src)
@@ -306,6 +326,7 @@ package object distributed {
           DistributedCommunication.Stop
         )
         _ <- modelIsSaved.get.map { modelIsSaved =>
+          // copying back best model
           if (modelIsSaved) {
             model.module.state.map(_._1.value).zip(clonedModelState).foreach {
               case (dst, src) =>
@@ -467,7 +488,7 @@ package object distributed {
       validationLossExponentialSmoothingFactor: Double = 1.0,
       trainEpoch: Double => IO[Double],
       validationEpoch: Option[IO[Double]],
-      saveModel: IO[Unit]
+      saveMinValidationLossModel: IO[Unit]
   ): IO[LoopState] = {
 
     def loop(
@@ -533,9 +554,9 @@ package object distributed {
             ) {
               if (maybeValidationLoss.isEmpty) IO.pure(minValidationEpoch)
               else if (minValidationLoss.isEmpty)
-                saveModel.map(_ => Some(epoch))
+                saveMinValidationLossModel.map(_ => Some(epoch))
               else if (minValidationLoss.get > maybeValidationLoss.get._1)
-                saveModel.map(_ => Some(epoch))
+                saveMinValidationLossModel.map(_ => Some(epoch))
               else IO.pure(minValidationEpoch)
             } else IO.pure(minValidationEpoch)
           nextLearningCurve = (

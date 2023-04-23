@@ -1,6 +1,7 @@
 package lamp.data.schemas
 import com.github.plokhotnyuk.jsoniter_scala.macros._
 import com.github.plokhotnyuk.jsoniter_scala.core._
+import lamp.nn
 
 case class TensorDescriptor(
     dims: Seq[Long],
@@ -30,7 +31,9 @@ object TensorList {
   implicit val codec: JsonValueCodec[TensorList] = JsonCodecMaker.make
 }
 
-sealed trait LoopState
+sealed trait LoopState {
+  def locations: Seq[String]
+}
 
 case class SimpleLoopState(
     model: TensorList,
@@ -39,8 +42,13 @@ case class SimpleLoopState(
     lastValidationLoss: Option[Double],
     minValidationLoss: Option[Double],
     minValidationLossModel: Option[(Int, TensorList)],
-    learningCurve: List[(Int, Double, Option[Double],Option[Double])]
-) extends LoopState
+    learningCurve: List[(Int, Double, Option[Double], Option[Double])]
+) extends LoopState {
+  def locations = List(
+    model.location,
+    optimizer.location
+  ) ++ minValidationLossModel.toList.map(_._2.location)
+}
 case class SWALoopState(
     model: TensorList,
     optimizer: TensorList,
@@ -50,12 +58,35 @@ case class SWALoopState(
     numberOfAveragedModels: Int,
     averagedModels: Option[TensorList],
     learningCurve: List[(Int, Double, Option[Double])]
-) extends LoopState
+) extends LoopState {
+  def locations = List(
+    model.location,
+    optimizer.location
+  ) ++ averagedModels.toList.map(_.location)
+}
 case class SimpleThenSWALoopState(
     simple: SimpleLoopState,
     swa: Option[SWALoopState]
-) extends LoopState
+) extends LoopState {
+  def locations: Seq[String] = simple.locations ++ swa.toList.flatMap(_.locations)
+}
 
 object LoopState {
   implicit val codec: JsonValueCodec[LoopState] = JsonCodecMaker.make
+}
+
+case class ByteSegmentEncoding(
+    encoding: Vector[(Vector[Byte], Int)],
+    unknownToken: Int,
+    unknownByte: Byte
+)
+
+object ByteSegmentEncoding {
+  implicit val codec: JsonValueCodec[ByteSegmentEncoding] = JsonCodecMaker.make
+}
+
+object LearningRateScheduleSchemas {
+  implicit val codec
+      : JsonValueCodec[nn.LearningRateSchedule.ReduceLROnPlateauState] =
+    JsonCodecMaker.make
 }
