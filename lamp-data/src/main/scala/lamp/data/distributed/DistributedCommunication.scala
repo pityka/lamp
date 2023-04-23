@@ -24,12 +24,11 @@ trait DistributedCommunicationRoot {
     */
   def onUniqueIdReady(uid: NcclUniqueId): IO[Unit]
 
-  /**
-    * Returns the number of joined peers
-    * 
+  /** Returns the number of joined peers
+    *
     * Used for reporting and testing
     */
-  def peers() : IO[Int]
+  def peers(): IO[Int]
 
   /** Broadcast command to all peers (non root ranks)
     *

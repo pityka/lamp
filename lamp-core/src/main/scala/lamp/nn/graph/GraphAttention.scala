@@ -179,7 +179,7 @@ object GraphAttention {
     assert(
       nodeValue.shape(1) % numHeads == 0,
       s"wNodeValue and numHeads size do not align ${wNodeValue
-        .shape(1)} $numHeads"
+          .shape(1)} $numHeads"
     )
 
     val h = {
@@ -202,12 +202,13 @@ object GraphAttention {
       m => m.copy(dropout = m.dropout.asEval),
       m => m.copy(dropout = m.dropout.asTraining)
     )
-  implicit val load : Load[GraphAttention] = Load.make[GraphAttention] { m => parameters =>
-    m.wNodeKey1.value.copyFrom(parameters(0))
-    m.wNodeKey2.value.copyFrom(parameters(1))
-    m.wEdgeKey.value.copyFrom(parameters(2))
-    m.wNodeValue.value.copyFrom(parameters(3))
-    m.wAttention.foreach(_.value.copyFrom(parameters(4)))
+  implicit val load: Load[GraphAttention] = Load.make[GraphAttention] {
+    m => parameters =>
+      m.wNodeKey1.value.copyFrom(parameters(0))
+      m.wNodeKey2.value.copyFrom(parameters(1))
+      m.wEdgeKey.value.copyFrom(parameters(2))
+      m.wNodeValue.value.copyFrom(parameters(3))
+      m.wAttention.foreach(_.value.copyFrom(parameters(4)))
 
   }
 

@@ -123,9 +123,9 @@ package object bytesegmentencoding {
       corpus: Array[Byte],
       vocabularyMin: Char,
       vocabularyMax: Char,
-      maxMergedSegmentLength: Int,
+      maxMergedSegmentLength: Int
   ): Vector[(Vector[Byte], Char)] = {
-    val effectiveMaxMergedSegmentLength = math.min(7,maxMergedSegmentLength)
+    val effectiveMaxMergedSegmentLength = math.min(7, maxMergedSegmentLength)
     val frequencies = scala.collection.mutable.Map[Vector[Byte], Long]()
     var i = 0
     var j = 0
@@ -134,17 +134,19 @@ package object bytesegmentencoding {
       j = i + 1
       while (j <= i + effectiveMaxMergedSegmentLength && j <= n) {
         val sub = corpus.slice(i, j).toVector
-          frequencies.get(sub) match {
-            case None    => frequencies.update(sub, 1L)
-            case Some(c) => frequencies.update(sub, c + 1L)
-          }
+        frequencies.get(sub) match {
+          case None    => frequencies.update(sub, 1L)
+          case Some(c) => frequencies.update(sub, c + 1L)
+        }
         j += 1
       }
       i += 1
     }
     val vocabSize = vocabularyMax - vocabularyMin
     val singles = frequencies.keySet.toVector.filter(_.size == 1).distinct
-    val nonSingles = frequencies.filter(v => v._1.size > 1 && v._1.forall(b => b.toChar.isLetterOrDigit))
+    val nonSingles = frequencies.filter(v =>
+      v._1.size > 1 && v._1.forall(b => b.toChar.isLetterOrDigit)
+    )
     val r = (singles ++ nonSingles.toVector
       .sortBy(v => -1 * v._2)
       .take(vocabSize - singles.size)
