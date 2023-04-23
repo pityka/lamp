@@ -27,7 +27,8 @@ Lamp may be used for scientific computing similarly to numpy, or to build neural
 
 It provides neural networks components:
 
-- fully connected, 1D and 2D convolutional, embedding, graph convolution, self-attention (transformer), BERT
+- fully connected, 1D and 2D convolutional, embedding, graph convolution, scaled dot product attention (transformer), 
+  BERT, autoregressive language models (GPT-like)
 - batch, weight, layer normalization
 - dropout, weight decay
 - optimizers: SgdW, AdamW (see [here](https://arxiv.org/abs/1711.05101)), RAdam, Yogi, Shampoo
@@ -95,9 +96,14 @@ Examples for various tasks:
 
 - Image classification: `bash run_cifar.sh` runs the code in `example-cifar100/`.
 - Text generation: `bash run_timemachine.sh` runs the code in `example-timemachine/`.
-- Machine translation: `bash run_translation.sh` runs the code in `example-translation/`.
 - Graph node property prediction: `bash run_arxiv.sh` runs the code in `example-arxiv/`.
 - Multi node distributed training: `bash run_cifar_dist1.sh` and  `bash run_cifar_dist2.sh` .
+- Language model pretraining: see `example-bert` and `example-autoregressivelm`.
+
+The project in folder `example-autoregressivelm` is a fully working example of self supervised 
+pretraining of a medium sized language model similar to GPT-2. It can leverage multiple GPUs either 
+driven from the same process or distributed across processes. 
+
 
 # Building from source
 

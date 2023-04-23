@@ -325,7 +325,7 @@ case class Table(
 
   def rfilter(
       predicateOnColumns: ColumnSelection*
-  )(predicate: Series[String, _] => Boolean)(implicit scope: Scope): Table = {
+  )(predicate: IndexMap => Boolean)(implicit scope: Scope): Table = {
     val proj = {
       if (predicateOnColumns.isEmpty) this
       else {
@@ -338,12 +338,21 @@ case class Table(
     var i = 0L
     val N = proj.numRows
     while (i < N) {
-      if (predicate(Series(proj.colNames, vecs.map(_.raw(i.toInt)).toVec))) {
+      if (predicate(IndexMap(proj.colNames, vecs.map(_.raw(i.toInt))))) {
         buffer.+=(i.toInt)
       }
       i += 1
     }
     this.rows(buffer.toArray)
+  }
+
+  case class IndexMap(index: Index[String], values: Seq[Any]) {
+    assert(index.length == values.length)
+    def apply(s:String) : Any = {
+      val i = index.getFirst(s)
+      if (i < 0) throw new NoSuchElementException(s"$s not in $index")
+      else values(i)
+    }
   }
 
 }

@@ -14,6 +14,12 @@ import aten.CudaStream
   */
 object STen {
 
+  /** A tensor option specifying CPU and int */
+  val iOptions = STenOptions(aten.TensorOptions.i)
+
+  /** A tensor option specifying CPU and short */
+  val shOptions = STenOptions(aten.TensorOptions.sh)
+
   /** A tensor option specifying CPU and double */
   val dOptions = STenOptions(aten.TensorOptions.d)
 
@@ -26,14 +32,39 @@ object STen {
   /** A tensor option specifying CPU and byte */
   val bOptions = STenOptions(aten.TensorOptions.b())
 
+  val bf16Options = STenOptions(aten.TensorOptions.dtypeBF16)
+
   implicit class OwnedSyntax(t: Tensor) {
     def owned[S: Sc] = STen.owned(t)
   }
 
   /** Returns a tensor with the given content and shape on the given device */
+  def fromByteArray[S: Sc](ar: Array[Byte], dim: Seq[Long], device: Device) =
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.b))
+    else TensorHelpers.fromByteArray(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
   def fromLongArray[S: Sc](ar: Array[Long], dim: Seq[Long], device: Device) =
     if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.l))
     else TensorHelpers.fromLongArray(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
+  def fromIntArray[S: Sc](
+      ar: Array[Int],
+      dim: Seq[Long],
+      device: Device
+  ): STen =
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.i))
+    else TensorHelpers.fromIntArray(ar, dim, device).owned
+
+  /** Returns a tensor with the given content and shape on the given device */
+  def fromShortArray[S: Sc](
+      ar: Array[Short],
+      dim: Seq[Long],
+      device: Device
+  ): STen =
+    if (ar.isEmpty) STen.zeros(dim, device.to(STenOptions.sh))
+    else TensorHelpers.fromShortArray(ar, dim, device).owned
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromLongArray[S: Sc](ar: Array[Long]): STen =
@@ -75,7 +106,7 @@ object STen {
     * @param length
     *   byte length of the data
     * @param scalarTypeByte
-    *   scalar type (long=4,half=5,float=6,double=7)
+    *   scalar type (byte=1,short=2,int=3,long=4,half=5,float=6,double=7)
     * @param pin
     *   if true the mapped segment will be page locked with mlock(2)
     * @return
@@ -138,10 +169,11 @@ object STen {
       if (length == 0)
         tensors.toVector.map { case (tpe, _, _) =>
           tpe match {
-            case 1 => STen.zeros(List(0), STenOptions.b)
-            case 4 => STen.zeros(List(0), STenOptions.l)
-            case 6 => STen.zeros(List(0), STenOptions.f)
-            case 7 => STen.zeros(List(0), STenOptions.d)
+            case 1  => STen.zeros(List(0), STenOptions.b)
+            case 4  => STen.zeros(List(0), STenOptions.l)
+            case 6  => STen.zeros(List(0), STenOptions.f)
+            case 7  => STen.zeros(List(0), STenOptions.d)
+            case 15 => STen.zeros(List(0), STen.bf16Options)
           }
         }
       else
@@ -425,6 +457,15 @@ object STen {
   ): Unit =
     ATen
       .addcmul_out(out.value, self.value, tensor1.value, tensor2.value, alpha)
+  def addcdivOut(
+      out: STen,
+      self: STen,
+      tensor1: STen,
+      tensor2: STen,
+      alpha: Double
+  ): Unit =
+    ATen
+      .addcdiv_out(out.value, self.value, tensor1.value, tensor2.value, alpha)
 
   def indexCopyOut(
       out: STen,
@@ -457,14 +498,61 @@ object STen {
   def to_dense_backward[S: Sc](gradOutput: STen, input: STen) =
     ATen.to_dense_backward(gradOutput.value, input.value).owned
 
-  def l1_loss_backward[S: Sc](
+  def scaledDotProductAttention[S: Sc](
+      query: STen,
+      key: STen,
+      value: STen,
+      isCausal: Boolean
+  ) = {
+    val (a, b) = ATen._efficient_attention_forward(
+      query.value,
+      key.value,
+      value.value,
+      None,
+      None,
+      Long.MinValue,
+      true,
+      isCausal
+    )
+    (owned(a), owned(b))
+  }
+  def scaledDotProductAttentionBackward[S: Sc](
+      gradOutput: STen,
+      query: STen,
+      key: STen,
+      value: STen,
+      out: STen,
+      logsumexp: STen,
+      isCausal: Boolean
+  ) = {
+    val (a, b, c) = ATen._efficient_attention_backward(
+      gradOutput.value,
+      query.value,
+      key.value,
+      value.value,
+      out.value,
+      logsumexp.value,
+      isCausal,
+      false
+    )
+    (owned(a), owned(b), owned(c))
+  }
+
+  def smooth_l1_loss_backward[S: Sc](
       gradOutput: STen,
       self: STen,
       target: STen,
-      reduction: Long
+      reduction: Long,
+      beta: Double
   ) =
     ATen
-      .l1_loss_backward(gradOutput.value, self.value, target.value, reduction)
+      .smooth_l1_loss_backward_0(
+        gradOutput.value,
+        self.value,
+        target.value,
+        reduction,
+        beta
+      )
       .owned
   def mse_loss_backward[S: Sc](
       gradOutput: STen,
@@ -546,6 +634,12 @@ case class STenOptions(value: aten.TensorOptions) {
   import STenOptions._
 
   /** Returns a copy with dtype set to long */
+  def toShort[S: Sc] = value.toShort.owned
+
+  /** Returns a copy with dtype set to long */
+  def toInt[S: Sc] = value.toInt.owned
+
+  /** Returns a copy with dtype set to long */
   def toLong[S: Sc] = value.toLong.owned
 
   /** Returns a copy with dtype set to double */
@@ -554,8 +648,12 @@ case class STenOptions(value: aten.TensorOptions) {
   /** Returns a copy with dtype set to float */
   def toFloat[S: Sc] = value.toFloat.owned
 
+  /** Returns a copy with dtype set to half */
+  def toHalf[S: Sc] = value.toHalf.owned
+
   /** Returns a copy with dtype set to a value compatible with Scala's Byte */
   def toByte[S: Sc] = value.toByte.owned
+  def toBF16[S: Sc] = value.toBF16.owned
 
   /** Returns a copy with device set to CPU */
   def cpu[S: Sc] = value.cpu.owned
@@ -570,6 +668,8 @@ case class STenOptions(value: aten.TensorOptions) {
   def mps[S: Sc] = value.device(STenOptions.deviceTypeMps, 0).owned
 
   def isDouble = value.isDouble
+  def isInt = value.isInt
+  def isShort = value.isShort
   def isFloat = value.isFloat
   def isByte = value.isByte
   def isLong = value.isLong
@@ -595,10 +695,19 @@ object STenOptions {
   def f = STen.fOptions
 
   /** Returns an tensor option specifying CPU and long */
+  def i = STen.iOptions
+
+  /** Returns an tensor option specifying CPU and long */
+  def sh = STen.shOptions
+
+  /** Returns an tensor option specifying CPU and long */
   def l = STen.lOptions
 
   /** Returns an tensor option specifying CPU and double */
   def b = STen.bOptions
+
+  /** Returns an tensor option specifying CPU and double */
+  def bf16 = STen.bf16Options
 
   val deviceTypeCpu: Byte = 0
   val deviceTypeCuda: Byte = 1
@@ -719,6 +828,12 @@ case class STen private (
   /** Returns true if data type is double */
   def isDouble = Scope.root { implicit scope => options.isDouble }
 
+  /** Returns true if data type is short */
+  def isShort = Scope.root { implicit scope => options.isShort }
+
+  /** Returns true if data type is int */
+  def isInt = Scope.root { implicit scope => options.isInt }
+
   /** Returns true if data type is float */
   def isFloat = Scope.root { implicit scope => options.isFloat }
 
@@ -743,7 +858,11 @@ case class STen private (
   /** Returns the byte representation of the data type
     *
     * The mapping is:
+    *   - 1 for Byte
+    *   - 2 for Short
+    *   - 3 for Int
     *   - 4 for Long
+    *   - 5 for Half
     *   - 6 for Float
     *   - 7 for Double
     */
@@ -906,11 +1025,14 @@ case class STen private (
   }
 
   def castToType[S: Sc](scalarType: Byte) = scalarType match {
-    case 7 => castToDouble
-    case 6 => castToFloat
-    case 5 => castToHalf
-    case 4 => castToLong
-    case 1 => castToByte
+    case 7  => castToDouble
+    case 6  => castToFloat
+    case 5  => castToHalf
+    case 4  => castToLong
+    case 3  => castToInt
+    case 2  => castToShort
+    case 1  => castToByte
+    case 15 => copyTo(options.toBF16)
   }
 
   /** Casts to byte. signed 8-bit integer (like Scala's Byte) This is called
@@ -926,6 +1048,12 @@ case class STen private (
 
   /** Casts to long */
   def castToLong[S: Sc] = owned(ATen._cast_Long(value, true))
+
+  /** Casts to short */
+  def castToShort[S: Sc] = owned(ATen._cast_Short(value, true))
+
+  /** Casts to int */
+  def castToInt[S: Sc] = owned(ATen._cast_Int(value, true))
 
   /** Casts to half */
   def castToHalf[S: Sc] = owned(ATen._cast_Half(value, true))
@@ -1415,8 +1543,8 @@ case class STen private (
     * Indexing the given dimension by the returned tensor would result in a
     * sorted order.
     */
-  def argsort[S: Sc](dim: Int, descending: Boolean) =
-    owned(ATen.argsort(value, dim, descending))
+  def argsort[S: Sc](stable: Boolean, dim: Int, descending: Boolean) =
+    owned(ATen.argsort(value, stable, dim, descending))
 
   def choleskyLower[S: Sc] =
     owned(ATen.linalg_cholesky(value, false))
@@ -1554,8 +1682,8 @@ case class STen private (
 
   def matrixPower[S: Sc](n: Int) =
     ATen.matrix_power(value, n).owned
-  def matrixRank[S: Sc](tol: Double, symmetric: Boolean) =
-    ATen.matrix_rank(value, tol, symmetric).owned
+  def matrixRank[S: Sc](tol: STen, symmetric: Boolean) =
+    ATen.linalg_matrix_rank_1(value, tol.value, symmetric).owned
 
   /** Returns a tensor with a subset of its elements.
     *
@@ -1631,7 +1759,8 @@ case class STen private (
   def dropout_(p: Double, training: Boolean): Unit =
     ATen.dropout_(value, p, training)
 
-  def frobeniusNorm[S: Sc] = ATen.frobenius_norm_0(value).owned
+  def frobeniusNorm[S: Sc](dim: Seq[Int], keepDim: Boolean) =
+    ATen.frobenius_norm(value, dim.map(_.toLong).toArray, keepDim).owned
 
   /** @param fullMatrices
     *   whether to return reduced or full matrices (in case of non-square input)
@@ -1703,6 +1832,9 @@ case class STen private (
 
   def toDense[S: Sc] = value.to_dense().owned
 
+  def to[S: Sc](options: STenOptions, nonBlocking: Boolean, copy: Boolean) =
+    value.to(options.value, nonBlocking, copy).owned
+
   def tril_(diagonal: Int = 0) = ATen.tril_out(value, value, diagonal.toLong)
   def tril[S: Sc](diagonal: Int = 0) = ATen.tril(value, diagonal.toLong).owned
   def diagonalView[S: Sc](offset: Int = 0, dim1: Int = 0, dim2: Int = 1) =
@@ -1711,6 +1843,9 @@ case class STen private (
   def toDoubleArray = TensorHelpers.toDoubleArray(value)
   def toFloatArray = TensorHelpers.toFloatArray(value)
   def toLongArray = TensorHelpers.toLongArray(value)
+  def toByteArray = TensorHelpers.toByteArray(value)
+  def toIntArray = TensorHelpers.toIntArray(value)
+  def toShortArray = TensorHelpers.toShortArray(value)
 
   def isPinned = if (aten.Tensor.hasCuda()) value.is_pinned() else false
 

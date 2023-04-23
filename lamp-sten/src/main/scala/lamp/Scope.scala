@@ -60,6 +60,7 @@ object EmptyMovable {
   implicit def FloatIsMovable: EmptyMovable[Float] = Movable.empty[Float]
   implicit def BooleanIsMovable: EmptyMovable[Boolean] = Movable.empty[Boolean]
   implicit def IntIsMovable: EmptyMovable[Int] = Movable.empty[Int]
+  implicit def CharIsMovable: EmptyMovable[Char] = Movable.empty[Char]
   implicit def LongIsMovable: EmptyMovable[Long] = Movable.empty[Long]
   implicit def ShortIsMovable: EmptyMovable[Short] = Movable.empty[Short]
   implicit def ByteIsMovable: EmptyMovable[Byte] = Movable.empty[Byte]
@@ -74,6 +75,10 @@ object EmptyMovable {
 
   @scala.annotation.nowarn
   implicit def SeqIsMovable[T: EmptyMovable]: EmptyMovable[Seq[T]] =
+    Movable.empty
+    
+  @scala.annotation.nowarn
+  implicit def ArrayIsMovable[T: EmptyMovable]: EmptyMovable[Array[T]] =
     Movable.empty
 
   @scala.annotation.nowarn
@@ -147,6 +152,9 @@ object Movable {
       def list(m: Either[T1, T2]) =
         m.fold(_.tensors, _.tensors)
     }
+  implicit def ArrayIsMovable[T: Movable]: Movable[Array[T]] = new Movable[Array[T]] {
+    def list(m: Array[T]) = m.flatMap(m => implicitly[Movable[T]].list(m)).toList
+  }
   implicit def SeqIsMovable[T: Movable]: Movable[Seq[T]] = new Movable[Seq[T]] {
     def list(m: Seq[T]) = m.flatMap(m => implicitly[Movable[T]].list(m)).toList
   }
@@ -296,11 +304,14 @@ final class Scope private {
         releasable = resources.iterator.asScala.toList
         (last, Nil)
       } else {
-        val lastResources = movable.list(last)
+        val lastResources = new java.util.IdentityHashMap[Tensor,Boolean]
+         movable.list(last).foreach{tensor =>
+          lastResources.put(tensor,true)  
+        }
         val (movableResources, releasableResources) =
           resources.iterator.asScala.toList.partition(r =>
             r match {
-              case Left(r)  => lastResources.exists(v => v eq r)
+              case Left(r)  => lastResources.containsKey(r)
               case Right(_) => false
             }
           )
@@ -339,11 +350,14 @@ final class Scope private {
 
     op(this)
       .map { last =>
-        val lastResources = movable.list(last)
+        val lastResources = new java.util.IdentityHashMap[Tensor,Boolean]
+         movable.list(last).foreach{tensor =>
+          lastResources.put(tensor,true)  
+        }
         val (movables, releasable) =
           resources.iterator.asScala.toList.partition(r =>
             r match {
-              case Left(r)  => lastResources.exists(v => v eq r)
+              case Left(r)  => lastResources.containsKey(r)
               case Right(_) => false
             }
           )

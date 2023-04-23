@@ -80,11 +80,11 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "3.5.0"
-val upickleVersion = "1.6.0"
+val saddleVersion = "4.0.0-M4"
+val upickleVersion = "3.1.0"
 val scalaTestVersion = "3.2.15"
 val scribeVersion = "3.8.3"
-val catsEffectVersion = "3.4.8"
+val catsEffectVersion = "3.4.9"
 val catsCoreVersion = "2.9.0"
 val jsoniterscalaVersion = "2.20.6"
 
@@ -122,7 +122,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+109-227b5d12",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+114-c708402a",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
@@ -263,7 +263,7 @@ lazy val onnx = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "com.microsoft.onnxruntime" % "onnxruntime" % "1.12.1" % "test"
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.14.0" % "test"
     ),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
@@ -368,20 +368,42 @@ lazy val example_bert = project
     )
   )
   .dependsOn(core, data, saddlecompat)
-
-lazy val example_translation = project
-  .in(file("example-translation"))
+  
+lazy val example_autoregressivelm = project
+  .in(file("example-autoregressivelm"))
   .settings(commonSettings: _*)
   .settings(
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.1.0",
+      "com.typesafe.akka" %% "akka-actor" % "2.6.20",
+      "com.typesafe.akka" %% "akka-remote" % "2.6.20",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
   )
+  .dependsOn(core, data, saddlecompat, akkacommunicator)
+  .enablePlugins(JavaAppPackaging)
+
+lazy val experiment_recursivelm = project
+  .in(file("experiment-recursive-lm"))
+  .settings(commonSettings: _*)
+  .settings(
+    publishArtifact := false,
+    publish / skip := true,
+    publishArtifact in (Compile, packageDoc) := false,
+    publishArtifact in packageDoc := false,
+    sources in (Compile,doc) := Seq.empty,
+    libraryDependencies ++= Seq(
+      "com.github.scopt" %% "scopt" % "4.1.0",
+      "io.github.pityka" %% "saddle-core" % saddleVersion,
+      "com.outr" %% "scribe" % scribeVersion,
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
+    )
+  )
   .dependsOn(core, data, saddlecompat)
+  .enablePlugins(JavaAppPackaging)
 
 lazy val example_arxiv = project
   .in(file("example-arxiv"))
@@ -421,10 +443,11 @@ lazy val docs = project
       (inAnyProject -- inProjects(
         example_arxiv,
         example_bert,
+        example_autoregressivelm,
+        experiment_recursivelm,
         example_cifar100,
         example_cifar100_distributed,
         example_timemachine,
-        example_translation,
         e2etest
       ))
   )
@@ -453,7 +476,6 @@ lazy val root = project
     example_cifar100,
     example_cifar100_distributed,
     example_timemachine,
-    example_translation,
     example_arxiv,
     example_bert,
     e2etest
