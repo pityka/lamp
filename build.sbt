@@ -83,7 +83,7 @@ lazy val AllTest = config("alltest").extend(Test)
 val saddleVersion = "4.0.0-M4"
 val upickleVersion = "3.1.0"
 val scalaTestVersion = "3.2.15"
-val scribeVersion = "3.8.3"
+val scribeVersion = "3.11.1"
 val catsEffectVersion = "3.4.9"
 val catsCoreVersion = "2.9.0"
 val jsoniterscalaVersion = "2.20.6"
@@ -368,7 +368,7 @@ lazy val example_bert = project
     )
   )
   .dependsOn(core, data, saddlecompat)
-  
+
 lazy val example_autoregressivelm = project
   .in(file("example-autoregressivelm"))
   .settings(commonSettings: _*)
@@ -394,7 +394,7 @@ lazy val experiment_recursivelm = project
     publish / skip := true,
     publishArtifact in (Compile, packageDoc) := false,
     publishArtifact in packageDoc := false,
-    sources in (Compile,doc) := Seq.empty,
+    sources in (Compile, doc) := Seq.empty,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
