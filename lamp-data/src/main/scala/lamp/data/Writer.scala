@@ -16,12 +16,14 @@ import lamp.data.schemas.TensorList
   * This format is similar to the ONNX external tensor serialization format, but
   * it uses JSON rather then protobuf.
   *
-  * Format specification \==================== Sequences of tensors are
-  * serialized into a JSON descriptor and a data blob. The schema of the
-  * descriptor is the case class lamp.data.schemas.TensorList. The location
-  * field in this schema holds a path to the data blob. If this the location a
-  * relative POSIX then it is relative to the file path where the descriptor
-  * itself is written.
+  * ==Format specification==
+  *
+  * Sequences of tensors are serialized into a JSON descriptor and a data blob.
+  * The schema of the descriptor is the case class lamp.data.schemas.TensorList.
+  * The location field in this schema holds a path to the data blob. If this is
+  * a relative POSIX path then it is relative to the file path where the
+  * descriptor itself is written. Otherwise it is an absolute path of the data
+  * blob file.
   *
   * The descriptor may be embedded into larger JSON structures.
   *

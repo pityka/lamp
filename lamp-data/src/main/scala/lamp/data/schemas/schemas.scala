@@ -3,6 +3,18 @@ import com.github.plokhotnyuk.jsoniter_scala.macros._
 import com.github.plokhotnyuk.jsoniter_scala.core._
 import lamp.nn
 
+/** dataType is pytorch scalartype:
+  *
+  *   - 1 I8
+  *   - 2 I16
+  *   - 3 I32
+  *   - 4 I64
+  *   - 5 FP16
+  *   - 6 FP32
+  *   - 7 FP64
+  *   - 11 bool
+  *   - 16 BF16
+  */
 case class TensorDescriptor(
     dims: Seq[Long],
     dataType: Byte,
@@ -68,7 +80,8 @@ case class SimpleThenSWALoopState(
     simple: SimpleLoopState,
     swa: Option[SWALoopState]
 ) extends LoopState {
-  def locations: Seq[String] = simple.locations ++ swa.toList.flatMap(_.locations)
+  def locations: Seq[String] =
+    simple.locations ++ swa.toList.flatMap(_.locations)
 }
 
 object LoopState {
