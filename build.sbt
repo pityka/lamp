@@ -17,7 +17,7 @@ inThisBuild(
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.13.10",
-  crossScalaVersions := Seq("2.13.10", "3.2.2"),
+  crossScalaVersions := Seq("2.13.10", "3.3.0"),
   Test / parallelExecution := false,
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((3, _)) =>
@@ -84,7 +84,7 @@ val saddleVersion = "4.0.0-M4"
 val upickleVersion = "3.1.0"
 val scalaTestVersion = "3.2.16"
 val scribeVersion = "3.8.3"
-val catsEffectVersion = "3.4.11"
+val catsEffectVersion = "3.5.0"
 val catsCoreVersion = "2.9.0"
 val jsoniterscalaVersion = "2.20.6"
 
