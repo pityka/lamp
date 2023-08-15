@@ -85,7 +85,7 @@ val upickleVersion = "3.1.0"
 val scalaTestVersion = "3.2.16"
 val scribeVersion = "3.8.3"
 val catsEffectVersion = "3.5.0"
-val catsCoreVersion = "2.9.0"
+val catsCoreVersion = "2.10.0"
 val jsoniterscalaVersion = "2.20.6"
 
 lazy val saddlecompat = project
