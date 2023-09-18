@@ -6,11 +6,10 @@ import lamp.nn._
 
 import lamp.STen
 import lamp.autograd.Constant
-import lamp.autograd.{param, const}
+import lamp.autograd.{ const}
 import lamp.STenOptions
 
 import lamp.autograd.Mean
-import lamp.SinglePrecision
 import lamp.Movable
 
 /** Input to BertLoss module
@@ -108,7 +107,6 @@ object BertLoss {
       padToken: Long,
       tOpt: STenOptions,
       linearized: Boolean,
-      positionEmbedding: Option[STen]
   ): BertLoss = BertLoss(
     pretrain = BertPretrainModule(
       maxLength = maxLength,
@@ -124,7 +122,6 @@ object BertLoss {
       dropout = dropout,
       tOpt = tOpt,
       linearized = linearized,
-      positionEmbedding = positionEmbedding
     ),
     mlmLoss = LossFunctions.NLL(
       numClasses = vocabularySize,
@@ -254,8 +251,7 @@ object BertPretrainModule {
       bertEncoderMlpHiddenDim: Int,
       dropout: Double,
       tOpt: STenOptions,
-      linearized: Boolean,
-      positionEmbedding: Option[STen]
+      linearized: Boolean
   ): BertPretrainModule = BertPretrainModule(
     encoder = BertEncoder(
       maxLength = maxLength,
@@ -269,7 +265,6 @@ object BertPretrainModule {
       dropout = dropout,
       tOpt = tOpt,
       linearized = linearized,
-      positionEmbedding = positionEmbedding
     ),
     mlm = MaskedLanguageModelModule(
       inputDim = embeddingDim,
@@ -385,24 +380,21 @@ object MaskedLanguageModelModule {
 case class BertEncoder(
     tokenEmbedding: Embedding,
     segmentEmbedding: Embedding,
-    positionalEmbedding: Constant,
+    positionalEmbedding: Embedding,
+    embeddingNorm: LayerNorm,
     blocks: Seq[TransformerEncoderBlock]
 ) extends GenericModule[(Variable, Variable, Option[STen]), Variable] {
-  def state = tokenEmbedding.state ++ segmentEmbedding.state ++ List(
-    positionalEmbedding ->
-      BertEncoder.PositionalEmbeddingWeight
-  ) ++ blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
+  def state = tokenEmbedding.state ++ segmentEmbedding.state ++  positionalEmbedding.state ++ embeddingNorm.state ++ blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
   def forward[S: Sc](x: (Variable, Variable, Option[STen])): Variable = {
     val (tokens, segments, maxLength) = x
+    val pos = const(
+      STen.arange_l(0, tokens.shape(1), 1, tokens.options).unsqueeze(0)
+    )
     val embedded = tokenEmbedding.forward(tokens) + segmentEmbedding.forward(
       segments
-    ) + positionalEmbedding.slice(
-      dim = 1,
-      start = 0,
-      end = tokens.shape(1),
-      step = 1
-    )
-    blocks.foldLeft(embedded) { (a, block) => block.forward((a, maxLength)) }
+    ) + positionalEmbedding.forward(pos)
+    
+    blocks.foldLeft(embeddingNorm(embedded)) { (a, block) => block.forward((a, maxLength)) }
   }
 }
 object BertEncoder {
@@ -413,13 +405,15 @@ object BertEncoder {
         m.copy(
           blocks = m.blocks.map(_.asEval),
           tokenEmbedding = m.tokenEmbedding.asEval,
-          segmentEmbedding = m.segmentEmbedding.asEval
+          segmentEmbedding = m.segmentEmbedding.asEval,
+          positionalEmbedding = m.positionalEmbedding.asEval,
         ),
       m =>
         m.copy(
           blocks = m.blocks.map(_.asTraining),
           tokenEmbedding = m.tokenEmbedding.asTraining,
-          segmentEmbedding = m.segmentEmbedding.asTraining
+          segmentEmbedding = m.segmentEmbedding.asTraining,
+          positionalEmbedding = m.positionalEmbedding.asTraining,
         )
     )
   implicit val load: Load[BertEncoder] = Load.make[BertEncoder] {
@@ -430,16 +424,21 @@ object BertEncoder {
           .drop(m.tokenEmbedding.state.size)
           .take(m.segmentEmbedding.state.size)
       )
-      m.positionalEmbedding.value.copyFrom(
+      m.positionalEmbedding.load(
         tensors
           .drop(m.tokenEmbedding.state.size + m.segmentEmbedding.state.size)
-          .head
+          .take(m.positionalEmbedding.state.size)
+      )
+      m.embeddingNorm.load(
+        tensors
+          .drop(m.tokenEmbedding.state.size + m.segmentEmbedding.state.size + m.positionalEmbedding.state.size)
+          .take(m.embeddingNorm.state.size)
       )
       m.blocks.foldLeft(
         (
           List[Unit](),
           tensors.drop(
-            m.tokenEmbedding.state.size + m.segmentEmbedding.state.size + 1
+            m.tokenEmbedding.state.size + m.segmentEmbedding.state.size + m.positionalEmbedding.state.size + m.embeddingNorm.state.size
           )
         )
       ) { case ((acc, params), member) =>
@@ -494,7 +493,6 @@ object BertEncoder {
       dropout: Double,
       tOpt: STenOptions,
       linearized: Boolean,
-      positionEmbedding: Option[STen]
   ): BertEncoder =
     BertEncoder(
       tokenEmbedding = Embedding.apply(
@@ -507,16 +505,12 @@ object BertEncoder {
         dimensions = embeddingDim,
         tOpt = tOpt
       ),
-      positionalEmbedding = param(
-        positionEmbedding.getOrElse(PositionalEmbedding
-          .vaswani(
-            sequenceLength = maxLength,
-            dimension = embeddingDim,
-            device = lamp.Device.fromOptions(tOpt),
-            SinglePrecision
-          ))
-          .unsqueeze(0)
+      positionalEmbedding = Embedding.apply(
+        classes = maxLength,
+        dimensions = embeddingDim,
+        tOpt = tOpt
       ),
+      embeddingNorm = LayerNorm(List(embeddingDim.toLong), tOpt),
       blocks = 0 until numBlocks map (_ =>
         TransformerEncoderBlock(
           in = embeddingDim,

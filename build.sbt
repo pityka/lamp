@@ -226,6 +226,15 @@ lazy val safetensors = project
   .dependsOn(data)
   .dependsOn(core % "test->test;compile->compile", saddlecompat)
 
+lazy val pertrainedbert = project
+  .in(file("pretrained-bert"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-pretrained-bert"
+  )
+  .dependsOn(data, safetensors)
+  .dependsOn(core % "test->test;compile->compile")
+
 lazy val umap = project
   .in(file("lamp-umap"))
   .configs(Cuda)
