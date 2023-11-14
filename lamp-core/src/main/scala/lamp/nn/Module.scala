@@ -20,7 +20,8 @@ case class Recursive[A, M <: GenericModule[A, A]](
 }
 object Recursive {
 
-  implicit def trainingMode[A, M <: GenericModule[A, A]: TrainingMode] : TrainingMode[Recursive[A,M]] =
+  implicit def trainingMode[A, M <: GenericModule[A, A]: TrainingMode]
+      : TrainingMode[Recursive[A, M]] =
     TrainingMode.make[Recursive[A, M]](
       module => Recursive(module.member.asEval, module.n),
       module => Recursive(module.member.asTraining, module.n)
@@ -51,7 +52,7 @@ object EitherModule {
       B,
       M1 <: GenericModule[A, B]: TrainingMode,
       M2 <: GenericModule[A, B]: TrainingMode
-  ] : TrainingMode[EitherModule[A,B,M1,M2]] =
+  ]: TrainingMode[EitherModule[A, B, M1, M2]] =
     TrainingMode.make[EitherModule[A, B, M1, M2]](
       module => EitherModule(module.members.left.map(_.asEval).map(_.asEval)),
       module =>
@@ -65,7 +66,7 @@ object EitherModule {
       B,
       M1 <: GenericModule[A, B]: Load,
       M2 <: GenericModule[A, B]: Load
-  ] : Load[EitherModule[A, B, M1, M2]] =
+  ]: Load[EitherModule[A, B, M1, M2]] =
     Load.make[EitherModule[A, B, M1, M2]] { module => tensors =>
       module.members.fold(_.load(tensors), _.load(tensors))
     }
@@ -92,13 +93,14 @@ case class Sequential[A, M <: GenericModule[A, A]](
 }
 object Sequential {
 
-  implicit def trainingMode[A, M <: GenericModule[A, A]: TrainingMode] : TrainingMode[Sequential[A, M]] =
+  implicit def trainingMode[A, M <: GenericModule[A, A]: TrainingMode]
+      : TrainingMode[Sequential[A, M]] =
     TrainingMode.make[Sequential[A, M]](
       module => Sequential(module.members.map(_.asEval): _*),
       module => Sequential(module.members.map(_.asTraining): _*)
     )
 
-  implicit def load[A, M <: GenericModule[A, A]: Load] : Load[Sequential[A, M]] =
+  implicit def load[A, M <: GenericModule[A, A]: Load]: Load[Sequential[A, M]] =
     Load.make[Sequential[A, M]] { module => tensors =>
       module.members.foldLeft((List[Unit](), tensors)) {
         case ((acc, params), member) =>
@@ -120,16 +122,16 @@ case class Fun(fun: Scope => Variable => Variable) extends Module {
   def forward[S: Sc](x: Variable): Variable = fun(scope)(x)
 }
 object Fun {
-  implicit val trainingMode : TrainingMode[Fun] = TrainingMode.identity[Fun]
-  implicit val load : Load[Fun] = Load.identity[Fun]
+  implicit val trainingMode: TrainingMode[Fun] = TrainingMode.identity[Fun]
+  implicit val load: Load[Fun] = Load.identity[Fun]
 }
 case class Debug(fun: (STen, Boolean, Boolean) => Unit) extends Module {
   def state = Nil
   def forward[S: Sc](x: Variable): Variable = x.debug(fun)
 }
 object Debug {
-  implicit val trainingMode : TrainingMode[Debug] = TrainingMode.identity[Debug]
-  implicit val load : Load[Debug] = Load.identity[Debug]
+  implicit val trainingMode: TrainingMode[Debug] = TrainingMode.identity[Debug]
+  implicit val load: Load[Debug] = Load.identity[Debug]
 }
 
 case class GenericFun[A, B](fun: Scope => A => B) extends GenericModule[A, B] {
@@ -137,26 +139,33 @@ case class GenericFun[A, B](fun: Scope => A => B) extends GenericModule[A, B] {
   def forward[S: Sc](x: A): B = fun(scope)(x)
 }
 object GenericFun {
-  implicit def trainingMode[A, B] : TrainingMode[GenericFun[A,B]] = TrainingMode.identity[GenericFun[A, B]]
-  implicit def load[A, B] : Load[GenericFun[A,B]] = Load.identity[GenericFun[A, B]]
+  implicit def trainingMode[A, B]: TrainingMode[GenericFun[A, B]] =
+    TrainingMode.identity[GenericFun[A, B]]
+  implicit def load[A, B]: Load[GenericFun[A, B]] =
+    Load.identity[GenericFun[A, B]]
 }
 
-case class WrapFun[A,B,M<:GenericModule[A,B],O](module: M, fun: (A,B) => O) extends GenericModule[A,(B,O)] {
-  def state = module.state 
-  def forward[S:Sc](a: A): (B,O) = {
+case class WrapFun[A, B, M <: GenericModule[A, B], O](
+    module: M,
+    fun: (A, B) => O
+) extends GenericModule[A, (B, O)] {
+  def state = module.state
+  def forward[S: Sc](a: A): (B, O) = {
     val b = module.forward(a)
-    val o = fun(a,b)
-    (b,o)
+    val o = fun(a, b)
+    (b, o)
   }
 }
 object WrapFun {
-   implicit def trainingMode[A,B,O, M <: GenericModule[A, B]: TrainingMode] : TrainingMode[WrapFun[A,B,M,O]] =
-    TrainingMode.make[WrapFun[A,B,M,O]](
+  implicit def trainingMode[A, B, O, M <: GenericModule[A, B]: TrainingMode]
+      : TrainingMode[WrapFun[A, B, M, O]] =
+    TrainingMode.make[WrapFun[A, B, M, O]](
       module => WrapFun(module.module.asEval, module.fun),
       module => WrapFun(module.module.asTraining, module.fun)
     )
 
-  implicit def load[A, B, O, M <: GenericModule[A, B]: Load]: Load[WrapFun[A,B,M,O]] =
+  implicit def load[A, B, O, M <: GenericModule[A, B]: Load]
+      : Load[WrapFun[A, B, M, O]] =
     Load.compose(_.module)
 }
 case class LiftedModule[M <: Module](mod: M with Module)
@@ -167,16 +176,16 @@ case class LiftedModule[M <: Module](mod: M with Module)
 object LiftedModule {
   implicit def trainingMode[
       M <: Module: TrainingMode
-  ] : TrainingMode[LiftedModule[M]] =
+  ]: TrainingMode[LiftedModule[M]] =
     TrainingMode.make[LiftedModule[M]](
       m => m.copy(mod = m.mod.asEval),
       m => m.copy(mod = m.mod.asTraining)
     )
   implicit def load[
       M <: Module: Load
-  ] : Load[LiftedModule[M]] =
+  ]: Load[LiftedModule[M]] =
     Load.make[LiftedModule[M]](m => tensors => m.mod.load(tensors))
-  implicit def initState[M <: Module] : InitState[LiftedModule[M], Unit] =
+  implicit def initState[M <: Module]: InitState[LiftedModule[M], Unit] =
     InitState.make[LiftedModule[M], Unit](_ => ())
 }
 
@@ -193,18 +202,19 @@ object UnliftedModule {
       implicit
       t: TrainingMode[M],
       is: InitState[M, C]
-  )  : TrainingMode[UnliftedModule[A, B, C, D, M]]=
+  ): TrainingMode[UnliftedModule[A, B, C, D, M]] =
     TrainingMode.make[UnliftedModule[A, B, C, D, M]](
       m => UnliftedModule[A, B, C, D, M](m.statefulModule.asEval),
       m => UnliftedModule[A, B, C, D, M](m.statefulModule.asTraining)
     )
-  implicit def load[A, B, C, D, M <: StatefulModule2[A, B, C, D]: Load] : Load[UnliftedModule[A, B, C, D, M]] =
+  implicit def load[A, B, C, D, M <: StatefulModule2[A, B, C, D]: Load]
+      : Load[UnliftedModule[A, B, C, D, M]] =
     Load.make[UnliftedModule[A, B, C, D, M]](m =>
       tensors => m.statefulModule.load(tensors)
     )
   implicit def initState[A, B, C, D, M <: StatefulModule2[A, B, C, D]](implicit
       is: InitState[M, C]
-  )  : InitState[UnliftedModule[A, B, C, D, M], Unit] =
+  ): InitState[UnliftedModule[A, B, C, D, M], Unit] =
     InitState.make[UnliftedModule[A, B, C, D, M], Unit](m =>
       is.initState(m.statefulModule)
     )
@@ -313,7 +323,7 @@ trait PTag {
   def leaf: PTag
 }
 object PTag {
-  implicit val isMovable : EmptyMovable[PTag] = Movable.empty[PTag]
+  implicit val isMovable: EmptyMovable[PTag] = Movable.empty[PTag]
 }
 trait LeafTag extends PTag {
   def leaf: PTag = this
@@ -612,18 +622,19 @@ case class MappedState[A, B, C, D, M <: StatefulModule[A, B, C]](
 object MappedState {
   implicit def trainingMode[A, B, C, D, M <: StatefulModule[A, B, C]](implicit
       t: TrainingMode[M]
-  ) : TrainingMode[MappedState[A, B, C, D, M]] =
+  ): TrainingMode[MappedState[A, B, C, D, M]] =
     TrainingMode.make[MappedState[A, B, C, D, M]](
       m => MappedState[A, B, C, D, M](m.statefulModule.asEval, m.map),
       m => MappedState[A, B, C, D, M](m.statefulModule.asTraining, m.map)
     )
-  implicit def load[A, B, C, D, M <: StatefulModule[A, B, C]: Load] : Load[MappedState[A, B, C, D, M]]=
+  implicit def load[A, B, C, D, M <: StatefulModule[A, B, C]: Load]
+      : Load[MappedState[A, B, C, D, M]] =
     Load.make[MappedState[A, B, C, D, M]](m =>
       tensors => m.statefulModule.load(tensors)
     )
   implicit def initState[A, B, C, D, M <: StatefulModule[A, B, C]](implicit
       is: InitState[M, C]
-  ) : InitState[MappedState[A, B, C, D, M], C] =
+  ): InitState[MappedState[A, B, C, D, M], C] =
     InitState.make[MappedState[A, B, C, D, M], C](m =>
       is.initState(m.statefulModule)
     )

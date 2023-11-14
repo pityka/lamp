@@ -17,7 +17,7 @@ inThisBuild(
 
 lazy val commonSettings = Seq(
   scalaVersion := "2.13.10",
-  crossScalaVersions := Seq("2.13.10", "3.3.0"),
+  crossScalaVersions := Seq("2.13.12", "3.3.1"),
   Test / parallelExecution := false,
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((3, _)) =>
@@ -86,7 +86,7 @@ val scalaTestVersion = "3.2.16"
 val scribeVersion = "3.12.2"
 val catsEffectVersion = "3.5.2"
 val catsCoreVersion = "2.10.0"
-val jsoniterscalaVersion = "2.20.6"
+val jsoniterscalaVersion = "2.24.4"
 
 lazy val saddlecompat = project
   .in(file("lamp-saddle"))
