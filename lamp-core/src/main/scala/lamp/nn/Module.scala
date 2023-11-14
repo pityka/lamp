@@ -141,6 +141,24 @@ object GenericFun {
   implicit def load[A, B] : Load[GenericFun[A,B]] = Load.identity[GenericFun[A, B]]
 }
 
+case class WrapFun[A,B,M<:GenericModule[A,B],O](module: M, fun: (A,B) => O) extends GenericModule[A,(B,O)] {
+  def state = module.state 
+  def forward[S:Sc](a: A): (B,O) = {
+    val b = module.forward(a)
+    val o = fun(a,b)
+    (b,o)
+  }
+}
+object WrapFun {
+   implicit def trainingMode[A,B,O, M <: GenericModule[A, B]: TrainingMode] : TrainingMode[WrapFun[A,B,M,O]] =
+    TrainingMode.make[WrapFun[A,B,M,O]](
+      module => WrapFun(module.module.asEval, module.fun),
+      module => WrapFun(module.module.asTraining, module.fun)
+    )
+
+  implicit def load[A, B, O, M <: GenericModule[A, B]: Load]: Load[WrapFun[A,B,M,O]] =
+    Load.compose(_.module)
+}
 case class LiftedModule[M <: Module](mod: M with Module)
     extends StatefulModule[Variable, Variable, Unit] {
   def state = mod.state
