@@ -96,7 +96,7 @@ The feature matrix is copied into a 2D floating point tensor and the target vect
     import lamp._
     import lamp.autograd._
     import org.saddle.Mat
-    implicit val scope = Scope.free // Use Scope.root, Scope.apply in non-doc code
+    implicit val scope : Scope = Scope.free // Use Scope.root, Scope.apply in non-doc code
     val device = CPU
     val precision = SinglePrecision
     val testDataTensor =

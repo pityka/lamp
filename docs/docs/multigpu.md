@@ -30,7 +30,7 @@ provide those to the training loop.
   import lamp.nn._ 
   import lamp.data._ 
 
- Scope.root { implicit scope =>
+  Scope.root { implicit scope =>
       // two devices
       val device = CPU
       val device2 = CudaDevice(0)
