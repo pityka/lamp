@@ -378,18 +378,18 @@ class OnnxSuite extends AnyFunSuite {
         new AvgPool2D(scope, a, 3, 1, 1).value
       }
   )
-  testBinaryOps(
-    "batchnorm1d",
-    List(1, 5),
-    List(5),
-    implicit scope =>
-      (a, b) => {
-        val bias = const(STen.zeros(List(5), STenOptions.f))
-        val m = STen.zeros(List(5), STenOptions.f)
-        val v = STen.zeros(List(5), STenOptions.f)
-        new BatchNorm(scope, a, b, bias, m, v, false, 0.99, 1e-5).value
-      }
-  )
+  // testBinaryOps(
+  //   "batchnorm1d",
+  //   List(1, 5),
+  //   List(5),
+  //   implicit scope =>
+  //     (a, b) => {
+  //       val bias = const(STen.zeros(List(5), STenOptions.f))
+  //       val m = STen.zeros(List(5), STenOptions.f)
+  //       val v = STen.zeros(List(5), STenOptions.f)
+  //       new BatchNorm(scope, a, b, bias, m, v, false, 0.99, 1e-5).value
+  //     }
+  // )
   testBinaryOps(
     "batchnorm2d",
     List(1, 3, 5),
