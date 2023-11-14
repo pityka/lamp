@@ -80,12 +80,12 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "4.0.0-M6"
-val upickleVersion = "3.1.0"
+val saddleVersion = "4.0.0-M7"
+val upickleVersion = "3.1.3"
 val scalaTestVersion = "3.2.16"
 val scribeVersion = "3.12.2"
-val catsEffectVersion = "3.5.0"
-val catsCoreVersion = "2.9.0"
+val catsEffectVersion = "3.5.2"
+val catsCoreVersion = "2.10.0"
 val jsoniterscalaVersion = "2.20.6"
 
 lazy val saddlecompat = project
