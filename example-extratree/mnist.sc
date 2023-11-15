@@ -1,5 +1,5 @@
 //> using scala 2.13
-//> using lib io.github.pityka::extratrees::0.0.100
+//> using lib io.github.pityka::extratrees::0.0.105
 //> using lib io.github.pityka::fileutils::1.2.5
 
 import org.saddle._
