@@ -5,7 +5,7 @@ import lamp.Sc
 
 case class Dropout(prob: Double, training: Boolean) extends Module {
   override def state = Nil
-  def forward[S: Sc](x: Variable): Variable = x.dropout(prob, training)
+  def forward[S: Sc](x: Variable): Variable = if (prob > 0) x.dropout(prob, training) else x
 }
 object Dropout {
   implicit val load :Load[Dropout] = Load.identity[Dropout]
