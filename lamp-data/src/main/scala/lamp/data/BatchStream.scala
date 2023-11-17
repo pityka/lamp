@@ -41,13 +41,45 @@ case class NonEmptyBatch[I](batch: I) extends StreamControl[I] {
   def unsafeGet = batch
 }
 
+/** A functional stateful stream of items
+  *
+  * lamp's training loops work from data presented in BatchStreams.
+  *
+  * An instance of BatchStream is an description of the data stream, it does not
+  * by itself allocates or stores any data. The stream needs to be driven by an
+  * interpreter. lamp.data.IOLoops and the companion object BatchStream contain
+  * those interpreters to make something useful with a BatchStream.
+  *
+  * @tparam I
+  *   the item type , the stream will yield items of this type
+  * @tparam S
+  *   the state type, the stream will carry over and accumulate state of this
+  *   type
+  * @tparam C
+  *   type of accessory resources (e.g. buffers), the stream might need an
+  *   instance of this type for its working. The intended use for fixed,
+  *   pre-allocated pinned buffer pairs to facilitate host-device copies. See
+  *   lamp.Device.toBatched and lamp.BufferPair.
+  *
+  * See the abstract members and the companion object for more documentation.
+  */
 trait BatchStream[+I, S, C] { self =>
 
+  /** Initial value of the State */
   def init: S
 
+  /** Allocation of a resource needed during the lifetime of the stream The
+    * intended use is for transfer buffer pairs
+    */
   def allocateBuffers(target: Device): Resource[IO, C]
 
-  /** May be called from different threads, but always in serial State should be
+  /** Returns the resource of the next item and the next state suspended in an
+    * effect.
+    *
+    * Returned values are wrapped in StreamControl type which signals the
+    * interpreter whether the stream is finished.
+    *
+    * May be called from different threads, but always in serial State should be
     * carried over in the state parameter and return type
     */
   def nextBatch(
@@ -56,6 +88,11 @@ trait BatchStream[+I, S, C] { self =>
       state: S
   ): IO[(S, Resource[IO, StreamControl[I]])]
 
+  /** Drives the stream and returns all the items from it in a scala collection.
+    *
+    * @param device
+    * @return
+    */
   def drainIntoSeq(
       device: Device
   ): Resource[IO, Vector[I]] = {
@@ -135,6 +172,8 @@ trait BatchStream[+I, S, C] { self =>
           }
     }
 
+  /** Returns a stream which is the concatenation of this stream and an other.
+    */
   def concat[I2 >: I, S2](other: BatchStream[I2, S2, C]) =
     new BatchStream[I2, (Boolean, Either[S, S2]), C] {
       def init = (false, Left(self.init))
@@ -191,6 +230,7 @@ trait BatchStream[+I, S, C] { self =>
       }
     }
 
+  /** Returns a stream wich contains only the first n elements of this stream */
   def take(n: Long) =
     new BatchStream[I, (Long, S), C] {
       def init = (0L, self.init)
@@ -215,6 +255,7 @@ trait BatchStream[+I, S, C] { self =>
           )
     }
 
+  /** Maps f over the elements of this stream */
   def map[I2](f: I => Resource[IO, StreamControl[I2]]) =
     new BatchStream[I2, S, C] {
       def init = self.init
@@ -245,6 +286,7 @@ trait BatchStream[+I, S, C] { self =>
           }
     }
 
+  /** Folds a function from an initial value over this stream */
   def foldLeft[B](zero: B, device: Device, stateZero: S)(
       f: (B, I) => IO[B]
   ): IO[B] = {
@@ -273,6 +315,9 @@ trait BatchStream[+I, S, C] { self =>
 
   }
 
+  /** ensures the length of the stream is fixed. Either repeats an element or
+    * truncates
+    */
   def repeatOrTake(requiredLength: Long) =
     new BatchStream[I, (Long, S), C] {
       val init0 = self.init
@@ -358,6 +403,7 @@ trait BatchStream[+I, S, C] { self =>
 
 object BatchStream {
 
+  /** Creates a stream from a single item */
   def single[A](resource: Resource[IO, StreamControl[A]]) =
     new BatchStream[A, Boolean, Unit] {
       def init = false
@@ -377,6 +423,7 @@ object BatchStream {
 
     }
 
+  /** Creates a stream from a vector of items */
   def fromVector[A](resources: Vector[Resource[IO, StreamControl[A]]]) =
     new BatchStream[A, Int, Unit] {
       def init = 0
@@ -396,6 +443,11 @@ object BatchStream {
 
     }
 
+  /** Creates a stream from an array of indices and a lambda using a subset of
+    * those indexes to allocate the batch
+    *
+    * The indices refer to some other external data structure
+    */
   def fromIndicesWithBuffers[A, C](
       indices: Array[Array[Int]],
       allocateBuffers1: Device => Resource[IO, C]
@@ -466,6 +518,7 @@ object BatchStream {
       Scope.free
     })(scope => IO { scope.release() })
 
+  /** Create a stream from the first dimension of a tensor */
   def minibatchesFromFull(
       minibatchSize: Int,
       dropLast: Boolean,
@@ -527,6 +580,7 @@ object BatchStream {
 
   }
 
+  /** Create a stream of a single full batch  of features and targets */
   def fromFullBatch(features: STen, targets: STen, device: Device) = {
     val resource = scopeInResource.map { implicit scope =>
       val xcl = device.to(features)
@@ -537,6 +591,12 @@ object BatchStream {
     BatchStream.single(resource)
   }
 
+  /** A two stage data loader which first loads items of type B, then from B
+    * loads items of type A
+    *
+    * Makes sense if loading B is quicker than loading an equivalent amount of A
+    * e.g. because B is a preformed batch of A-s on secondary medium
+    */
   object StagedLoader {
 
     private def updateBuckets[A, B](
