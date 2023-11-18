@@ -83,23 +83,33 @@ object MPNN {
       message: Variable,
       edgeI: STen,
       edgeJ: STen,
-      degreeNormalizeI: Boolean ,
-      degreeNormalizeJ: Boolean ,
-      aggregateJ: Boolean 
+      degreeNormalizeI: Boolean,
+      degreeNormalizeJ: Boolean,
+      aggregateJ: Boolean
   ) = {
     val p = if (degreeNormalizeJ && degreeNormalizeI) -0.5 else -1d
+
+    val tpe = message.value.scalarTypeByte
 
     val normalizedMessage = {
       val t1 =
         if (degreeNormalizeI)
           message * const(
-            countOccurences(edgeI, numVertices).pow(p).indexSelect(0, edgeI).view(-1L,1L)
+            countOccurences(edgeI, numVertices)
+              .pow(p)
+              .castToType(tpe)
+              .indexSelect(0, edgeI)
+              .view(-1L, 1L)
           )
         else message
 
       if (degreeNormalizeJ)
         t1 * const(
-          countOccurences(edgeJ, numVertices).pow(p).indexSelect(0, edgeJ).view(-1L,1L)
+          countOccurences(edgeJ, numVertices)
+            .pow(p)
+            .castToType(tpe)
+            .indexSelect(0, edgeJ)
+            .view(-1L, 1L)
         )
       else t1
     }
