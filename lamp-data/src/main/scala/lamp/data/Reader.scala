@@ -14,17 +14,17 @@ import lamp.nn.LoadSyntax
 
 object Reader {
 
- private[lamp]  def readTensorListDescriptorFromChannel(
+  private[lamp] def readTensorListDescriptorFromChannel(
       channel: ReadableByteChannel
-  ): schemas.TensorList = {
+  ): schemas.Schemas.TensorList = {
     val is = Channels.newInputStream(channel)
     com.github.plokhotnyuk.jsoniter_scala.core
-      .readFromStream[schemas.TensorList](is)
+      .readFromStream[schemas.Schemas.TensorList](is)
   }
 
- private[lamp]  def readTensorListDescriptorFromFile(
+  private[lamp] def readTensorListDescriptorFromFile(
       file: File
-  ): schemas.TensorList = {
+  ): schemas.Schemas.TensorList = {
     val fis = new FileInputStream(file)
     try {
       readTensorListDescriptorFromChannel(fis.getChannel)
@@ -34,7 +34,7 @@ object Reader {
   }
 
   private[lamp] def readTensorData(
-      descriptor: schemas.TensorList,
+      descriptor: schemas.Schemas.TensorList,
       pathOfDescriptor: File,
       device: Device,
       pin: Boolean
@@ -59,7 +59,7 @@ object Reader {
 
   }
 
- def readTensorsFromFile(
+  def readTensorsFromFile(
       file: File,
       device: Device,
       pin: Boolean
@@ -89,7 +89,7 @@ object Reader {
 
   }
 
- private[lamp]  def readFully(bb: ByteBuffer, channel: ReadableByteChannel) = {
+  private[lamp] def readFully(bb: ByteBuffer, channel: ReadableByteChannel) = {
     bb.clear
     var i = 0
     while (bb.hasRemaining && i >= 0) {

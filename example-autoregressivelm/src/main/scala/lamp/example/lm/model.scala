@@ -1,7 +1,6 @@
 package lamp.example.lm
 import lamp._
 import lamp.nn._
-import lamp.data.bytesegmentencoding.ByteSegmentCodecFactory
 import lamp.data.IdentityCodecFactory
 
 object Model {

@@ -1,7 +1,9 @@
 package lamp.table.io.schemas
 import com.github.plokhotnyuk.jsoniter_scala.macros._
 import com.github.plokhotnyuk.jsoniter_scala.core._
-import lamp.data.schemas.TensorList
+import lamp.data.schemas.Schemas.TensorList
+
+private[lamp] object Schemas{
 
 sealed trait ColumnDataTypeDescriptor
 case class TextColumnType(
@@ -23,4 +25,5 @@ case class TableDescriptor(
 
 object TableDescriptor {
   implicit val codec: JsonValueCodec[TableDescriptor] = JsonCodecMaker.make
+}
 }

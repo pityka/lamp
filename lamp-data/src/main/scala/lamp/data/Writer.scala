@@ -9,7 +9,7 @@ import lamp.nn.GenericModule
 import lamp.STen
 import lamp.Scope
 import java.nio.channels.Channels
-import lamp.data.schemas.TensorList
+import lamp.data.schemas.Schemas.TensorList
 
 /** Serializes tensors
   *
@@ -47,7 +47,7 @@ object Writer {
         val tensorDescriptors =
           offsets.zip(tensors).map { case ((offset, length, _), tensor) =>
             assert(offset >= 0, s"offset is $offset")
-            schemas.TensorDescriptor(
+            schemas.Schemas.TensorDescriptor(
               dims = tensor.shape,
               dataType = tensor.scalarTypeByte,
               byteOffset = offset,
@@ -55,7 +55,7 @@ object Writer {
             )
           }
 
-        schemas.TensorList(
+        schemas.Schemas.TensorList(
           tensorDescriptors,
           location = location,
           byteOffset = initialByteOffset,
