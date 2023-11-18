@@ -50,6 +50,8 @@ case class NonEmptyBatch[I](batch: I) extends StreamControl[I] {
   * interpreter. lamp.data.IOLoops and the companion object BatchStream contain
   * those interpreters to make something useful with a BatchStream.
   *
+  * See the abstract members and the companion object for more documentation.
+  *
   * @tparam I
   *   the item type , the stream will yield items of this type
   * @tparam S
@@ -60,8 +62,6 @@ case class NonEmptyBatch[I](batch: I) extends StreamControl[I] {
   *   instance of this type for its working. The intended use for fixed,
   *   pre-allocated pinned buffer pairs to facilitate host-device copies. See
   *   lamp.Device.toBatched and lamp.BufferPair.
-  *
-  * See the abstract members and the companion object for more documentation.
   */
 trait BatchStream[+I, S, C] { self =>
 
@@ -494,6 +494,12 @@ object BatchStream {
       }
 
     }
+
+  /** Creates a stream from an array of indices and a lambda using a subset of
+    * those indexes to allocate the batch
+    *
+    * The indices refer to some other external data structure
+    */
   def fromIndices[A, C](
       indices: Array[Array[Int]]
   )(
@@ -591,13 +597,7 @@ object BatchStream {
     BatchStream.single(resource)
   }
 
-  /** A two stage data loader which first loads items of type B, then from B
-    * loads items of type A
-    *
-    * Makes sense if loading B is quicker than loading an equivalent amount of A
-    * e.g. because B is a preformed batch of A-s on secondary medium
-    */
-  object StagedLoader {
+  private[data] object StagedLoader {
 
     private def updateBuckets[A, B](
         buckets: Vector[BucketState[A, B]],
@@ -789,6 +789,12 @@ object BatchStream {
 
   }
 
+  /** A two stage data loader which first loads items of type B, then from B
+    * loads items of type A
+    *
+    * Makes sense if loading B is quicker than loading an equivalent amount of A
+    * e.g. because B is a preformed batch of A-s on secondary medium
+    */
   def stagedFromIndices[A, B, C](
       indices: Array[Array[Int]],
       bucketSize: Int,
