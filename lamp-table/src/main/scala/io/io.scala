@@ -6,7 +6,7 @@ import cats.effect.IO
 import java.io.FileOutputStream
 import cats.effect.kernel.Resource
 import lamp.data.Writer
-import lamp.table.io.schemas.ColumnDataTypeDescriptor
+import lamp.table.io.schemas.Schemas.ColumnDataTypeDescriptor
 import java.nio.channels.ReadableByteChannel
 import java.io.FileInputStream
 import lamp.Device
@@ -16,15 +16,15 @@ package object io {
 
   private[lamp] def readTableDescriptorFromChannel(
       channel: ReadableByteChannel
-  ): schemas.TableDescriptor = {
+  ): schemas.Schemas.TableDescriptor = {
     val is = Channels.newInputStream(channel)
     com.github.plokhotnyuk.jsoniter_scala.core
-      .readFromStream[schemas.TableDescriptor](is)
+      .readFromStream[schemas.Schemas.TableDescriptor](is)
   }
 
   private[lamp] def readTableDescriptorFromFile(
       file: File
-  ): schemas.TableDescriptor = {
+  ): schemas.Schemas.TableDescriptor = {
     val fis = new FileInputStream(file)
     try {
       readTableDescriptorFromChannel(fis.getChannel)
@@ -43,19 +43,19 @@ package object io {
       lamp.data.Reader.readTensorData(d.columnValues, file, device, pin)
     val columns = d.columnTypes.zip(tensors).map { case (tpe, data) =>
       tpe match {
-        case schemas.TextColumnType(maxLength, pad, vocabulary) =>
+        case schemas.Schemas.TextColumnType(maxLength, pad, vocabulary) =>
           Column(data, TextColumnType(maxLength, pad, vocabulary), None)
-        case schemas.DateTimeColumnType =>
+        case schemas.Schemas.DateTimeColumnType =>
           Column(data, DateTimeColumnType(), None)
-        case schemas.F32ColumnType => Column(data, F32ColumnType, None)
-        case schemas.I64ColumnType => Column(data, I64ColumnType, None)
-        case schemas.BooleanColumnType =>
+        case schemas.Schemas.F32ColumnType => Column(data, F32ColumnType, None)
+        case schemas.Schemas.I64ColumnType => Column(data, I64ColumnType, None)
+        case schemas.Schemas.BooleanColumnType =>
           Column(data, BooleanColumnType(), None)
-        case schemas.F64ColumnType => Column(data, F64ColumnType, None)
+        case schemas.Schemas.F64ColumnType => Column(data, F64ColumnType, None)
       }
     }
     import org.saddle._
-    Table(columns=columns.toVector, colNames = d.columnNames.toIndex)
+    Table(columns = columns.toVector, colNames = d.columnNames.toIndex)
   }
 
   def writeTableToFile(
@@ -88,16 +88,18 @@ package object io {
               val colTypeDescriptors: List[ColumnDataTypeDescriptor] =
                 table.columns
                   .map(_.tpe match {
-                    case _: BooleanColumnType  => schemas.BooleanColumnType
-                    case _: DateTimeColumnType => schemas.DateTimeColumnType
+                    case _: BooleanColumnType =>
+                      schemas.Schemas.BooleanColumnType
+                    case _: DateTimeColumnType =>
+                      schemas.Schemas.DateTimeColumnType
                     case TextColumnType(maxLength, pad, vocabulary) =>
-                      schemas.TextColumnType(maxLength, pad, vocabulary)
-                    case I64ColumnType => schemas.I64ColumnType
-                    case F32ColumnType => schemas.F32ColumnType
-                    case F64ColumnType => schemas.F64ColumnType
+                      schemas.Schemas.TextColumnType(maxLength, pad, vocabulary)
+                    case I64ColumnType => schemas.Schemas.I64ColumnType
+                    case F32ColumnType => schemas.Schemas.F32ColumnType
+                    case F64ColumnType => schemas.Schemas.F64ColumnType
                   })
                   .toList
-              val tableDescriptor = schemas.TableDescriptor(
+              val tableDescriptor = schemas.Schemas.TableDescriptor(
                 columnTypes = colTypeDescriptors,
                 columnNames = table.colNames.toSeq.toList,
                 columnValues = tensorListDescriptor

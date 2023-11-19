@@ -1082,6 +1082,9 @@ case class Dropout(scope: Scope, a: Variable, prob: Double, train: Boolean)
   val params = List(
     a.zipBackward { (p, out) =>
       if (prob > 0.0) { out.addcmulSelf(p, mask, 1d) }
+      else {
+        out += p
+      }
     }
   )
   val mask =

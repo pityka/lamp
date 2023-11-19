@@ -1,5 +1,7 @@
 .bloop/
+.scala-build/
 .metals/
+.bsp/
 target
 todo
 test_data

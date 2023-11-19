@@ -14,7 +14,7 @@ import lamp.nn.LearningRateSchedule
 object StateIO {
 
   private def readSimpleLoopStateDescriptor(
-      s: schemas.SimpleLoopState,
+      s: schemas.Schemas.SimpleLoopState,
       file: File,
       device: Device
   )(implicit scope: Scope) = {
@@ -37,7 +37,7 @@ object StateIO {
     )
   }
   private def readSWALoopStateDescriptor(
-      s: schemas.SWALoopState,
+      s: schemas.Schemas.SWALoopState,
       file: File,
       device: Device
   )(implicit scope: Scope) = {
@@ -79,17 +79,17 @@ object StateIO {
       val is = new FileInputStream(file)
       try {
         com.github.plokhotnyuk.jsoniter_scala.core
-          .readFromStream[schemas.LoopState](is)
+          .readFromStream[schemas.Schemas.LoopState](is)
       } finally {
         is.close
       }
     }
     descriptor match {
-      case s: schemas.SimpleLoopState =>
+      case s: schemas.Schemas.SimpleLoopState =>
         readSimpleLoopStateDescriptor(s, file, device)
-      case s: schemas.SWALoopState =>
+      case s: schemas.Schemas.SWALoopState =>
         readSWALoopStateDescriptor(s, file, device)
-      case schemas.SimpleThenSWALoopState(simple, swa) =>
+      case schemas.Schemas.SimpleThenSWALoopState(simple, swa) =>
         SimpleThenSWALoopState(
           readSimpleLoopStateDescriptor(simple, file, device),
           swa.map(readSWALoopStateDescriptor(_, file, device))
@@ -161,7 +161,7 @@ object StateIO {
       new File(file.getParentFile(), modelLocation)
     )
 
-    schemas.SimpleLoopState(
+    schemas.Schemas.SimpleLoopState(
       modelDescriptor,
       optimizerDescriptor,
       s.epoch,
@@ -236,7 +236,7 @@ object StateIO {
       descriptor
     }
 
-    schemas.SWALoopState(
+    schemas.Schemas.SWALoopState(
       modelDescriptor,
       optimizerDescriptor,
       s.epoch,
@@ -256,7 +256,7 @@ object StateIO {
       bufferSize: Int = 16384
   ): Unit = {
 
-    val descriptor: schemas.LoopState = state match {
+    val descriptor: schemas.Schemas.LoopState = state match {
       case s: SimpleLoopState =>
         simpleLoopStateDescriptor(
           s,
@@ -270,7 +270,7 @@ object StateIO {
           bufferSize
         )
       case s: SimpleThenSWALoopState =>
-        schemas.SimpleThenSWALoopState(
+        schemas.Schemas.SimpleThenSWALoopState(
           simple = simpleLoopStateDescriptor(
             s.simple,
             new File(file.getAbsolutePath() + ".simple"),
@@ -309,7 +309,7 @@ object StateIO {
       IO.blocking {
         val fos = new java.io.FileOutputStream(file)
         try {
-          import lamp.data.schemas.LearningRateScheduleSchemas._
+          import lamp.data.schemas.Schemas.LearningRateScheduleSchemas._
           com.github.plokhotnyuk.jsoniter_scala.core.writeToStream(state, fos)
         } finally { fos.close }
       }
@@ -319,7 +319,7 @@ object StateIO {
   ): IO[LearningRateSchedule.ReduceLROnPlateauState] = IO.blocking {
     val fos = new java.io.FileInputStream(file)
     try {
-      import lamp.data.schemas.LearningRateScheduleSchemas._
+      import lamp.data.schemas.Schemas.LearningRateScheduleSchemas._
       com.github.plokhotnyuk.jsoniter_scala.core
         .readFromStream[LearningRateSchedule.ReduceLROnPlateauState](fos)
     } finally { fos.close }

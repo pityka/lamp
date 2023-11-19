@@ -16,8 +16,8 @@ inThisBuild(
 )
 
 lazy val commonSettings = Seq(
-  scalaVersion := "2.13.10",
-  crossScalaVersions := Seq("2.13.10", "3.2.2"),
+  scalaVersion := "2.13.12",
+  crossScalaVersions := Seq("2.13.12", "3.3.1"),
   Test / parallelExecution := false,
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((3, _)) =>
@@ -80,13 +80,13 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "4.0.0-M4"
-val upickleVersion = "3.1.0"
-val scalaTestVersion = "3.2.15"
-val scribeVersion = "3.8.3"
-val catsEffectVersion = "3.4.9"
-val catsCoreVersion = "2.9.0"
-val jsoniterscalaVersion = "2.20.6"
+val saddleVersion = "4.0.0-M7"
+val upickleVersion = "3.1.3"
+val scalaTestVersion = "3.2.16"
+val scribeVersion = "3.12.2"
+val catsEffectVersion = "3.5.2"
+val catsCoreVersion = "2.10.0"
+val jsoniterscalaVersion = "2.24.4"
 
 lazy val saddlecompat = project
   .in(file("lamp-saddle"))
@@ -207,10 +207,21 @@ lazy val table = project
     testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
     testOptions in AllTest := Nil,
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-parse" % "0.3.5",
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
     )
     // coverageEnabled := true
+  )
+  .dependsOn(data)
+  .dependsOn(core % "test->test;compile->compile", saddlecompat)
+
+lazy val safetensors = project
+  .in(file("lamp-safetensors"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "lamp-safetensors",
+    libraryDependencies ++= Seq(
+      "me.vican.jorge" %% "dijon" % "0.6.0"
+    )
   )
   .dependsOn(data)
   .dependsOn(core % "test->test;compile->compile", saddlecompat)
@@ -263,7 +274,7 @@ lazy val onnx = project
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-      "com.microsoft.onnxruntime" % "onnxruntime" % "1.14.0" % "test"
+      "com.microsoft.onnxruntime" % "onnxruntime" % "1.15.0" % "test"
     ),
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
@@ -368,7 +379,7 @@ lazy val example_bert = project
     )
   )
   .dependsOn(core, data, saddlecompat)
-  
+
 lazy val example_autoregressivelm = project
   .in(file("example-autoregressivelm"))
   .settings(commonSettings: _*)
@@ -394,7 +405,7 @@ lazy val experiment_recursivelm = project
     publish / skip := true,
     publishArtifact in (Compile, packageDoc) := false,
     publishArtifact in packageDoc := false,
-    sources in (Compile,doc) := Seq.empty,
+    sources in (Compile, doc) := Seq.empty,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
@@ -448,7 +459,8 @@ lazy val docs = project
         example_cifar100,
         example_cifar100_distributed,
         example_timemachine,
-        e2etest
+        e2etest,
+        safetensors
       ))
   )
   .enablePlugins(MdocPlugin, ScalaUnidocPlugin)

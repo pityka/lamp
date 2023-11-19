@@ -81,7 +81,7 @@ object LoopState {
       new File(file.getParentFile(), minValidLocation)
     )
 
-    lamp.data.schemas.SimpleLoopState(
+    lamp.data.schemas.Schemas.SimpleLoopState(
       modelDescriptor,
       optimizerDescriptor,
       s.loopState.epoch,
@@ -102,7 +102,7 @@ object LoopState {
       bufferSize: Int = 16384
   ): Unit = {
 
-    val descriptor: lamp.data.schemas.LoopState =
+    val descriptor: lamp.data.schemas.Schemas.LoopState =
       writeLoopStateDescriptor(
         state,
         file,
