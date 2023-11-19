@@ -1,11 +1,13 @@
 package lamp.table
 
+
 import org.saddle.scalar.ScalarTagLong
 import org.saddle.scalar.ScalarTagFloat
 import org.saddle.scalar.ScalarTagDouble
 import org.saddle._
 import org.saddle.order._
 import org.saddle.Index
+
 
 sealed trait ColumnIndex[T] {
   def index: Index[T]

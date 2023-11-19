@@ -23,7 +23,7 @@ case class TensorList(
   assert(
     tensors.forall(t => t.byteOffset + t.byteLength <= byteLength),
     s"Some tensor offset+length is out of bound ${tensors
-        .map(v => (v.byteOffset, v.byteLength))} total: $byteLength"
+      .map(v => (v.byteOffset, v.byteLength))} total: $byteLength"
   )
 }
 
@@ -68,8 +68,7 @@ case class SimpleThenSWALoopState(
     simple: SimpleLoopState,
     swa: Option[SWALoopState]
 ) extends LoopState {
-  def locations: Seq[String] =
-    simple.locations ++ swa.toList.flatMap(_.locations)
+  def locations: Seq[String] = simple.locations ++ swa.toList.flatMap(_.locations)
 }
 
 object LoopState {

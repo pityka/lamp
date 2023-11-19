@@ -139,8 +139,7 @@ trait ColumnOps { self: Column =>
   def argsort[S: Sc](descending: Boolean) =
     tpe match {
       case _: TextColumnType => ???
-      case _ =>
-        Column(values.argsort(dim = 0, descending = descending, stable = true))
+      case _                 => Column(values.argsort(dim = 0, descending=descending, stable=true))
     }
 
   /** Return a boolean tensor indicating element-wise greater-than. */

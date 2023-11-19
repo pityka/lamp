@@ -39,18 +39,17 @@ object Util {
 
         validCorpus <-
           (if (config.validFile.isEmpty) IO.pure(Option.empty[STen])
-           else
-             Util
-               .readBytesFromFile(config.validFile, config.fileMaxLength)
-               .flatMap(corp =>
-                 Util.encodeOrReadTokens(
-                   corp,
-                   new File(config.validFile + ".tokens"),
-                   codec,
-                   config.parallelism
-                 )
-               )
-               .map(Option(_)))
+          else 
+          Util
+            .readBytesFromFile(config.validFile, config.fileMaxLength)
+            .flatMap(corp =>
+              Util.encodeOrReadTokens(
+                corp,
+                new File(config.validFile + ".tokens"),
+                codec,
+                config.parallelism
+              )
+            ).map(Option(_)))
 
         _ = scribe.info(
           s"Valid corpus length: ${validCorpus.map(_.numel)} tokens"
@@ -85,15 +84,13 @@ object Util {
   def readBytesFromFile[S: Sc](file: String, maxLength: Long): IO[STen] =
     IO.interruptible {
       val l = math.min(maxLength, new File(file).length())
-      STen
-        .fromFile(
-          path = file,
-          offset = 0,
-          length = l,
-          scalarTypeByte = 1,
-          pin = false
-        )
-        .max(STen.scalarLong(0, STenOptions.l))
+      STen.fromFile(
+        path = file,
+        offset = 0,
+        length = l,
+        scalarTypeByte = 1,
+        pin = false
+      ).max(STen.scalarLong(0,STenOptions.l))
 
     }
   def saveTokens(file: File, tokens: STen): IO[Unit] = {

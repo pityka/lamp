@@ -368,7 +368,7 @@ lazy val example_bert = project
     )
   )
   .dependsOn(core, data, saddlecompat)
-
+  
 lazy val example_autoregressivelm = project
   .in(file("example-autoregressivelm"))
   .settings(commonSettings: _*)
@@ -394,7 +394,7 @@ lazy val experiment_recursivelm = project
     publish / skip := true,
     publishArtifact in (Compile, packageDoc) := false,
     publishArtifact in packageDoc := false,
-    sources in (Compile, doc) := Seq.empty,
+    sources in (Compile,doc) := Seq.empty,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.1.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,

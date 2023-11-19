@@ -8,6 +8,7 @@ import lamp.example.lm.Model
 object Inference {
   def inference(config: CliConfig, codec: Codec)(scope: Scope) =
     Scope.bracket(scope) { implicit scope =>
+      
       val device =
         if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
 

@@ -8,8 +8,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.compatible.Assertion
 
 class STenSuite extends AnyFunSuite {
-  implicit def AssertionIsMovable: EmptyMovable[Assertion] =
-    Movable.empty[Assertion]
+  implicit def AssertionIsMovable : EmptyMovable[Assertion] = Movable.empty[Assertion]
 
   test("from empty long") {
     Scope.root { implicit scope =>
@@ -473,7 +472,7 @@ class STenSuite extends AnyFunSuite {
 
   test("csv - buffer toArrays") {
     val buffer =
-      org.saddle.Buffer.empty[Double]
+       org.saddle.Buffer.empty[Double]
     0 until 100000 foreach (i => buffer.+=(i.toDouble))
     assert(
       buffer.toArrays.reduce(_ ++ _).toList == (0 until 100000).toList
@@ -482,7 +481,7 @@ class STenSuite extends AnyFunSuite {
   }
   test("csv - buffer toArray") {
     val buffer =
-      org.saddle.Buffer.empty[Double]
+       org.saddle.Buffer.empty[Double]
     0 until 100000 foreach (i => buffer.+=(i.toDouble))
     assert(
       buffer.toArray.toList == (0 until 100000).toList

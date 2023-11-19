@@ -55,7 +55,7 @@ package object io {
       }
     }
     import org.saddle._
-    Table(columns = columns.toVector, colNames = d.columnNames.toIndex)
+    Table(columns=columns.toVector, colNames = d.columnNames.toIndex)
   }
 
   def writeTableToFile(
