@@ -135,62 +135,67 @@ package object languagemodel {
       createMaxLength: Boolean = true
   ) = {
     def makeNonEmptyBatch(device: Device) = {
-      scopeInResource.map { implicit scope =>
-        val corpusLength = corpus.shape(0)
-        val (tokens, targets, maxLength) = Scope { implicit scope =>
-          val starts = STen
-            .randint(
-              low = 0,
-              high = corpusLength - blockLength - 1,
-              size = List(minibatchSize),
-              STenOptions.l
+      scopeInResource.evalMap { implicit scope =>
+        IO.interruptible {
+          val corpusLength = corpus.shape(0)
+          val (tokens, targets, maxLength) = Scope { implicit scope =>
+            val starts = STen
+              .randint(
+                low = 0,
+                high = corpusLength - blockLength - 1,
+                size = List(minibatchSize),
+                STenOptions.l
+              )
+              .toLongArray
+              .toVector
+              .map(_.toLong)
+
+            val tokens = STen.stack(
+              starts.map(i =>
+                corpus.slice(0L, i.toLong, i + blockLength, 1L).castToLong
+              ),
+              dim = 0
             )
-            .toLongArray
-            .toVector
-            .map(_.toLong)
-
-          val tokens = STen.stack(
-            starts.map(i =>
-              corpus.slice(0L, i.toLong, i + blockLength, 1L).castToLong
-            ),
-            dim = 0
-          )
-          val targets = STen.stack(
-            starts.map(i =>
-              corpus.slice(0L, i + 1L, i + 1 + blockLength, 1L).castToLong
-            ),
-            dim = 0
-          )
-
-          val maxLength = if (createMaxLength) {
-            val single = STen.arange_l(1, blockLength + 1, 1).unsqueeze(0)
-            Some(single.repeat(List(minibatchSize, 1)))
-          } else None
-
-          device.withOtherStreamThenSync(synchronizeBefore = false) {
-
-            (
-              device.to(tokens),
-              device.to(targets),
-              maxLength.map(device.to)
+            val targets = STen.stack(
+              starts.map(i =>
+                corpus.slice(0L, i + 1L, i + 1 + blockLength, 1L).castToLong
+              ),
+              dim = 0
             )
+
+            val maxLength = if (createMaxLength) {
+              val single = STen.arange_l(1, blockLength + 1, 1).unsqueeze(0)
+              Some(single.repeat(List(minibatchSize, 1)))
+            } else None
+            device.withOtherStream(
+              synchronizeBefore = true,
+              synchronizeAfter = true
+            ) {
+              // println(s"TX ENTER ${device.asInstanceOf[lamp.CudaDevice].getCurrentStream} ${Thread.currentThread().getName}")
+              val k = (
+                device.to(tokens),
+                device.to(targets),
+                maxLength.map(device.to)
+              )
+// println(s"TX EXIT ${device.asInstanceOf[lamp.CudaDevice].getCurrentStream} ${Thread.currentThread().getName}")
+              k
+            }
           }
+
+          val batch = LossInput(
+            input = LanguageModelInput(
+              tokens = const(tokens),
+              maxLength = maxLength,
+              positions = None
+            ),
+            languageModelTarget = targets
+          )
+
+          val fakeTarget = STen.zeros(List(minibatchSize), tokens.options)
+
+          NonEmptyBatch((batch, fakeTarget))
         }
-
-        val batch = LossInput(
-          input = LanguageModelInput(
-            tokens = const(tokens),
-            maxLength = maxLength,
-            positions = None
-          ),
-          languageModelTarget = targets
-        )
-
-        val fakeTarget = STen.zeros(List(minibatchSize), tokens.options)
-
-        NonEmptyBatch((batch, fakeTarget))
       }
-
     }
 
     BatchStream.fromFunction(numBatches, makeNonEmptyBatch)

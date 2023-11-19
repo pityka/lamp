@@ -228,27 +228,28 @@ object IOLoops {
 
           case _ =>
             epochs(
-              model,
-              optimizerFactory,
-              trainBatchesOverEpoch,
-              validationBatchesOverEpoch,
-              warmupEpochs,
-              trainingCallback,
-              validationCallback,
-              checkpointState.map(fun =>
+              model = model,
+              optimizerFactory = optimizerFactory,
+              trainBatchesOverEpoch = trainBatchesOverEpoch,
+              validationBatchesOverEpoch = validationBatchesOverEpoch,
+              epochs = warmupEpochs,
+              trainingCallback = trainingCallback,
+              validationCallback = validationCallback,
+              checkpointState.mapcheckpointState = (fun =>
                 (s: SimpleLoopState, lr: LRState) =>
                   fun(SimpleThenSWALoopState(s, None), Left(lr))
               ),
               // checkpointLRState,
-              1,
-              logger,
-              returnMinValidationLossModel,
-              learningRateSchedule,
-              prefetch,
-              dataParallelModels,
-              initState.map(_.simple),
-              accumulateGradientOverNBatches,
-              learningRateScheduleInitState,
+              validationFrequency = 1,
+              logger = logger,
+              returnMinValidationLossModel = returnMinValidationLossModel,
+              learningRateSchedule = learningRateSchedule,
+              prefetch = prefetch,
+              overlapModelWithLoad = true,
+              dataParallelModels = dataParallelModels,
+              initState.mapinitState = (_.simple),
+              accumulateGradientOverNBatches = accumulateGradientOverNBatches,
+              learningRateScheduleInitState = learningRateScheduleInitState,
               validationLossExponentialSmoothingFactor =
                 validationLossExponentialSmoothingFactor
             )
@@ -329,6 +330,7 @@ object IOLoops {
       learningRateSchedule: LearningRateSchedule[LRState] =
         LearningRateSchedule.noop,
       prefetch: Boolean = false,
+      overlapModelWithLoad: Boolean = false,
       dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
       initState: Option[SimpleLoopState] = None,
       accumulateGradientOverNBatches: Int = 1,
@@ -454,24 +456,25 @@ object IOLoops {
                 logger,
                 learningRateFactor,
                 prefetch,
+                overlapModelWithLoad,
                 accumulateGradientOverNBatches
               )
             else
               DataParallel.oneEpoch(
-                epoch,
-                trainingCallback,
-                modelWithOptimizer,
-                trainBatchesOverEpoch(
+                epochCount = epoch,
+                trainingCallback = trainingCallback,
+                mainModel = modelWithOptimizer,
+                trainBatches = trainBatchesOverEpoch(
                   TrainingLoopContext(
-                    epoch,
-                    lastValidationLoss,
-                    minValidationLoss
+                    epoch = epoch,
+                    lastValidationLoss = lastValidationLoss,
+                    minValidationLoss = minValidationLoss
                   )
                 ),
-                logger,
-                learningRateFactor,
-                dataParallelModels,
-                accumulateGradientOverNBatches
+                logger = logger,
+                learningRateScheduleFactor = learningRateFactor,
+                models = dataParallelModels,
+                accumulateGradientOverNBatches = accumulateGradientOverNBatches
               )
 
           maybeValidationLoss <-
@@ -609,6 +612,7 @@ object IOLoops {
       logger: Option[Logger],
       learningRateScheduleFactor: Double,
       prefetch: Boolean,
+      overlapModelWithLoad: Boolean,
       accumulateGradientOverNBatches: Int
   ): IO[Double] = {
 
@@ -622,10 +626,11 @@ object IOLoops {
       if (accumulateGradientOverNBatches <= 1) {
         val (numInstances, gradients) =
           model.model.addTotalLossAndReturnGradientsAndNumExamples(
-            sample,
-            target,
-            lossAcc,
-            zeroGrad = true
+            samples = sample,
+            target = target,
+            acc = lossAcc,
+            zeroGrad = true,
+            switchStream = overlapModelWithLoad
           )
 
         model.optimizer.step(gradients, learningRateScheduleFactor)
@@ -634,10 +639,11 @@ object IOLoops {
 
         val (numInstances, gradients) =
           model.model.addTotalLossAndReturnGradientsAndNumExamples(
-            sample,
-            target,
-            lossAcc,
-            zeroGrad = false
+            samples = sample,
+            target = target,
+            acc = lossAcc,
+            zeroGrad = false,
+            switchStream = prefetch
           )
 
         if (
@@ -769,9 +775,10 @@ object IOLoops {
                 elem.map { case (validationSample, validationTarget) =>
                   val numExamples =
                     modelAsEval.addTotalLossAndReturnNumExamples(
-                      validationSample,
-                      validationTarget,
-                      totalLoss
+                      samples = validationSample,
+                      target = validationTarget,
+                      acc = totalLoss,
+                      switchStream = false
                     )
                   numExamples
                 }

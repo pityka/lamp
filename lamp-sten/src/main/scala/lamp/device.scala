@@ -116,10 +116,17 @@ sealed trait Device { self =>
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions
   def setSeed(seed: Long): Unit
 
-  /** Executes f on a new stream f must not switch to other threads Restores the
-    * stream to the default stream
+  /** Executes f on a new stream
+    *
+    * f must not switch to other threads
+    *
+    * Restores the stream to the original stream Optionally synchronizes the
+    * host before and/or after f
     */
-  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A
+  @scala.annotation.nowarn
+  def withOtherStream[A](synchronizeBefore: Boolean, synchronizeAfter: Boolean)(
+      f: => A
+  ): A = f
 
   def measureTime[A](f: => A): (A, Long)
 }
@@ -135,7 +142,6 @@ case object CPU extends Device {
     val t2 = System.nanoTime
     (r, t2 - t1)
   }
-  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = f
   def to[S: Sc](t: STenOptions): STenOptions = t.cpu
   def to(t: Tensor) = {
     t.cpu
@@ -152,14 +158,13 @@ case object MPS extends Device {
     val t2 = System.nanoTime
     (r, t2 - t1)
   }
-  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = f
   def to[S: Sc](t: STenOptions): STenOptions = t.mps
   def to(t: Tensor) = {
     val tmp = t.options()
-    val tmp2 = tmp.device(STenOptions.deviceTypeMps,0)
-    val r = t.to(tmp2,true,true)
-    tmp.release 
-    tmp2.release 
+    val tmp2 = tmp.device(STenOptions.deviceTypeMps, 0)
+    val r = t.to(tmp2, true, true)
+    tmp.release
+    tmp2.release
     r
   }
   def setSeed(seed: Long) = Tensor.manual_seed_mps(seed)
@@ -178,14 +183,32 @@ case class CudaDevice(i: Int) extends Device {
     (r, t2 - t1)
   }
 
-  def withOtherStreamThenSync[A](synchronizeBefore: Boolean)(f: => A): A = {
-    val default = aten.CudaStream.getDefaultCUDAStream(i.toByte)
-    if (synchronizeBefore) { default.synchronize() }
+  /** Effective for the current OS thread */
+  def getCurrentStream = {
+    aten.CudaStream.getCurrentCUDAStream(i.toByte)
+  }
+  def getStreamFromPool = {
+    aten.CudaStream.getStreamFromPool(false, i.toByte)
+  }
+
+  /** Effective for the current OS thread */
+  def setCurrentStream(s: aten.CudaStream) = {
+    aten.CudaStream.setCurrentCUDAStream(s)
+  }
+
+  override def withOtherStream[A](
+      synchronizeBefore: Boolean,
+      synchronizeAfter: Boolean
+  )(f: => A): A = {
+    val orig = aten.CudaStream.getCurrentCUDAStream(i.toByte)
+    if (synchronizeBefore) { orig.synchronize() }
     val other = aten.CudaStream.getStreamFromPool(false, i.toByte)
     aten.CudaStream.setCurrentCUDAStream(other)
     val a = f
-    other.synchronize()
-    aten.CudaStream.setCurrentCUDAStream(default)
+    if (synchronizeAfter) {
+      other.synchronize()
+    }
+    aten.CudaStream.setCurrentCUDAStream(orig)
     a
   }
   def to[S: Sc](t: STenOptions): STenOptions = t.cudaIndex(i.toShort)

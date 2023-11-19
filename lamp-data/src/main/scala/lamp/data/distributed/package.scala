@@ -740,10 +740,11 @@ package object distributed {
       broadcast()
       val (numExamples, gradients) =
         model.addTotalLossAndReturnGradientsAndNumExamples(
-          batchFeature,
-          batchTarget,
-          lossAccumulator,
-          zeroGradBeforeComputingGradients
+          samples = batchFeature,
+          target = batchTarget,
+          acc = lossAccumulator,
+          zeroGrad = zeroGradBeforeComputingGradients,
+          switchStream = true
         )
       if (stepOptimizerAfterComputingGradients) {
         // totalExamples is only correct on root rank
@@ -764,9 +765,10 @@ package object distributed {
       broadcast()
       val numExamples =
         model.addTotalLossAndReturnNumExamples(
-          batchFeature,
-          batchTarget,
-          lossAccumulator
+          samples = batchFeature,
+          target = batchTarget,
+          acc = lossAccumulator,
+          switchStream = true
         )
       // totalExamples is only correct on root rank
       val totalExamples = Scope.root { implicit scope =>

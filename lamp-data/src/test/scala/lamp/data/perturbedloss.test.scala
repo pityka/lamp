@@ -113,7 +113,8 @@ class PerturbedLossSuite extends AnyFunSuite {
           const(testDataTensor),
           testTarget,
           acc,
-          true
+          true,
+          false
         )
       val loss = acc.toDoubleArray.head / numExamples
       println(loss)

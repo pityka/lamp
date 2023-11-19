@@ -153,6 +153,7 @@ class MLPSuite extends AnyFunSuite {
           const(testDataTensor),
           testTarget,
           acc,
+          true,
           true
         )
       val loss = acc.toDoubleArray.head / numExamples

@@ -5,6 +5,7 @@ import lamp.nn.bert.{BertPretrainInput, BertLossInput}
 import lamp.data.BatchStream.scopeInResource
 import lamp.autograd.const
 import scala.collection.compat.immutable.ArraySeq
+import cats.effect.IO
 
 package object bert {
 
@@ -143,9 +144,16 @@ package object bert {
   ) = {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       assert(idx.nonEmpty)
-      scopeInResource.map { implicit scope =>
-        val (tokens, segments, positions, mlmTargets, nsTargets,tokenMaxLength) = Scope {
-          implicit scope =>
+      scopeInResource.evalMap { implicit scope =>
+        IO.interruptible {
+          val (
+            tokens,
+            segments,
+            positions,
+            mlmTargets,
+            nsTargets,
+            tokenMaxLength
+          ) = Scope { implicit scope =>
             val ps = ArraySeq.unsafeWrapArray(idx).flatMap { paragraphIdx =>
               prepareParagraph(
                 paragraphs(paragraphIdx),
@@ -173,7 +181,7 @@ package object bert {
             val mlmTarget = STen.stack(dim = 0, tensors = ps.map(_._5))
             val tokenMaxLength = STen.fromLongArray(ps.map(_._6).toArray)
 
-            device.withOtherStreamThenSync(synchronizeBefore = false) {
+            device.withOtherStream(synchronizeBefore = false, synchronizeAfter = true) {
 
               (
                 device.to(maskedBertTokens),
@@ -181,25 +189,26 @@ package object bert {
                 device.to(mlmPositions),
                 device.to(mlmTarget),
                 device.to(nextSentenceTarget),
-                device.to(tokenMaxLength),
+                device.to(tokenMaxLength)
               )
             }
+          }
+
+          val batch = BertLossInput(
+            input = BertPretrainInput(
+              tokens = const(tokens),
+              segments = const(segments),
+              positions = positions,
+              maxLength = Option(tokenMaxLength)
+            ),
+            maskedLanguageModelTarget = mlmTargets,
+            wholeSentenceTarget = nsTargets
+          )
+
+          val fakeTarget = STen.zeros(List(minibatchSize), tokens.options)
+
+          NonEmptyBatch((batch, fakeTarget))
         }
-
-        val batch = BertLossInput(
-          input = BertPretrainInput(
-            tokens = const(tokens),
-            segments = const(segments),
-            positions = positions,
-            maxLength = Option(tokenMaxLength)
-          ),
-          maskedLanguageModelTarget = mlmTargets,
-          wholeSentenceTarget = nsTargets
-        )
-
-        val fakeTarget = STen.zeros(List(minibatchSize), tokens.options)
-
-        NonEmptyBatch((batch, fakeTarget))
       }
 
     }

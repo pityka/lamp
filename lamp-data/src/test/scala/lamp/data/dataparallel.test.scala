@@ -91,6 +91,7 @@ class DataParallelLoopSuite extends AnyFunSuite {
           const(x),
           target,
           acc,
+          true,
           true
         )
       val loss = acc.toDoubleArray.head / n

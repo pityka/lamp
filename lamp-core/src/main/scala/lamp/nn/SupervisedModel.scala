@@ -15,7 +15,8 @@ trait LossCalculation[I] {
       module: M with GenericModule[I, Variable],
       lossFunction: LossFunction,
       computeGradients: Boolean,
-      zeroGradBeforeComputingGradients: Boolean
+      zeroGradBeforeComputingGradients: Boolean,
+      switchStream: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]])
 }
 
@@ -53,8 +54,10 @@ class PerturbedLossCalculation[I](noiseLevel: Double)
       module: M with GenericModule[I, Variable],
       lossFunction: LossFunction,
       computeGradients: Boolean,
-      zeroGradBeforeComputingGradients: Boolean
+      zeroGradBeforeComputingGradients: Boolean,
+      switchStream: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
+    assert(!switchStream, "not implemented")
     val gradients = Scope { implicit scope =>
       saveState(module.parameters.map(_._1.value)) {
         perturb(
@@ -87,16 +90,26 @@ class SimpleLossCalculation[I] extends LossCalculation[I] {
       module: M with GenericModule[I, Variable],
       lossFunction: LossFunction,
       computeGradients: Boolean,
-      zeroGradBeforeComputingGradients: Boolean
+      zeroGradBeforeComputingGradients: Boolean,
+      switchStream: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
-    val output = module.forward(samples)
-    val (loss, numInstances) = lossFunction(output, target)
+    def body() = {
 
-    val gradients =
-      if (computeGradients)
-        Some(module.gradients(loss, zeroGradBeforeComputingGradients))
-      else None
-    (loss, numInstances, gradients)
+      val output = module.forward(samples)
+      val (loss, numInstances) = lossFunction(output, target)
+
+      val gradients =
+        if (computeGradients)
+          Some(module.gradients(loss, zeroGradBeforeComputingGradients))
+        else None
+
+      (loss, numInstances, gradients)
+    }
+    if (switchStream)
+      target.device.withOtherStream(true, true) {
+        body()
+      }
+    else body()
   }
 
 }
@@ -109,8 +122,10 @@ case class AdversarialTraining(eps: Double) extends LossCalculation[Variable] {
       module: M with Module,
       lossFunction: LossFunction,
       computeGradients: Boolean,
-      zeroGradBeforeComputingGradients: Boolean
+      zeroGradBeforeComputingGradients: Boolean,
+      switchStream: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
+    assert(!switchStream, "not implemented")
     val samplesWithGrad = samples.withGrad
     val output0 = module.forward(samplesWithGrad)
     val (loss0, numInstances) = lossFunction(output0, target)
@@ -151,12 +166,21 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
   def addTotalLossAndReturnNumExamples(
       samples: I,
       target: STen,
-      acc: STen
+      acc: STen,
+      switchStream: Boolean
   ): Long = {
 
     Scope.root { implicit scope =>
       val (loss, examples, _) =
-        lossCalculation(samples, target, module, lossFunction, false, false)
+        lossCalculation(
+          samples,
+          target,
+          module,
+          lossFunction,
+          false,
+          false,
+          switchStream
+        )
       if (printMemoryAllocations) {
         println(loss.graphMemoryAllocationReport)
       }
@@ -169,11 +193,20 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
       samples: I,
       target: STen,
       acc: STen,
-      zeroGrad: Boolean
+      zeroGrad: Boolean,
+      switchStream: Boolean
   ): (Long, Seq[Option[STen]]) =
     Scope.unsafe { implicit scope =>
       val (loss, numInstances, mayGradients) =
-        lossCalculation(samples, target, module, lossFunction, true, zeroGrad)
+        lossCalculation(
+          samples,
+          target,
+          module,
+          lossFunction,
+          true,
+          zeroGrad,
+          switchStream
+        )
       acc += (loss.value * numInstances.toDouble)
 
       (numInstances, mayGradients.get)
