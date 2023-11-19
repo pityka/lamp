@@ -144,46 +144,52 @@ package object bert {
     def makeNonEmptyBatch(idx: Array[Int], device: Device) = {
       assert(idx.nonEmpty)
       scopeInResource.map { implicit scope =>
-        val (tokens, segments, positions, mlmTargets, nsTargets,tokenMaxLength) = Scope {
-          implicit scope =>
-            val ps = ArraySeq.unsafeWrapArray(idx).flatMap { paragraphIdx =>
-              prepareParagraph(
-                paragraphs(paragraphIdx),
-                maximumTokenId,
-                clsToken,
-                sepToken,
-                padToken,
-                maskToken,
-                maxLength,
-                rng
+        val (
+          tokens,
+          segments,
+          positions,
+          mlmTargets,
+          nsTargets,
+          tokenMaxLength
+        ) = Scope { implicit scope =>
+          val ps = ArraySeq.unsafeWrapArray(idx).flatMap { paragraphIdx =>
+            prepareParagraph(
+              paragraphs(paragraphIdx),
+              maximumTokenId,
+              clsToken,
+              sepToken,
+              padToken,
+              maskToken,
+              maxLength,
+              rng
+            )
+          }
+
+          val nextSentenceTarget =
+            STen
+              .fromLongArray(
+                ps.map(v => if (v._1) 1L else 0L).toArray,
+                List(ps.length),
+                CPU
               )
-            }
+              .castToFloat
+          val maskedBertTokens = STen.stack(dim = 0, tensors = ps.map(_._2))
+          val bertSegments = STen.stack(dim = 0, tensors = ps.map(_._3))
+          val mlmPositions = STen.stack(dim = 0, tensors = ps.map(_._4))
+          val mlmTarget = STen.stack(dim = 0, tensors = ps.map(_._5))
+          val tokenMaxLength = STen.fromLongArray(ps.map(_._6).toArray)
 
-            val nextSentenceTarget =
-              STen
-                .fromLongArray(
-                  ps.map(v => if (v._1) 1L else 0L).toArray,
-                  List(ps.length),
-                  CPU
-                )
-                .castToFloat
-            val maskedBertTokens = STen.stack(dim = 0, tensors = ps.map(_._2))
-            val bertSegments = STen.stack(dim = 0, tensors = ps.map(_._3))
-            val mlmPositions = STen.stack(dim = 0, tensors = ps.map(_._4))
-            val mlmTarget = STen.stack(dim = 0, tensors = ps.map(_._5))
-            val tokenMaxLength = STen.fromLongArray(ps.map(_._6).toArray)
+          device.withOtherStreamThenSync(synchronizeBefore = false) {
 
-            device.withOtherStreamThenSync(synchronizeBefore = false) {
-
-              (
-                device.to(maskedBertTokens),
-                device.to(bertSegments),
-                device.to(mlmPositions),
-                device.to(mlmTarget),
-                device.to(nextSentenceTarget),
-                device.to(tokenMaxLength),
-              )
-            }
+            (
+              device.to(maskedBertTokens),
+              device.to(bertSegments),
+              device.to(mlmPositions),
+              device.to(mlmTarget),
+              device.to(nextSentenceTarget),
+              device.to(tokenMaxLength)
+            )
+          }
         }
 
         val batch = BertLossInput(

@@ -348,7 +348,7 @@ case class Table(
 
   case class IndexMap(index: Index[String], values: Seq[Any]) {
     assert(index.length == values.length)
-    def apply(s:String) : Any = {
+    def apply(s: String): Any = {
       val i = index.getFirst(s)
       if (i < 0) throw new NoSuchElementException(s"$s not in $index")
       else values(i)
