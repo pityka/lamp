@@ -57,7 +57,6 @@ class PerturbedLossCalculation[I](noiseLevel: Double)
       zeroGradBeforeComputingGradients: Boolean,
       switchStream: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
-    assert(!switchStream, "not implemented")
     val gradients = Scope { implicit scope =>
       saveState(module.parameters.map(_._1.value)) {
         perturb(
@@ -125,7 +124,6 @@ case class AdversarialTraining(eps: Double) extends LossCalculation[Variable] {
       zeroGradBeforeComputingGradients: Boolean,
       switchStream: Boolean
   )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
-    assert(!switchStream, "not implemented")
     val samplesWithGrad = samples.withGrad
     val output0 = module.forward(samplesWithGrad)
     val (loss0, numInstances) = lossFunction(output0, target)
