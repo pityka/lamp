@@ -235,7 +235,7 @@ object IOLoops {
               epochs = warmupEpochs,
               trainingCallback = trainingCallback,
               validationCallback = validationCallback,
-              checkpointState.mapcheckpointState = (fun =>
+              checkpointState = checkpointState.map(fun =>
                 (s: SimpleLoopState, lr: LRState) =>
                   fun(SimpleThenSWALoopState(s, None), Left(lr))
               ),
@@ -247,7 +247,7 @@ object IOLoops {
               prefetch = prefetch,
               overlapModelWithLoad = true,
               dataParallelModels = dataParallelModels,
-              initState.mapinitState = (_.simple),
+              initState = initState.map(_.simple),
               accumulateGradientOverNBatches = accumulateGradientOverNBatches,
               learningRateScheduleInitState = learningRateScheduleInitState,
               validationLossExponentialSmoothingFactor =
