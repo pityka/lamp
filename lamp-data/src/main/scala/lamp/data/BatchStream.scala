@@ -537,25 +537,30 @@ object BatchStream {
         buffers: BufferPair,
         device: Device
     ) = {
-      scopeInResource.map { implicit scope =>
-        val (d1, d2) = Scope { implicit scope =>
-          val idxT = STen.fromLongArray(
-            idx.map(_.toLong),
-            List(idx.length),
-            features.device
-          )
-          val xcl = features.index(idxT)
-          val tcl = target.index(idxT)
-          val (d1, d2) =
-            device.withOtherStreamThenSync(synchronizeBefore = false) {
+      scopeInResource.evalMap { implicit scope =>
+        IO.interruptible {
+          val (d1, d2) = Scope { implicit scope =>
+            val idxT = STen.fromLongArray(
+              idx.map(_.toLong),
+              List(idx.length),
+              features.device
+            )
+            val xcl = features.index(idxT)
+            val tcl = target.index(idxT)
+            val (d1, d2) =
+              device.withOtherStream(
+                synchronizeBefore = false,
+                synchronizeAfter = true
+              ) {
 
-              val d1 = device.toBatched(List(xcl), buffers).head
-              val d2 = device.to(tcl)
-              (d1, d2)
-            }
-          (d1, d2)
+                val d1 = device.toBatched(List(xcl), buffers).head
+                val d2 = device.to(tcl)
+                (d1, d2)
+              }
+            (d1, d2)
+          }
+          NonEmptyBatch((const(d1), d2)): StreamControl[(Variable, STen)]
         }
-        NonEmptyBatch((const(d1), d2)): StreamControl[(Variable, STen)]
       }
 
     }

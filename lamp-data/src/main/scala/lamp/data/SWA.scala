@@ -168,20 +168,21 @@ object SWA {
           trainingLoss <-
             if (dataParallelModels.isEmpty)
               IOLoops.oneEpoch(
-                epoch,
-                trainingCallback,
-                modelWithOptimizer,
-                trainBatchesOverEpoch(
+                epochCount = epoch,
+                trainingCallback = trainingCallback,
+                model = modelWithOptimizer,
+                trainBatches = trainBatchesOverEpoch(
                   IOLoops.TrainingLoopContext(
                     epoch,
                     lastValidationLoss,
                     minValidationLoss
                   )
                 ),
-                logger,
-                learningRateFactor,
-                prefetch,
-                accumulateGradientOverNBatches
+                logger = logger,
+                learningRateScheduleFactor = learningRateFactor,
+                prefetch = prefetch,
+                overlapModelWithLoad = false,
+                accumulateGradientOverNBatches = accumulateGradientOverNBatches
               )
             else
               DataParallel.oneEpoch(

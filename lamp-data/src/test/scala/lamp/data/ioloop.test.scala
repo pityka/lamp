@@ -97,6 +97,7 @@ class IOLoopSuite extends AnyFunSuite {
             const(x),
             target,
             acc,
+            true,
             true
           )
       val loss = acc.toDoubleArray.head / n
@@ -172,6 +173,7 @@ class IOLoopSuite extends AnyFunSuite {
           const(x),
           target,
           acc,
+          true,
           true
         )
       val loss = acc.toDoubleArray.head / n
@@ -241,6 +243,7 @@ class IOLoopSuite extends AnyFunSuite {
           const(x),
           target,
           acc,
+          true,
           true
         )
       val loss = acc.toDoubleArray.head / n

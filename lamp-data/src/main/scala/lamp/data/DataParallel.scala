@@ -60,9 +60,10 @@ object DataParallel {
                         IO {
                           val numExamples =
                             modelAsEval.addTotalLossAndReturnNumExamples(
-                              validationSample,
-                              validationTarget,
-                              totalLoss
+                              samples = validationSample,
+                              target = validationTarget,
+                              acc = totalLoss,
+                              switchStream = false
                             )
                           numExamples
                         }
@@ -202,7 +203,7 @@ object DataParallel {
           .zip(mainModel.model +: models)
           .zip(perModelLossAcc)
           .parTraverse { case ((batch, model), lossAcc) =>
-            IO { computeGradient(batch, lossAcc, model, zeroGrad) }
+            IO.interruptible { computeGradient(batch, lossAcc, model, zeroGrad) }
           }
         _ <-
           if (step)
@@ -224,8 +225,8 @@ object DataParallel {
       val sources = mainModel.model.module.state.map(_._1.value)
       models.toList.zip(deviceBuffers).parTraverseN(models.size) {
         case (destinationModel, buffers) =>
-          IO {
-            mainDevice.withOtherStreamThenSync(true) {
+          IO.interruptible {
+            mainDevice.withOtherStream(true,true) {
 
               val destinations = destinationModel.module.state.map(_._1.value)
               val device = destinationModel.module.state.head._1.value.device
@@ -249,10 +250,11 @@ object DataParallel {
         zeroGrad: Boolean
     ): (Long, Seq[Option[STen]]) =
       model.addTotalLossAndReturnGradientsAndNumExamples(
-        elem._1,
-        elem._2,
-        lossAcc,
-        zeroGrad
+        samples = elem._1,
+        target = elem._2,
+        acc = lossAcc,
+        zeroGrad = zeroGrad,
+        switchStream = true
       )
 
     def averageGradientsIntoMain(
