@@ -26,10 +26,9 @@ class LogisticSuite extends AnyFunSuite {
     Scope.root { implicit scope =>
       val data = org.saddle.csv.CsvParser
         .parseInputStreamWithHeader[Double](
-          
-              new java.util.zip.GZIPInputStream(
-                getClass.getResourceAsStream("/mnist_test.csv.gz")
-              )
+          new java.util.zip.GZIPInputStream(
+            getClass.getResourceAsStream("/mnist_test.csv.gz")
+          )
         )
         .toOption
         .get

@@ -14,8 +14,6 @@ import cats.effect.unsafe.implicits.global
 
 class TransformerSuite extends AnyFunSuite {
 
-
-
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
     test(id + "/CUDA", CudaTest) { fun(true) }
@@ -40,12 +38,16 @@ class TransformerSuite extends AnyFunSuite {
 
     val (vocab, _) = Text.charsToIntegers((positives ++ negatives).mkString)
 
-    val all = Mat(Text.sentencesToPaddedMatrix(
-      positives ++ negatives,
-      maxLength = 15,
-      pad = vocab.size,
-      vocabulary = vocab
-    ).map(_.toVec):_*).T
+    val all = Mat(
+      Text
+        .sentencesToPaddedMatrix(
+          positives ++ negatives,
+          maxLength = 15,
+          pad = vocab.size,
+          vocabulary = vocab
+        )
+        .map(_.toVec): _*
+    ).T
     val target = vec.ones(positives.size) concat vec.zeros(negatives.size)
     val shuffle =
       scala.util.Random.shuffle(0 until all.numRows toVector).toArray
@@ -94,8 +96,8 @@ class TransformerSuite extends AnyFunSuite {
                   .simpleSequence(15, 30, 15, device, precision)
               )
             ),
-            GenericFun[Variable, (Variable,Option[STen])] { _ => x =>
-              (x,None)
+            GenericFun[Variable, (Variable, Option[STen])] { _ => x =>
+              (x, None)
             },
             lamp.nn.TransformerEncoder(
               numBlocks = 3,
