@@ -25,7 +25,7 @@ package object knn {
       val outer = v1.mm(v2.t)
       val n1 = (v1 * v1).rowSum
       val n2 = (v2 * v2).rowSum
-      (n1 + n2.t - outer * 2).max(STen.zeros(List(1), v1.options))
+      (n1 + n2.t - outer * 2).max(STen.zeros(List(1),v1.options))
     }
   }
 
@@ -92,8 +92,7 @@ package object knn {
       val selected = values.take(r.toArray)
       vec
         .range(0, numClasses)
-        .map(c => selected.countif(_ == c).toDouble)
-        .map(_ / selected.length)
+        .map(c => selected.countif(_ == c).toDouble).map(_ / selected.length)
     }: _*).T.map(v => if (log) math.log(v + 1e-6) else v)
 
   def knnSearch(

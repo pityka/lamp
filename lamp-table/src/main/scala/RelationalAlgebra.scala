@@ -281,10 +281,8 @@ trait RelationalAlgebra { self: Table =>
     val pr = p(this)
     filter(pr)
   }
-  def equifilter[A](
-      p: TableExpression => EquExpression[A]
-  )(implicit scope: Scope): Table = {
-    val EquExpression(column, value) = p(TableExpression(this))
+  def equifilter[A](p: TableExpression => EquExpression[A])(implicit scope: Scope):Table = {
+    val EquExpression(column,value) = p(TableExpression(this))
     val indexed = column.indexed
     val locs = indexed.indexAs[A].get.index.get(value)
     this.rows(locs)
@@ -300,19 +298,17 @@ trait RelationalAlgebra { self: Table =>
 
 }
 
-case class TableExpression(t: Table) {
-  def apply(s: ColumnSelection): ColumnExpression = ColumnExpression(
-    t.colAt(t.resolveColumnIdx(s))
-  )
+case class TableExpression(t:Table) {
+  def apply(s:ColumnSelection) : ColumnExpression = ColumnExpression(t.colAt(t.resolveColumnIdx(s)))
 }
 
-case class ColumnExpression(c: Column) {
-  def ===[T](a: T) = EquExpression(c, a)
-  def eq[T](a: T) = EquExpression(c, a)
-  def equ[T](a: T) = EquExpression(c, a)
+case class ColumnExpression(c:Column) {
+  def ===[T](a:T) = EquExpression(c,a)
+  def eq[T](a:T) = EquExpression(c,a)
+  def equ[T](a:T) = EquExpression(c,a)
 }
 
-case class EquExpression[A](column: Column, equalsWith: A)
+case class EquExpression[A](column:Column, equalsWith: A)
 
 case class TableWithGroups(table: Table, groups: IndexedSeq[STen]) {
   def colAt(idx: Int*): TableWithGroups =
@@ -353,3 +349,4 @@ case class TableWithGroups(table: Table, groups: IndexedSeq[STen]) {
     Table.union(transform(locs => fun(table.rows(locs))): _*)
 
 }
+

@@ -270,11 +270,11 @@ sealed trait Variable {
           if (operator.joinedBackward.isEmpty) {
             operator.params.foreach { case (v1, computeGrad) =>
               if (v1.needsGrad) {
-                computeGrad(v.partialDerivative.get, v1.partialDerivative.get)
+                computeGrad(v.partialDerivative.get,v1.partialDerivative.get)
               }
             }
           } else {
-            operator.joinedBackward.get(v.partialDerivative.get)
+              operator.joinedBackward.get(v.partialDerivative.get)
           }
         }
       }
@@ -284,10 +284,10 @@ sealed trait Variable {
 
   /** Returns a pair of this instance and the supplied function */
   private[autograd] def zipBackward(fn: (STen, STen) => Unit) = (this, fn)
-  private[autograd] def zipNoBackward = zipBackward((_, _) => ())
+  private[autograd] def zipNoBackward = zipBackward((_,_) => ())
 
   private[autograd] def accumulateGrad(
-      grad: STen
+      grad: STen,
   ) = if (needsGrad) {
     partialDerivative.get += grad
   }
@@ -531,6 +531,6 @@ case class GraphMemoryAllocationReport(
   private def gb(l: Long) = f"${(l.toDouble * 1e-9)}%.4f"
   override def toString =
     s"#par=$parameterTensorCount(${gb(parameterTensorStorage)}GB);#const=$constantTensorCount(${gb(
-        constantTensorStorage
-      )}GB);#act=$intermediateTensorCount(${gb(intermediateTensorStorage)}GB)"
+      constantTensorStorage
+    )}GB);#act=$intermediateTensorCount(${gb(intermediateTensorStorage)}GB)"
 }

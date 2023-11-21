@@ -156,10 +156,10 @@ case object MPS extends Device {
   def to[S: Sc](t: STenOptions): STenOptions = t.mps
   def to(t: Tensor) = {
     val tmp = t.options()
-    val tmp2 = tmp.device(STenOptions.deviceTypeMps, 0)
-    val r = t.to(tmp2, true, true)
-    tmp.release
-    tmp2.release
+    val tmp2 = tmp.device(STenOptions.deviceTypeMps,0)
+    val r = t.to(tmp2,true,true)
+    tmp.release 
+    tmp2.release 
     r
   }
   def setSeed(seed: Long) = Tensor.manual_seed_mps(seed)
