@@ -8,6 +8,6 @@ addSbtPlugin("com.github.sbt" % "sbt-dynver" % "5.0.1")
 
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.6")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.12"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.15"
 
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.15")
