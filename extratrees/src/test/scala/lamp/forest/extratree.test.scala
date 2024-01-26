@@ -86,6 +86,19 @@ class ExtraTreesSuite extends AnyFunSuite {
     )
     assert(r == ((0, 3.424021023861243, 0, false)))
   }
+  test("splitBestRegression 1") {
+    val attr = Array(0, 1)
+    val r = splitBestRegression(
+      data = Mat(Vec(0d, 2d, 3d, 4d, 5d), Vec(100d, 99d, 98d, 97d, 96d)),
+      subset = Vec(0, 1, 2, 3, 4),
+      attributes = attr,
+      numConstant = 0,
+      k = 2,
+      targetAtSubset = Vec(0d, 0.1d, 0.1, 100.1, 100.2),
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
+    )
+    assert(r == ((0, 4d, 0, false)))
+  }
   test("splitClassification 1") {
     val attr = Array(0, 1)
     val r = splitClassification(
@@ -101,6 +114,22 @@ class ExtraTreesSuite extends AnyFunSuite {
     )
     assert(attr.toVector == Vector(1, 0))
     assert(r == ((0, 3.424021023861243, 0, false)))
+  }
+  test("splitBestClassification") {
+    val attr = Array(0, 1)
+    val r = splitBestClassification(
+      data = Mat(Vec(0d, 2d, 3d, 4d, 5d), Vec(100d, 99d, 98d, 97d, 96d)),
+      subset = Vec(0, 1, 2, 3, 4),
+      attributes = attr,
+      numConstant = 0,
+      k = 2,
+      numClasses = 2,
+      targetAtSubset = Vec(1, 1, 1, 0, 0),
+      weightsAtSubset = None,
+      rng = org.saddle.spire.random.rng.Cmwc5.fromTime(0L)
+    )
+    assert(attr.toVector == Vector(1, 0))
+    assert(r == ((0, 4d, 0, false)))
   }
   test("splitClassification 1 weighted") {
     val attr = Array(0, 1)
@@ -272,7 +301,9 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 2,
       k = 32,
       m = 1,
-      parallelism = 1
+      parallelism = 1,
+      bestSplit = false,
+      maxDepth = 200
     )
     println((System.nanoTime() - t1) * 1e-9)
     val output = predictClassification(trees, features)
@@ -285,6 +316,43 @@ class ExtraTreesSuite extends AnyFunSuite {
       )
     val accuracy = correct.mean2
     assert(accuracy == 1.0)
+  }
+  test("mnist - best-split") {
+    val data = org.saddle.csv.CsvParser
+      .parseInputStreamWithHeader[Double](
+        new java.util.zip.GZIPInputStream(
+          getClass.getResourceAsStream("/mnist_test.csv.gz")
+        )
+      )
+      .toOption
+      .get
+    val target =
+      Mat(data.firstCol("label").toVec.map(_.toLong))
+    val features = data.filterIx(_ != "label").toMat
+    val t1 = System.nanoTime
+    val trees = buildForestClassification(
+      data = features,
+      target = target.col(0).map(_.toInt),
+      sampleWeights = None,
+      numClasses = 10,
+      nMin = 2,
+      k = 32,
+      m = 1,
+      parallelism = 1,
+      bestSplit = true,
+      maxDepth = 1
+    )
+    println((System.nanoTime() - t1) * 1e-9)
+    val output = predictClassification(trees, features)
+    val prediction = {
+      output.rows.map(_.argmax).toVec
+    }
+    val correct =
+      prediction.zipMap(data.firstCol("label").toVec.map(_.toInt))((a, b) =>
+        if (a == b) 1d else 0d
+      )
+    val accuracy = correct.mean2
+    assert(accuracy > 0.15)
   }
   test("mnist weighted") {
     val data = org.saddle.csv.CsvParser
@@ -309,7 +377,9 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 2,
       k = 32,
       m = 1,
-      parallelism = 8
+      parallelism = 8,
+      bestSplit = false,
+      maxDepth = 200
     )
     println((System.nanoTime() - t1) * 1e-9)
     val output = predictClassification(trees, features)
@@ -353,7 +423,9 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 2,
       k = 32,
       m = 10,
-      parallelism = 8
+      parallelism = 8,
+      bestSplit = false,
+      maxDepth = 200
     )
     println((System.nanoTime() - t1) * 1e-9)
     val output = predictClassification(trees, testfeatures)
@@ -386,7 +458,10 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 2,
       k = 32,
       m = 1,
-      parallelism = 8
+      parallelism = 8,
+      bestSplit = false,
+      maxDepth = 200
+      
     )
     println((System.nanoTime - t1) * 1e-9)
     val output = predictRegression(trees, features)
@@ -400,6 +475,42 @@ class ExtraTreesSuite extends AnyFunSuite {
     val accuracy = correct.mean2
     assert(accuracy == 1.0)
   }
+  test("mnist regression best split") {
+    val data = org.saddle.csv.CsvParser
+      .parseInputStreamWithHeader[Double](
+        new java.util.zip.GZIPInputStream(
+          getClass.getResourceAsStream("/mnist_test.csv.gz")
+        )
+      )
+      .toOption
+      .get
+    val target =
+      Mat(data.firstCol("label").toVec.map(_.toLong)).toVec.map(_.toDouble)
+    val features = data.filterIx(_ != "label").toMat
+    val t1 = System.nanoTime()
+    val trees = buildForestRegression(
+      data = features,
+      target = target,
+      nMin = 2,
+      k = 32,
+      m = 1,
+      parallelism = 8,
+      bestSplit = true,
+      maxDepth = 3
+      
+    )
+    println((System.nanoTime - t1) * 1e-9)
+    val output = predictRegression(trees, features)
+    val prediction = {
+      output.map(_.toInt)
+    }
+    val correct =
+      prediction.zipMap(data.firstCol("label").toVec.map(_.toInt))((a, b) =>
+        if (a == b) 1d else 0d
+      )
+    val accuracy = correct.mean2
+    assert(accuracy > 0.15)
+  }
 
   test("with missing - regression ") {
     val features = Mat(Vec(1d, 1d, 1d, 1d, Double.NaN, Double.NaN, Double.NaN))
@@ -410,7 +521,9 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 1,
       k = 1,
       m = 100,
-      parallelism = 1
+      parallelism = 1,
+      bestSplit = false,
+      maxDepth = 200
     )
     val output = predictRegression(trees, features)
     val correct =
@@ -429,7 +542,9 @@ class ExtraTreesSuite extends AnyFunSuite {
       nMin = 1,
       k = 1,
       m = 100,
-      parallelism = 1
+      parallelism = 1,
+      bestSplit = false,
+      maxDepth = 200
     )
     val output = predictClassification(trees, features).col(1)
     val correct =
