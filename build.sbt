@@ -80,7 +80,7 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "4.0.0-M7"
+val saddleVersion = "4.0.0-M11"
 val upickleVersion = "3.1.4"
 val scalaTestVersion = "3.2.16"
 val scribeVersion = "3.12.2"
