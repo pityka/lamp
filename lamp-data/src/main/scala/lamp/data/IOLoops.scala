@@ -186,8 +186,8 @@ object IOLoops {
           BatchStreamBuffers
         ]
       ] = None,
-      trainingCallback: TrainingCallback = TrainingCallback.noop,
-      validationCallback: ValidationCallback = ValidationCallback.noop,
+      trainingCallback: Option[TrainingCallback[M]] = None,
+      validationCallback: Option[ValidationCallback[M]] = None,
       checkpointState: Option[
         (SimpleThenSWALoopState, Either[LRState, LRStateSWA]) => IO[Unit]
       ] = None,
@@ -321,8 +321,8 @@ object IOLoops {
         ]
       ],
       epochs: Int,
-      trainingCallback: TrainingCallback = TrainingCallback.noop,
-      validationCallback: ValidationCallback = ValidationCallback.noop,
+      trainingCallback: Option[TrainingCallback[M]] = None,
+      validationCallback: Option[ValidationCallback[M]] = None,
       checkpointState: Option[(SimpleLoopState, LRState) => IO[Unit]] = None,
       validationFrequency: Int = 1,
       logger: Option[Logger] = None,
@@ -524,7 +524,7 @@ object IOLoops {
 
           _ <- IO {
             maybeValidationLoss.foreach { case (validationLoss, _) =>
-              validationCallback.apply(epoch, validationLoss)
+              validationCallback.foreach(_.apply(epoch, validationLoss, model.module))
             }
           }
 
@@ -606,7 +606,7 @@ object IOLoops {
 
   def oneEpoch[I, M <: GenericModule[I, Variable], S, C](
       epochCount: Long,
-      trainingCallback: TrainingCallback,
+      trainingCallback: Option[TrainingCallback[M]],
       model: ModelWithOptimizer[I, M],
       trainBatches: BatchStream[(I, STen), S, C],
       logger: Option[Logger],
@@ -742,7 +742,7 @@ object IOLoops {
         )
       }
       _ <- IO {
-        trainingCallback(epochCount, trainingLoss)
+        trainingCallback.foreach(_.apply(epochCount, trainingLoss, model.model.module))
       }
 
     } yield trainingLoss
@@ -751,7 +751,7 @@ object IOLoops {
   def validationOneEpoch[I, M <: GenericModule[I, Variable], S, C](
       model: SupervisedModel[I, M],
       validationBatches: BatchStream[(I, STen), S, C],
-      validationCallback: ValidationCallback,
+      validationCallback: Option[ValidationCallback[M]],
       logger: Option[Logger],
       epochCount: Long
   ): IO[Double] = {
@@ -821,7 +821,7 @@ object IOLoops {
               )
             }
             _ <- IO {
-              validationCallback(epochCount, validationLoss)
+              validationCallback.foreach(_(epochCount, validationLoss, model.module))
             }
 
           } yield validationLoss

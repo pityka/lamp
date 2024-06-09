@@ -79,8 +79,8 @@ class DataParallelLoopSuite extends AnyFunSuite {
             BatchStream.minibatchesFromFull(200, true, x, target, rng)
           ),
           epochs = 50,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback = ValidationCallback.noop,
+          trainingCallback = None,
+          validationCallback = None,
           dataParallelModels = List(model2)
         )
         .unsafeRunSync()
