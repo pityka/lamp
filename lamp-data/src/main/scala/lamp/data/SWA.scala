@@ -54,20 +54,20 @@ object SWA {
       model: SupervisedModel[I, M],
       optimizerFactory: Seq[(STen, PTag)] => Optimizer,
       trainBatchesOverEpoch: IOLoops.TrainingLoopContext => BatchStream[
-        (I,STen),
+        (I, STen),
         BatchStreamState,
         BatchStreamBuffers
       ],
       validationBatchesOverEpoch: Option[
         IOLoops.TrainingLoopContext => BatchStream[
-          (I,STen),
+          (I, STen),
           BatchStreamState,
           BatchStreamBuffers
         ]
       ],
       epochs: Int,
-      trainingCallback: TrainingCallback = TrainingCallback.noop,
-      validationCallback: ValidationCallback = ValidationCallback.noop,
+      trainingCallback: Option[TrainingCallback[M]] = None,
+      validationCallback: Option[ValidationCallback[M]] = None,
       checkpointState: Option[(SWALoopState, LRState) => IO[Unit]] = None,
       // checkpointLrState: Option[LRState => IO[Unit]] = None,
       validationFrequency: Int = 1,
@@ -242,7 +242,7 @@ object SWA {
 
           _ <- IO {
             maybeValidationLoss.foreach(validationLoss =>
-              validationCallback.apply(epoch, validationLoss)
+              validationCallback.foreach(_.apply(epoch, validationLoss, model.module))
             )
           }
 

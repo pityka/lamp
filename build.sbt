@@ -80,7 +80,7 @@ lazy val commonSettings = Seq(
 lazy val Cuda = config("cuda").extend(Test)
 lazy val AllTest = config("alltest").extend(Test)
 
-val saddleVersion = "4.0.0-M7"
+val saddleVersion = "4.0.0-M11"
 val upickleVersion = "3.1.4"
 val scalaTestVersion = "3.2.18"
 val scribeVersion = "3.12.2"
@@ -193,26 +193,6 @@ lazy val e2etest = project
   .dependsOn(data)
   .dependsOn(forest, saddlecompat)
   .dependsOn(core % "test->test;compile->compile")
-
-lazy val table = project
-  .in(file("lamp-table"))
-  .configs(Cuda)
-  .configs(AllTest)
-  .settings(commonSettings: _*)
-  .settings(
-    name := "lamp-table",
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    testOptions in Test += Tests.Argument("-l", "cuda slow"),
-    testOptions in Cuda := List(Tests.Argument("-n", "cuda")),
-    testOptions in AllTest := Nil,
-    libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
-    )
-    // coverageEnabled := true
-  )
-  .dependsOn(data)
-  .dependsOn(core % "test->test;compile->compile", saddlecompat)
 
 lazy val safetensors = project
   .in(file("lamp-safetensors"))
@@ -427,8 +407,8 @@ lazy val example_arxiv = project
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.lihaoyi" %% "requests" % "0.6.9",
-      "com.lihaoyi" %% "os-lib" % "0.8.1"
+      "com.lihaoyi" %% "requests" % "0.8.3",
+      "com.lihaoyi" %% "os-lib" % "0.10.2"
     )
   )
   .dependsOn(core, data, saddlecompat)
@@ -478,7 +458,6 @@ lazy val root = project
     akkacommunicator,
     core,
     data,
-    table,
     knn,
     forest,
     umap,

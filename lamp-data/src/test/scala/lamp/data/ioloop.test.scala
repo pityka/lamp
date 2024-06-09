@@ -84,8 +84,8 @@ class IOLoopSuite extends AnyFunSuite {
           ),
           warmupEpochs = 50,
           swaEpochs = 20,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback = ValidationCallback.noop,
+          trainingCallback = None,
+          validationCallback = None,
           returnMinValidationLossModel = List(1, 25, 50)
         )
         .unsafeRunSync()
@@ -160,8 +160,8 @@ class IOLoopSuite extends AnyFunSuite {
             BatchStream.minibatchesFromFull(200, true, x, target, rng)
           ),
           epochs = 50,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback = ValidationCallback.noop,
+          trainingCallback = None,
+          validationCallback = None,
           prefetch = true,
           printOptimizerAllocations = true
         )
@@ -229,8 +229,8 @@ class IOLoopSuite extends AnyFunSuite {
             BatchStream.minibatchesFromFull(200, true, x, target, rng)
           ),
           epochs = 50,
-          trainingCallback = TrainingCallback.noop,
-          validationCallback = ValidationCallback.noop,
+          trainingCallback = None,
+          validationCallback = None,
           prefetch = true,
           printOptimizerAllocations = true,
           accumulateGradientOverNBatches = 2

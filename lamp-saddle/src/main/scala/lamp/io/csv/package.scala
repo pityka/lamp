@@ -335,19 +335,21 @@ package object csv {
         s: Array[Char],
         from: Array[Int],
         to: Array[Int],
-        len: Int
+        len: Int,
+        eol: Array[Int]
     ): org.saddle.io.csv.Control = {
       scalarType match {
-        case 4 => applyLong(s, from, to, len)
-        case 6 => applyFloat(s, from, to, len)
-        case 7 => applyDouble(s, from, to, len)
+        case 4 => applyLong(s, from, to, len, eol)
+        case 6 => applyFloat(s, from, to, len, eol)
+        case 7 => applyDouble(s, from, to, len, eol)
       }
     }
     private def applyLong(
         s: Array[Char],
         from: Array[Int],
         to: Array[Int],
-        len: Int
+        len: Int,
+        eol: Array[Int]
     ): org.saddle.io.csv.Control = {
       var i = 0
 
@@ -390,7 +392,7 @@ package object csv {
           }
         }
 
-        if (toi < 0) {
+        if (toi < 0 || eol(i) < 0) {
           if (line == 0 && !emptyLoc && headerLocFields != locs.length) {
             error = true
             errorString =
@@ -417,7 +419,8 @@ package object csv {
         s: Array[Char],
         from: Array[Int],
         to: Array[Int],
-        len: Int
+        len: Int,
+        eol: Array[Int]
     ): org.saddle.io.csv.Control = {
       var i = 0
 
@@ -459,7 +462,7 @@ package object csv {
           }
         }
 
-        if (toi < 0) {
+        if (toi < 0 || eol(i) < 0) {
           if (line == 0 && !emptyLoc && headerLocFields != locs.length) {
             error = true
             errorString =
@@ -486,7 +489,8 @@ package object csv {
         s: Array[Char],
         from: Array[Int],
         to: Array[Int],
-        len: Int
+        len: Int,
+        eol: Array[Int]
     ): org.saddle.io.csv.Control = {
       var i = 0
 
@@ -528,7 +532,7 @@ package object csv {
           }
         }
 
-        if (toi < 0) {
+        if (toi < 0 || eol(i) < 0) {
           if (line == 0 && !emptyLoc && headerLocFields != locs.length) {
             error = true
             errorString =
