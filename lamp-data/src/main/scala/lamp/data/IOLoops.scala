@@ -522,11 +522,11 @@ object IOLoops {
               }
             } else IO.pure(None)
 
-          _ <- IO {
-            maybeValidationLoss.foreach { case (validationLoss, _) =>
-              validationCallback.foreach(_.apply(epoch, validationLoss, model.module))
+          _ <- 
+            maybeValidationLoss.fold(IO.unit) { case (validationLoss, _) =>
+              validationCallback.fold(IO.unit)(_.apply(epoch, validationLoss, model.module))
             }
-          }
+          
 
           nextMinValidationLoss =
             if (
@@ -741,9 +741,9 @@ object IOLoops {
           )
         )
       }
-      _ <- IO {
-        trainingCallback.foreach(_.apply(epochCount, trainingLoss, model.model.module))
-      }
+      _ <- 
+        trainingCallback.fold(IO.unit)(_.apply(epochCount, trainingLoss, model.model.module))
+      
 
     } yield trainingLoss
 
@@ -820,9 +820,9 @@ object IOLoops {
                 )
               )
             }
-            _ <- IO {
-              validationCallback.foreach(_(epochCount, validationLoss, model.module))
-            }
+            _ <- 
+              validationCallback.fold(IO.unit)(_(epochCount, validationLoss, model.module))
+            
 
           } yield validationLoss
         }

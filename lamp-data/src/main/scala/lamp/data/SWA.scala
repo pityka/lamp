@@ -240,11 +240,11 @@ object SWA {
                   .map(Some(_))
             else IO.pure(None)
 
-          _ <- IO {
-            maybeValidationLoss.foreach(validationLoss =>
-              validationCallback.foreach(_.apply(epoch, validationLoss, model.module))
+          _ <- 
+            maybeValidationLoss.fold(IO.unit)(validationLoss =>
+              validationCallback.fold(IO.unit)(_.apply(epoch, validationLoss, model.module))
             )
-          }
+          
 
           nextMinValidationLoss =
             if (maybeValidationLoss.isEmpty)

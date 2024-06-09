@@ -119,13 +119,13 @@ object DataParallel {
                   )
                 )
               }
-              _ <- IO {
-                validationCallback.foreach(_(
+              _ <- 
+                validationCallback.fold(IO.unit)(_(
                   epochCount,
                   validationLoss,
                   modelsAsEval.head.module
                 ))
-              }
+              
 
             } yield validationLoss
           }
@@ -367,9 +367,9 @@ object DataParallel {
           )
         )
       }
-      _ <- IO {
-        trainingCallback.foreach(_(epochCount, trainingLoss, mainModel.model.module))
-      }
+      _ <- 
+        trainingCallback.fold(IO.unit)(_(epochCount, trainingLoss, mainModel.model.module))
+      
 
     } yield trainingLoss
   }
