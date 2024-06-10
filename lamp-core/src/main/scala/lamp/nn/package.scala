@@ -81,7 +81,7 @@ package object nn {
       gradients
         .foreach {
           case Some(g) =>
-            sum += g.view(-1).norm2(List(0),false).pow(2d)
+            sum += g.view(-1).norm2(List(0), false).pow(2d)
           case None => None
         }
       val norm = sum.sqrt

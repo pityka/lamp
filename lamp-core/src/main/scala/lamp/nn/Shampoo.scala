@@ -39,7 +39,9 @@ case class Shampoo(
     momentum: OptimizerHyperparameter = simple(0d)
 ) extends Optimizer {
   val scope = Scope.free
-  val clip = clip0.map(theta => STen.scalarDouble(theta,parameters.head._1.options(scope))(scope))
+  val clip = clip0.map(theta =>
+    STen.scalarDouble(theta, parameters.head._1.options(scope))(scope)
+  )
 
   val lt: List[(STen, STen)] = parameters.toList.map { case (param, _) =>
     val dim1 = param.shape(0)

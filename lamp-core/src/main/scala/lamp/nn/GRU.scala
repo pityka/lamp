@@ -66,9 +66,10 @@ case class GRU(
 }
 
 object GRU {
-  implicit val trainingMode : TrainingMode[GRU] = TrainingMode.identity[GRU]
-  implicit val is : InitState[GRU, Option[Variable]] = InitState.make[GRU, Option[Variable]](_ => None)
-  implicit val load : Load[GRU] = Load.make[GRU] { m => tensors =>
+  implicit val trainingMode: TrainingMode[GRU] = TrainingMode.identity[GRU]
+  implicit val is: InitState[GRU, Option[Variable]] =
+    InitState.make[GRU, Option[Variable]](_ => None)
+  implicit val load: Load[GRU] = Load.make[GRU] { m => tensors =>
     m.weightXh.value.copyFrom(tensors(0))
     m.weightHh.value.copyFrom(tensors(1))
     m.weightXr.value.copyFrom(tensors(2))
