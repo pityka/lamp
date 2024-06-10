@@ -522,11 +522,12 @@ object IOLoops {
               }
             } else IO.pure(None)
 
-          _ <- 
+          _ <-
             maybeValidationLoss.fold(IO.unit) { case (validationLoss, _) =>
-              validationCallback.fold(IO.unit)(_.apply(epoch, validationLoss, model.module))
+              validationCallback.fold(IO.unit)(
+                _.apply(epoch, validationLoss, model.module)
+              )
             }
-          
 
           nextMinValidationLoss =
             if (
@@ -737,13 +738,14 @@ object IOLoops {
         logger.foreach(
           _.info(
             s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f"
-              .format(throughput)} instances/sec)"
+                .format(throughput)} instances/sec)"
           )
         )
       }
-      _ <- 
-        trainingCallback.fold(IO.unit)(_.apply(epochCount, trainingLoss, model.model.module))
-      
+      _ <-
+        trainingCallback.fold(IO.unit)(
+          _.apply(epochCount, trainingLoss, model.model.module)
+        )
 
     } yield trainingLoss
 
@@ -820,9 +822,9 @@ object IOLoops {
                 )
               )
             }
-            _ <- 
-              validationCallback.fold(IO.unit)(_(epochCount, validationLoss, model.module))
-            
+            _ <-
+              validationCallback
+                .fold(IO.unit)(_(epochCount, validationLoss, model.module))
 
           } yield validationLoss
         }

@@ -119,13 +119,14 @@ object DataParallel {
                   )
                 )
               }
-              _ <- 
-                validationCallback.fold(IO.unit)(_(
-                  epochCount,
-                  validationLoss,
-                  modelsAsEval.head.module
-                ))
-              
+              _ <-
+                validationCallback.fold(IO.unit)(
+                  _(
+                    epochCount,
+                    validationLoss,
+                    modelsAsEval.head.module
+                  )
+                )
 
             } yield validationLoss
           }
@@ -363,13 +364,14 @@ object DataParallel {
         logger.foreach(
           _.info(
             s"Avg training loss in epoch $epochCount over $numInstances examples: $trainingLoss (${"%.2f"
-              .format(throughput)} instances/sec)"
+                .format(throughput)} instances/sec)"
           )
         )
       }
-      _ <- 
-        trainingCallback.fold(IO.unit)(_(epochCount, trainingLoss, mainModel.model.module))
-      
+      _ <-
+        trainingCallback.fold(IO.unit)(
+          _(epochCount, trainingLoss, mainModel.model.module)
+        )
 
     } yield trainingLoss
   }

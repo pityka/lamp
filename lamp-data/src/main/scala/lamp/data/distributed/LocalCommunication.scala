@@ -14,7 +14,7 @@ object LocalCommunication {
     def onUniqueIdReady(uid: NcclUniqueId): IO[Unit] =
       storedUid.complete(uid).map(_ => ())
 
-    def peers() : IO[Int] = ranks.get.map(_.size)
+    def peers(): IO[Int] = ranks.get.map(_.size)
     def broadcast(
         command: DistributedCommunication.Command
     ): IO[Unit] =
