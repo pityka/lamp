@@ -2431,8 +2431,33 @@ class GradientSuite extends AnyFunSuite {
           new LayerNormOp(
             scope,
             input,
-            weight,
-            bias,
+            Option(weight),
+            Option(bias),
+            List(3L),
+            eps = 1e-5
+          ).value.mean(List(0, 1))
+
+        val L = output
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          input.partialDerivative.map(t => t.toMat)
+        )
+      }
+  }
+  testGradientAndValue("layer norm 1d - wrt to input - no scale and no bias")(mat2x3, 0.0) {
+    (m, doBackprop, cuda) =>
+      Scope.root { implicit scope =>
+        val input =
+          param(lamp.saddle.fromMat(m, cuda))
+        val output =
+          new LayerNormOp(
+            scope,
+            input,
+            None,
+            None,
             List(3L),
             eps = 1e-5
           ).value.mean(List(0, 1))
@@ -2460,8 +2485,36 @@ class GradientSuite extends AnyFunSuite {
           new LayerNormOp(
             scope,
             input,
-            weight,
-            bias,
+            Option(weight),
+            Option(bias),
+            List(3L),
+            eps = 1e-5
+          ).value
+
+        val L = output.mean(List(0, 1))
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+        )
+      }
+  }
+  testGradientAndValueND("layer norm 1d - wrt to weight - no bias")(ndx3, 0.8165) {
+    (m, doBackprop, cuda) =>
+      Scope.root { implicit scope =>
+        val input =
+          param(lamp.saddle.fromMat(mat2x3, cuda))
+        val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+
+
+        val output =
+          new LayerNormOp(
+            scope,
+            input,
+            Option(weight),
+            None,
             List(3L),
             eps = 1e-5
           ).value
@@ -2489,8 +2542,36 @@ class GradientSuite extends AnyFunSuite {
           new LayerNormOp(
             scope,
             input,
-            weight,
-            bias,
+            Option(weight),
+            Option(bias),
+            List(3L),
+            eps = 1e-5
+          ).value
+
+        val L = output.mean(List(0, 1))
+        if (doBackprop) {
+          L.backprop()
+        }
+        (
+          L.value.toMat.raw(0),
+          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
+        )
+      }
+  }
+  testGradientAndValueND("layer norm 1d - wrt to bias - no scale")(ndx3, 2d) {
+    (m, doBackprop, cuda) =>
+      Scope.root { implicit scope =>
+        val input =
+          param(lamp.saddle.fromMat(mat2x3, cuda))
+        val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+
+
+        val output =
+          new LayerNormOp(
+            scope,
+            input,
+            None,
+            Option(bias),
             List(3L),
             eps = 1e-5
           ).value

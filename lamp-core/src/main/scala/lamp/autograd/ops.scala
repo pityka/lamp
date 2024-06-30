@@ -1956,8 +1956,8 @@ case class BatchNorm(
 case class LayerNormOp(
     scope: Scope,
     input: Variable,
-    weight: Variable,
-    bias: Variable,
+    weight: Option[Variable],
+    bias: Option[Variable],
     normalizedShape: List[Long],
     eps: Double
 ) extends Op {
@@ -1967,8 +1967,8 @@ case class LayerNormOp(
   val (output, mean, rstd) = ATen.native_layer_norm(
     input.value.value,
     normalizedShape.toArray,
-    Option(weight.value.value),
-    Option(bias.value.value),
+    weight.map(_.value.value),
+    bias.map(_.value.value),
     eps
   )
 
@@ -1986,48 +1986,49 @@ case class LayerNormOp(
         normalizedShape.toArray,
         (mean),
         (rstd),
-        Option(weight.value.value),
-        Option(bias.value.value),
+        weight.map(_.value.value),
+        bias.map(_.value.value),
         Array(true, false, false)
       )
       ATen.add_out(out.value, out.value, gradInput, 1d)
       gradInput.release
       a.release
       b.release
-    },
-    weight.zipBackward { (p, out) =>
+    }
+  ) ++
+    weight.toList.map(_.zipBackward { (p, out) =>
       val (a, gradWeight, b) = ATen.native_layer_norm_backward(
         p.value,
         input.value.value,
         normalizedShape.toArray,
         mean,
         rstd,
-        Option(weight.value.value),
-        Option(bias.value.value),
+        weight.map(_.value.value),
+        bias.map(_.value.value),
         Array(false, true, false)
       )
       ATen.add_out(out.value, out.value, gradWeight, 1d)
       gradWeight.release
       a.release
       b.release
-    },
-    bias.zipBackward { (p, out) =>
+    }) ++ 
+    bias.toList.map(_.zipBackward { (p, out) =>
       val (a, b, gradBias) = ATen.native_layer_norm_backward(
         p.value,
         input.value.value,
         normalizedShape.toArray,
         mean,
         rstd,
-        Option(weight.value.value),
-        Option(bias.value.value),
+        weight.map(_.value.value),
+        bias.map(_.value.value),
         Array(false, false, true)
       )
       ATen.add_out(out.value, out.value, gradBias, 1d)
       gradBias.release
       a.release
       b.release
-    }
-  )
+    })
+  
 }
 
 /** Batch Norm 2D 0-th dimension are samples. 1-th are features, everything else

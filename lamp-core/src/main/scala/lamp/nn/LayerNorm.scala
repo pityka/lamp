@@ -6,16 +6,15 @@ import lamp.STen
 import lamp.STenOptions
 
 case class LayerNorm(
-    scale: Constant,
-    bias: Constant,
+    scale: Option[Constant],
+    bias: Option[Constant],
     eps: Double,
     normalizedShape: List[Long]
 ) extends Module {
 
-  override val state = List(
-    scale -> LayerNorm.Scale,
-    bias -> LayerNorm.Bias
-  )
+  override val state =
+    scale.map(_ -> LayerNorm.Scale).toList ++
+      bias.map(_ -> LayerNorm.Bias).toList
 
   override def forward[S: Sc](x: Variable): Variable =
     (new lamp.autograd.LayerNormOp(
@@ -30,11 +29,14 @@ case class LayerNorm(
 }
 
 object LayerNorm {
-  implicit val trainingMode : TrainingMode[LayerNorm] = TrainingMode.identity[LayerNorm]
-  implicit val load : Load[LayerNorm] = Load.make[LayerNorm](m =>
+  implicit val trainingMode: TrainingMode[LayerNorm] =
+    TrainingMode.identity[LayerNorm]
+  implicit val load: Load[LayerNorm] = Load.make[LayerNorm](m =>
     tensors => {
-      m.scale.value.copyFrom(tensors.head)
-      m.bias.value.copyFrom(tensors(1))
+      val a = (m.scale.toList ++ m.bias.toList)
+      a.zip(tensors.take(a.length)).foreach { case (a, b) =>
+        a.value.copyFrom(b)
+      }
 
     }
   )
@@ -43,10 +45,12 @@ object LayerNorm {
   def apply[S: Sc](
       normalizedShape: List[Long],
       tOpt: STenOptions,
-      eps: Double = 1e-5
+      eps: Double = 1e-5,
+      scale: Boolean = false,
+      bias: Boolean = false
   ): LayerNorm = LayerNorm(
-    scale = param(STen.ones(normalizedShape, tOpt)),
-    bias = param(STen.zeros(normalizedShape, tOpt)),
+    scale = if (scale) Some(param(STen.ones(normalizedShape, tOpt))) else None,
+    bias = if (bias) Some(param(STen.zeros(normalizedShape, tOpt))) else None,
     eps = eps,
     normalizedShape = normalizedShape
   )
