@@ -71,10 +71,11 @@ object MLP {
           EitherModule(
             Right(
               lamp.nn.LayerNorm(
-                normalizedShape = List(normDim),
+                normalizedShape = List(normDim.toLong),
                 tOpt = tOpt,
                 bias = bias,
                 scale = scale
+                
               )
             )
           )
