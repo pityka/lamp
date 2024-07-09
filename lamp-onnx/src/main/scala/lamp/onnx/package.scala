@@ -8,7 +8,6 @@ import java.nio.ByteBuffer
 import java.io.File
 import java.io.BufferedOutputStream
 import java.io.FileOutputStream
-import java.util.UUID
 
 package object onnx {
   def serializeToFile(
@@ -109,11 +108,11 @@ package object onnx {
     val inputs = info.filter(_.input).map(_.variable.id)
     val nameMap = info.map { input => input.variable.id -> input.name }.toMap
 
-    def makeName(u: UUID) =
+    def makeName(u: AnyRef) =
       nameMap.get(u).getOrElse(u.toString.replace("-", "_"))
 
     val namer = new NameMap {
-      def apply(u: UUID): String = makeName(u)
+      def apply(u: AnyRef): String = makeName(u)
     }
 
     val constantNodes = graph.collect { case x: ConstantWithoutGrad =>

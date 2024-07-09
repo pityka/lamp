@@ -1,5 +1,4 @@
 package lamp.autograd
-import java.{util => ju}
 import lamp.FloatingPointPrecision
 import lamp.Scope
 import lamp.Sc
@@ -208,8 +207,8 @@ sealed trait Variable {
   /** Returns the shape of its value. */
   def shape = sizes
 
-  /** Returns unique, stable and random UUID. */
-  val id = ju.UUID.randomUUID()
+  /** Returns unique, stable reference. */
+  val id = new AnyRef
 
   /** Returns an other Variable wrapping the same value tensor, without any
     * parent and with `needsGrad=false`.
@@ -491,8 +490,8 @@ object Autograd {
   private[autograd] def topologicalSort[D](root: Variable): Seq[Variable] = {
     type V = Variable
     var order = List.empty[V]
-    var marks = Set.empty[ju.UUID]
-    var currentParents = Set.empty[ju.UUID]
+    var marks = Set.empty[AnyRef]
+    var currentParents = Set.empty[AnyRef]
 
     def visit(n: V): Unit =
       if (marks.contains(n.id)) ()

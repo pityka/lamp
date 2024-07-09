@@ -10,7 +10,7 @@ import lamp.Scope
 import lamp.HalfPrecision
 
 trait NameMap {
-  def apply(u: UUID): String
+  def apply(u: AnyRef): String
 }
 
 case class Converted(
