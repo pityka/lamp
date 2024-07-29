@@ -407,7 +407,7 @@ lazy val example_arxiv = project
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.lihaoyi" %% "requests" % "0.8.3",
+      "com.lihaoyi" %% "requests" % "0.9.0",
       "com.lihaoyi" %% "os-lib" % "0.10.2"
     )
   )
