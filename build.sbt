@@ -408,7 +408,7 @@ lazy val example_arxiv = project
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.lihaoyi" %% "requests" % "0.8.3",
-      "com.lihaoyi" %% "os-lib" % "0.10.2"
+      "com.lihaoyi" %% "os-lib" % "0.10.5"
     )
   )
   .dependsOn(core, data, saddlecompat)
