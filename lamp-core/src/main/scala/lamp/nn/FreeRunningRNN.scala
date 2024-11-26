@@ -59,15 +59,16 @@ object FreeRunningRNN {
     Variable,
     Variable,
     T
-  ]: TrainingMode] : TrainingMode[FreeRunningRNN[T,M]] =
+  ]: TrainingMode]: TrainingMode[FreeRunningRNN[T, M]] =
     TrainingMode.make[FreeRunningRNN[T, M]](
       m => m.copy(module = m.module.asEval),
       m => m.copy(module = m.module.asTraining)
     )
   implicit def is[T, M <: StatefulModule[Variable, Variable, T]](implicit
       st: InitState[M, T]
-  ) : InitState[FreeRunningRNN[T, M], T] =
+  ): InitState[FreeRunningRNN[T, M], T] =
     InitState.make[FreeRunningRNN[T, M], T](m => m.module.initState)
-  implicit def load[T, M <: StatefulModule[Variable, Variable, T]: Load] : Load[FreeRunningRNN[T,M]] =
+  implicit def load[T, M <: StatefulModule[Variable, Variable, T]: Load]
+      : Load[FreeRunningRNN[T, M]] =
     Load.make[FreeRunningRNN[T, M]] { m => tensors => m.module.load(tensors) }
 }

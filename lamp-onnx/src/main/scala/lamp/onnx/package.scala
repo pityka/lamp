@@ -26,48 +26,49 @@ package object onnx {
     }
   }
 
-  private[lamp] def tensorAsByteString(t: STen): ByteString = Scope.unsafe { implicit scope =>
-    t.options.scalarTypeByte match {
-      case 4 =>
-        val array = t.toLongArray
-        val bb = ByteBuffer
-          .allocate(array.length * 8)
-          .order(java.nio.ByteOrder.LITTLE_ENDIAN)
-        var i = 0
-        val n = array.length
-        while (i < n) {
-          bb.putLong(array(i))
-          i += 1
-        }
-        bb.rewind()
-        ByteString.copyFrom(bb)
-      case 7 =>
-        val array = t.toDoubleArray
-        val bb = ByteBuffer
-          .allocate(array.length * 8)
-          .order(java.nio.ByteOrder.LITTLE_ENDIAN)
-        var i = 0
-        val n = array.length
-        while (i < n) {
-          bb.putDouble(array(i))
-          i += 1
-        }
-        bb.rewind()
-        ByteString.copyFrom(bb)
-      case 6 =>
-        val array = t.toFloatArray
-        val bb = ByteBuffer
-          .allocate(array.length * 4)
-          .order(java.nio.ByteOrder.LITTLE_ENDIAN)
-        var i = 0
-        val n = array.length
-        while (i < n) {
-          bb.putFloat(array(i))
-          i += 1
-        }
-        bb.rewind()
-        ByteString.copyFrom(bb)
-    }
+  private[lamp] def tensorAsByteString(t: STen): ByteString = Scope.unsafe {
+    implicit scope =>
+      t.options.scalarTypeByte match {
+        case 4 =>
+          val array = t.toLongArray
+          val bb = ByteBuffer
+            .allocate(array.length * 8)
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+          var i = 0
+          val n = array.length
+          while (i < n) {
+            bb.putLong(array(i))
+            i += 1
+          }
+          bb.rewind()
+          ByteString.copyFrom(bb)
+        case 7 =>
+          val array = t.toDoubleArray
+          val bb = ByteBuffer
+            .allocate(array.length * 8)
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+          var i = 0
+          val n = array.length
+          while (i < n) {
+            bb.putDouble(array(i))
+            i += 1
+          }
+          bb.rewind()
+          ByteString.copyFrom(bb)
+        case 6 =>
+          val array = t.toFloatArray
+          val bb = ByteBuffer
+            .allocate(array.length * 4)
+            .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+          var i = 0
+          val n = array.length
+          while (i < n) {
+            bb.putFloat(array(i))
+            i += 1
+          }
+          bb.rewind()
+          ByteString.copyFrom(bb)
+      }
 
   }
 

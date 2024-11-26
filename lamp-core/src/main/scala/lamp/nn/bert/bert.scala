@@ -130,7 +130,7 @@ object BertLoss {
       numClasses = vocabularySize,
       classWeights = STen.ones(List(vocabularySize), tOpt),
       reduction = Mean,
-      ignore = padToken // not sure this is needed 
+      ignore = padToken // not sure this is needed
     ),
     wholeSentenceLoss = LossFunctions.BCEWithLogits(
       posWeights = None,
@@ -166,8 +166,9 @@ object BertLoss {
   *   - Positions: Long tensor of size (batch, mask size (variable)). Values are
   *     indices in [0,sequence length) selecting masked sequence positions. They
   *     never select positions of cls, sep, pad.
-  *   - maxLength: 1D long tensor of size (sequence length). Values are in [0,sequence_length]. 
-  *     Tokens at positions higher or equal than the sequence length are ignored.
+  *   - maxLength: 1D long tensor of size (sequence length). Values are in
+  *     [0,sequence_length]. Tokens at positions higher or equal than the
+  *     sequence length are ignored.
   *
   * @param tokens
   * @param segments
@@ -377,8 +378,9 @@ object MaskedLanguageModelModule {
 
 /** BertEncoder module
   *
-  * Input is `(tokens, segments, maxLength)` where `tokens` and `segments` are both
-  * (batch,num tokens) long tensor. maxLength is a 1D long tensor indicating the length of input sequences
+  * Input is `(tokens, segments, maxLength)` where `tokens` and `segments` are
+  * both (batch,num tokens) long tensor. maxLength is a 1D long tensor
+  * indicating the length of input sequences
   *
   * Output is (batch, num tokens, out dimension)
   */
@@ -476,9 +478,10 @@ object BertEncoder {
     *   dropout rate
     * @param tOpt
     *   tensor options
-    * @param positionEmbedding optional float tensor of size (sequence length, embedding dimension)
-    *   if missing the absolute positional embeddings from Vaswani et al 2017 is used
-    *   Following the Bert paper the position embeddings are summed
+    * @param positionEmbedding
+    *   optional float tensor of size (sequence length, embedding dimension) if
+    *   missing the absolute positional embeddings from Vaswani et al 2017 is
+    *   used Following the Bert paper the position embeddings are summed
     * @return
     *   a module
     */
@@ -508,13 +511,16 @@ object BertEncoder {
         tOpt = tOpt
       ),
       positionalEmbedding = param(
-        positionEmbedding.getOrElse(PositionalEmbedding
-          .vaswani(
-            sequenceLength = maxLength,
-            dimension = embeddingDim,
-            device = lamp.Device.fromOptions(tOpt),
-            SinglePrecision
-          ))
+        positionEmbedding
+          .getOrElse(
+            PositionalEmbedding
+              .vaswani(
+                sequenceLength = maxLength,
+                dimension = embeddingDim,
+                device = lamp.Device.fromOptions(tOpt),
+                SinglePrecision
+              )
+          )
           .unsqueeze(0)
       ),
       blocks = 0 until numBlocks map (_ =>
