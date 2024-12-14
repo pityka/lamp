@@ -502,19 +502,42 @@ object STen {
       query: STen,
       key: STen,
       value: STen,
+      attentionBias: Option[STen],
       isCausal: Boolean
   ) = {
-    val (a, b) = ATen._efficient_attention_forward(
+    // _scaled_dot_product_cudnn_attention(Tensor query, Tensor key, Tensor value, Tensor? attn_bias, bool compute_log_sumexp, float dropout_p=0.0, bool is_causal=False, bool return_debug_mask=False, *, float? scale=None) -> (Tensor output, Tensor logsumexp, Tensor cum_seq_q, Tensor cum_seq_k, SymInt max_q, SymInt max_k, Tensor philox_seed, Tensor philox_offset, Tensor debug_attn_mask)
+    val (
+      output,
+      logsumexp,
+      cum_seq_q,
+      cum_seq_k,
+      max_q,
+      max_k,
+      philox_seed,
+      philox_offset,
+      debug_attn_mask
+    ) = ATen._scaled_dot_product_cudnn_attention(
       query.value,
       key.value,
       value.value,
-      None,
-      None,
-      Long.MinValue,
-      true,
-      isCausal
+      attentionBias.map(_.value),
+      true, // compute_log_sum_exp
+      0d, // dropout
+      isCausal,
+      false // return debug mask
     )
-    (owned(a), owned(b))
+    debug_attn_mask.release
+
+    (
+      owned(output),
+      owned(logsumexp),
+      owned(cum_seq_q),
+      owned(cum_seq_k),
+      max_q,
+      max_k,
+      owned(philox_seed),
+      owned(philox_offset)
+    )
   }
   def scaledDotProductAttentionBackward[S: Sc](
       gradOutput: STen,
@@ -522,20 +545,42 @@ object STen {
       key: STen,
       value: STen,
       out: STen,
+      attentionBias: Option[STen],
       logsumexp: STen,
-      isCausal: Boolean
+      isCausal: Boolean,
+      philoxSeed: STen,
+      philoxOffset: STen,
+      cum_seq_q: STen,
+      cum_seq_k: STen,
+      max_q: Long,
+      max_k: Long
   ) = {
-    val (a, b, c) = ATen._efficient_attention_backward(
-      gradOutput.value,
-      query.value,
-      key.value,
-      value.value,
-      out.value,
-      logsumexp.value,
-      isCausal,
-      false
-    )
-    (owned(a), owned(b), owned(c))
+
+    val (q, k, v) = {
+      val undef =
+        if (attentionBias.isEmpty) Some(Tensor.undefined)
+        else None
+      val r = ATen._scaled_dot_product_cudnn_attention_backward(
+        gradOutput.value,
+        query.value,
+        key.value,
+        value.value,
+        out.value,
+        logsumexp.value,
+        philoxSeed.value,
+        philoxOffset.value,
+        attentionBias.map(_.value).getOrElse(undef.get),
+        cum_seq_q.value,
+        cum_seq_k.value,
+        max_q,
+        max_k,
+        0d,
+        isCausal
+      )
+      undef.get.release
+      r
+    }
+    (owned(q), owned(k), owned(v))
   }
 
   def smooth_l1_loss_backward[S: Sc](

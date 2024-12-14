@@ -226,7 +226,7 @@ class GradientSuite extends AnyFunSuite {
       val q = param(mSTen + 0.0)
       val k = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
       val v = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
-      val r = new ScaledDotProductAttention(scope, q, k, v, false).value
+      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
 
       val L = r.sum
 
@@ -249,7 +249,7 @@ class GradientSuite extends AnyFunSuite {
       val q = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
       val k = param(mSTen + 0.0)
       val v = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
-      val r = new ScaledDotProductAttention(scope, q, k, v, false).value
+      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
 
       val L = r.sum
       if (doBackprop) {
@@ -272,7 +272,7 @@ class GradientSuite extends AnyFunSuite {
       val q = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
       val k = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
       val v = param(mSTen + 10.0)
-      val r = new ScaledDotProductAttention(scope, q, k, v, false).value
+      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
 
       val L = r.sum
       if (doBackprop) {

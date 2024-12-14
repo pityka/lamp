@@ -956,6 +956,7 @@ object MultiheadAttention {
           q1.view(List(nB, nQ, numHeads, -1)),
           k1.view(List(nB, nQ, numHeads, -1)),
           v1.view(List(nB, nQ, numHeads, -1)),
+          None,
           causalMask
         ).value
           .flatten(2, 3)

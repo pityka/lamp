@@ -2344,29 +2344,40 @@ case class ScaledDotProductAttention(
     query: Variable,
     key: Variable,
     valueIn: Variable,
+    attentionBias: Option[STen],
     isCausal: Boolean
 ) extends Op {
 
-  val (v0, lse) = STen.scaledDotProductAttention(
+  
+  val (out, lse,cumsq,cumsk,maxq,maxk,philoxseed,philoxoffset) = STen.scaledDotProductAttention(
     query.value,
     key.value,
     valueIn.value,
+    attentionBias,
     isCausal
   )(scope)
-  val value = Variable(this, v0)(scope)
+  val value = Variable(this, out)(scope)
 
   val params =
     List(query.zipNoBackward, key.zipNoBackward, valueIn.zipNoBackward)
   override val joinedBackward: Option[(STen => Unit)] = Some { p =>
     Scope.root { implicit scope =>
+      
       val (gQ, gK, gV) = STen.scaledDotProductAttentionBackward(
         p,
         query.value,
         key.value,
         valueIn.value,
-        v0,
+        out,
+        attentionBias,
         lse,
-        isCausal
+        isCausal,
+        philoxseed,
+        philoxoffset,
+        cumsq,
+        cumsk,
+        maxq,
+        maxk
       )
       query.accumulateGrad(gQ)
       key.accumulateGrad(gK)

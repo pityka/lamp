@@ -16,8 +16,8 @@ inThisBuild(
 )
 
 lazy val commonSettings = Seq(
-  scalaVersion := "2.13.14",
-  crossScalaVersions := Seq("2.13.14", "3.3.1"),
+  scalaVersion := "2.13.15",
+  crossScalaVersions := Seq("2.13.15", "3.3.4"),
   Test / parallelExecution := false,
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((3, _)) =>
@@ -84,7 +84,7 @@ val saddleVersion = "4.0.0-M11"
 val upickleVersion = "3.1.4"
 val scalaTestVersion = "3.2.18"
 val scribeVersion = "3.12.2"
-val catsEffectVersion = "3.5.3"
+val catsEffectVersion = "3.5.7"
 val catsCoreVersion = "2.10.0"
 val jsoniterscalaVersion = "2.27.5"
 
@@ -122,7 +122,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+117-ef358cb2",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+119-7231a9c7",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
