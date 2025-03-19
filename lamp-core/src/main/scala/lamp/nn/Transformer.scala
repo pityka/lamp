@@ -206,7 +206,6 @@ object TransformerDecoder {
   *   - Note that the residual connection has a path which flows through the
   *     normalization.
   *
-  *
   * Output is (bach, sequence, output dimension)
   */
 case class TransformerEncoderBlock(
@@ -217,7 +216,7 @@ case class TransformerEncoderBlock(
     b1: Constant,
     w2: Constant,
     b2: Constant,
-    scale1: Constant, 
+    scale1: Constant,
     scale2: Constant,
     dropout: Double,
     train: Boolean,
@@ -231,7 +230,7 @@ case class TransformerEncoderBlock(
       b1 -> TransformerEncoderBlock.Bias1,
       b2 -> TransformerEncoderBlock.Bias2,
       scale1 -> TransformerEncoderBlock.Scale1,
-      scale2 -> TransformerEncoderBlock.Scale2,
+      scale2 -> TransformerEncoderBlock.Scale2
     )
 
   def forward[S: Sc](x: (Variable, Option[STen])): Variable = {
@@ -521,8 +520,8 @@ object TransformerEncoderBlock {
       b1 = param(STen.zeros(List(1, mlpHiddenDim), tOpt)),
       w2 = initLinear(mlpHiddenDim, out, tOpt),
       b2 = param(STen.zeros(List(1, out), tOpt)),
-      scale1 = param(STen.normal(0d,0.0001,List(in.toLong), tOpt)),
-      scale2 = param(STen.normal(0d,0.0001,List(in.toLong), tOpt)),
+      scale1 = param(STen.normal(0d, 0.0001, List(in.toLong), tOpt)),
+      scale2 = param(STen.normal(0d, 0.0001, List(in.toLong), tOpt)),
       dropout = dropout,
       train = true
     )

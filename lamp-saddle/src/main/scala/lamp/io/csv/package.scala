@@ -285,7 +285,7 @@ package object csv {
 
           Left(
             s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${callback.allHeaderFields
-              .mkString("[", ", ", "]")}"
+                .mkString("[", ", ", "]")}"
           )
         } else {
           val sten = {
@@ -397,7 +397,7 @@ package object csv {
             error = true
             errorString =
               s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${allHeaderFields
-                .mkString("[", ", ", "]")}"
+                  .mkString("[", ", ", "]")}"
           }
           if (loc < headerAllFields - 1) {
             error = true
@@ -467,7 +467,7 @@ package object csv {
             error = true
             errorString =
               s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${allHeaderFields
-                .mkString("[", ", ", "]")}"
+                  .mkString("[", ", ", "]")}"
           }
           if (loc < headerAllFields - 1) {
             error = true
@@ -537,7 +537,7 @@ package object csv {
             error = true
             errorString =
               s"Header line to short for given locs: ${locs.mkString("[", ", ", "]")}. Header line: ${allHeaderFields
-                .mkString("[", ", ", "]")}"
+                  .mkString("[", ", ", "]")}"
           }
           if (loc < headerAllFields - 1) {
             error = true

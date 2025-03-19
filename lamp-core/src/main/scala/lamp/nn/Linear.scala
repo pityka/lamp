@@ -35,8 +35,9 @@ case class Linear(weights: Constant, bias: Option[Constant]) extends Module {
 }
 
 object Linear {
-  implicit val trainingMode : TrainingMode[Linear] = TrainingMode.identity[Linear]
-  implicit val load : Load[Linear] = Load.make[Linear] { m => parameters =>
+  implicit val trainingMode: TrainingMode[Linear] =
+    TrainingMode.identity[Linear]
+  implicit val load: Load[Linear] = Load.make[Linear] { m => parameters =>
     m.weights.value.copyFrom(parameters.head)
     m.bias.foreach(_.value.copyFrom(parameters(1)))
   }

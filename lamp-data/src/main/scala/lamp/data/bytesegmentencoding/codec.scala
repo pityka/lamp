@@ -9,7 +9,11 @@ case class ByteSegmentCodec(
     unknownByte: Byte
 ) extends lamp.data.Codec {
 
-  override def toString() = s"ByteSegmentCodec(unknownToken=${unknownToken.toInt},unknownByte=$unknownByte,trained(top1000)=${trained.map(v => v._1.map(_.toChar).mkString -> v._2.toInt).take(1000).mkString("\n","\n","\n")})"
+  override def toString() =
+    s"ByteSegmentCodec(unknownToken=${unknownToken.toInt},unknownByte=$unknownByte,trained(top1000)=${trained
+        .map(v => v._1.map(_.toChar).mkString -> v._2.toInt)
+        .take(1000)
+        .mkString("\n", "\n", "\n")})"
   def encode(in: Array[Byte]): Array[Char] =
     lamp.data.bytesegmentencoding.encode(
       corpus = in,
@@ -22,9 +26,9 @@ case class ByteSegmentCodec(
       trained,
       unknownByte
     )
-  def saveToFile(file: File): IO[Unit] = IO.blocking{
+  def saveToFile(file: File): IO[Unit] = IO.blocking {
     lamp.data.bytesegmentencoding
-    .saveEncodingToFile(file, trained, unknownToken, unknownByte)
+      .saveEncodingToFile(file, trained, unknownToken, unknownByte)
   }
 
 }
@@ -45,7 +49,7 @@ case class ByteSegmentCodecFactory(
       unknownByte
     )
 
-  def readFromFile(file: File): IO[ByteSegmentCodec] = IO.blocking{
+  def readFromFile(file: File): IO[ByteSegmentCodec] = IO.blocking {
     val r = lamp.data.bytesegmentencoding.readEncodingFromFile(file)
     ByteSegmentCodec(
       r.encoding.map(v => (v._1, v._2.toChar)),

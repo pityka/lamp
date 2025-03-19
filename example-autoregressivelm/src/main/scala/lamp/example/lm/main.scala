@@ -27,7 +27,10 @@ object Main extends IOApp {
             _ <-
               if (!config.distributed)
                 Train.train(config, corpora._1, corpora._2)(scope)
-              else DistributedTrain.train(config, corpora._1, corpora._2.get)(scope)
+              else
+                DistributedTrain.train(config, corpora._1, corpora._2.get)(
+                  scope
+                )
           } yield ExitCode(0)
         )
 

@@ -792,7 +792,7 @@ package object distributed {
         logger.foreach(
           _.info(
             s"Avg training loss over $numInstances examples: $trainingLoss (${"%.2f"
-              .format(throughput)} instances/sec)"
+                .format(throughput)} instances/sec)"
           )
         )
       }

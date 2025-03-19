@@ -12,8 +12,8 @@ object TensorLogger {
 
   def formatLine(data: TensorTraceData) =
     s"${data.getShape.mkString(" ")}|${if (data.getCpu) "CPU" else "GPU"}|${if (data.getScalarType == 4) "L"
-    else if (data.getScalarType == 6) "F"
-    else "D"}"
+      else if (data.getScalarType == 6) "F"
+      else "D"}"
 
   def formatStackTrace(data: TensorTraceData) = {
     data.getStackTrace.map(v => "\t\t" + v.toString).mkString("\n")
@@ -121,16 +121,16 @@ object TensorLogger {
     }
     val (histogram, actives, totalBytes) = makeStatistic(nanoTime, data)(filter)
     val string = s" lifetime histogram: ${histogram
-      .map { case (_, high, count) => s"<${format(high / 1000)}:$count" }
-      .mkString("|")}, total=${histogram.map(_._3).sum}. \nTotal bytes on CPU: ${totalBytes
-      .get(true)
-      .getOrElse(0L)}. Total bytes on all GPUs: ${totalBytes.get(false).getOrElse(0L)}.  ${actives
-      .filter { case (_, ms) => ms >= detailMinMs && ms <= detailMaxMs }
-      .take(detailNum)
-      .map { case (data, duration) =>
-        s"${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
-      }
-      .mkString("\n", ";\n", "")}"
+        .map { case (_, high, count) => s"<${format(high / 1000)}:$count" }
+        .mkString("|")}, total=${histogram.map(_._3).sum}. \nTotal bytes on CPU: ${totalBytes
+        .get(true)
+        .getOrElse(0L)}. Total bytes on all GPUs: ${totalBytes.get(false).getOrElse(0L)}.  ${actives
+        .filter { case (_, ms) => ms >= detailMinMs && ms <= detailMaxMs }
+        .take(detailNum)
+        .map { case (data, duration) =>
+          s"${duration * 1e-3}s|${formatLine(data)}\n${formatStackTrace(data)}"
+        }
+        .mkString("\n", ";\n", "")}"
 
     string
   }

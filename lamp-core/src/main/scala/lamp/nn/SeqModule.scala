@@ -126,7 +126,7 @@ object Seq2 {
   ]: TrainingMode, M2 <: GenericModule[
     T2,
     T3
-  ]: TrainingMode] : TrainingMode[Seq2[T1,T2,T3,M1,M2]] =
+  ]: TrainingMode]: TrainingMode[Seq2[T1, T2, T3, M1, M2]] =
     TrainingMode.make[Seq2[T1, T2, T3, M1, M2]](
       module => Seq2(module.m1.asEval, module.m2.asEval),
       module => Seq2(module.m1.asTraining, module.m2.asTraining)
@@ -138,7 +138,7 @@ object Seq2 {
   ]: Load, M2 <: GenericModule[
     T2,
     T3
-  ]: Load] : Load[Seq2[T1, T2, T3, M1, M2]] =
+  ]: Load]: Load[Seq2[T1, T2, T3, M1, M2]] =
     Load.make[Seq2[T1, T2, T3, M1, M2]](module =>
       tensors => {
         val m1S = module.m1.state.size
@@ -184,7 +184,7 @@ object Seq3 {
   ]: TrainingMode, M3 <: GenericModule[
     T3,
     T4,
-  ]: TrainingMode] : TrainingMode[Seq3[T1, T2, T3, T4, M1, M2, M3]]=
+  ]: TrainingMode]: TrainingMode[Seq3[T1, T2, T3, T4, M1, M2, M3]] =
     TrainingMode.make[Seq3[T1, T2, T3, T4, M1, M2, M3]](
       module => Seq3(module.m1.asEval, module.m2.asEval, module.m3.asEval),
       module =>
@@ -204,7 +204,7 @@ object Seq3 {
   ]: Load, M3 <: GenericModule[
     T3,
     T4,
-  ]: Load] : Load[Seq3[T1, T2, T3, T4, M1, M2, M3]]=
+  ]: Load]: Load[Seq3[T1, T2, T3, T4, M1, M2, M3]] =
     Load.make[Seq3[T1, T2, T3, T4, M1, M2, M3]](module =>
       tensors => {
         val m1S = module.m1.state.size
@@ -277,7 +277,7 @@ object Seq4 {
         T4,
         T5,
       ]: TrainingMode
-  ] : TrainingMode[Seq4[T1, T2, T3, T4, T5, M1, M2, M3, M4]]=
+  ]: TrainingMode[Seq4[T1, T2, T3, T4, T5, M1, M2, M3, M4]] =
     TrainingMode
       .make[Seq4[T1, T2, T3, T4, T5, M1, M2, M3, M4]](
         module =>
@@ -308,7 +308,7 @@ object Seq4 {
   ]: Load, M4 <: GenericModule[
     T4,
     T5,
-  ]: Load] : Load[Seq4[T1, T2, T3, T4, T5, M1, M2, M3, M4]]=
+  ]: Load]: Load[Seq4[T1, T2, T3, T4, T5, M1, M2, M3, M4]] =
     Load.make[Seq4[T1, T2, T3, T4, T5, M1, M2, M3, M4]](module =>
       tensors => {
         val m1S = module.m1.state.size
@@ -391,19 +391,19 @@ object Seq5 {
         T5,
         T6,
       ]: TrainingMode
-  ] : TrainingMode[Seq5[
-        T1,
-        T2,
-        T3,
-        T4,
-        T5,
-        T6,
-        M1,
-        M2,
-        M3,
-        M4,
-        M5
-      ]] =
+  ]: TrainingMode[Seq5[
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    M1,
+    M2,
+    M3,
+    M4,
+    M5
+  ]] =
     TrainingMode
       .make[Seq5[
         T1,
@@ -463,19 +463,19 @@ object Seq5 {
         T5,
         T6,
       ]: Load
-  ] : Load[Seq5[
-      T1,
-      T2,
-      T3,
-      T4,
-      T5,
-      T6,
-      M1,
-      M2,
-      M3,
-      M4,
-      M5
-    ]]=
+  ]: Load[Seq5[
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    M1,
+    M2,
+    M3,
+    M4,
+    M5
+  ]] =
     Load.make[Seq5[
       T1,
       T2,
@@ -581,21 +581,21 @@ object Seq6 {
         T6,
         T7,
       ]: TrainingMode
-  ] : TrainingMode[Seq6[
-        T1,
-        T2,
-        T3,
-        T4,
-        T5,
-        T6,
-        T7,
-        M1,
-        M2,
-        M3,
-        M4,
-        M5,
-        M6
-      ]]=
+  ]: TrainingMode[Seq6[
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+    M1,
+    M2,
+    M3,
+    M4,
+    M5,
+    M6
+  ]] =
     TrainingMode
       .make[Seq6[
         T1,
@@ -664,21 +664,21 @@ object Seq6 {
         T6,
         T7,
       ]: Load
-  ] : Load[Seq6[
-        T1,
-        T2,
-        T3,
-        T4,
-        T5,
-        T6,
-        T7,
-        M1,
-        M2,
-        M3,
-        M4,
-        M5,
-        M6
-      ]] =
+  ]: Load[Seq6[
+    T1,
+    T2,
+    T3,
+    T4,
+    T5,
+    T6,
+    T7,
+    M1,
+    M2,
+    M3,
+    M4,
+    M5,
+    M6
+  ]] =
     Load.make[Seq6[
       T1,
       T2,

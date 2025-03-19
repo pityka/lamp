@@ -181,7 +181,10 @@ package object bert {
             val mlmTarget = STen.stack(dim = 0, tensors = ps.map(_._5))
             val tokenMaxLength = STen.fromLongArray(ps.map(_._6).toArray)
 
-            device.withOtherStream(synchronizeBefore = false, synchronizeAfter = true) {
+            device.withOtherStream(
+              synchronizeBefore = false,
+              synchronizeAfter = true
+            ) {
 
               (
                 device.to(maskedBertTokens),
