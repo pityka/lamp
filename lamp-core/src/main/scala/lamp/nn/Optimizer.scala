@@ -4,7 +4,7 @@ import lamp.STen
 
 trait Optimizer {
   def step(
-      gradients: Seq[Option[STen]],
+      gradients: Seq[STen],
       scheduleFactor: Double
   ): Unit
   def release(): Unit

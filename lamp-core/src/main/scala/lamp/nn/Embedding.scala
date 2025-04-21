@@ -3,7 +3,6 @@ package lamp.nn
 import lamp.autograd.{Variable, Constant, param}
 import lamp.STenOptions
 import lamp.Sc
-import lamp.scope
 import lamp.STen
 
 /** Learnable mapping from classes to dense vectors. Equivalent to L * W where L
@@ -14,20 +13,20 @@ import lamp.STen
   * Input is a long tensor with values in [0,C-1]. Input shape is arbitrary,
   * (*). Output shape is (* x D) where D is the embedding dimension.
   */
-case class Embedding(weights: Constant) extends Module {
+case class Embedding(weights: Constant) extends GenericModule[STen, Variable] {
   val state = List(
     weights -> Embedding.Weights
   )
 
-  def forward[S: Sc](x: Variable): Variable =
-    new lamp.autograd.Embedding(scope, x, weights).value
+  def forward[S:Sc, F:FW](x: STen): Variable =
+    new lamp.autograd.Embedding( x, weights).value
 
 }
 
 object Embedding {
   implicit val trainingMode : TrainingMode[Embedding] = TrainingMode.identity[Embedding]
   implicit val load : Load[Embedding] = Load.make[Embedding] { m => parameters =>
-    m.weights.value.copyFrom(parameters.head)
+    m.weights.constantValue.copyFrom(parameters.head)
   }
   case object Weights extends LeafTag
   def apply[S: Sc](

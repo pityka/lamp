@@ -12,7 +12,7 @@ case object DoublePrecision extends FloatingPointPrecision {
   val scalarTypeByte = 7
   def convertTensor(t: Tensor): Tensor = {
     val opt = t.options().toDouble()
-    val r = t.to(opt, true, true)
+    val r = t.to(opt, false, true)
     opt.release
     r
   }
@@ -24,7 +24,7 @@ case object SinglePrecision extends FloatingPointPrecision {
   val scalarTypeByte = 6
   def convertTensor(t: Tensor): Tensor = {
     val opt = t.options().toFloat()
-    val r = t.to(opt, true, true)
+    val r = t.to(opt, false, true)
     opt.release
     r
   }
@@ -35,10 +35,19 @@ case object SinglePrecision extends FloatingPointPrecision {
 case object HalfPrecision extends FloatingPointPrecision {
   val scalarTypeByte = 5
   def convertTensor(t: Tensor): Tensor = {
-    aten.ATen._cast_Half(t, true)
+    aten.ATen._cast_Half(t, false)
   }
   def convertOption[S: Sc](t: STenOptions): STenOptions = {
     t.toHalf
+  }
+}
+case object Bf16Precision extends FloatingPointPrecision {
+  val scalarTypeByte = 15
+  def convertTensor(t: Tensor): Tensor = {
+    t.to(t.options().toBF16(), false, true)
+  }
+  def convertOption[S: Sc](t: STenOptions): STenOptions = {
+    t.toBF16
   }
 }
 
@@ -62,13 +71,24 @@ sealed trait Device { self =>
   def toBatched[S: Sc](
       tensors: Seq[STen],
       buffers: BufferPair
-  ): Seq[STen] = self
-    .toBatchedImpl(
-      tensors.map(_.value),
-      buffers.source.value,
-      buffers.destination.value
-    )
-    .map(t => STen.owned(t))
+  ): Seq[STen] = {
+    assert(tensors.map(_.device).distinct.size == 1)
+    if (tensors.take(1).exists(_.device == buffers.destination.device)) tensors
+    else if (tensors.isEmpty) tensors
+    else {
+      assert(
+        tensors.take(1).forall(_.device == buffers.source.device),
+        "device of source end of buffer pair does not match with input tensors"
+      )
+      self
+        .toBatchedImpl(
+          tensors.map(_.value),
+          buffers.source.value,
+          buffers.destination.value
+        )
+        .map(t => STen.owned(t))
+    }
+  }
 
   def allocateBuffers[S: Sc](size: Long, options: STenOptions) =
     BufferPair.allocate(size, this, options)
@@ -114,6 +134,8 @@ sealed trait Device { self =>
   }
   def to[S: Sc](t: STenOptions): STenOptions
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions
+  def optionsLong[S: Sc]: STenOptions
+
   def setSeed(seed: Long): Unit
 
   /** Executes f on a new stream
@@ -132,7 +154,7 @@ sealed trait Device { self =>
 }
 object Device {
   def fromOptions(st: STenOptions) =
-    if (st.isCPU) CPU else CudaDevice(st.deviceIndex)
+    if (st.isCPU) CPU else if (st.isMps) MPS else CudaDevice(st.deviceIndex)
   implicit val movable: EmptyMovable[Device] = Movable.empty
 }
 case object CPU extends Device {
@@ -150,6 +172,8 @@ case object CPU extends Device {
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
     precision.convertOption(STenOptions.d)
 
+  def optionsLong[S: Sc] = STenOptions.l
+
 }
 case object MPS extends Device {
   def measureTime[A](f: => A): (A, Long) = {
@@ -162,7 +186,7 @@ case object MPS extends Device {
   def to(t: Tensor) = {
     val tmp = t.options()
     val tmp2 = tmp.device(STenOptions.deviceTypeMps, 0)
-    val r = t.to(tmp2, true, true)
+    val r = t.to(tmp2, false, true)
     tmp.release
     tmp2.release
     r
@@ -170,6 +194,8 @@ case object MPS extends Device {
   def setSeed(seed: Long) = Tensor.manual_seed_mps(seed)
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
     precision.convertOption(STenOptions.d.mps)
+
+  def optionsLong[S: Sc] = STenOptions.l.mps
 
 }
 case class CudaDevice(i: Int) extends Device {
@@ -228,6 +254,8 @@ case class CudaDevice(i: Int) extends Device {
 
   def options[S: Sc](precision: FloatingPointPrecision): STenOptions =
     precision.convertOption(STenOptions.d.cudaIndex(i.toShort))
+
+  def optionsLong[S: Sc] = STenOptions.l.cudaIndex(i.toShort)
 }
 
 case class BufferPair(

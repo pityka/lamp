@@ -73,13 +73,15 @@ package object distributed {
 
     val nranks = modelsWithDataStreams.size
     val gpus =
-      modelsWithDataStreams.map(_._1.module.state.head._1.value.device).map {
-        case CudaDevice(i) => i
-        case _ =>
-          throw new RuntimeException(
-            "localDataParallelTrainingLoop supports solely Cuda devices"
-          )
-      }
+      modelsWithDataStreams
+        .map(_._1.module.state.head._1.constantValue.device)
+        .map {
+          case CudaDevice(i) => i
+          case _ =>
+            throw new RuntimeException(
+              "localDataParallelTrainingLoop supports solely Cuda devices"
+            )
+        }
 
     def root(comm: DistributedCommunicationRoot) =
       IO.unit *> driveDistributedTraining(
@@ -205,7 +207,8 @@ package object distributed {
 
     Scope.root { implicit scope =>
       val uid = lamp.NcclUniqueId()
-      val clonedModelState = model.module.state.map(_._1.value.cloneTensor)
+      val clonedModelState =
+        model.module.state.map(_._1.constantValue.cloneTensor)
 
       val ncclComm =
         IO.blocking {
@@ -215,7 +218,7 @@ package object distributed {
 
       val optimizer = IO {
         optimizerFactory(
-          model.module.parameters.map(v => (v._1.value, v._2))
+          model.module.parameters.map(v => (v._1.constantValue, v._2))
         )
       }
 
@@ -306,7 +309,7 @@ package object distributed {
             val f2 = (ls: LoopState, lr: LRState) => {
               val both = LoopStateWithModelAndOptimizerData(
                 ls,
-                model.module.state.map(_._1.value),
+                model.module.state.map(_._1.constantValue),
                 optimizer.state,
                 clonedModelState
               )
@@ -315,10 +318,12 @@ package object distributed {
             f2
           },
           saveMinValidationLossModel = IO {
-            model.module.state.map(_._1.value).zip(clonedModelState).foreach {
-              case (src, dst) =>
+            model.module.state
+              .map(_._1.constantValue)
+              .zip(clonedModelState)
+              .foreach { case (src, dst) =>
                 dst.copyFrom(src)
-            }
+              }
           } *> modelIsSaved.update(_ => true)
         )
         _ <- IO { scribe.info("Broadcast stop command.") }
@@ -328,10 +333,12 @@ package object distributed {
         _ <- modelIsSaved.get.map { modelIsSaved =>
           // copying back best model
           if (modelIsSaved) {
-            model.module.state.map(_._1.value).zip(clonedModelState).foreach {
-              case (dst, src) =>
+            model.module.state
+              .map(_._1.constantValue)
+              .zip(clonedModelState)
+              .foreach { case (dst, src) =>
                 dst.copyFrom(src)
-            }
+              }
           }
         }
         _ <- IO(ncclComm.comm_destroy())
@@ -616,7 +623,7 @@ package object distributed {
     */
   def oneEpoch[I, M <: GenericModule[I, Variable], S, C](
       model: SupervisedModel[I, M],
-      stepOptimizerFn: Option[Seq[Option[STen]] => Unit],
+      stepOptimizerFn: Option[Seq[STen] => Unit],
       batches: BatchStream[(I, STen), S, C],
       logger: Option[Logger],
       accumulateGradientOverNBatches: Int,
@@ -629,59 +636,68 @@ package object distributed {
     def epochLoop = Scope.inResource.use { implicit scope =>
       batches.allocateBuffers(device).use { buffers =>
         val lossAcc =
-          STen.scalarDouble(0d, model.module.state.head._1.options)
+          STen
+            .scalarDouble(0d, model.module.state.head._1.constantValue.options)
         val loopDone =
-          prefetchLoop(lossAcc, buffers)
+          prefetchLoop(lossAcc, buffers, scope)
 
         loopDone.map { numInstances =>
           val totalLoss = lossAcc.toDoubleArray.apply(0)
           (totalLoss, numInstances)
         }
       }
+
     }
 
     def prefetchLoop(
         lossAccumulator: STen,
-        batchLoadingBuffers: C
+        batchLoadingBuffers: C,
+        scope: Scope
     ) = {
 
       DataParallel.driveSynchronousLoop[S, StreamControl[(I, STen)], Long](
         fetch = (s) => batches.nextBatch(device, batchLoadingBuffers, s),
-        transform = (batchCounter, batch) =>
+        transform = (batchCounter, batch, pgs) =>
           IO.blocking {
             batch match {
               case EmptyBatch => ???
               case EndStream  => EndStream
               case NonEmptyBatch((features, target)) =>
                 NonEmptyBatch(
-                  if (forwardOnly)
-                    oneForwardBatch(
+                  if (forwardOnly) {
+                    val a = oneForwardBatch(
                       batchFeature = features,
                       batchTarget = target,
                       lossAccumulator = lossAccumulator
                     )
-                  else
-                    oneBatch(
+                    (a, pgs)
+                  } else {
+                    val (a, b) = oneBatch(
+                      scope = scope,
                       batchFeature = features,
                       batchTarget = target,
                       lossAccumulator = lossAccumulator,
                       zeroGradBeforeComputingGradients =
                         (batchCounter % accumulateGradientOverNBatches) == 0,
                       stepOptimizerAfterComputingGradients =
-                        (batchCounter % accumulateGradientOverNBatches) == (accumulateGradientOverNBatches - 1)
+                        (batchCounter % accumulateGradientOverNBatches) == (accumulateGradientOverNBatches - 1),
+                      pg = pgs.head
                     )
+                    (a, List(b))
+                  }
                 )
             }
 
           },
         reduce = (b, acc) => (acc + b),
         zero = 0L,
-        zeroS = batches.init
+        zeroS = batches.init,
+        initPds = List(ParameterGradients.empty)
       )
     }
 
     def broadcast(): Unit = {
-      val tensors = model.module.state.map(_._1.value)
+      val tensors = model.module.state.map(_._1.constantValue)
       tensors.foreach { tensor =>
         STen.ncclBoadcast(List((tensor, ncclComm)))
       }
@@ -689,29 +705,25 @@ package object distributed {
 
     def averageGradients(
         numExamples: Long,
-        gradients: Seq[Option[STen]],
+        gradients: Seq[STen],
         isRoot: Boolean
     ): Double = {
       Scope.root { implicit scope =>
         val numExamplesD = numExamples.toDouble
-        gradients.foreach {
-          _.foreach { gradient =>
-            gradient *= numExamplesD
-          }
+        gradients.foreach { gradient =>
+          gradient *= numExamplesD
         }
-        val op = gradients.find(_.isDefined).flatten.get.options
+        val op = gradients.head.options
         val numExamplesT = STen.scalarDouble(numExamplesD, op)
         STen.ncclReduce(List((numExamplesT, ncclComm)), numExamplesT, rootRank)
-        gradients.foreach {
-          _.foreach { gradient =>
-            STen.ncclReduce(List((gradient, ncclComm)), gradient, rootRank)
-          }
+        gradients.foreach { gradient =>
+          STen.ncclReduce(List((gradient, ncclComm)), gradient, rootRank)
+
         }
         if (isRoot) {
-          gradients.foreach {
-            _.foreach { gradient =>
-              gradient /= numExamplesT
-            }
+          gradients.foreach { gradient =>
+            gradient /= numExamplesT
+
           }
         }
         lamp.CPU.to(numExamplesT).toDoubleArray(0)
@@ -735,8 +747,10 @@ package object distributed {
         batchTarget: STen,
         lossAccumulator: STen,
         zeroGradBeforeComputingGradients: Boolean,
-        stepOptimizerAfterComputingGradients: Boolean
-    ): Long = {
+        stepOptimizerAfterComputingGradients: Boolean,
+        pg: ParameterGradients,
+        scope: Scope
+    ): (Long, ParameterGradients) = {
       broadcast()
       val (numExamples, gradients) =
         model.addTotalLossAndReturnGradientsAndNumExamples(
@@ -744,17 +758,24 @@ package object distributed {
           target = batchTarget,
           acc = lossAccumulator,
           zeroGrad = zeroGradBeforeComputingGradients,
-          switchStream = true
-        )
+          switchStream = true,
+          pd = pg
+        )(scope)
       if (stepOptimizerAfterComputingGradients) {
         // totalExamples is only correct on root rank
+        val orderedGradients =
+          model.module.parameters.map(_._1).map(gradients.map)
         val totalExamples =
-          averageGradients(numExamples, gradients, stepOptimizerFn.isDefined)
+          averageGradients(
+            numExamples,
+            orderedGradients,
+            stepOptimizerFn.isDefined
+          )
         if (stepOptimizerFn.isDefined) {
-          stepOptimizerFn.get(gradients)
+          stepOptimizerFn.get(orderedGradients)
         }
-        totalExamples.toLong
-      } else numExamples
+        (totalExamples.toLong, gradients)
+      } else (numExamples, gradients)
 
     }
     def oneForwardBatch(

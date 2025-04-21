@@ -4,7 +4,6 @@ import lamp.Sc
 import lamp.STenOptions
 import lamp.autograd.Variable
 import lamp.nn.MLP.NormType.LayerNorm
-import _root_.lamp.nn.MLP.NormType.BatchNorm
 
 /** Factory for multilayer fully connected feed forward networks
   *
@@ -33,7 +32,6 @@ object MLP {
   sealed trait NormType
   object NormType {
     case object NoNorm extends NormType
-    case object BatchNorm extends NormType
     case class LayerNorm(bias: Boolean, scale: Boolean) extends NormType
   }
 
@@ -45,45 +43,36 @@ object MLP {
       dropout: Double = 0d,
       lastNonLinearity: Boolean = false,
       activationFunction: ActivationFunction = Relu,
-      norm: NormType = NormType.BatchNorm,
+      norm: NormType = NormType.LayerNorm(false,true),
       numHeads: Int = 1,
       bias: Boolean = true
   ) = {
 
     def act() = activationFunction match {
-      case Gelu      => Fun(scope => input => input.gelu(scope))
-      case Relu      => Fun(scope => input => input.relu(scope))
-      case Swish1    => Fun(scope => input => input.swish1(scope))
-      case HardSwish => Fun(scope => input => input.hardSwish(scope))
-      case Sigmoid   => Fun(scope => input => input.sigmoid(scope))
+      case Gelu      => Fun(_ => input => input.gelu)
+      case Relu      => Fun(_ => input => input.relu)
+      case Swish1    => Fun(_ => input => input.swish1)
+      case HardSwish => Fun(_ => input => input.hardSwish)
+      case Sigmoid   => Fun(_ => input => input.sigmoid)
     }
-    def makeNorm(normDim: Int): Sequential[Variable, EitherModule[
-      Variable,
-      Variable,
-      lamp.nn.BatchNorm,
-      lamp.nn.LayerNorm
-    ]] = norm match {
+    def makeNorm(normDim: Int): Sequential[Variable, lamp.nn.LayerNorm] = norm match {
       case NormType.NoNorm => Sequential()
-      case NormType.BatchNorm =>
-        Sequential(EitherModule(Left(lamp.nn.BatchNorm(normDim, tOpt = tOpt))))
+      
       case NormType.LayerNorm(bias, scale) =>
         Sequential(
-          EitherModule(
-            Right(
+          
               lamp.nn.LayerNorm(
                 normalizedShape = List(normDim.toLong),
                 tOpt = tOpt,
                 bias = bias,
                 scale = scale
                 
-              )
-            )
-          )
+                        )
         )
     }
 
     val hasBias = norm match {
-      case LayerNorm(true, _) | BatchNorm => false 
+      case LayerNorm(true, _) => false 
       case _ => bias 
     }
 

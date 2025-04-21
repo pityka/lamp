@@ -10,6 +10,7 @@ import lamp.Movable
 import cats.effect.std.CountDownLatch
 import scala.collection.compat.immutable.ArraySeq
 import lamp.BufferPair
+import lamp.autograd.Constant
 
 sealed trait StreamControl[+I] {
   def map[B](f: I => B): StreamControl[B]
@@ -559,7 +560,7 @@ object BatchStream {
               }
             (d1, d2)
           }
-          NonEmptyBatch((const(d1), d2)): StreamControl[(Variable, STen)]
+          NonEmptyBatch((const(d1), d2)): StreamControl[(Constant, STen)]
         }
       }
 
@@ -584,7 +585,7 @@ object BatchStream {
       else t
     }
 
-    BatchStream.fromIndicesWithBuffers[(Variable, STen), BufferPair](
+    BatchStream.fromIndicesWithBuffers[(Constant, STen), BufferPair](
       idx.toArray,
       allocateBuffers
     )(makeNonEmptyBatch)

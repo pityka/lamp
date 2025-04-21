@@ -3,7 +3,6 @@ package lamp.data
 import lamp._
 import lamp.nn.bert.{BertPretrainInput, BertLossInput}
 import lamp.data.BatchStream.scopeInResource
-import lamp.autograd.const
 import scala.collection.compat.immutable.ArraySeq
 import cats.effect.IO
 
@@ -196,8 +195,8 @@ package object bert {
 
           val batch = BertLossInput(
             input = BertPretrainInput(
-              tokens = const(tokens),
-              segments = const(segments),
+              tokens = (tokens),
+              segments = (segments),
               positions = positions,
               maxLength = Option(tokenMaxLength)
             ),

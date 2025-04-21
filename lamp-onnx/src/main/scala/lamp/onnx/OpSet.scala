@@ -8,9 +8,10 @@ import lamp.SinglePrecision
 import lamp.DoublePrecision
 import lamp.Scope
 import lamp.HalfPrecision
+import lamp.Bf16Precision
 
 trait NameMap {
-  def apply(u: AnyRef): String
+  def apply(u: Variable): String
 }
 
 case class Converted(
@@ -27,17 +28,17 @@ case class Converted(
 object Ops {
   private[lamp] val ComMicrosoft = "com.microsoft"
   def apply(
-      output: VariableNonConstant,
+      output: Variable,
       opType: String,
       attributes: Seq[ox.AttributeProto] = Nil,
       domain: Option[String] = None
   )(makeName: NameMap): Converted =
     Converted(
       ox.NodeProto(
-        name = Some(makeName(output.id)),
-        output = List(makeName(output.id)),
+        name = Some(makeName(output)),
+        output = List(makeName(output)),
         opType = Some(opType),
-        input = output.op.get.params.map(v => makeName(v._1.id)),
+        input = output.op.get.params.map(v => makeName(v.fold(_.variable,id => id))),
         attribute = attributes,
         domain = domain
       )
@@ -197,13 +198,13 @@ object Ops {
 }
 
 trait OpSet {
-  def translate(m: NameMap, op: VariableNonConstant): Seq[Converted]
+  def translate(m: NameMap, op: Variable): Seq[Converted]
 }
 
 object DefaultOpSet extends DefaultOpSet1
 
 trait DefaultOpSet1 extends OpSet {
-  def translate(nm: NameMap, out: VariableNonConstant): Seq[Converted] =
+  def translate(nm: NameMap, out: Variable): Seq[Converted] =
     out.op.get match {
       case _: Transpose     => Ops(out, "Transpose")(nm) :: Nil
       case _: Add           => Ops(out, "Add")(nm) :: Nil
@@ -248,7 +249,7 @@ trait DefaultOpSet1 extends OpSet {
           .appendInput(
             Ops.tensorFromDoubleVec(
               List(0d, 1d),
-              Scope.root { implicit scope => op.value.options.scalarTypeByte }
+              Scope.root { implicit scope => op.value.eval.options.scalarTypeByte }
             )
           ) :: Nil
 
@@ -257,7 +258,7 @@ trait DefaultOpSet1 extends OpSet {
           Ops.tensorFromDoubleScalar(
             op.b,
             Scope.root { implicit scope =>
-              op.a.options.scalarTypeByte
+              op.a.eval.options.scalarTypeByte
             }
           )
         ) :: Nil
@@ -267,7 +268,7 @@ trait DefaultOpSet1 extends OpSet {
           Ops.tensorFromDoubleScalar(
             op.b,
             Scope.root { implicit scope =>
-              op.a.options.scalarTypeByte
+              op.a.eval.options.scalarTypeByte
             }
           )
         ) :: Nil
@@ -299,7 +300,7 @@ trait DefaultOpSet1 extends OpSet {
           Ops.tensorFromDoubleScalar(
             op.exponent,
             Scope.root { implicit scope =>
-              op.a.options.scalarTypeByte
+              op.a.eval.options.scalarTypeByte
             }
           )
         ) :: Nil
@@ -330,7 +331,7 @@ trait DefaultOpSet1 extends OpSet {
           .appendInput(Ops.tensorFromDoubleScalar(op.prob, 7))
           .appendInput(Ops.tensorFromBooleanScalar(op.train)) :: Nil
       case op: Flatten =>
-        assert(op.endDim == op.input.shape.length - 1 || op.endDim == -1)
+        Scope.root{ implicit scope => assert(op.endDim == op.input.eval.shape.length - 1 || op.endDim == -1)}
         Ops(out, "Flatten", attributes = List(Ops.attr("axis", op.startDim)))(
           nm
         ) :: Nil
@@ -398,27 +399,17 @@ trait DefaultOpSet1 extends OpSet {
             Ops.attrLongSeq("strides", List(op.stride, op.stride))
           )
         )(nm) :: Nil
-      case op: BatchNorm =>
-        Ops(
+      case op: LayerNormOp =>
+         Ops(
           out,
-          "BatchNormalization",
+          "LayerNormalization",
           attributes = List(
-            Ops.attr("momentum", op.momentum.toFloat)
+            Ops.attr("eps", op.eps.toFloat)
           )
-        )(nm)
-          .appendInput(Ops.tensorFromSTen(op.runningMean))
-          .appendInput(Ops.tensorFromSTen(op.runningVar)) :: Nil
-      case op: BatchNorm2D =>
-        Ops(
-          out,
-          "BatchNormalization",
-          attributes = List(
-            Ops.attr("momentum", op.momentum.toFloat)
-          )
-        )(nm)
-          .appendInput(Ops.tensorFromSTen(op.runningMean))
-          .appendInput(Ops.tensorFromSTen(op.runningVar)) :: Nil
-
+        )(nm) :: Nil 
+          // .appendInput(Ops.tensorFromSTen(op.bias.map(_.eval).getOrElse(STen.zeros(Nil))))
+          // .appendInput(Ops.tensorFromSTen(op.weight.map(_.eval).getOrElse(STen.zeros(Nil)))) 
+        
       case op: CastToPrecision =>
         Ops(
           out,
@@ -433,6 +424,8 @@ trait DefaultOpSet1 extends OpSet {
                   ox.TensorProto.DataType.FLOAT.index.toLong
                 case DoublePrecision =>
                   ox.TensorProto.DataType.DOUBLE.index.toLong
+                case Bf16Precision =>
+                  ox.TensorProto.DataType.BFLOAT16.index.toLong
               }
             )
           )
@@ -453,31 +446,41 @@ trait DefaultOpSet1 extends OpSet {
           attributes = List(
             Ops.attr("axis", op.dim)
           )
-        )(nm).appendInput(Ops.tensorFromSTen(op.index.value)) :: Nil
+        )(nm).appendInput(Ops.tensorFromSTen(op.index)) :: Nil
       case op: Assign =>
         Converted(
           ox.NodeProto(
-            name = Some(nm(op.value.id)),
-            output = List(nm(op.value.id)),
+            name = Some(nm(op.value)),
+            output = List(nm(op.value)),
             opType = Some("Identity"),
-            input = op.params.takeRight(1).map(v => nm(v._1.id))
+            input = op.params.takeRight(1).map(v => nm(v.fold(_.variable,id => id)))
           )
         ) :: Nil
+      
+      case op: Persist =>
+        Converted(
+          ox.NodeProto(
+            name = Some(nm(op.value)),
+            output = List(nm(op.value)),
+            opType = Some("Identity"),
+            input = op.params.takeRight(1).map(v => nm(v.fold(_.variable,id => id)))
+          )
+        ) :: Nil
+      
       case op: Stack =>
         val unsqueezes = op.a.map { input =>
-          val name = UUID.randomUUID()
           ox.NodeProto(
-            name = Some(nm(name)),
-            output = List(nm(name)),
+            name = Some(nm(op.value)),
+            output = List(nm(op.value)),
             opType = Some("Unsqueeze"),
-            input = List(nm(input.id)),
+            input = List(nm(input)),
             attribute = List(Ops.attrLongSeq("axes", List(op.dim)))
           )
         }
         val cat = List(
           ox.NodeProto(
-            name = Some(nm(op.value.id)),
-            output = List(nm(op.value.id)),
+            name = Some(nm(op.value)),
+            output = List(nm(op.value)),
             opType = Some("Concat"),
             input = unsqueezes.map(_.name.get),
             attribute = List(Ops.attr("axis", op.dim))

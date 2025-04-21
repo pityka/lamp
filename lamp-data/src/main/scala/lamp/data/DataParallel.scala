@@ -25,7 +25,10 @@ object DataParallel {
 
     def allocatePerModelLossAcc(implicit scope: Scope) =
       (models)
-        .map(model => STen.scalarDouble(0d, model.module.state.head._1.options))
+        .map(model =>
+          STen
+            .scalarDouble(0d, model.module.state.head._1.constantValue.options)
+        )
         .toList
 
     def loop(
@@ -48,7 +51,7 @@ object DataParallel {
                   batches
                     .zip(modelsAsEval)
                     .zip(totalLossPerModel)
-                    .parTraverseN(batches.size) {
+                    .parTraverseN(batches.size + 1) {
 
                       case (
                             (
@@ -94,7 +97,7 @@ object DataParallel {
     }
 
     Scope.inResource.use { implicit scope =>
-      val devices = models.map(_.module.state.head._1.value.device)
+      val devices = models.map(_.module.state.head._1.constantValue.device)
       import cats.implicits._
       devices
         .map(device => validationBatches.allocateBuffers(device))
@@ -119,13 +122,14 @@ object DataParallel {
                   )
                 )
               }
-              _ <- 
-                validationCallback.fold(IO.unit)(_(
-                  epochCount,
-                  validationLoss,
-                  modelsAsEval.head.module
-                ))
-              
+              _ <-
+                validationCallback.fold(IO.unit)(
+                  _(
+                    epochCount,
+                    validationLoss,
+                    modelsAsEval.head.module
+                  )
+                )
 
             } yield validationLoss
           }
@@ -146,16 +150,20 @@ object DataParallel {
       accumulateGradientOverNBatches: Int
   ): IO[Double] = {
 
-    val mainDevice = mainModel.model.module.state.head._1.value.device
+    val mainDevice = mainModel.model.module.state.head._1.constantValue.device
 
     def allocatePerModelLossAcc(implicit scope: Scope) =
       (mainModel.model +: models)
-        .map(model => STen.scalarDouble(0d, model.module.state.head._1.options))
+        .map(model =>
+          STen
+            .scalarDouble(0d, model.module.state.head._1.constantValue.options)
+        )
         .toList
 
     def loop(
         perModelLossAcc: List[(STen, C)],
-        deviceBuffers: List[BufferPair]
+        deviceBuffers: List[BufferPair],
+        scope: Scope
     ) =
       driveSynchronousLoop[S, StreamControl[List[(I, STen)]], Long](
         fetch = makeMultipleBatches(
@@ -165,11 +173,13 @@ object DataParallel {
         ),
         transform = (
             batchCounter,
-            batches
-        ) =>
+            batches,
+            perModelPds
+        ) => {
           sequence(
             batches
-              .map(batches =>
+              .map { batches =>
+                assert(batches.size == perModelLossAcc.size)
                 synchronousStep(
                   batches,
                   perModelLossAcc.map(_._1),
@@ -177,13 +187,19 @@ object DataParallel {
                   zeroGrad =
                     (batchCounter % accumulateGradientOverNBatches) == 0,
                   step =
-                    (batchCounter % accumulateGradientOverNBatches) == (accumulateGradientOverNBatches - 1)
+                    (batchCounter % accumulateGradientOverNBatches) == (accumulateGradientOverNBatches - 1),
+                  pds = perModelPds,
+                  needsUpdateFromMain =
+                    (batchCounter % accumulateGradientOverNBatches) == 0,
+                  scope = scope
                 )
-              )
-          ),
+              }
+          )
+        },
         reduce = (b, acc) => (acc + b),
         zero = 0L,
-        zeroS = trainBatches.init
+        zeroS = trainBatches.init,
+        initPds = perModelLossAcc.map(_ => ParameterGradients.empty)
       )
 
     def sequence[A](a: StreamControl[IO[A]]): IO[StreamControl[A]] = a match {
@@ -197,28 +213,44 @@ object DataParallel {
         perModelLossAcc: List[STen],
         deviceBuffers: List[BufferPair],
         step: Boolean,
-        zeroGrad: Boolean
-    ): IO[Long] = {
+        zeroGrad: Boolean,
+        pds: Seq[ParameterGradients],
+        needsUpdateFromMain: Boolean,
+        scope: Scope
+    ): IO[(Long, Seq[ParameterGradients])] = {
       assert(batch.size == perModelLossAcc.size)
       assert(batch.size == (models.size + 1))
       for {
-        _ <- copyStateFromMain(mainDevice, deviceBuffers)
+        _ <-
+          if (needsUpdateFromMain)
+            copyStateFromMain(mainDevice, deviceBuffers)
+          else IO.unit
         gradients <- batch
           .zip(mainModel.model +: models)
           .zip(perModelLossAcc)
-          .parTraverse { case ((batch, model), lossAcc) =>
+          .zip(pds)
+          .parTraverse { case (((batch, model), lossAcc), pd) =>
             IO.interruptible {
-              computeGradient(batch, lossAcc, model, zeroGrad)
+              val (n, pg) =
+                computeGradient(batch, lossAcc, model, zeroGrad, pd, scope)
+              val parameterOrder = model.module.parameters.map(_._1)
+              val ordered = parameterOrder.map(pg.map)
+              ((n, ordered), parameterOrder)
             }
           }
         _ <-
           if (step)
             averageGradientsIntoMain(
-              gradMain = gradients.head,
-              gradPerModel = gradients.drop(1)
-            ).flatMap(_ => IO { stepOptimizer(gradients.head._2) })
+              gradMain = gradients.head._1,
+              gradPerModel = gradients.drop(1).map(_._1)
+            ).flatMap(_ => IO { stepOptimizer(gradients.head._1._2) })
           else IO.unit
-      } yield gradients.map(_._1).sum
+      } yield (
+        gradients.map(_._1._1).sum,
+        gradients.map { case ((_, ordered), parameterOrder) =>
+          ParameterGradients(parameterOrder.zip(ordered).toMap)
+        }
+      )
 
     }
 
@@ -226,14 +258,16 @@ object DataParallel {
         mainDevice: Device,
         deviceBuffers: List[BufferPair]
     ) = {
-      val sources = mainModel.model.module.state.map(_._1.value)
-      models.toList.zip(deviceBuffers).parTraverseN(models.size) {
+      val sources = mainModel.model.module.state.map(_._1.constantValue)
+      models.toList.zip(deviceBuffers).parTraverseN(models.size + 1) {
         case (destinationModel, buffers) =>
           IO.interruptible {
             mainDevice.withOtherStream(true, true) {
 
-              val destinations = destinationModel.module.state.map(_._1.value)
-              val device = destinationModel.module.state.head._1.value.device
+              val destinations =
+                destinationModel.module.state.map(_._1.constantValue)
+              val device =
+                destinationModel.module.state.head._1.constantValue.device
 
               Scope.root { implicit scope =>
                 val copied = device.toBatched(sources, buffers)
@@ -251,19 +285,24 @@ object DataParallel {
         elem: (I, STen),
         lossAcc: STen,
         model: SupervisedModel[I, M],
-        zeroGrad: Boolean
-    ): (Long, Seq[Option[STen]]) =
-      model.addTotalLossAndReturnGradientsAndNumExamples(
+        zeroGrad: Boolean,
+        pd: ParameterGradients,
+        scope: Scope
+    ): (Long, ParameterGradients) = {
+      val (n, pg) = model.addTotalLossAndReturnGradientsAndNumExamples(
         samples = elem._1,
         target = elem._2,
         acc = lossAcc,
         zeroGrad = zeroGrad,
-        switchStream = true
-      )
+        switchStream = true,
+        pd = pd
+      )(scope)
+      (n, pg)
+    }
 
     def averageGradientsIntoMain(
-        gradMain: (Long, Seq[Option[STen]]),
-        gradPerModel: Seq[(Long, Seq[Option[STen]])]
+        gradMain: (Long, Seq[STen]),
+        gradPerModel: Seq[(Long, Seq[STen])]
     ): IO[Unit] = {
       val totalExamples = gradPerModel.map(_._1).sum + gradMain._1
 
@@ -273,26 +312,24 @@ object DataParallel {
             gradPerModel.size + 1
           ) { case (numExample, grad) =>
             IO {
-              grad.foreach(_.foreach { gradTensor =>
+              grad.foreach { gradTensor =>
                 gradTensor.*=(numExample.toDouble)
-              })
+              }
             }
           }
 
-        _ <- gradPerModel.toList.parTraverseN(gradPerModel.size) {
+        _ <- gradPerModel.toList.parTraverseN(gradPerModel.size + 1) {
           case (_, grads) =>
             assert(grads.size == gradMain._2.size)
             IO {
               Scope.root { implicit scope =>
                 val gradientSourcesOnMainDevice =
                   grads.zip(gradMain._2).map { case (source, main) =>
-                    assert(source.isEmpty == main.isEmpty)
-                    source.zip(main).map { case (source, main) =>
-                      val sourceOnMainDevice = main.device.to(source)
-                      (main, sourceOnMainDevice)
-                    }
+                    val sourceOnMainDevice = main.device.to(source)
+                    (main, sourceOnMainDevice)
+
                   }
-                gradientSourcesOnMainDevice.foreach(_.foreach {
+                gradientSourcesOnMainDevice.foreach({
                   case (main, sourceOnMainDevice) =>
                     main += sourceOnMainDevice
                 })
@@ -303,14 +340,14 @@ object DataParallel {
         }
 
         _ <- IO {
-          gradMain._2.foreach(_.foreach { grad =>
+          gradMain._2.foreach({ grad =>
             grad *= (1d / totalExamples.toDouble)
           })
         }
       } yield ()
     }
 
-    def stepOptimizer(gradients: Seq[Option[STen]]): Unit = {
+    def stepOptimizer(gradients: Seq[STen]): Unit = {
       mainModel.optimizer.step(gradients, learningRateScheduleFactor)
     }
 
@@ -326,10 +363,11 @@ object DataParallel {
         .sequence
 
       val buffersForDataParallel = Scope.inResource.map { implicit scope =>
-        val size = mainModel.model.module.state.map(_._1.value.numel).sum
-        val op = mainModel.model.module.state.head._1.value.options
+        val size =
+          mainModel.model.module.state.map(_._1.constantValue.numel).sum
+        val op = mainModel.model.module.state.head._1.constantValue.options
         models.toList.map { m =>
-          val device = m.module.state.head._1.value.device
+          val device = m.module.state.head._1.constantValue.device
           val onmain = STen.zeros(List(size), mainDevice.to(op))
           val ondevice = STen.zeros(List(size), device.to(op))
           BufferPair(source = onmain, destination = ondevice)
@@ -340,12 +378,14 @@ object DataParallel {
       buffersForBatchStream
         .use { cs =>
           buffersForDataParallel.use { dpBuffers =>
-            val loopDone =
-              loop(lossAcc.zip(cs), dpBuffers)
+            Scope.inResource.use { scope =>
+              val loopDone =
+                loop(lossAcc.zip(cs), dpBuffers, scope)
 
-            loopDone.map { numInstances =>
-              val totalLoss = lossAcc.map(_.toDoubleArray.apply(0)).sum
-              (totalLoss, numInstances)
+              loopDone.map { numInstances =>
+                val totalLoss = lossAcc.map(_.toDoubleArray.apply(0)).sum
+                (totalLoss, numInstances)
+              }
             }
           }
         }
@@ -367,9 +407,10 @@ object DataParallel {
           )
         )
       }
-      _ <- 
-        trainingCallback.fold(IO.unit)(_(epochCount, trainingLoss, mainModel.model.module))
-      
+      _ <-
+        trainingCallback.fold(IO.unit)(
+          _(epochCount, trainingLoss, mainModel.model.module)
+        )
 
     } yield trainingLoss
   }
@@ -396,7 +437,7 @@ object DataParallel {
     def startN(s0: S) =
       fold(s0, devices, Nil)
         .map { case (s1, resources) =>
-          val started = resources.parTraverseN(devices.size)(_.allocated)
+          val started = resources.parTraverseN(devices.size + 1)(_.allocated)
           (s1, started)
         }
 
@@ -433,10 +474,15 @@ object DataParallel {
 
   private[lamp] def driveSynchronousLoop[S, A, B](
       fetch: S => IO[(S, Resource[IO, A])],
-      transform: (Long, A) => IO[StreamControl[B]],
+      transform: (
+          Long,
+          A,
+          Seq[ParameterGradients]
+      ) => IO[StreamControl[(B, Seq[ParameterGradients])]],
       reduce: (B, B) => B,
       zero: B,
-      zeroS: S
+      zeroS: S,
+      initPds: Seq[ParameterGradients]
   ): IO[B] = {
 
     def startFetch(q: Queue[IO, (A, IO[Unit])], s0: S) =
@@ -458,7 +504,8 @@ object DataParallel {
         counter: Long,
         acc: B,
         queue: Queue[IO, (A, IO[Unit])],
-        s0: S
+        s0: S,
+        pds: Seq[ParameterGradients]
     ): IO[B] = {
       for {
         fetched <- queue.take
@@ -466,13 +513,13 @@ object DataParallel {
         release = fetched._2
         started <- startFetch(queue, s0)
         s1 = started._1
-        done <- transform(counter, a)
+        done <- transform(counter, a, pds)
         _ <- release
         loopDone <- done match {
           case EndStream  => IO.pure(acc)
-          case EmptyBatch => loop(counter, acc, queue, s1)
-          case NonEmptyBatch(b) =>
-            loop(counter + 1, reduce(b, acc), queue, s1)
+          case EmptyBatch => loop(counter, acc, queue, s1, pds)
+          case NonEmptyBatch((b, updatedPds)) =>
+            loop(counter + 1, reduce(b, acc), queue, s1, updatedPds)
         }
       } yield loopDone
     }
@@ -480,7 +527,7 @@ object DataParallel {
     for {
       q <- Queue.bounded[IO, (A, IO[Unit])](1)
       started <- startFetch(q, zeroS)
-      l <- loop(0, zero, q, started._1)
+      l <- loop(0, zero, q, started._1, initPds)
     } yield l
 
   }

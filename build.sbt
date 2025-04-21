@@ -16,8 +16,8 @@ inThisBuild(
 )
 
 lazy val commonSettings = Seq(
-  scalaVersion := "2.13.15",
-  crossScalaVersions := Seq("2.13.15", "3.3.4"),
+  scalaVersion := "2.13.16",
+  crossScalaVersions := Seq("2.13.16", "3.3.5"),
   Test / parallelExecution := false,
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((3, _)) =>
@@ -122,7 +122,7 @@ lazy val sten = project
   .settings(
     name := "lamp-sten",
     libraryDependencies ++= Seq(
-      "io.github.pityka" %% "aten-scala-core" % "0.0.0+119-7231a9c7",
+      "io.github.pityka" %% "aten-scala-core" % "0.0.0+120-4ca7c56d",
       "org.typelevel" %% "cats-core" % catsCoreVersion,
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
@@ -172,27 +172,6 @@ lazy val data = project
   )
   .dependsOn(core % "test->test;compile->compile", onnx % "test")
 
-lazy val e2etest = project
-  .in(file("endtoendtest"))
-  .configs(Cuda)
-  .configs(AllTest)
-  .settings(commonSettings: _*)
-  .settings(
-    name := "lamp-e2etest",
-    libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
-    ),
-    publish / skip := true,
-    publishArtifact := false,
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    Test / testOptions += Tests.Argument("-l", "cuda slow"),
-    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
-    AllTest / testOptions := Nil
-  )
-  .dependsOn(data)
-  .dependsOn(forest, saddlecompat)
-  .dependsOn(core % "test->test;compile->compile")
 
 lazy val safetensors = project
   .in(file("lamp-safetensors"))
@@ -324,8 +303,8 @@ lazy val example_cifar100_distributed = project
     publish / skip := true,
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "4.0.1",
-      "com.typesafe.akka" %% "akka-actor" % "2.6.20",
-      "com.typesafe.akka" %% "akka-remote" % "2.6.20",
+      "com.typesafe.akka" %% "akka-actor" % "2.6.19", // scala-steward:off
+      "com.typesafe.akka" %% "akka-remote" % "2.6.19", // scala-steward:off
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -333,19 +312,6 @@ lazy val example_cifar100_distributed = project
   .dependsOn(core, data, onnx, saddlecompat, akkacommunicator)
   .enablePlugins(JavaAppPackaging)
 
-lazy val example_timemachine = project
-  .in(file("example-timemachine"))
-  .settings(commonSettings: _*)
-  .settings(
-    publishArtifact := false,
-    publish / skip := true,
-    libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
-      "io.github.pityka" %% "saddle-core" % saddleVersion,
-      "com.outr" %% "scribe" % scribeVersion
-    )
-  )
-  .dependsOn(core, data, saddlecompat)
 lazy val example_bert = project
   .in(file("example-bert"))
   .settings(commonSettings: _*)
@@ -438,8 +404,6 @@ lazy val docs = project
         experiment_recursivelm,
         example_cifar100,
         example_cifar100_distributed,
-        example_timemachine,
-        e2etest,
         safetensors
       ))
   )
@@ -466,8 +430,6 @@ lazy val root = project
     docs,
     example_cifar100,
     example_cifar100_distributed,
-    example_timemachine,
     example_arxiv,
     example_bert,
-    e2etest
   )

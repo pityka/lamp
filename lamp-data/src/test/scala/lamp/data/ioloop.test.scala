@@ -18,7 +18,7 @@ class IOLoopSuite extends AnyFunSuite {
   ) =
     Seq2(
       Linear(dim, k, tOpt = tOpt),
-      Fun(implicit pool => _.logSoftMax(dim = 1))
+      Fun(_ => _.logSoftMax(dim = 1))
     )
 
   def test1(id: String)(fun: Boolean => Unit) = {
@@ -28,6 +28,7 @@ class IOLoopSuite extends AnyFunSuite {
 
   test1("mnist tabular full batch") { cuda =>
     Scope.root { implicit scope =>
+
       val device = if (cuda) CudaDevice(0) else CPU
       val data = org.saddle.csv.CsvParser
         .parseInputStreamWithHeader[Double](
@@ -69,8 +70,8 @@ class IOLoopSuite extends AnyFunSuite {
         printMemoryAllocations = true
       )
 
-      val (epoch, trainedModel, learningCurve, _) = IOLoops
-        .withSWA(
+      val (epoch, trainedModel, learningCurve,_, _) = IOLoops
+        .epochs(
           model = model,
           optimizerFactory = SGDW
             .factory(
@@ -82,8 +83,7 @@ class IOLoopSuite extends AnyFunSuite {
           validationBatchesOverEpoch = Some((_: IOLoops.TrainingLoopContext) =>
             BatchStream.fromFullBatch(x, target, device)
           ),
-          warmupEpochs = 50,
-          swaEpochs = 20,
+          epochs = 100,
           trainingCallback = None,
           validationCallback = None,
           returnMinValidationLossModel = List(1, 25, 50)
@@ -98,15 +98,16 @@ class IOLoopSuite extends AnyFunSuite {
             target,
             acc,
             true,
-            true
+            true,
+            ParameterGradients.empty
           )
       val loss = acc.toDoubleArray.head / n
       tensorLogger.cancel()
 
-      assert(epoch == 25)
+      assert(epoch == 50)
       println(loss)
 
-      assert(learningCurve.size == 70)
+      assert(learningCurve.size == 100)
 
       assert(loss < 50)
       ()
@@ -114,6 +115,7 @@ class IOLoopSuite extends AnyFunSuite {
   }
   test1("mnist tabular mini batch") { cuda =>
     Scope.root { implicit scope =>
+
       val device = if (cuda) CudaDevice(0) else CPU
       val data = org.saddle.csv.CsvParser
         .parseInputStreamWithHeader[Double](
@@ -174,7 +176,8 @@ class IOLoopSuite extends AnyFunSuite {
           target,
           acc,
           true,
-          true
+          true,
+          ParameterGradients.empty
         )
       val loss = acc.toDoubleArray.head / n
       assert(loss < 50)
@@ -228,7 +231,7 @@ class IOLoopSuite extends AnyFunSuite {
           validationBatchesOverEpoch = Some((_: IOLoops.TrainingLoopContext) =>
             BatchStream.minibatchesFromFull(200, true, x, target, rng)
           ),
-          epochs = 50,
+          epochs = 100,
           trainingCallback = None,
           validationCallback = None,
           prefetch = true,
@@ -244,7 +247,8 @@ class IOLoopSuite extends AnyFunSuite {
           target,
           acc,
           true,
-          true
+          true,
+          ParameterGradients.empty
         )
       val loss = acc.toDoubleArray.head / n
       assert(loss < 50)

@@ -24,12 +24,12 @@ class ShampooSuite extends AnyFunSuite {
         parameters = List((params, NoTag)),
         learningRate = simple(0.1d),
       )
-      opt.step(List(Some(gradients)), 1d)
+      opt.step(List((gradients)), 1d)
       val updatedParams1 = params.toMat
       assert(
         updatedParams1.roundTo(4) == Mat(Vec(0.9445, 0.2101)).T
       )
-      opt.step(List(Some(gradients)), 1d)
+      opt.step(List((gradients)), 1d)
       val updatedParams2 = params.toMat
 
       assert(
@@ -46,12 +46,12 @@ class ShampooSuite extends AnyFunSuite {
         parameters = List((params, NoTag)),
         learningRate = simple(0.1d),
       )
-      opt.step(List(Some(gradients)), 1d)
+      opt.step(List((gradients)), 1d)
       // val updatedParams1 = params.toMat
       // assert(
       //   updatedParams1.roundTo(4) == Mat(Vec(0.9445, 0.2101)).T
       // )
-      opt.step(List(Some(gradients)), 1d)
+      opt.step(List((gradients)), 1d)
       // val updatedParams2 = params.toMat
 
       // assert(

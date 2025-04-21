@@ -9,6 +9,7 @@ import lamp.Scope
 import cats.effect.std.Queue
 import lamp.Movable
 import lamp.Device
+import lamp.autograd.ForwardCache
 
 /** Contains a training loops and helpers around it
   *
@@ -33,7 +34,7 @@ object IOLoops {
       model: M with GenericModule[I, Variable]
   ): IO[Unit] = {
 
-    val device = model.state.head._1.value.device
+    val device = model.state.head._1.constantValue.device
 
     def loop(
         batch: Resource[IO, StreamControl[(I, STen)]],
@@ -44,7 +45,12 @@ object IOLoops {
         case EndStream  => IO.pure(false)
         case EmptyBatch => IO.pure(true)
         case NonEmptyBatch((x, _)) =>
-          IO { Scope.root { implicit scope => model.forward(x); () }; true }
+          IO {
+            Scope.root { implicit scope =>
+              implicit val fw = ForwardCache.selective
+              model.forward(x).forward; ()
+            }; true
+          }
       } flatMap {
         case true =>
           batchStream.nextBatch(device, buffer, s0).flatMap { case (s1, next) =>
@@ -67,7 +73,7 @@ object IOLoops {
       model: M with GenericModule[A, B]
   )(implicit scope: Scope): IO[Vector[B]] = {
 
-    val device = model.state.head._1.value.device
+    val device = model.state.head._1.constantValue.device
 
     def loop(
         batch: Resource[IO, StreamControl[A]],
@@ -81,6 +87,7 @@ object IOLoops {
         case NonEmptyBatch(x) =>
           IO {
             Right(acc :+ Scope { implicit scope =>
+              implicit val fw = ForwardCache.selective
               model.forward(x)
             })
           }
@@ -131,6 +138,7 @@ object IOLoops {
                     .parTraverseN(batches.size) { case (batch, model) =>
                       IO {
                         Scope { implicit scope =>
+                          implicit val fw = ForwardCache.selective
                           val forwarded =
                             model.forward(batch._1)
                           val o2 = tx(batch, forwarded)
@@ -162,144 +170,6 @@ object IOLoops {
         buffers
       )
     )
-  }
-
-  // import scala.reflect.runtime.universe._
-
-  def withSWA[I, M <: GenericModule[
-    I,
-    Variable
-  ]: Load, LRState, LRStateSWA, BatchStreamState, BatchStreamBuffers](
-      model: SupervisedModel[I, M],
-      optimizerFactory: Seq[(STen, PTag)] => Optimizer,
-      trainBatchesOverEpoch: TrainingLoopContext => BatchStream[
-        (I, STen),
-        BatchStreamState,
-        BatchStreamBuffers
-      ],
-      warmupEpochs: Int,
-      swaEpochs: Int,
-      validationBatchesOverEpoch: Option[
-        TrainingLoopContext => BatchStream[
-          (I, STen),
-          BatchStreamState,
-          BatchStreamBuffers
-        ]
-      ] = None,
-      trainingCallback: Option[TrainingCallback[M]] = None,
-      validationCallback: Option[ValidationCallback[M]] = None,
-      checkpointState: Option[
-        (SimpleThenSWALoopState, Either[LRState, LRStateSWA]) => IO[Unit]
-      ] = None,
-      logger: Option[Logger] = None,
-      returnMinValidationLossModel: Seq[Int] = Nil,
-      learningRateSchedule: LearningRateSchedule[LRState] =
-        LearningRateSchedule.decrement(20, 0.5),
-      swaLearningRateSchedule: SWA.SWALearningRateSchedule[LRStateSWA] =
-        SWA.SWALearningRateSchedule.cyclic(
-          minFactor = 0.01,
-          maxFactor = 1d,
-          cycleLength = 10
-        ),
-      prefetch: Boolean = false,
-      dataParallelModels: Seq[SupervisedModel[I, M]] = Nil,
-      initState: Option[SimpleThenSWALoopState] = None,
-      accumulateGradientOverNBatches: Int = 1,
-      learningRateScheduleInitState: Option[LRState] = None,
-      swaLearningRateScheduleInitState: Option[LRStateSWA] = None,
-      swaForwardPassAfterTraining: Boolean = true,
-      validationLossExponentialSmoothingFactor: Double = 1.0
-  ) = {
-    for {
-      warmedup <-
-        initState match {
-          case Some(SimpleThenSWALoopState(simple, Some(_))) =>
-            IO.pure(
-              (
-                simple.epoch,
-                model,
-                simple.learningCurve,
-                learningRateScheduleInitState.getOrElse(
-                  learningRateSchedule.init
-                ),
-                simple
-              )
-            )
-
-          case _ =>
-            epochs(
-              model = model,
-              optimizerFactory = optimizerFactory,
-              trainBatchesOverEpoch = trainBatchesOverEpoch,
-              validationBatchesOverEpoch = validationBatchesOverEpoch,
-              epochs = warmupEpochs,
-              trainingCallback = trainingCallback,
-              validationCallback = validationCallback,
-              checkpointState = checkpointState.map(fun =>
-                (s: SimpleLoopState, lr: LRState) =>
-                  fun(SimpleThenSWALoopState(s, None), Left(lr))
-              ),
-              // checkpointLRState,
-              validationFrequency = 1,
-              logger = logger,
-              returnMinValidationLossModel = returnMinValidationLossModel,
-              learningRateSchedule = learningRateSchedule,
-              prefetch = prefetch,
-              overlapModelWithLoad = true,
-              dataParallelModels = dataParallelModels,
-              initState = initState.map(_.simple),
-              accumulateGradientOverNBatches = accumulateGradientOverNBatches,
-              learningRateScheduleInitState = learningRateScheduleInitState,
-              validationLossExponentialSmoothingFactor =
-                validationLossExponentialSmoothingFactor
-            )
-        }
-      warmupEpochReturned = warmedup._1
-      warmedupModel = warmedup._2
-      warmupLearningCurve = warmedup._3
-      warmupLRState = warmedup._4
-      warmupLoopState = warmedup._5
-      swaResult <- SWA.epochs(
-        warmedupModel,
-        optimizerFactory,
-        trainBatchesOverEpoch,
-        validationBatchesOverEpoch,
-        swaEpochs,
-        trainingCallback,
-        validationCallback,
-        checkpointState.map(fun =>
-          (s: SWALoopState, lrState: LRStateSWA) =>
-            fun(
-              SimpleThenSWALoopState(warmupLoopState, Some(s)),
-              Right(lrState)
-            )
-        ),
-        // checkpointSWALRState,
-        1,
-        logger,
-        swaLearningRateSchedule,
-        prefetch,
-        dataParallelModels,
-        initState.flatMap(_.swa),
-        accumulateGradientOverNBatches,
-        swaLearningRateScheduleInitState match {
-          case Some(x) => Some(x)
-          case None
-              if swaLearningRateSchedule.init.getClass == warmupLRState.getClass =>
-            Some(warmupLRState.asInstanceOf[LRStateSWA])
-          case _ => None
-        },
-        swaForwardPassAfterTraining
-      )
-    } yield {
-      val swaModel = swaResult._1
-      val swaLearningCurve = swaResult._2
-      val m = warmupLearningCurve.map(_._1).max + 1
-      val concatLearningCurve = warmupLearningCurve ++ swaLearningCurve.map {
-        case (epoch, l1, l2) => (epoch + m, l1, l2.map(x => (x, x)))
-      }
-      (warmupEpochReturned, swaModel, concatLearningCurve, warmedupModel)
-    }
   }
 
   def epochs[I, M <: GenericModule[
@@ -350,16 +220,27 @@ object IOLoops {
         : ModelWithOptimizer[I, M with GenericModule[I, Variable]] =
       model.asTraining.zipOptimizer(optimizerFactory)
 
-    if (printOptimizerAllocations) {
+    { // print or log optimizer allocation
       val (c, bts) = {
         val state = modelWithOptimizer.optimizer.state
         val c = state.size
         val b = state.map(_.numBytes).sum
         (c, b)
       }
-      println(
-        s"Optimizer allocations: $c(${"%.4f".format(bts.toDouble * 1e-9)}GB)"
-      )
+      logger match {
+        case None =>
+          if (printOptimizerAllocations) {
+            println(
+              s"Optimizer allocations: $c tensors (${"%.4f".format(bts.toDouble * 1e-9)}GB)"
+            )
+          }
+        case Some(value) => {
+          value.info(
+            s"Optimizer allocations: $c tensors (${"%.4f".format(bts.toDouble * 1e-9)}GB)"
+          )
+        }
+      }
+
     }
 
     initState.foreach { case state =>
@@ -431,7 +312,7 @@ object IOLoops {
           logger.foreach(_.info(s"Copying model at epoch $epoch"))
           minValidationLossModel.foreach(_._2.foreach(_.release))
           val copiedState =
-            model.module.state.map(_._1.value).map { t =>
+            model.module.state.map(_._1.constantValue).map { t =>
               aten.ATen.clone(t.value)
             }
 
@@ -522,11 +403,12 @@ object IOLoops {
               }
             } else IO.pure(None)
 
-          _ <- 
+          _ <-
             maybeValidationLoss.fold(IO.unit) { case (validationLoss, _) =>
-              validationCallback.fold(IO.unit)(_.apply(epoch, validationLoss, model.module))
+              validationCallback.fold(IO.unit)(
+                _.apply(epoch, validationLoss, model.module)
+              )
             }
-          
 
           nextMinValidationLoss =
             if (
@@ -560,7 +442,7 @@ object IOLoops {
             if (checkpointState.isDefined)
               checkpointState.get(
                 SimpleLoopState(
-                  modelWithOptimizer.model.module.state.map(_._1.value),
+                  modelWithOptimizer.model.module.state.map(_._1.constantValue),
                   modelWithOptimizer.optimizer.state,
                   epoch + 1,
                   maybeValidationLoss.map { case (smoothedValidationLoss, _) =>
@@ -616,46 +498,55 @@ object IOLoops {
       accumulateGradientOverNBatches: Int
   ): IO[Double] = {
 
-    val device = model.model.module.state.head._1.value.device
+    val device = model.model.module.state.head._1.constantValue.device
 
     def processBatch(
         elem: StreamControl[(I, STen)],
         lossAcc: STen,
-        batchCount: Long
-    ): StreamControl[Long] = elem.map { case (sample, target) =>
-      if (accumulateGradientOverNBatches <= 1) {
-        val (numInstances, gradients) =
-          model.model.addTotalLossAndReturnGradientsAndNumExamples(
-            samples = sample,
-            target = target,
-            acc = lossAcc,
-            zeroGrad = true,
-            switchStream = overlapModelWithLoad
-          )
+        batchCount: Long,
+        partialDerivatives: ParameterGradients,
+        scope: Scope
+    ): StreamControl[(Long, ParameterGradients)] = elem.map {
+      case (sample, target) =>
+        if (accumulateGradientOverNBatches <= 1) {
+          val (numInstances, updatedPD) =
+            model.model.addTotalLossAndReturnGradientsAndNumExamples(
+              samples = sample,
+              target = target,
+              acc = lossAcc,
+              zeroGrad = true,
+              switchStream = overlapModelWithLoad,
+              pd = partialDerivatives
+            )(scope)
+          val gradients =
+            model.model.module.parameters.map(_._1).map(v => updatedPD.map(v))
 
-        model.optimizer.step(gradients, learningRateScheduleFactor)
-        numInstances
-      } else {
-
-        val (numInstances, gradients) =
-          model.model.addTotalLossAndReturnGradientsAndNumExamples(
-            samples = sample,
-            target = target,
-            acc = lossAcc,
-            zeroGrad = false,
-            switchStream = prefetch
-          )
-
-        if (
-          (batchCount % accumulateGradientOverNBatches) == (accumulateGradientOverNBatches - 1)
-        ) {
           model.optimizer.step(gradients, learningRateScheduleFactor)
-          model.model.zeroGrad()
+          (numInstances, updatedPD)
+        } else {
+
+          val (numInstances, updatedPD) =
+            model.model.addTotalLossAndReturnGradientsAndNumExamples(
+              samples = sample,
+              target = target,
+              acc = lossAcc,
+              zeroGrad = false,
+              switchStream = prefetch,
+              pd = partialDerivatives
+            )(scope)
+
+          if (
+            (batchCount % accumulateGradientOverNBatches) == (accumulateGradientOverNBatches - 1)
+          ) {
+            val gradients =
+              model.model.module.parameters.map(_._1).map(v => updatedPD.map(v))
+              model.optimizer.step(gradients, learningRateScheduleFactor)
+              gradients.foreach(_.zero_())
+          }
+
+          (numInstances, updatedPD)
+
         }
-
-        numInstances
-
-      }
 
     }
 
@@ -664,7 +555,9 @@ object IOLoops {
         numInstancesAcc: Long,
         batchCount: Long,
         state0: S,
-        buffers: C
+        buffers: C,
+        partialDerivatives: ParameterGradients,
+        scope: Scope
     ): IO[Long] = {
 
       trainBatches
@@ -672,21 +565,42 @@ object IOLoops {
         .flatMap { case (state1, resource) =>
           resource
             .use { batch =>
-              IO { (state1, processBatch(batch, lossAcc, batchCount)) }
+              IO.interruptible {
+                (
+                  state1,
+                  processBatch(
+                    batch,
+                    lossAcc,
+                    batchCount,
+                    partialDerivatives,
+                    scope
+                  )
+                )
+              }
             }
 
         }
         .flatMap {
           case (_, EndStream) => IO.pure(numInstancesAcc)
           case (s1, EmptyBatch) =>
-            simpleLoop(lossAcc, numInstancesAcc, batchCount, s1, buffers)
-          case (s1, NonEmptyBatch(numInstances)) =>
+            simpleLoop(
+              lossAcc,
+              numInstancesAcc,
+              batchCount,
+              s1,
+              buffers,
+              partialDerivatives,
+              scope
+            )
+          case (s1, NonEmptyBatch((numInstances, updatedPartialDerivatives))) =>
             simpleLoop(
               lossAcc,
               numInstances + numInstancesAcc,
               batchCount + 1L,
               s1,
-              buffers
+              buffers,
+              updatedPartialDerivatives,
+              scope
             )
         }
 
@@ -694,14 +608,21 @@ object IOLoops {
 
     def prefetchLoop(
         lossAcc: STen,
-        buffers: C
+        buffers: C,
+        scope: Scope
     ) = {
 
       prefetch1[S, (I, STen), Long](
         fetch = (s) => trainBatches.nextBatch(device, buffers, s),
-        transform = (batchCounter, batch) =>
+        transform = (batchCounter, parameterGradients, batch) =>
           IO {
-            processBatch(batch, lossAcc, batchCounter)
+            processBatch(
+              batch,
+              lossAcc,
+              batchCounter,
+              parameterGradients,
+              scope
+            )
           },
         reduce = (b, acc) => (acc + b),
         zero = 0L,
@@ -712,14 +633,26 @@ object IOLoops {
     val epochLoop = Scope.inResource.use { implicit scope =>
       trainBatches.allocateBuffers(device).use { buffers =>
         val lossAcc =
-          STen.scalarDouble(0d, model.model.module.state.head._1.options)
+          STen.scalarFloat(
+            0f,
+            model.model.module.state.head._1.constantValue.options
+          )
         val loopDone =
           if (prefetch)
-            prefetchLoop(lossAcc, buffers)
-          else simpleLoop(lossAcc, 0L, 0L, trainBatches.init, buffers)
+            prefetchLoop(lossAcc, buffers, scope)
+          else
+            simpleLoop(
+              lossAcc,
+              0L,
+              0L,
+              trainBatches.init,
+              buffers,
+              ParameterGradients.empty,
+              scope
+            )
 
         loopDone.map { numInstances =>
-          val totalLoss = lossAcc.toDoubleArray.apply(0)
+          val totalLoss = lossAcc.toDevice(lamp.CPU).toDoubleArray.apply(0)
           (totalLoss, numInstances)
         }
       }
@@ -741,9 +674,10 @@ object IOLoops {
           )
         )
       }
-      _ <- 
-        trainingCallback.fold(IO.unit)(_.apply(epochCount, trainingLoss, model.model.module))
-      
+      _ <-
+        trainingCallback.fold(IO.unit)(
+          _.apply(epochCount, trainingLoss, model.model.module)
+        )
 
     } yield trainingLoss
 
@@ -755,7 +689,7 @@ object IOLoops {
       logger: Option[Logger],
       epochCount: Long
   ): IO[Double] = {
-    val device = model.module.state.head._1.value.device
+    val device = model.module.state.head._1.constantValue.device
     val modelAsEval = model.asEval
 
     def loop(
@@ -806,7 +740,8 @@ object IOLoops {
       validationBatches.allocateBuffers(device).use { buffers =>
         loop(
           0,
-          STen.scalarDouble(0d, model.module.state.head._1.options),
+          STen
+            .scalarDouble(0d, model.module.state.head._1.constantValue.options),
           0L,
           validationBatches.init,
           buffers
@@ -820,9 +755,9 @@ object IOLoops {
                 )
               )
             }
-            _ <- 
-              validationCallback.fold(IO.unit)(_(epochCount, validationLoss, model.module))
-            
+            _ <-
+              validationCallback
+                .fold(IO.unit)(_(epochCount, validationLoss, model.module))
 
           } yield validationLoss
         }
@@ -832,7 +767,11 @@ object IOLoops {
 
   private[lamp] def prefetch1[S, A, B](
       fetch: S => IO[(S, Resource[IO, StreamControl[A]])],
-      transform: (Long, StreamControl[A]) => IO[StreamControl[B]],
+      transform: (
+          Long,
+          ParameterGradients,
+          StreamControl[A]
+      ) => IO[StreamControl[(B, ParameterGradients)]],
       reduce: (B, B) => B,
       zero: B,
       zeroS: S
@@ -842,7 +781,8 @@ object IOLoops {
         counter: Long,
         acc: B,
         queue: Queue[IO, (StreamControl[A], IO[Unit])],
-        s0: S
+        s0: S,
+        parameterGradients: ParameterGradients
     ): IO[B] = {
       for {
         fetched <- queue.take
@@ -852,13 +792,13 @@ object IOLoops {
         s1 = pair._1
         resource = pair._2
         _ <- resource.allocated.flatMap(queue.offer).start
-        done <- transform(counter, a)
+        done <- transform(counter, parameterGradients, a)
         _ <- release
         loopDone <- done match {
           case EndStream  => IO.pure(acc)
-          case EmptyBatch => loop(counter, acc, queue, s1)
-          case NonEmptyBatch(b) =>
-            loop(counter + 1, reduce(b, acc), queue, s1)
+          case EmptyBatch => loop(counter, acc, queue, s1, parameterGradients)
+          case NonEmptyBatch((b, pd)) =>
+            loop(counter + 1, reduce(b, acc), queue, s1, pd)
         }
       } yield loopDone
     }
@@ -868,7 +808,7 @@ object IOLoops {
       pair <- fetch(zeroS)
       s1 = pair._1
       _ <- pair._2.allocated.flatMap(q.offer).start
-      l <- loop(0, zero, q, s1)
+      l <- loop(0, zero, q, s1, ParameterGradients.empty)
     } yield l
 
   }

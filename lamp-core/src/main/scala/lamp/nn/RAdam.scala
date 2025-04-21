@@ -36,7 +36,8 @@ case class RAdam(
     beta1: OptimizerHyperparameter = simple(0.9),
     beta2: OptimizerHyperparameter = simple(0.999),
     eps: Double = 1e-8,
-    clip0: Option[Double] = None
+    clip0: Option[Double] = None,
+    printGradientNorm: Boolean = false
 ) extends Optimizer {
   val scope = Scope.free
     val clip = clip0.map(theta => STen.scalarDouble(theta,parameters.head._1.options(scope))(scope))
@@ -64,20 +65,16 @@ case class RAdam(
   def state = {
     List(stepCountSTen) ++ mt ++ vt
   }
-  def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
-    clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
+  def step(gradients: Seq[STen], scheduleFactor: Double) = {
+    clip.foreach { theta => gradientClippingInPlace(gradients, theta, printGradientNorm) }
     stepCount += 1
     stepCountSTen += 1d
     parameters
       .zip(gradients)
       .zip(mt)
       .zip(vt)
-      .filter(_._1._1._2.isDefined)
-      .foreach {
-        case ((((_, _), None), _), _) =>
-          // won't happent, see filter above
-          ???
-        case ((((param, tag), Some(gradients)), mt), vt) =>
+      .foreach {        
+        case ((((param, tag), gradients), mt), vt) =>
           val wd = weightDecay(tag)
           val b1 = beta1(tag)
           val b2 = beta2(tag)

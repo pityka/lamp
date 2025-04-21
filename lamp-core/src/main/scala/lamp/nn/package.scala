@@ -32,9 +32,8 @@ import lamp.autograd.{Constant, param}
   *   - [[nn.MLP]] is a factory of a multilayer perceptron architecture
   */
 package object nn {
+  type FW[_] = lamp.autograd.ForwardCache
   type Module = GenericModule[Variable, Variable]
-  type StatefulModule[A, B, C] = GenericModule[(A, C), (B, C)]
-  type StatefulModule2[A, B, C, D] = GenericModule[(A, C), (B, D)]
 
   implicit class TrainingModeSyntax[M: TrainingMode](m: M) {
     def asEval: M = implicitly[TrainingMode[M]].asEval(m)
@@ -44,55 +43,37 @@ package object nn {
     def load(tensors: Seq[STen]): Unit =
       implicitly[Load[M]].load(m, tensors)
   }
-  implicit class InitStateSyntax[M, C](m: M)(implicit is: InitState[M, C]) {
-    def initState = is.initState(m)
-  }
-
-  implicit class ToLift[M <: Module](mod: M with Module) {
-    def lift = LiftedModule(mod)
-  }
-  implicit class ToUnlift[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
-      mod: M with StatefulModule2[A, B, C, D]
-  )(implicit
-      is: InitState[M, C]
-  ) {
-    def unlift = UnliftedModule(mod)(is)
-  }
-  implicit class ToMappedState[A, B, C, M <: StatefulModule[A, B, C]](
-      mod: M with StatefulModule[A, B, C]
-  ) {
-    def mapState[D](f: C => D) = MappedState[A, B, C, D, M](mod, f)
-  }
-  implicit class ToWithInit[A, B, C, M <: StatefulModule[A, B, C]](
-      mod: M with StatefulModule[A, B, C]
-  ) {
-    def withInit(c: C) = WithInit[A, B, C, M](mod, c)
-  }
 
   def gradientClippingInPlace(
-      gradients: Seq[Option[STen]],
-      theta: STen
+      gradients: Seq[STen],
+      theta: STen,
+      printGradientNorm: Boolean
   ): Unit = {
     Scope.root { implicit scope =>
       val one =
-        STen.ones(List(1), gradients.find(_.isDefined).flatten.get.options)
+        STen.ones(List(1), gradients.head.options)
       val sum =
-        STen.zeros(List(1), gradients.find(_.isDefined).flatten.get.options)
+        STen.zeros(List(1), gradients.head.options)
       gradients
-        .foreach {
-          case Some(g) =>
-            sum += g.view(-1).norm2(List(0),false).pow(2d)
-          case None => None
+        .foreach { case g =>
+          val norm = g.view(-1).norm2(List(0), false)
+          sum += norm.pow(2d)
         }
       val norm = sum.sqrt
+      if (printGradientNorm) {
+        val n = norm.toDevice(lamp.CPU).castToDouble.toDoubleArray(0)
+        println(
+          "Total gradient norm before clipping: " + n + s"${if (n == 0d) " !!! Zero total gradient !!!"
+          else ""}"
+        )
+
+      }
 
       val scalar = theta / norm
       val s2 = scalar.min(one)
 
-      gradients.foreach {
-        case None =>
-        case Some(g) =>
-          g *= s2
+      gradients.foreach { case g =>
+        g *= s2
       }
 
     }

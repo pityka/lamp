@@ -15,17 +15,17 @@ case class MPNN[M1 <: Module, M2 <: Module](
   def state =
     messageTransform.state ++ vertexTransform.state
 
-  override def forward[S: Sc](
+  override def forward[S:Sc, F:FW](
       x: Graph
   ): Graph = {
     val message = {
-      val vI = x.nodeFeatures.indexSelect(dim = 0, const(x.edgeI))
-      val vJ = x.nodeFeatures.indexSelect(dim = 0, const(x.edgeJ))
+      val vI = x.nodeFeatures.indexSelect(dim = 0, (x.edgeI))
+      val vJ = x.nodeFeatures.indexSelect(dim = 0, (x.edgeJ))
       Variable.cat(List(x.edgeFeatures, vI, vJ), dim = 1)
     }
     val messageTx = messageTransform.forward(message)
     val aggregatedMessage = MPNN.aggregate(
-      numVertices = x.nodeFeatures.shape(0),
+      numVertices = x.nodeFeatures.shape.apply(0),
       message = messageTx,
       edgeI = x.edgeI,
       edgeJ = x.edgeJ,
@@ -38,7 +38,7 @@ case class MPNN[M1 <: Module, M2 <: Module](
     )
 
     val addOrNot =
-      if (updatedVertex.shape(1) == x.nodeFeatures.shape(1))
+      if (updatedVertex.shape.apply(1) == x.nodeFeatures.shape.apply(1))
         x.nodeFeatures + updatedVertex
       else updatedVertex
 
@@ -78,7 +78,7 @@ object MPNN {
       zeros.indexAdd(0, t, ones)
   }
 
-  def aggregate[S: Sc](
+  def aggregate[S: Sc,F:FW](
       numVertices: Long,
       message: Variable,
       edgeI: STen,
@@ -89,7 +89,7 @@ object MPNN {
   ) = {
     val p = if (degreeNormalizeJ && degreeNormalizeI) -0.5 else -1d
 
-    val tpe = message.value.scalarTypeByte
+    val tpe = message.scalarTypeByte
 
     val normalizedMessage = {
       val t1 =
@@ -114,10 +114,10 @@ object MPNN {
       else t1
     }
 
-    val aggregateI = normalizedMessage.indexAdd(const(edgeJ), 0, numVertices)
+    val aggregateI = normalizedMessage.indexAdd((edgeJ), 0, numVertices)
 
     if (aggregateJ) {
-      val aggregateJ = normalizedMessage.indexAdd(const(edgeI), 0, numVertices)
+      val aggregateJ = normalizedMessage.indexAdd((edgeI), 0, numVertices)
 
       aggregateI + aggregateJ
     } else aggregateI

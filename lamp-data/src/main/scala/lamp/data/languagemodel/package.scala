@@ -2,7 +2,6 @@ package lamp.data
 
 import lamp._
 import lamp.data.BatchStream.scopeInResource
-import lamp.autograd.const
 import lamp.nn.languagemodel.LossInput
 import lamp.nn.languagemodel.LanguageModelInput
 import lamp.nn.languagemodel.LanguageModelModule
@@ -40,7 +39,7 @@ package object languagemodel {
       temperature: Double
   )(scope: Scope): IO[Array[Char]] = {
     assert(temperature > 0d)
-    val device = model.tokenEmbedding.weights.value.device
+    val device = model.tokenEmbedding.weights.constantValue.device
     def makeInput(prefix: Array[Char])(implicit scope: Scope) = {
       val tokens =
         STen
@@ -58,7 +57,7 @@ package object languagemodel {
       }
 
       LanguageModelInput(
-        tokens = const(device.to(tokens)),
+        tokens = (device.to(tokens)),
         maxLength = Some(device.to(maxLength)),
         positions = Some(device.to(positions))
       )
@@ -78,8 +77,8 @@ package object languagemodel {
           buffers = Resource.unit,
           model = lamp.nn.sequence(
             model,
-            GenericFun[LanguageModelOutput, LanguageModelOutputNonVariable](_ =>
-              _.toSTen
+            GenericFun[LanguageModelOutput, LanguageModelOutputNonVariable](  _ => fw => 
+              _.toSTen(fw)
             )
           )
         )
@@ -132,7 +131,7 @@ package object languagemodel {
       numBatches: Int,
       corpus: STen,
       blockLength: Int,
-      createMaxLength: Boolean = true
+      createMaxLength: Boolean
   ) = {
     def makeNonEmptyBatch(device: Device) = {
       scopeInResource.evalMap { implicit scope =>
@@ -181,10 +180,11 @@ package object languagemodel {
               k
             }
           }
+          
 
           val batch = LossInput(
             input = LanguageModelInput(
-              tokens = const(tokens),
+              tokens = (tokens),
               maxLength = maxLength,
               positions = None
             ),

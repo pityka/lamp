@@ -12,7 +12,7 @@ object Inference {
       val device =
         if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
 
-      val model = Model.allocateModel(device).module
+      val model = Model.allocateModel(device, config.gradientCheckpointing, config.mixedPrecision).module
 
       val checkpointedState = config.checkpointSave
         .map { state =>

@@ -57,25 +57,31 @@ package lamp
   */
 package object autograd {
 
+
   def const(m: STen): Constant =
-    ConstantWithoutGrad(m)
+    new ConstantWithoutGrad(m)
 
   def const(
       m: Double,
       tOpt: STenOptions = STenOptions.d
   )(implicit scope: Scope): Constant =
-    ConstantWithoutGrad(STen.scalarDouble(m, tOpt))
+    new ConstantWithoutGrad(STen.scalarDouble(m, tOpt))
 
-  def param(m: STen)(implicit scope: Scope): ConstantWithGrad =
-    ConstantWithGrad(m, STen.zerosLike(m)(scope))
+  def param(m: STen): ConstantWithGrad =
+    new ConstantWithGrad(m)
   def param(
       m: Double,
       tOpt: STenOptions = STenOptions.d
   )(implicit scope: Scope): ConstantWithGrad =
     Scope { implicit scope =>
       val scalar = STen.scalarDouble(m, tOpt).view(1)
-      ConstantWithGrad(scalar, STen.zerosLike(scalar)(scope))
+      new ConstantWithGrad(scalar)
     }
+
+  def needsGrad(v:Variable) = v match {
+                case _: ConstantWithoutGrad => false
+                case _                      => true
+              }
 
   private[lamp] def measure[T](tag: String)(body: => T): T = {
     val t1 = System.nanoTime()

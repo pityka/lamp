@@ -11,16 +11,20 @@ object Train {
   def train(
       config: CliConfig,
       trainTokens: STen,
-      validTokens: Option[STen]
+      validTokens: Option[STen],
   )(implicit scope: Scope): IO[Unit] = Scope.bracket(scope) { implicit scope =>
     val device =
-      if (config.gpus.nonEmpty) CudaDevice(config.gpus.head) else CPU
+      if (config.gpus.nonEmpty) {if (aten.Tensor.hasMps) 
+        MPS else 
+        CudaDevice(config.gpus.head)} else 
+         CPU
+      
 
-    val model = Model.allocateModel(device)
+    val model = Model.allocateModel(device, config.gradientCheckpointing,config.mixedPrecision)
 
-    val extraModels = config.gpus.drop(1).map { deviceNum =>
-      val device = CudaDevice(deviceNum)
-      Model.allocateModel(device)
+    val extraModels =  config.gpus.drop(1).map { deviceNum =>
+      val device = if (aten.Tensor.hasMps) MPS else CudaDevice(deviceNum)
+      Model.allocateModel(device, config.gradientCheckpointing, config.mixedPrecision)
     }
 
     val checkpointedState = config.checkpointSave.flatMap { state =>
@@ -38,7 +42,8 @@ object Train {
         minibatchSize = config.trainBatchSize,
         numBatches = config.numBatchesPerEpoch,
         corpus = trainTokens,
-        blockLength = Model.contextLength
+        blockLength = Model.contextLength,
+        createMaxLength = true
       )
     val validEpochs = validTokens.map(validTokens =>
       (_: IOLoops.TrainingLoopContext) =>
@@ -46,7 +51,8 @@ object Train {
           minibatchSize = config.trainBatchSize,
           numBatches = config.numBatchesPerEpoch,
           corpus = validTokens,
-          blockLength = Model.contextLength
+          blockLength = Model.contextLength,
+          createMaxLength = true
         )
     )
 
@@ -62,7 +68,8 @@ object Train {
       learningRate = simple(config.learningRate),
       beta2 = simple(config.beta2),
       clip = Some(1d),
-      mixedPrecision = true
+      mixedPrecision = config.mixedPrecision,
+      printGradientNorm = false
     )
 
     IOLoops

@@ -1,7 +1,12 @@
 package lamp.nn
-import lamp.autograd.{Variable, const}
+import lamp.autograd.{Variable}
 import lamp.Scope
 import lamp.STen
+import lamp.autograd.ConstantWithGrad
+import lamp.Movable
+import lamp.autograd.Autograd.BackpropForwardCache
+import lamp.autograd.Autograd.CacheStrategy
+import lamp.autograd.Autograd
 
 /** Loss and Gradient calculation
   *
@@ -16,71 +21,14 @@ trait LossCalculation[I] {
       lossFunction: LossFunction,
       computeGradients: Boolean,
       zeroGradBeforeComputingGradients: Boolean,
-      switchStream: Boolean
-  )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]])
+      switchStream: Boolean,
+      partialDerivatives: Map[Variable, STen],
+      printMemoryAllocations: Boolean,
+      cacheStrategy: CacheStrategy,
+      printZeroGradients: Boolean
+  )(implicit scope: Scope): (STen, Long, Map[Variable, STen])
 }
 
-/** Evaluates the gradient at current point + eps where eps is I *
-  * N(0,noiseLevel)
-  */
-class PerturbedLossCalculation[I](noiseLevel: Double)
-    extends LossCalculation[I] {
-
-  private def perturb(noiseLevel: Double, params: Seq[STen])(implicit
-      scope: Scope
-  ) = {
-
-    params.foreach { case param =>
-      val n = STen.randn(param.shape, param.options)
-      n *= noiseLevel
-      param += n
-    }
-  }
-
-  private def saveState[T](
-      params: Seq[STen]
-  )(f: => T)(implicit scope: Scope): T = {
-    val copy = params.map(_.cloneTensor)
-    val r = f
-    params.zip(copy).foreach { case (orig, copy) =>
-      orig.copyFrom(copy)
-    }
-    r
-  }
-
-  def apply[M <: GenericModule[I, Variable]](
-      samples: I,
-      target: STen,
-      module: M with GenericModule[I, Variable],
-      lossFunction: LossFunction,
-      computeGradients: Boolean,
-      zeroGradBeforeComputingGradients: Boolean,
-      switchStream: Boolean
-  )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
-    val gradients = Scope { implicit scope =>
-      saveState(module.parameters.map(_._1.value)) {
-        perturb(
-          noiseLevel,
-          module.parameters.map(_._1.value)
-        )
-        Scope { implicit scope =>
-          val (perturbedLoss, _) = lossFunction(module.forward(samples), target)
-
-          if (computeGradients)
-            Some(
-              module.gradients(perturbedLoss, zeroGradBeforeComputingGradients)
-            )
-          else None
-        }
-
-      }
-    }
-    val (realLoss, numInstances) =
-      lossFunction(module.forward(samples), target)
-    (realLoss, numInstances, gradients)
-  }
-
-}
 class SimpleLossCalculation[I] extends LossCalculation[I] {
 
   def apply[M <: GenericModule[I, Variable]](
@@ -90,19 +38,52 @@ class SimpleLossCalculation[I] extends LossCalculation[I] {
       lossFunction: LossFunction,
       computeGradients: Boolean,
       zeroGradBeforeComputingGradients: Boolean,
-      switchStream: Boolean
-  )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
+      switchStream: Boolean,
+      partialDerivatives: Map[Variable, STen],
+      printMemoryAllocations: Boolean,
+      cacheStrategy: CacheStrategy,
+      printZeroGradients: Boolean
+  )(implicit scope: Scope): (STen, Long, Map[Variable, STen]) = {
     def body() = {
-
-      val output = module.forward(samples)
-      val (loss, numInstances) = lossFunction(output, target)
-
-      val gradients =
+      implicit val forwardCache: BackpropForwardCache =
         if (computeGradients)
-          Some(module.gradients(loss, zeroGradBeforeComputingGradients))
-        else None
+          BackpropForwardCache.empty(cacheStrategy, Nil)
+        else BackpropForwardCache.empty(cacheStrategy, Nil)
+      val output = module.forward(samples).persist
+      val loss = lossFunction(output, target)
+      val lossValue = loss.forward.cloneTensor
+      val outputValue = output.forward.cloneTensor
+      
+      val numInstances = if (outputValue.shape.nonEmpty) outputValue.shape(0) else if (target.shape.nonEmpty) target.shape(0) else 1
 
-      (loss, numInstances, gradients)
+        if (printMemoryAllocations) {
+          println("Allocation report before backward pass.")
+        println(Autograd.graphMemoryAllocationReport(loss, forwardCache,partialDerivatives))
+      }
+
+      if (computeGradients) {
+        val updatedPd = module.computeGradientsAndDestroyGraph(
+          loss = loss,
+          pd = partialDerivatives,
+          scope = scope,
+          zeroGrad = zeroGradBeforeComputingGradients,
+          fw = forwardCache.withCacheStrategy(CacheStrategy.AlwaysCache),
+          printZeroGradients = printZeroGradients
+        )
+
+        if (printMemoryAllocations) {
+          println("Allocation report after backward pass.")
+        println(Autograd.graphMemoryAllocationReport(loss, forwardCache,updatedPd))
+      }
+
+        (lossValue, numInstances, updatedPd)
+      } else {
+
+        
+
+        (lossValue, numInstances, partialDerivatives)
+      }
+
     }
     if (switchStream)
       target.device.withOtherStream(true, true) {
@@ -113,53 +94,31 @@ class SimpleLossCalculation[I] extends LossCalculation[I] {
 
 }
 
-case class AdversarialTraining(eps: Double) extends LossCalculation[Variable] {
-
-  def apply[M <: Module](
-      samples: Variable,
-      target: STen,
-      module: M with Module,
-      lossFunction: LossFunction,
-      computeGradients: Boolean,
-      zeroGradBeforeComputingGradients: Boolean,
-      switchStream: Boolean
-  )(implicit scope: Scope): (Variable, Long, Option[Seq[Option[STen]]]) = {
-    val samplesWithGrad = samples.withGrad
-    val output0 = module.forward(samplesWithGrad)
-    val (loss0, numInstances) = lossFunction(output0, target)
-
-    val _ = module.gradients(loss0)
-
-    val sampleGradient = samplesWithGrad.partialDerivative.get
-
-    val adversarialSample = const(samples.value.add(sampleGradient.sign, eps))
-
-    val adversarialOutput = module.forward(adversarialSample)
-    val (adversarialLoss, _) = lossFunction(adversarialOutput, target)
-
-    val totalLoss = (loss0 + adversarialLoss) * 0.5
-
-    val gradients =
-      if (computeGradients)
-        Some(module.gradients(totalLoss, zeroGradBeforeComputingGradients))
-      else None
-    (totalLoss, numInstances, gradients)
+case class ParameterGradients(map: Map[ConstantWithGrad, STen]) {
+  def mapParameters(s: Seq[ConstantWithGrad]) = s.map { s =>
+    map.get(s) match {
+      case None =>
+        ???
+      case Some(value) => value
+    }
   }
-
 }
-
+object ParameterGradients {
+  val empty = ParameterGradients(Map.empty)
+  implicit val movable: Movable[ParameterGradients] = Movable.nonEmpty(
+    _.map.flatMap(v => List(v._2.value, v._1.constantValue.value)).toList
+  )
+}
 case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     module: M with GenericModule[I, Variable],
     lossFunction: LossFunction,
     lossCalculation: LossCalculation[I] = new SimpleLossCalculation[I],
-    printMemoryAllocations: Boolean = false
+    printMemoryAllocations: Boolean = false,
+    cacheStrategy : CacheStrategy = CacheStrategy.AlwaysCache,
+    printZeroGradients: Boolean = false
 )(implicit tm: TrainingMode[M]) {
   def asEval = copy(module = module.asEval)
   def asTraining = copy(module = module.asTraining)
-
-  def zeroGrad() = {
-    module.zeroGrad()
-  }
 
   def addTotalLossAndReturnNumExamples(
       samples: I,
@@ -169,21 +128,25 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
   ): Long = {
 
     Scope.root { implicit scope =>
-      val (loss, examples, _) =
+      val (loss, examples, pd2) =
         lossCalculation(
-          samples,
-          target,
-          module,
-          lossFunction,
-          false,
-          false,
-          switchStream
+          samples = samples,
+          target = target,
+          module = module,
+          lossFunction = lossFunction,
+          computeGradients = false,
+          zeroGradBeforeComputingGradients = false,
+          switchStream = switchStream,
+          partialDerivatives = Map.empty,
+          printMemoryAllocations = printMemoryAllocations,
+          cacheStrategy = cacheStrategy,
+          printZeroGradients = printZeroGradients
         )
-      if (printMemoryAllocations) {
-        println(loss.graphMemoryAllocationReport)
-      }
-      acc += (loss.value * examples.toDouble)
-      examples
+
+      acc += (loss * examples.toDouble)
+      (
+        examples,
+      )
     }
   }
 
@@ -192,28 +155,37 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
       target: STen,
       acc: STen,
       zeroGrad: Boolean,
-      switchStream: Boolean
-  ): (Long, Seq[Option[STen]]) =
-    Scope.unsafe { implicit scope =>
-      val (loss, numInstances, mayGradients) =
+      switchStream: Boolean,
+      pd: ParameterGradients
+  )(implicit scope: Scope): (Long, ParameterGradients) =
+    Scope { implicit scope =>
+      val (loss, numInstances, pd2) =
         lossCalculation(
-          samples,
-          target,
-          module,
-          lossFunction,
-          true,
-          zeroGrad,
-          switchStream
+          samples = samples,
+          target = target,
+          module = module,
+          lossFunction = lossFunction,
+          computeGradients = true,
+          zeroGradBeforeComputingGradients = zeroGrad,
+          switchStream = switchStream,
+          partialDerivatives = pd.map.map { case (k, v) => (k: Variable, v) },
+          printMemoryAllocations = printMemoryAllocations,
+          cacheStrategy = cacheStrategy,
+          printZeroGradients = printZeroGradients
         )
-      acc += (loss.value * numInstances.toDouble)
+      acc += (loss * numInstances.toFloat)
 
-      (numInstances, mayGradients.get)
+      val pg2 = ParameterGradients(module.parameters.map { case (v, _) =>
+        v -> pd2.get(v).getOrElse(v.allocatePartialDerivative)
+      }.toMap)
+
+      (numInstances, pg2)
     }
 
   def zipOptimizer(optimizerFactory: Seq[(STen, PTag)] => Optimizer) =
     ModelWithOptimizer(
       this,
-      optimizerFactory(module.parameters.map(v => (v._1.value, v._2)))
+      optimizerFactory(module.parameters.map(v => (v._1.constantValue, v._2)))
     )
 }
 

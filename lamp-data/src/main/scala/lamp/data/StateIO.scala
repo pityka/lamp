@@ -36,28 +36,7 @@ object StateIO {
       }
     )
   }
-  private def readSWALoopStateDescriptor(
-      s: schemas.Schemas.SWALoopState,
-      file: File,
-      device: Device
-  )(implicit scope: Scope) = {
-    val model = Reader.readTensorData(s.model, file, device, false)
-    val optim = Reader.readTensorData(s.optimizer, file, device, false)
-    val avg = s.averagedModels.map { case d =>
-      implicit val scope = Scope.free
-      Reader.readTensorData(d, file, device, false).map(_.value)
-    }
-    SWALoopState(
-      model,
-      optim,
-      s.epoch,
-      s.lastValidationLoss,
-      s.minValidationLoss,
-      s.numberOfAveragedModels,
-      avg,
-      s.learningCurve
-    )
-  }
+  
 
   /** Reads LoopState from file
     *
@@ -87,13 +66,7 @@ object StateIO {
     descriptor match {
       case s: schemas.Schemas.SimpleLoopState =>
         readSimpleLoopStateDescriptor(s, file, device)
-      case s: schemas.Schemas.SWALoopState =>
-        readSWALoopStateDescriptor(s, file, device)
-      case schemas.Schemas.SimpleThenSWALoopState(simple, swa) =>
-        SimpleThenSWALoopState(
-          readSimpleLoopStateDescriptor(simple, file, device),
-          swa.map(readSWALoopStateDescriptor(_, file, device))
-        )
+      
 
     }
   }
@@ -173,80 +146,7 @@ object StateIO {
       }
     )
   }
-  private def swaLoopStateDescriptor(
-      s: SWALoopState,
-      file: File,
-      bufferSize: Int
-  ) = {
-    val modelLocation = s"${file.getName}.model"
-    val modelChannel = new FileOutputStream(
-      new File(file.getParentFile(), modelLocation + ".tmp"),
-      false
-    ).getChannel
-    val optimizerLocation = s"${file.getName}.optimizer"
-    val optimizerChannel = new FileOutputStream(
-      new File(file.getParentFile(), optimizerLocation + ".tmp"),
-      false
-    ).getChannel
-    val modelDescriptor = Writer
-      .writeTensorDataAndMakeDescriptor(
-        tensors = s.model,
-        modelLocation,
-        dataChannel = modelChannel,
-        bufferSize = bufferSize,
-        initialByteOffset = 0
-      )
-      .toOption
-      .get
-    val optimizerDescriptor = Writer
-      .writeTensorDataAndMakeDescriptor(
-        tensors = s.optimizer,
-        optimizerLocation,
-        dataChannel = optimizerChannel,
-        bufferSize = bufferSize,
-        initialByteOffset = 0
-      )
-      .toOption
-      .get
-    new File(file.getParentFile(), optimizerLocation + ".tmp").renameTo(
-      new File(file.getParentFile(), optimizerLocation)
-    )
-    new File(file.getParentFile(), modelLocation + ".tmp").renameTo(
-      new File(file.getParentFile(), modelLocation)
-    )
-    val averageDescriptor = s.averagedModels.map { case ts =>
-      val location = s"${file.getName}.averagemodel"
-      val channel = new FileOutputStream(
-        new File(file.getParentFile(), location),
-        false
-      ).getChannel
-      val descriptor = Writer
-        .writeTensorDataAndMakeDescriptor(
-          tensors = ts.map(tensor => STen.owned(tensor)(Scope.free)),
-          location,
-          dataChannel = channel,
-          bufferSize = bufferSize,
-          initialByteOffset = 0
-        )
-        .toOption
-        .get
-      new File(file.getParentFile(), location + ".tmp").renameTo(
-        new File(file.getParentFile(), location)
-      )
-      descriptor
-    }
-
-    schemas.Schemas.SWALoopState(
-      modelDescriptor,
-      optimizerDescriptor,
-      s.epoch,
-      s.lastValidationLoss,
-      s.minValidationLoss,
-      s.numberOfAveragedModels,
-      averageDescriptor,
-      s.learningCurve
-    )
-  }
+  
 
   /** Writes loop state into file
     */
@@ -263,27 +163,7 @@ object StateIO {
           file,
           bufferSize
         )
-      case s: SWALoopState =>
-        swaLoopStateDescriptor(
-          s,
-          file,
-          bufferSize
-        )
-      case s: SimpleThenSWALoopState =>
-        schemas.Schemas.SimpleThenSWALoopState(
-          simple = simpleLoopStateDescriptor(
-            s.simple,
-            new File(file.getAbsolutePath() + ".simple"),
-            bufferSize
-          ),
-          swa = s.swa.map(s =>
-            swaLoopStateDescriptor(
-              s,
-              new File(file.getAbsolutePath() + ".swa"),
-              bufferSize
-            )
-          )
-        )
+    
     }
     val tmp = new File(file.getAbsolutePath() + ".tmp")
     val fos = new java.io.FileOutputStream(tmp)

@@ -21,7 +21,8 @@ case class SGDW(
     learningRate: OptimizerHyperparameter,
     weightDecay: OptimizerHyperparameter,
     momentum: Option[OptimizerHyperparameter] = None,
-    clip0: Option[Double] = None
+    clip0: Option[Double] = None,
+    printGradientNorm: Boolean = false
 ) extends Optimizer {
   val scope = Scope.free
     val clip = clip0.map(theta => STen.scalarDouble(theta,parameters.head._1.options(scope))(scope))
@@ -43,11 +44,11 @@ case class SGDW(
   def release() = {
     scope.release()
   }
-  def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
-    clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
+  def step(gradients: Seq[STen], scheduleFactor: Double) = {
+    clip.foreach { theta => gradientClippingInPlace(gradients, theta, printGradientNorm) }
 
-    parameters.zip(gradients).zip(velocity).filter(_._1._2.isDefined).foreach {
-      case (((param, tag), Some(gradients)), None) =>
+    parameters.zip(gradients).zip(velocity).foreach {
+      case (((param, tag), gradients), None) =>
         val wd = weightDecay(tag)
         if (wd != 0d) {
           ATen.add_out(
@@ -65,7 +66,7 @@ case class SGDW(
           (-1) * learningRate(tag) * scheduleFactor
         )
 
-      case (((param, tag), Some(gradients)), Some((velocity, momentum))) =>
+      case (((param, tag), gradients), Some((velocity, momentum))) =>
         val m = momentum(tag)
 
         velocity.value.mul_(m)
@@ -92,7 +93,6 @@ case class SGDW(
           velocity.value,
           -1
         )
-      case _ => ???
     }
 
   }

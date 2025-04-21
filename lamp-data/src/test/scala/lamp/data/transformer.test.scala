@@ -11,18 +11,20 @@ import lamp.autograd.const
 import lamp.STen
 import scala.io.Codec
 import cats.effect.unsafe.implicits.global
+import cats.effect.kernel.Resource
+import lamp.autograd.Autograd.BackpropForwardCache
+import lamp.autograd.Autograd.CacheStrategy
+import lamp.Device
 
 class TransformerSuite extends AnyFunSuite {
 
-
-
-  def test1(id: String)(fun: Boolean => Unit) = {
-    test(id) { fun(false) }
-    test(id + "/CUDA", CudaTest) { fun(true) }
+  def test1(id: String)(fun: Device => Unit) = {
+    test(id) { fun(CPU) }
+    if (aten.Tensor.hasMps) {test(id+" MPS") { fun( lamp.MPS) }}
+    test(id + "/CUDA", CudaTest) { fun(CudaDevice(0)) }
   }
 
-  test1("clickbait") { cuda =>
-    val device = if (cuda) CudaDevice(0) else CPU
+  test1("clickbait") { device =>
     val precision = SinglePrecision
 
     val positives = scala.io.Source
@@ -40,12 +42,16 @@ class TransformerSuite extends AnyFunSuite {
 
     val (vocab, _) = Text.charsToIntegers((positives ++ negatives).mkString)
 
-    val all = Mat(Text.sentencesToPaddedMatrix(
-      positives ++ negatives,
-      maxLength = 15,
-      pad = vocab.size,
-      vocabulary = vocab
-    ).map(_.toVec):_*).T
+    val all = Mat(
+      Text
+        .sentencesToPaddedMatrix(
+          positives ++ negatives,
+          maxLength = 15,
+          pad = vocab.size,
+          vocabulary = vocab
+        )
+        .map(_.toVec): _*
+    ).T
     val target = vec.ones(positives.size) concat vec.zeros(negatives.size)
     val shuffle =
       scala.util.Random.shuffle(0 until all.numRows toVector).toArray
@@ -62,6 +68,7 @@ class TransformerSuite extends AnyFunSuite {
     val rng = new scala.util.Random
 
     Scope.root { implicit scope =>
+      
       val tOpt = device.options(precision)
       val trainFT = lamp.saddle.fromLongMat(trainF.map(_.toLong), CPU)
       val trainTargetT = lamp.saddle.fromLongVec(trainTarget.map(_.toLong), CPU)
@@ -76,26 +83,30 @@ class TransformerSuite extends AnyFunSuite {
               trainFT,
               trainTargetT,
               rng
-            )
+            ).map(v => Resource.pure(NonEmptyBatch((v._1.constantValue,v._2))))
 
         val classWeights = STen.ones(List(2), device.options(precision))
-        val model = SupervisedModel(
+        def makeModel = SupervisedModel(
           sequence(
             lamp.nn.TransformerEmbedding(
               lamp.nn
                 .Embedding(
                   classes = vocab.size + 1,
-                  dimensions = 30,
+                  dimensions = 45,
                   tOpt = tOpt
                 ),
-              addPositionalEmbedding = false,
               positionalEmbedding = const(
                 PositionalEmbedding
-                  .simpleSequence(15, 30, 15, device, precision)
+                  .vaswani(
+                    sequenceLength = 15,
+                    dimension = 45,
+                    device = device,
+                    precision = precision
+                  )
               )
             ),
-            GenericFun[Variable, (Variable,Option[STen])] { _ => x =>
-              (x,None)
+            GenericFun[Variable, (Variable, Option[STen])] { _ => _ => x =>
+              (x, None)
             },
             lamp.nn.TransformerEncoder(
               numBlocks = 3,
@@ -110,26 +121,31 @@ class TransformerSuite extends AnyFunSuite {
               gptOrder = false,
               causalMask = false
             ),
-            GenericFun[Variable, Variable] { implicit scope => x =>
-              x.view(List(x.shape(0), -1))
+            GenericFun[Variable, Variable] { _ => fw => x =>
+              x.view(List(x.forward(fw).shape(0), -1))
             },
             Linear(in = 675, out = 2, tOpt = tOpt),
-            Fun(implicit scope => variable => variable.logSoftMax(1))
+            Fun(_=> variable => variable.logSoftMax(1))
           ),
           LossFunctions.NLL(2, classWeights)
         )
-
-        val (_, trainedModel, _, _) = IOLoops
-          .withSWA(
+        val model = makeModel
+        val model2 = makeModel
+        val model3 = makeModel
+        val model4 = makeModel
+        
+        val (_, trainedModel, _, _,_) = IOLoops
+          .epochs(
             model = model,
             optimizerFactory = RAdam
               .factory(
-                learningRate = simple(0.01),
+                learningRate = simple(0.001),
                 weightDecay = simple(0d)
               ),
             trainBatchesOverEpoch = makeTrainingBatch,
-            warmupEpochs = 5,
-            swaEpochs = 5,
+            validationBatchesOverEpoch = None,
+            dataParallelModels = List(model2,model3,model4),
+            epochs = 10,
             logger = Some(scribe.Logger("sdf"))
           )
           .unsafeRunSync()
@@ -138,10 +154,11 @@ class TransformerSuite extends AnyFunSuite {
       }
 
       val accuracy = {
+        implicit val fw = BackpropForwardCache.empty(CacheStrategy.AlwaysCache,Nil)
         val output =
-          trainedModel.asEval.forward(lamp.autograd.const(testFT))
+          trainedModel.asEval.forward((testFT))
         val prediction = {
-          val argm = aten.ATen.argmax(output.value.value, 1, false)
+          val argm = aten.ATen.argmax(output.forward.value, 1, false)
           val r = lamp.saddle.SaddleTensorHelpers.toLongMat(argm).toVec
           argm.release
           r

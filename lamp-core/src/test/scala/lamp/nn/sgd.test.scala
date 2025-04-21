@@ -24,7 +24,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
         learningRate = simple(1d),
         weightDecay = simple(0.00),
         momentum = None
-      ).step(List(Some(gradients)), 1d)
+      ).step(List((gradients)), 1d)
       val updatedParams = params.toMat
       assert(updatedParams == initParams)
     }
@@ -39,7 +39,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
         learningRate = simple(1d),
         weightDecay = simple(0.00),
         momentum = None
-      ).step(List(Some(gradients)), 1d)
+      ).step(List((gradients)), 1d)
       val updatedParams = params.toMat
       assert(updatedParams == initParams * 0.5)
     }
@@ -54,7 +54,7 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
         learningRate = simple(1d),
         weightDecay = simple(0.1),
         momentum = None
-      ).step(List(Some(gradients)), 1d)
+      ).step(List((gradients)), 1d)
       val updatedParams = params.toMat
       assert(updatedParams == (initParams * 0.5 - initParams * 0.1))
     }
@@ -70,14 +70,14 @@ implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.em
         weightDecay = simple(0.1),
         momentum = None
       )
-      optim.step(List(Some(gradients)), 1d)
+      optim.step(List((gradients)), 1d)
       val updatedParams1 = params.toMat
       assert(
         updatedParams1
           .roundTo(4) == (initParams * Mat(Vec(0.5, 0.25)).T - initParams * 0.1)
           .roundTo(4)
       )
-      optim.step(List(Some(gradients)), 1d)
+      optim.step(List((gradients)), 1d)
       val updatedParams2 = params.toMat
       assert(updatedParams2.roundTo(4) == Mat(Vec(-0.1400, -0.6150)).T)
 

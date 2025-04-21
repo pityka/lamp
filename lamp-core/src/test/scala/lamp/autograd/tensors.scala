@@ -107,7 +107,6 @@ class SaddleTensorHelpersuite extends AnyFunSuite {
         val t3 = lamp.saddle.fromMat(m)
         val t4 =
           new Concatenate(
-            scope,
             List(
               const(t),
               const(t2),
@@ -115,7 +114,7 @@ class SaddleTensorHelpersuite extends AnyFunSuite {
             ),
             1
           ).value
-        assert(t4.shape == List(3000, 9000))
+        assert(t4.eval.shape == List(3000, 9000))
         ()
       }
     }

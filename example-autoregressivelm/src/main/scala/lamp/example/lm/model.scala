@@ -2,6 +2,7 @@ package lamp.example.lm
 import lamp._
 import lamp.nn._
 import lamp.data.IdentityCodecFactory
+import lamp.autograd.Autograd
 
 object Model {
 
@@ -9,18 +10,16 @@ object Model {
   val contextLength = 384
 
   val codecFactory = IdentityCodecFactory
-  //   ByteSegmentCodecFactory(
-  //   vocabularyMin = 10,
-  //   vocabularyMax = (vocabularySize - 1).toChar,
-  //   maxMergedSegmentLength = 7,
-  //   unknownToken = 0.toChar,
-  //   unknownByte = '?'.toByte
-  // )
 
-  def allocateModel(device: Device)(implicit
+  def allocateModel(
+      device: Device,
+      gradientCheckpointing: Boolean,
+      mixedPrecision: Boolean
+  )(implicit
       scope: Scope
   ) = {
-    val tensorOptions = device.options(SinglePrecision).toBF16
+    val tensorOptions =
+      device.options(if (mixedPrecision) Bf16Precision else SinglePrecision)
     val embeddingDim = 768
     val layers = 12
     val numHeads = 12
@@ -38,13 +37,17 @@ object Model {
       linearized = false
     )
     scribe.info(
-      f"Allocated model on $device . embedding=$embeddingDim layers=$layers num-heads=$numHeads num-param=${net.learnableParameters}%,d"
+      f"Allocated model on $device . embedding=$embeddingDim layers=$layers num-heads=$numHeads num-param=${net.learnableParameters}%,d gradient-checkpointing=$gradientCheckpointing"
     )
 
-    // scribe.info(s"List of parameters: \n${net.parameters
-    //   .map(v => v._2.getClass -> v._1.value.numel)
-    //   .mkString("\n")}")
-    SupervisedModel(net, LossFunctions.Identity)
+    SupervisedModel(
+      net,
+      LossFunctions.Identity,
+      // printMemoryAllocations = true,
+      cacheStrategy =
+        if (gradientCheckpointing) Autograd.CacheStrategy.SelectivelyCache
+        else Autograd.CacheStrategy.AlwaysCache
+    )
   }
 
 }

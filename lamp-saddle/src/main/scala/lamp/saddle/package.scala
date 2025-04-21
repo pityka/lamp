@@ -15,6 +15,14 @@ package object saddle {
   def fromMat[S: Sc](
       m: Mat[Double],
       device: Device,
+  ) = if (device == MPS) 
+    owned(SaddleTensorHelpers.fromMat(m, device, SinglePrecision))
+    else 
+    owned(SaddleTensorHelpers.fromMat(m, device, DoublePrecision))
+  /** Returns a tensor with the given content and shape on the given device */
+  def fromMat[S: Sc](
+      m: Mat[Double],
+      device: Device,
       precision: FloatingPointPrecision
   ) = owned(SaddleTensorHelpers.fromMat(m, device, precision))
 
@@ -37,6 +45,16 @@ package object saddle {
       precision: FloatingPointPrecision
   ) = if (m.isEmpty) STen.zeros(List(0), device.options(precision))
   else owned(SaddleTensorHelpers.fromVec(m, device, precision))
+
+  /** Returns a tensor with the given content and shape on the given device */
+  def fromVec[S: Sc](
+      m: Vec[Double],
+      device: Device,
+  ) = {
+    val p = if (device == MPS) SinglePrecision else DoublePrecision
+    if (m.isEmpty) STen.zeros(List(0), device.options(p))
+  else owned(SaddleTensorHelpers.fromVec(m, device, p))
+  }
 
   /** Returns a tensor with the given content and shape on the given device */
   def fromLongMat[S: Sc](

@@ -16,7 +16,7 @@ case class LayerNorm(
     scale.map(_ -> LayerNorm.Scale).toList ++
       bias.map(_ -> LayerNorm.Bias).toList
 
-  override def forward[S: Sc](x: Variable): Variable =
+  override def forward[S:Sc, F:FW](x: Variable): Variable =
     (new lamp.autograd.LayerNormOp(
       implicitly[Scope],
       x,
@@ -35,7 +35,7 @@ object LayerNorm {
     tensors => {
       val a = (m.scale.toList ++ m.bias.toList)
       a.zip(tensors.take(a.length)).foreach { case (a, b) =>
-        a.value.copyFrom(b)
+        a.constantValue.copyFrom(b)
       }
 
     }

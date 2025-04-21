@@ -10,11 +10,12 @@ case class ResidualModule[M <: Module](
   def state =
     transform.state
 
-  override def forward[S: Sc](
+  override def forward[S:Sc, F:FW](
       x: Variable
   ): Variable = {
-    val n = transform.forward(x)
-    if (n.sizes == x.sizes) n + x
+    val xp = x.persist
+    val n = transform.forward(x).persist
+    if (n.forward.sizes == xp.forward.sizes) n + xp
     else n
   }
 

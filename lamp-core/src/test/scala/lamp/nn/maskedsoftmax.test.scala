@@ -7,18 +7,20 @@ import lamp._
 import lamp.autograd.const
 import lamp.saddle._
 import org.saddle._
+import lamp.autograd.ForwardCache
 
 class MaskedSoftmaxTest extends AnyFunSuite {
-
+  
   test("1D") {
     Scope.unsafe { implicit sc =>
+      implicit val fw : ForwardCache = ForwardCache.selective
       val maxLength = STen.fromLongArray(Array(2, 3))
       val maskable = STen.ones(List(2, 4, 3))
       val fill = 0.0
 
       val masked = MultiheadAttention
         .sequenceMaskValidLength1D(maxLength, const(maskable), fill)
-        .value
+        .eval
 
       val b0 =
         masked
@@ -37,13 +39,15 @@ class MaskedSoftmaxTest extends AnyFunSuite {
 
   test("1D symm") {
     Scope.unsafe { implicit sc =>
+            implicit val fw : ForwardCache = ForwardCache.selective
+
       val maxLength = STen.fromLongArray(Array(2, 3))
       val maskable = STen.ones(List(2, 4, 4))
       val fill = 0.0
 
       val masked = MultiheadAttention
         .sequenceMaskValidLength1D(maxLength, const(maskable), fill)
-        .value
+        .eval
 
       val b0 =
         masked
@@ -61,14 +65,17 @@ class MaskedSoftmaxTest extends AnyFunSuite {
   }
 
   test("2D") {
+    
     Scope.unsafe { implicit sc =>
+            implicit val fw : ForwardCache = ForwardCache.selective
+
       val maxLength = STen.fromLongArray(Array(2, 3, 2, 1)).reshape(2, 2)
       val maskable = STen.ones(List(2, 2, 3))
       val fill = 0.0
 
       val masked = MultiheadAttention
         .sequenceMaskValidLength2D(maxLength, const(maskable), fill)
-        .value
+        .eval
 
       val b0 =
         masked

@@ -95,7 +95,6 @@ All tests are executed with `sbt alltest:test`. This runs all unit tests, all cu
 Examples for various tasks:
 
 - Image classification: `bash run_cifar.sh` runs the code in `example-cifar100/`.
-- Text generation: `bash run_timemachine.sh` runs the code in `example-timemachine/`.
 - Graph node property prediction: `bash run_arxiv.sh` runs the code in `example-arxiv/`.
 - Multi node distributed training: `bash run_cifar_dist1.sh` and  `bash run_cifar_dist2.sh` .
 - Language model pretraining: see `example-bert` and `example-autoregressivelm`.

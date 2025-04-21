@@ -18,7 +18,7 @@ case class Conv2DTransposed(
     bias -> Conv2DTransposed.Bias
   )
 
-  def forward[S: Sc](x: Variable): Variable =
+  def forward[S:Sc, F:FW](x: Variable): Variable =
     new Convolution(
       scope = scope,
       input = x,
@@ -39,8 +39,8 @@ object Conv2DTransposed {
     TrainingMode.identity[Conv2DTransposed]
   implicit val load: Load[Conv2DTransposed] = Load.make[Conv2DTransposed](m =>
     parameters => {
-      m.weights.value.copyFrom(parameters.head)
-      m.bias.value.copyFrom(parameters(1))
+      m.weights.constantValue.copyFrom(parameters.head)
+      m.bias.constantValue.copyFrom(parameters(1))
     }
   )
   case object Weights extends LeafTag

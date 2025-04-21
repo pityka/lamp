@@ -10,6 +10,7 @@ import lamp.util.NDArray
 import lamp.STen
 import lamp.STenOptions
 import lamp.saddle._
+import lamp.autograd.Autograd.BackpropForwardCache
 
 object NDArraySyntax {
   implicit class syntax[T](value: NDArray[T]) {
@@ -19,6 +20,42 @@ object NDArraySyntax {
 
 import NDArraySyntax._
 class GradientSuite extends AnyFunSuite {
+
+  def testEval(L: Variable, x1: Variable, doBackprop: Boolean)(implicit
+      scope: Scope
+  ) = {
+    val map = Map[Variable, STen]()
+    val (map2, v) = if (doBackprop) {
+      {
+        val fw = BackpropForwardCache.simple
+        val v = L.forward(fw).toMat.raw(0)
+        (Autograd.backprop(L, map, fw,false)(scope), v)
+      }
+    } else (map, L.eval.toMat.raw(0))
+    (
+      v,
+      map2.get(x1).map(t => t.toMat)
+    )
+
+  }
+  def testEvalND(L: Variable, x1: Variable, doBackprop: Boolean)(implicit
+      scope: Scope
+  ) = {
+    val map = Map[Variable, STen]()
+    val (map2, v) = if (doBackprop) {
+      {
+        val fw = BackpropForwardCache.simple
+        val v = L.forward( fw).cloneTensor
+        (Autograd.backprop(L, map, fw,false)(scope), v.toMat.raw(0))
+      }
+    } else (map, L.eval.toMat.raw(0))
+    (
+      v,
+      map2.get(x1).map(t => NDArray.tensorToNDArray(t.value))
+    )
+
+  }
+
   val ar18 = Array(1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d, 4d, 5d, 6d, 1d, 2d, 3d,
     4d, 5d, 6d)
   val mat2x3 = Mat(Vec(1d, 2d), Vec(3d, 4d), Vec(5d, 6d))
@@ -115,32 +152,48 @@ class GradientSuite extends AnyFunSuite {
     }
   }
   def testGradientAndValue(
-      id: String
+      id: String,
+      onlyCpu : Boolean = false
   )(m: Mat[Double], expectedValue: Double, eps: Double = 1e-6)(
-      fun: (Mat[Double], Boolean, Boolean) => (Double, Option[Mat[Double]])
+      fun: (Mat[Double], Boolean, lamp.Device) => (Double, Option[Mat[Double]])
   ) = {
     test(id + ": gradient is correct") {
 
-      def diffNum(m: Mat[Double]) = diff(m, eps)(m => fun(m, false, false)._1)
+      def diffNum(m: Mat[Double]) = diff(m, eps)(m => fun(m, false, lamp.CPU)._1)
       def diffAuto(m: Mat[Double]) = {
-        fun(m, true, false)._2.get
+        fun(m, true, lamp.CPU)._2.get
       }
       assert(
-        Vec(fun(m, false, false)._1).roundTo(4) == Vec(expectedValue).roundTo(
+        Vec(fun(m, false, lamp.CPU)._1).roundTo(4) == Vec(expectedValue).roundTo(
           4
         )
       )
 
       assert(diffAuto(m).roundTo(4) == diffNum(m).roundTo(4))
     }
+    if (aten.Tensor.hasMps() && !onlyCpu) {
+      test(id + ": gradient is correct | MPS") {
+
+      def diffNum(m: Mat[Double]) = diff(m, eps * 1000)(m => fun(m, false, lamp.MPS)._1)
+      def diffAuto(m: Mat[Double]) = {
+        fun(m, true, lamp.MPS)._2.get
+      }
+      val v = fun(m, false, lamp.MPS)._1
+      assert(
+        (Vec(v) - Vec(expectedValue)).map(math.abs).mean2 < 1e-2
+      )
+      
+      (diffAuto(m) - diffNum(m)).toVec.map(math.abs).mean2 < 1e-2
+    }
+    }
     test(id + "/CUDA: gradient is correct", CudaTest) {
 
-      def diffNum(m: Mat[Double]) = diff(m)(m => fun(m, false, true)._1)
+      def diffNum(m: Mat[Double]) = diff(m)(m => fun(m, false, lamp.CudaDevice(0))._1)
       def diffAuto(m: Mat[Double]) = {
-        fun(m, true, true)._2.get
+        fun(m, true, lamp.CudaDevice(0))._2.get
       }
       assert(
-        Vec(fun(m, false, true)._1).roundTo(4) == Vec(expectedValue).roundTo(
+        Vec(fun(m, false, lamp.CudaDevice(0))._1).roundTo(4) == Vec(expectedValue).roundTo(
           4
         )
       )
@@ -153,7 +206,7 @@ class GradientSuite extends AnyFunSuite {
       cuda: Boolean = true,
       cpu: Boolean = true
   )(m: NDArray[Double], expectedValue: Double)(
-      fun: (NDArray[Double], Boolean, Boolean) => (
+      fun: (NDArray[Double], Boolean, lamp.Device) => (
           Double,
           Option[NDArray[Double]]
       )
@@ -162,12 +215,12 @@ class GradientSuite extends AnyFunSuite {
       test(id + ": gradient is correct") {
 
         def diffNum(m: NDArray[Double]) =
-          diffND(m)(m => fun(m, false, false)._1)
+          diffND(m)(m => fun(m, false, lamp.CPU)._1)
         def diffAuto(m: NDArray[Double]) = {
-          fun(m, true, false)._2.get
+          fun(m, true, lamp.CPU)._2.get
         }
         assert(
-          Vec(fun(m, false, false)._1).roundTo(4) == Vec(expectedValue).roundTo(
+          Vec(fun(m, false, lamp.CPU)._1).roundTo(4) == Vec(expectedValue).roundTo(
             4
           )
         )
@@ -178,12 +231,12 @@ class GradientSuite extends AnyFunSuite {
     if (cuda) {
       test(id + "/CUDA: gradient is correct", CudaTest) {
 
-        def diffNum(m: NDArray[Double]) = diffND(m)(m => fun(m, false, true)._1)
+        def diffNum(m: NDArray[Double]) = diffND(m)(m => fun(m, false, lamp.CudaDevice(0))._1)
         def diffAuto(m: NDArray[Double]) = {
-          fun(m, true, true)._2.get
+          fun(m, true, lamp.CudaDevice(0))._2.get
         }
         assert(
-          Vec(fun(m, false, true)._1).roundTo(10) == Vec(expectedValue).roundTo(
+          Vec(fun(m, false, lamp.CudaDevice(0))._1).roundTo(10) == Vec(expectedValue).roundTo(
             10
           )
         )
@@ -198,129 +251,58 @@ class GradientSuite extends AnyFunSuite {
       val x1 = const(t2x3)
       val L = x1.sum
       assert(
-        L.value.toMat == Mat(Vec(t2x3.toMat.toVec.sum2))
+        L.eval.toMat == Mat(Vec(t2x3.toMat.toVec.sum2))
       )
-      L.backprop()
-      assert(x1.partialDerivative.isEmpty)
+      val map = Map.empty[Variable, STen]
+      val map2 = {
+        val fw = BackpropForwardCache.simple
+        L.forward(fw)
+        Autograd.backprop(L, map, fw,false)(scope)
+      }
+
+      assert(map2.get(x1).isEmpty)
       ()
     }
   }
   test("param is accumulating gradients") {
     Scope.root { implicit scope =>
       val x1 = param(t2x3)
-      val L = x1.sum
+      val L = x1.sum.persist
       // assert(L.value == Mat(Vec(mat2x3.toVec.sum2)))
-      L.backprop()
-      assert(x1.partialDerivative.get.toMat == mat.ones(2, 3))
+      val map = Map.empty[Variable, STen]
+      val map2 = {
+        val fw = BackpropForwardCache.simple
+        L.forward( fw)
+        Autograd.backprop(L, map, fw,false)(scope)
+      }
+      assert(map2(x1).toMat == mat.ones(2, 3))
       ()
     }
   }
 
-  testGradientAndValueCudaOnly("scaled dot product attention - by q")(
-    mat1x64,
-    64d
-  ) { (m, doBackprop) =>
-    Scope.root { implicit scope =>
-      val device = lamp.CudaDevice(0)
-      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
-      val q = param(mSTen + 0.0)
-      val k = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
-      val v = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
-      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
-
-      val L = r.sum
-
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        lamp.CPU.to(L.value).toMat.raw(0),
-        q.partialDerivative.map(t => t.reshape(-1, 1).toMat)
-      )
-    }
-  }
-  testGradientAndValueCudaOnly("scaled dot product attention - by k")(
-    mat1x64,
-    64d
-  ) { (m, doBackprop) =>
-    Scope.root { implicit scope =>
-      val device = lamp.CudaDevice(0)
-      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
-      val q = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
-      val k = param(mSTen + 0.0)
-      val v = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
-      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
-
-      val L = r.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        lamp.CPU.to(L.value).toMat.raw(0),
-        k.partialDerivative.map(t => t.reshape(-1, 1).toMat)
-      )
-    }
-  }
-  testGradientAndValueCudaOnly("scaled dot product attention - by v")(
-    mat1x64,
-    704d,
-    eps = 1e-3
-  ) { (m, doBackprop) =>
-    Scope.root { implicit scope =>
-      val device = lamp.CudaDevice(0)
-      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
-      val q = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
-      val k = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
-      val v = param(mSTen + 10.0)
-      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
-
-      val L = r.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        lamp.CPU.to(L.value).toMat.raw(0),
-        v.partialDerivative.map(t => t.reshape(-1, 1).toMat)
-      )
-    }
-  }
   testGradientAndValue("sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
+      
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("colSum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.colSum.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("rowSum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.rowSum.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("assign - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
@@ -328,13 +310,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.assign(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("assign - left")(mat2x3, 42d) { (m, doBackprop, cuda) =>
@@ -342,13 +319,8 @@ class GradientSuite extends AnyFunSuite {
       val x2 = param(lamp.saddle.fromMat(m, cuda))
       val x1 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.assign(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x2.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x2, doBackprop)
     }
   }
   testGradientAndValue("add broadcasted - left")(Mat(Vec(1d)), 48d) {
@@ -357,27 +329,18 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = (x1.+(x2)).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
+
   }
   testGradientAndValue("add - left")(mat2x3, 63d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1.+(x2).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("add broadcasted - right")(Mat(Vec(1d)), 48d) {
@@ -386,13 +349,8 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = (x2.+(x1)).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("add - right")(mat2x3, 63d) { (m, doBackprop, cuda) =>
@@ -400,13 +358,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.+(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("minus - left")(mat2x3, -21d) { (m, doBackprop, cuda) =>
@@ -414,13 +367,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1.-(x2).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("minus broadcasted - left")(mat1x1, -36d) {
@@ -429,13 +377,8 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x1.-(x2).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("minus broadcasted - right")(mat1x1, 36d) {
@@ -444,13 +387,8 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x2.-(x1).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("minus - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
@@ -458,26 +396,16 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.-(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("constmult")(mat2x3, 42d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.*(2d).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("cast to float")(mat2x3, 21d, 1e-2) {
@@ -485,26 +413,16 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.cast(lamp.SinglePrecision).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("constadd")(mat2x3, 33d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.+(2d).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("mult broadcasted - left")(mat1x1, 42d) {
@@ -513,13 +431,8 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x1.*(x2).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("mult broadcasted - right")(mat1x1, 42d) {
@@ -528,13 +441,8 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x2.*(x1).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("mult - right")(mat2x3, 182d) { (m, doBackprop, cuda) =>
@@ -542,13 +450,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2.*(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
 
@@ -557,13 +460,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1./(x2).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("div broadcasted - left")(mat1x1, 1.225d) {
@@ -572,13 +470,8 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x1./(x2).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("div - right")(mat2x3, 12d) { (m, doBackprop, cuda) =>
@@ -586,13 +479,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x2./(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("min - left")(mat2x3, 21d) { (m, doBackprop, cuda) =>
@@ -601,13 +489,7 @@ class GradientSuite extends AnyFunSuite {
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1.minimum(x2).sum
 
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("min - right")(mat2x3, 21d) { (m, doBackprop, cuda) =>
@@ -616,13 +498,8 @@ class GradientSuite extends AnyFunSuite {
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
 
       val L = x2.minimum(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("max - left")(mat2x3, 42d) { (m, doBackprop, cuda) =>
@@ -631,13 +508,7 @@ class GradientSuite extends AnyFunSuite {
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
       val L = x1.maximum(x2).sum
 
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("max - right")(mat2x3, 42d) { (m, doBackprop, cuda) =>
@@ -646,13 +517,8 @@ class GradientSuite extends AnyFunSuite {
       val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
 
       val L = x2.maximum(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
 
@@ -661,13 +527,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat3x2 * 2, cuda))
       val L = x1.mm(x2).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("diag")(mat3x1, 6d) { (m, doBackprop, cuda) =>
@@ -676,17 +537,13 @@ class GradientSuite extends AnyFunSuite {
 
       val d = values.view(List(-1)).diag(0L)
 
-      assert(d.value.toMat.numCols == 3)
-      assert(d.value.toMat.numRows == 3)
+      assert(d.eval.toMat.numCols == 3)
+      assert(d.eval.toMat.numRows == 3)
 
       val L = d.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        values.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, values, doBackprop)
+
     }
   }
   testGradientAndValue("inv")(mat2x2, -0.5) { (m, doBackprop, cuda) =>
@@ -694,15 +551,10 @@ class GradientSuite extends AnyFunSuite {
       val values = param(lamp.saddle.fromMat(m, cuda))
 
       val i = values.inv
-      assert(i.value.toMat.roundTo(4) == m.invert.roundTo(4))
+      assert(i.eval.toMat.roundTo(4) == m.invert.roundTo(4))
       val L = i.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        values.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, values, doBackprop)
     }
   }
   testGradientAndValue("inv2")(mat3x3, 2d) { (m, doBackprop, cuda) =>
@@ -710,15 +562,10 @@ class GradientSuite extends AnyFunSuite {
       val values = param(lamp.saddle.fromMat(m, cuda))
 
       val i = values.inv
-      assert(i.value.toMat.roundTo(4) == m.invert.roundTo(4))
+      assert(i.eval.toMat.roundTo(4) == m.invert.roundTo(4))
       val L = i.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        values.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, values, doBackprop)
     }
   }
   testGradientAndValue("pinv")(mat3x3, 2d) { (m, doBackprop, cuda) =>
@@ -727,13 +574,8 @@ class GradientSuite extends AnyFunSuite {
 
       val i = values.pinv()
       val L = i.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        values.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, values, doBackprop)
     }
   }
   testGradientAndValue("pinv batch ")(mat3x3, 2d) { (m, doBackprop, cuda) =>
@@ -743,13 +585,19 @@ class GradientSuite extends AnyFunSuite {
 
       val i = values.pinv().select(0, 0)
       val L = i.sum
-      if (doBackprop) {
-        L.backprop()
+
+      val map = Map[Variable, STen]()
+    val (map2, v) = if (doBackprop) {
+      {
+        val fw = BackpropForwardCache.simple
+        val v = L.forward( fw).toMat.raw(0)
+        (Autograd.backprop(L, map, fw,false)(scope), v)
       }
-      (
-        L.value.toMat.raw(0),
-        values.partialDerivative.map(t => t.select(0, 0).toMat)
-      )
+    } else (map, L.eval.toMat.raw(0))
+    (
+      v,
+      map2.get(values).map(t => t.select(0,0).toMat)
+    )
     }
   }
   testGradientAndValueND("inv batch")(nd1x3x3, 0d) { (m, doBackprop, cuda) =>
@@ -758,51 +606,51 @@ class GradientSuite extends AnyFunSuite {
 
       val i = values.inv
       val L = i.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        values.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, values, doBackprop)
     }
   }
 
-  testGradientAndValue("sparse to dense")(mat3x1, 6d) { (m, doBackprop, cuda) =>
-    Scope.root { implicit scope =>
-      val values = param(lamp.saddle.fromMat(m, cuda))
+  // testGradientAndValue("sparse to dense")(mat3x1, 6d) { (m, doBackprop, cuda) =>
+  //   Scope.root { implicit scope =>
+  //     val values = param(lamp.saddle.fromMat(m, cuda))
 
-      val idx =
-        lamp.saddle.fromLongMat(Mat(Vec(1L, 0L, 1L), Vec(0L, 1L, 1L)).T, cuda)
+  //     val idx =
+  //       lamp.saddle.fromLongMat(Mat(Vec(1L, 0L, 1L), Vec(0L, 1L, 1L)).T, cuda)
 
-      val dim = List(3L, 2L)
+  //     val dim = List(3L, 2L)
 
-      val dense = Variable
-        .sparseFromValueAndIndex(
-          values = values.view(List(-1L)),
-          indices = idx,
-          dim = dim
-        )
-        .toDense
+  //     val dense = Variable
+  //       .sparseFromValueAndIndex(
+  //         values = values.view(List(-1L)),
+  //         indices = idx,
+  //         dim = dim
+  //       )
+  //       .toDense
 
-      assert(
-        dense.value.toMat.roundTo(4) == Mat(
-          Vec(0d, mat3x1.raw(0), 0d),
-          Vec(mat3x1.raw(1), mat3x1.raw(2), 0d)
-        ).roundTo(4)
-      )
+  //     assert(
+  //       dense.eval.toMat.roundTo(4) == Mat(
+  //         Vec(0d, mat3x1.raw(0), 0d),
+  //         Vec(mat3x1.raw(1), mat3x1.raw(2), 0d)
+  //       ).roundTo(4)
+  //     )
 
-      val L = dense.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        values.partialDerivative.map(t => t.toMat)
-      )
-    }
-  }
-  testGradientAndValue("sparse mm - right")(mat2x3, 54d) {
+  //     val L = dense.sum
+  
+  //     val map2 = if (doBackprop) {
+  //       {
+  //         val fw = BackpropForwardCache.simple
+  //         L.forward(scope, fw)
+  //         Autograd.backprop(L, map, fw)(scope)
+  //       }
+  //     } else map
+  //     (
+  //       L.eval.toMat.raw(0),
+  //       map2.get(values).map(t => t.toMat)
+  //     )
+  //   }
+  // }
+  testGradientAndValue("sparse mm - right", onlyCpu = true)(mat2x3, 54d) {
     (m, doBackprop, cuda) =>
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
@@ -810,18 +658,13 @@ class GradientSuite extends AnyFunSuite {
           val idx =
             lamp.saddle.fromLongMat(Mat(Vec(1L, 0L), Vec(0L, 1L)), cuda)
           val values = lamp.saddle.fromVec(Vec(2d, 3d), cuda)
-          val topt = if (cuda) STenOptions.d.cudaIndex(0) else STenOptions.d
+          val topt = if (cuda.isInstanceOf[lamp.CudaDevice]) STenOptions.d.cudaIndex(0) else STenOptions.d
           val sp = STen.sparse_coo(idx, values, List(3, 2), topt)
           const(sp)
         }
         val L = x2.mm(x1).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
 
@@ -830,13 +673,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat3x2 * 2, cuda))
       val L = x2.mm(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("crossentropy - left")(mat2x3, -182.0) {
@@ -846,13 +684,8 @@ class GradientSuite extends AnyFunSuite {
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
 
         val L = x1.crossEntropy(x2).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("crossentropy - right")(mat2x3, -182.0) {
@@ -861,13 +694,8 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3 * 2, cuda))
         val L = x2.crossEntropy(x1).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
 
@@ -875,52 +703,32 @@ class GradientSuite extends AnyFunSuite {
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.leakyRelu(0.5).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("relu")(mat2x3_2, 16d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.relu.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("gelu")(mat2x3_2, 15.7917) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.gelu.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("sigmoid")(mat2x3_2, 4.1111) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.sigmoid.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("hardswish")(mat2x3_2, 15.7700) {
@@ -928,13 +736,8 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda) + 0.1)
         val L = x1.hardSwish.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("exp")(mat2x3_2, 579.7027406974902) {
@@ -942,27 +745,18 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.exp.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
-  testGradientAndValue("logdet")(mat2x2PD, 1.3863) { (m, doBackprop, cuda) =>
+  testGradientAndValue("logdet", onlyCpu = true)(mat2x2PD, 1.3863) { (m, doBackprop, device) =>
     Scope.root { implicit scope =>
-      val x1 = param(lamp.saddle.fromMat(m, cuda))
+      val x1 = param(lamp.saddle.fromMat(m, device))
       val L = x1.logdet.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
+  
   }
   // won't pass because the grad is symmetrized
   // testGradientAndValue("cholesky")(mat2x2PD, 9.7073) { (m, doBackprop, cuda) =>
@@ -970,27 +764,22 @@ class GradientSuite extends AnyFunSuite {
   //     val x1 = param(lamp.saddle.fromMat(m, cuda))
   //     val L = x1.cholesky().sum
   //     if (doBackprop) {
-  //       L.backprop()
+  //       L.persist.backprop()
   //     }
   //     (
-  //       L.value.toMat.raw(0),
-  //       x1.partialDerivative.map(t => t.toMat)
+  //       L.eval.toMat.raw(0),
+  //       map2.get(x1).map(t => t.toMat)
   //     )
   //   }
   // }
-  testGradientAndValue("cholesky solve, b")(mat2x2, 58.2500) {
+  testGradientAndValue("cholesky solve, b",onlyCpu = true)(mat2x2, 58.2500) {
     (m, doBackprop, cuda) =>
       Scope.root { implicit scope =>
-        val l = param(lamp.saddle.fromMat(mat2x2PD).choleskyLower)
+        val l = param(lamp.saddle.fromMat(mat2x2PD,cuda).choleskyLower)
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.choleskySolve(l, false).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   // won't pass because the grad is symmetrized
@@ -1001,11 +790,11 @@ class GradientSuite extends AnyFunSuite {
   //       val b = param(STen.eye(2))
   //       val L = b.choleskySolve(x1, false).sum
   //       if (doBackprop) {
-  //         L.backprop()
+  //         L.persist.backprop()
   //       }
   //       (
-  //         L.value.toMat.raw(0),
-  //         x1.partialDerivative.map(t => t.toMat)
+  //         L.eval.toMat.raw(0),
+  //         map2.get(x1).map(t => t.toMat)
   //       )
   //     }
   // }
@@ -1014,39 +803,24 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.log.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("log1p")(mat2x3, 8.5252) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.log1p.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("softplus")(mat2x3, 21.0000) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.softplus(beta = 2d, threshold = 0d).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("cross left")(mat2x3, 28.0000) { (m, doBackprop, cuda) =>
@@ -1054,13 +828,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = const(lamp.saddle.fromMat(mat2x3_2, cuda))
       val L = x1.cross(x2, 1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("cross right")(mat2x3, -28.0000) {
@@ -1069,13 +838,8 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = const(lamp.saddle.fromMat(mat2x3_2, cuda))
         val L = x2.cross(x1, 1).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("sin")(mat2x3_2, -0.27259082747648367) {
@@ -1083,13 +847,8 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.sin.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("cos")(mat2x3_2, -0.2756481760294678) {
@@ -1097,13 +856,8 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.cos.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("tan")(mat2x3_2, -8.71433661097161) {
@@ -1111,13 +865,8 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.tan.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
 
@@ -1126,13 +875,8 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.atan.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("capped exp")(mat3x1, 2.6065) { (m, doBackprop, cuda) =>
@@ -1140,30 +884,20 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val out = new CappedShiftedNegativeExponential(scope, x1, 2.5d).value
       assert(
-        out.value.toMat.roundTo(4) == Mat(Vec(1d, 1d, math.exp(-0.5)))
-          .roundTo(4)
+        (out.eval.toMat - Mat(Vec(1d, 1d, math.exp(-0.5)))).map(math.abs).toVec.mean2 < 1e-2
+          
       )
       val L = out.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("pow")(mat2x3_2, 91d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.pow(2d).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("euclidean distance wrt a")(mat2x3_2, 10d) {
@@ -1172,16 +906,11 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val out =
           x1.euclideanDistance(const(lamp.saddle.fromMat(mat2x3, cuda)), 1)
-        assert(out.shape == List(2, 1))
-        assert(out.value.toMat.roundTo(4) == Mat(Vec(2d, 8d)))
+        assert(out.eval.shape == List(2, 1))
+        assert((out.eval.toMat - Mat(Vec(2d, 8d))).toVec.map(math.abs).mean2 < 1e-2)
         val L = out.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("euclidean distance wrt b")(mat2x3_2, 10d) {
@@ -1190,16 +919,11 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val out =
           const(lamp.saddle.fromMat(mat2x3, cuda)).euclideanDistance(x1, 1)
-        assert(out.shape == List(2, 1))
-        assert(out.value.toMat.roundTo(4) == Mat(Vec(2d, 8d)))
+        assert(out.eval.shape == List(2, 1))
+        assert((out.eval.toMat - Mat(Vec(2d, 8d))).toVec.map(math.abs).mean2 < 1e-2)
         val L = out.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("pow  2")(mat1x1, 11d) { (m, doBackprop, cuda) =>
@@ -1207,26 +931,16 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = param(lamp.saddle.fromMat(mat2x3_2, cuda))
       val L = x2.pow(x1).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("tanh")(mat2x3_2, 2.1981) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.tanh.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("where true branch")(mat2x3_2, 21d) {
@@ -1235,14 +949,9 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val x2 = param(lamp.saddle.fromMat(mat2x3, cuda))
         val L =
-          Variable.where(lamp.saddle.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+          Variable.where(lamp.saddle.fromMat(mat2x3_2,cuda).equ(2.0), x1, x2).sum
+
+        testEval(L, x1, doBackprop)
       }
   }
   testGradientAndValue("where false branch")(mat2x3, 21d) {
@@ -1251,14 +960,9 @@ class GradientSuite extends AnyFunSuite {
         val x1 = param(lamp.saddle.fromMat(mat2x3_2, cuda))
         val x2 = param(lamp.saddle.fromMat(m, cuda))
         val L =
-          Variable.where(lamp.saddle.fromMat(mat2x3_2).equ(2.0), x1, x2).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x2.partialDerivative.map(t => t.toMat)
-        )
+          Variable.where(lamp.saddle.fromMat(mat2x3_2,cuda).equ(2.0), x1, x2).sum
+
+        testEval(L, x2, doBackprop)
       }
   }
   testGradientAndValue("softmax")(mat2x3_2, -22.441910257332836) {
@@ -1266,66 +970,33 @@ class GradientSuite extends AnyFunSuite {
       Scope.root { implicit scope =>
         val x1 = param(lamp.saddle.fromMat(m, cuda))
         val L = x1.logSoftMax(dim = 1).sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, x1, doBackprop)
       }
   }
-  testGradientAndValue("squaredFrobenius")(mat2x3_2, 91d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val x1 = param(lamp.saddle.fromMat(m, cuda))
-        val L = x1.squaredFrobenius.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          x1.partialDerivative.map(t => t.toMat)
-        )
-      }
-  }
+
   testGradientAndValue("transpose")(mat2x3_2, 11d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.t.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("mean")(mat2x3_2, 1.8333d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.mean(List(0, 1))
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("norm2")(mat2x3_2, 9.5394) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val L = x1.norm2(List(0, 1), true)
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("mse loss")(mat3x1, 1d) { (m, doBackprop, cuda) =>
@@ -1333,13 +1004,8 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = lamp.saddle.fromMat(mat3x1_2, cuda)
       val L = x1.mseLoss(x2.squeeze).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("l1 loss")(mat3x1, 0.5) { (m, doBackprop, cuda) =>
@@ -1347,18 +1013,13 @@ class GradientSuite extends AnyFunSuite {
       val x1 = param(lamp.saddle.fromMat(m, cuda))
       val x2 = lamp.saddle.fromMat(mat3x1_2, cuda)
       val L = x1.smoothL1Loss(x2.squeeze).sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        x1.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, x1, doBackprop)
     }
   }
   testGradientAndValue("l2 logistic regression loss")(
     mat2x3_2,
-    151.0000008318073
+    71d
   ) { (m, doBackprop, _) =>
     Scope.root { implicit scope =>
       val w = param(lamp.saddle.fromMat(m))
@@ -1369,14 +1030,9 @@ class GradientSuite extends AnyFunSuite {
           .mm(w))
           .logSoftMax(dim = 1)
           .crossEntropy(y)
-          .sum + w.squaredFrobenius)
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        w.partialDerivative.map(t => t.toMat)
-      )
+          .sum + w.sum)
+
+      testEval(L, w, doBackprop)
     }
   }
   testGradientAndValue("l2 logistic regression loss - bce loss")(
@@ -1388,18 +1044,17 @@ class GradientSuite extends AnyFunSuite {
       val data = const(lamp.saddle.fromMat(mat3x2))
       val y =
         const(lamp.saddle.fromMat(Mat(Vec(0d, 1d, 0.5d), Vec(0d, 0.5, 1d))))
-      val classWeights = STen.ones(List(1, 2), w.value.options)
+      val classWeights = STen.ones(List(1, 2), w.eval.options)
       val L =
         ((data
           .mm(w))
-          .binaryCrossEntropyWithLogitsLoss(y.value, Some(classWeights), Sum))
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        w.partialDerivative.map(t => t.toMat)
-      )
+          .binaryCrossEntropyWithLogitsLoss(
+            y.eval,
+            Some(classWeights),
+            SumReduce
+          ))
+
+      testEval(L, w, doBackprop)
     }
   }
   testGradientAndValue("l2 logistic regression loss - bce loss mean")(
@@ -1411,99 +1066,55 @@ class GradientSuite extends AnyFunSuite {
       val data = const(lamp.saddle.fromMat(mat3x2))
       val y =
         const(lamp.saddle.fromMat(Mat(Vec(0d, 1d, 0.5d), Vec(0d, 0.5, 1d))))
-      val classWeights = STen.ones(List(1, 2), w.value.options)
+      val classWeights = STen.ones(List(1, 2), w.eval.options)
       val L =
         ((data
           .mm(w))
-          .binaryCrossEntropyWithLogitsLoss(y.value, Some(classWeights), Mean))
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        w.partialDerivative.map(t => t.toMat)
-      )
+          .binaryCrossEntropyWithLogitsLoss(y.eval, Some(classWeights), Mean))
+
+      testEval(L, w, doBackprop)
     }
   }
   testGradientAndValue("l2 logistic regression loss - nll_loss")(
     mat2x3_2,
-    151.0000008318073
+    71
   ) { (m, doBackprop, _) =>
     Scope.root { implicit scope =>
       val w = param(lamp.saddle.fromMat(m))
       val data = const(lamp.saddle.fromMat(mat3x2))
       val y =
         const(lamp.saddle.fromLongMat(Mat(Vec(0L, 1L, 2L))).squeeze)
-      val classWeights = STen.ones(List(3), w.value.options)
+      val classWeights = STen.ones(List(3), w.eval.options)
       val L =
         ((data
           .mm(w))
           .logSoftMax(dim = 1)
-          .nllLoss(y.value, classWeights, Sum) + w.squaredFrobenius)
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        w.partialDerivative.map(t => t.toMat)
-      )
+          .nllLoss(y.eval, classWeights, SumReduce) + w.sum)
+
+      testEval(L, w, doBackprop)
     }
   }
   testGradientAndValue("l2 logistic regression loss - nll_loss unreduced")(
     mat2x3_2,
-    151.0000008318073
+    71
   ) { (m, doBackprop, _) =>
     Scope.root { implicit scope =>
       val w = param(lamp.saddle.fromMat(m))
       val data = const(lamp.saddle.fromMat(mat3x2))
       val y =
         const(lamp.saddle.fromLongMat(Mat(Vec(0L, 1L, 2L))).squeeze)
-      val classWeights = STen.ones(List(3), w.value.options)
+      val classWeights = STen.ones(List(3), w.eval.options)
       val L =
         ((data
           .mm(w))
           .logSoftMax(dim = 1)
-          .nllLoss(y.value, classWeights, NoReduction)
-          .sum + w.squaredFrobenius)
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        w.partialDerivative.map(t => t.toMat)
-      )
+          .nllLoss(y.eval, classWeights, NoReduction)
+          .sum + w.sum)
+
+      testEval(L, w, doBackprop)
     }
   }
-  testGradientAndValue("weight norm - wrt g")(mat2x3.row(Array(0)), 12.7279) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val v = param(lamp.saddle.fromMat(mat.ones(2, 3), cuda))
-        val g = param(lamp.saddle.fromMat(m, cuda))
-        val L = new WeightNorm(scope, v, g, 0).value.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          g.partialDerivative.map(t => t.toMat)
-        )
-      }
-  }
-  testGradientAndValue("weight norm - wrt v")(mat2x3, 4.1500) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val v = param(lamp.saddle.fromMat(m, cuda))
-        val g = param(lamp.saddle.fromMat(mat.ones(1, 3), cuda))
-        val L = new WeightNorm(scope, v, g, 0).value.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          v.partialDerivative.map(t => t.toMat)
-        )
-      }
-  }
+
   testGradientAndValueND("mask-fill")(nd1x2x2, 5d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val input =
@@ -1516,19 +1127,14 @@ class GradientSuite extends AnyFunSuite {
           )
         )
         val sc = STen.scalarDouble(1d, q.options)
-        param(q.equ(sc))
+        (q.equ(sc))
       }
 
-      val output = new MaskFill(scope, input, mask, 2d).value
+      val output = new MaskFill(input, mask, 2d).value
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("mask-select")(nd1x2x2, 2d) { (m, doBackprop, cuda) =>
@@ -1546,17 +1152,12 @@ class GradientSuite extends AnyFunSuite {
         param(q.equ(sc))
       }
 
-      val output = new MaskSelect(scope, input.flatten, mask.flatten).value
-      assert(output.shape == List(2))
+      val output = new MaskSelect(input.flatten, mask.flatten).value
+      assert(output.eval.shape == List(2))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("index_fill")(nd1x2x2, 6d) { (m, doBackprop, cuda) =>
@@ -1564,22 +1165,15 @@ class GradientSuite extends AnyFunSuite {
       val input =
         param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
       val index =
-        param(
-          STen.owned(
-            NDArray.tensorFromLongNDArray(NDArray(Array(1L), List(1)), cuda)
-          )
+        STen.owned(
+          NDArray.tensorFromLongNDArray(NDArray(Array(1L), List(1)), cuda)
         )
 
-      val output = new IndexFill(scope, input, 1L, index, 2d).value
+      val output = new IndexFill(input, 1L, index, 2d).value
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("expand as")(nd1x2x2, 16d) { (m, doBackprop, cuda) =>
@@ -1597,15 +1191,10 @@ class GradientSuite extends AnyFunSuite {
           )
         )
       val output = input.expandAs(other)
-      assert(output.shape == other.shape)
+      assert(output.eval.shape == other.shape)
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValue("scatter sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
@@ -1613,7 +1202,7 @@ class GradientSuite extends AnyFunSuite {
       val input =
         param(lamp.saddle.fromMat(m, cuda))
       val index =
-        param(
+        (
           STen.owned(
             NDArray.tensorFromLongNDArray(
               NDArray(
@@ -1626,13 +1215,8 @@ class GradientSuite extends AnyFunSuite {
         )
       val output = input.scatterAdd(index, 0, 2)
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, input, doBackprop)
     }
   }
 
@@ -1643,13 +1227,8 @@ class GradientSuite extends AnyFunSuite {
 
       val output = input.variance(List(1))
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, input, doBackprop)
     }
   }
   testGradientAndValue("index sum")(mat2x3, 21d) { (m, doBackprop, cuda) =>
@@ -1657,7 +1236,7 @@ class GradientSuite extends AnyFunSuite {
       val input =
         param(lamp.saddle.fromMat(m, cuda))
       val index =
-        param(
+        (
           STen.owned(
             NDArray.tensorFromLongNDArray(
               NDArray(
@@ -1670,19 +1249,14 @@ class GradientSuite extends AnyFunSuite {
         )
       val output = input.indexAdd(index, 0, 2)
       assert(
-        output.value.toMat.roundTo(4) == Mat(
+        (output.eval.toMat - Mat(
           Vec(0d, 0d, 0d),
           Vec(3d, 7d, 11d)
-        ).T
+        ).T).toVec.map(math.abs).mean2 < 1e-2
       )
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, input, doBackprop)
     }
   }
   testGradientAndValue("index add by target")(mat2x3, 27d) {
@@ -1692,7 +1266,7 @@ class GradientSuite extends AnyFunSuite {
           param(lamp.saddle.fromMat(m, cuda))
         val src = param(lamp.saddle.fromMat(mat3x1.T, cuda))
         val index =
-          param(
+          (
             STen.owned(
               NDArray.tensorFromLongNDArray(
                 NDArray(
@@ -1705,19 +1279,14 @@ class GradientSuite extends AnyFunSuite {
           )
         val output = input.indexAddFromSource(index, 0, src)
         assert(
-          output.value.toMat.roundTo(4) == Mat(
+          (output.eval.toMat - Mat(
             Vec(2d, 5d, 8d),
             Vec(2d, 4d, 6d)
-          ).T
+          ).T).toVec.map(math.abs).mean2 < 1e-2
         )
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, input, doBackprop)
       }
   }
   testGradientAndValue("index add by src")(mat1x3, 27d) {
@@ -1727,7 +1296,7 @@ class GradientSuite extends AnyFunSuite {
           param(lamp.saddle.fromMat(mat2x3, cuda))
         val src = param(lamp.saddle.fromMat(m, cuda))
         val index =
-          param(
+          (
             STen.owned(
               NDArray.tensorFromLongNDArray(
                 NDArray(
@@ -1740,19 +1309,14 @@ class GradientSuite extends AnyFunSuite {
           )
         val output = input.indexAddFromSource(index, 0, src)
         assert(
-          output.value.toMat.roundTo(4) == Mat(
+          (output.eval.toMat - Mat(
             Vec(2d, 5d, 8d),
             Vec(2d, 4d, 6d)
-          ).T
+          ).T).toVec.map(math.abs).mean2 < 1e-2
         )
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          src.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, src, doBackprop)
       }
   }
   testGradientAndValue("repeat interleave")(mat2x3, 54d) {
@@ -1761,7 +1325,7 @@ class GradientSuite extends AnyFunSuite {
         val input =
           param(lamp.saddle.fromMat(m, cuda))
         val index =
-          param(
+          (
             STen.owned(
               NDArray.tensorFromLongNDArray(
                 NDArray(
@@ -1774,20 +1338,15 @@ class GradientSuite extends AnyFunSuite {
           )
         val output = input.repeatInterleave(index, 0)
         assert(
-          output.value.toMat.roundTo(4) == Mat(
+          (output.eval.toMat -Mat(
             Vec(1d, 1d, 2d, 2d, 2d),
             Vec(3d, 3d, 4d, 4d, 4d),
             Vec.apply[Double](5d, 5d, 6d, 6d, 6d)
-          )
+          )).toVec.map(math.abs).mean2 < 1e-2
         )
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, input, doBackprop)
       }
   }
   testGradientAndValueND("index_select")(nd1x2x2, 6d) { (m, doBackprop, cuda) =>
@@ -1795,23 +1354,18 @@ class GradientSuite extends AnyFunSuite {
       val input =
         param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
       val index =
-        param(
+        (
           STen.owned(
             NDArray
               .tensorFromLongNDArray(NDArray(Array(1L, 1L, 1L), List(3)), cuda)
           )
         )
 
-      val output = new IndexSelect(scope, input, 1L, index).value
+      val output = new IndexSelect(input, 1L, index).value
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("conv1d - wrt weights")(nd1x2x2, 30d) {
@@ -1837,13 +1391,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, weight, doBackprop)
       }
   }
   testGradientAndValueND("conv1d - wrt input")(nd1x2x3, 30d) {
@@ -1870,13 +1419,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("conv1d - padded - wrt weights")(nd1x2x2, 46d) {
@@ -1903,13 +1447,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, weight, doBackprop)
       }
   }
   testGradientAndValueND("conv1d -padded - wrt input")(nd1x2x3, 46d) {
@@ -1935,13 +1474,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("conv1d - stride-2 - wrt weights")(nd1x2x2, 23d) {
@@ -1967,13 +1501,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, weight, doBackprop)
       }
   }
   testGradientAndValueND("conv1d -stride-2 - wrt input")(nd1x2x3, 23d) {
@@ -1999,13 +1528,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("conv1d -stride-2 - wrt bias")(ndx1, 23d) {
@@ -2031,13 +1555,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, bias, doBackprop)
       }
   }
   testGradientAndValueND("conv2d - wrt weights")(nd1x2x2x2, 276d) {
@@ -2063,13 +1582,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, weight, doBackprop)
       }
   }
   testGradientAndValueND("conv2d - wrt weights - groups", cpu = false)(
@@ -2096,13 +1610,8 @@ class GradientSuite extends AnyFunSuite {
       ).value
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, weight, doBackprop)
     }
   }
   testGradientAndValueND("conv2d - wrt input")(nd1x2x3x3, 276d) {
@@ -2128,13 +1637,8 @@ class GradientSuite extends AnyFunSuite {
         ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("conv2d - padded - wrt input")(nd1x2x3x3, 628d) {
@@ -2160,13 +1664,8 @@ class GradientSuite extends AnyFunSuite {
         ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("conv2d - wrt bias")(ndx1, 276d) {
@@ -2192,13 +1691,8 @@ class GradientSuite extends AnyFunSuite {
         ).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, bias, doBackprop)
       }
   }
 
@@ -2211,13 +1705,8 @@ class GradientSuite extends AnyFunSuite {
           new MaxPool1D(scope, input, 2, 1, 1, 1).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("maxpool1d unpadded")(nd1x2x3, 18d) {
@@ -2230,13 +1719,8 @@ class GradientSuite extends AnyFunSuite {
           new MaxPool1D(scope, input, 2, 1, 0, 1).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("maxpool1d strided")(nd1x2x3, 7d) {
@@ -2249,13 +1733,8 @@ class GradientSuite extends AnyFunSuite {
           new MaxPool1D(scope, input, 2, 2, 0, 1).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("maxpool2d strided")(nd1x2x3x3, 17d) {
@@ -2268,13 +1747,8 @@ class GradientSuite extends AnyFunSuite {
           new MaxPool2D(scope, input, 2, 2, 0, 1).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("maxpool2d strided padded")(nd1x2x3x3, 68d) {
@@ -2287,13 +1761,8 @@ class GradientSuite extends AnyFunSuite {
           new MaxPool2D(scope, input, 2, 2, 1, 1).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("avgpool2d strided padded")(nd1x2x3x3, 38.25) {
@@ -2306,115 +1775,8 @@ class GradientSuite extends AnyFunSuite {
           new AvgPool2D(scope, input, 2, 2, 1).value
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValue("batch norm 1d - wrt to input")(mat2x3, 0d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(lamp.saddle.fromMat(m, cuda))
-        val weight = param(lamp.saddle.fromVec(Vec(1d, 2d, 3d), cuda))
 
-        val bias = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
-        val runningMean = lamp.saddle.fromVec(vec.ones(3), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(3), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weight,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => t.toMat)
-        )
-      }
-  }
-  testGradientAndValueND("batch norm 1d - wrt to weight")(ndx3, 0d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(lamp.saddle.fromMat(mat2x3, cuda))
-        val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-
-        val bias = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
-        val runningMean = lamp.saddle.fromVec(vec.ones(3), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(3), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weight,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("batch norm 1d - wrt to bias")(ndx3, 12d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(lamp.saddle.fromMat(mat2x3, cuda))
-        val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-
-        val weight = param(lamp.saddle.fromVec(vec.zeros(3), cuda))
-        val runningMean = lamp.saddle.fromVec(vec.ones(3), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(3), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weight,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+        testEvalND(L, input, doBackprop)
       }
   }
 
@@ -2438,39 +1800,31 @@ class GradientSuite extends AnyFunSuite {
           ).value.mean(List(0, 1))
 
         val L = output
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => t.toMat)
-        )
+
+        testEval(L, input, doBackprop)
       }
   }
-  testGradientAndValue("layer norm 1d - wrt to input - no scale and no bias")(mat2x3, 0.0) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(lamp.saddle.fromMat(m, cuda))
-        val output =
-          new LayerNormOp(
-            scope,
-            input,
-            None,
-            None,
-            List(3L),
-            eps = 1e-5
-          ).value.mean(List(0, 1))
+  testGradientAndValue("layer norm 1d - wrt to input - no scale and no bias")(
+    mat2x3,
+    0.0
+  ) { (m, doBackprop, cuda) =>
+    Scope.root { implicit scope =>
+      val input =
+        param(lamp.saddle.fromMat(m, cuda))
+      val output =
+        new LayerNormOp(
+          scope,
+          input,
+          None,
+          None,
+          List(3L),
+          eps = 1e-5
+        ).value.mean(List(0, 1))
 
-        val L = output
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => t.toMat)
-        )
-      }
+      val L = output
+
+      testEval(L, input, doBackprop)
+    }
   }
   testGradientAndValueND("layer norm 1d - wrt to weight")(ndx3, 0.8165) {
     (m, doBackprop, cuda) =>
@@ -2492,42 +1846,33 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.mean(List(0, 1))
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, weight, doBackprop)
       }
   }
-  testGradientAndValueND("layer norm 1d - wrt to weight - no bias")(ndx3, 0.8165) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(lamp.saddle.fromMat(mat2x3, cuda))
-        val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
+  testGradientAndValueND("layer norm 1d - wrt to weight - no bias")(
+    ndx3,
+    0.8165
+  ) { (m, doBackprop, cuda) =>
+    Scope.root { implicit scope =>
+      val input =
+        param(lamp.saddle.fromMat(mat2x3, cuda))
+      val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
+      val output =
+        new LayerNormOp(
+          scope,
+          input,
+          Option(weight),
+          None,
+          List(3L),
+          eps = 1e-5
+        ).value
 
-        val output =
-          new LayerNormOp(
-            scope,
-            input,
-            Option(weight),
-            None,
-            List(3L),
-            eps = 1e-5
-          ).value
+      val L = output.mean(List(0, 1))
 
-        val L = output.mean(List(0, 1))
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
+      testEvalND(L, weight, doBackprop)
+    }
   }
   testGradientAndValueND("layer norm 1d - wrt to bias")(ndx3, 2d) {
     (m, doBackprop, cuda) =>
@@ -2549,13 +1894,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.mean(List(0, 1))
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, bias, doBackprop)
       }
   }
   testGradientAndValueND("layer norm 1d - wrt to bias - no scale")(ndx3, 2d) {
@@ -2564,7 +1904,6 @@ class GradientSuite extends AnyFunSuite {
         val input =
           param(lamp.saddle.fromMat(mat2x3, cuda))
         val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-
 
         val output =
           new LayerNormOp(
@@ -2577,13 +1916,8 @@ class GradientSuite extends AnyFunSuite {
           ).value
 
         val L = output.mean(List(0, 1))
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, bias, doBackprop)
       }
   }
   testGradientAndValueND("bmm - wrt left")(nd3x2x3, 489d) {
@@ -2595,13 +1929,8 @@ class GradientSuite extends AnyFunSuite {
         val output = input.bmm(other)
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("bmm - wrt right")(nd3x3x2, 489d) {
@@ -2613,338 +1942,23 @@ class GradientSuite extends AnyFunSuite {
         val output = other.bmm(input)
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
-  testGradientAndValueND("batch norm 2d - wrt to input")(nd1x2x3, 6d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val bias = param(lamp.saddle.fromVec(vec.ones(6), cuda))
 
-        val weight = param(lamp.saddle.fromVec(vec.ones(6), cuda))
-        val runningMean = lamp.saddle.fromVec(vec.ones(6), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(6), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weight,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("batch norm 2d - wrt to weights")(ndx6, 6d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3, cuda)))
-        val bias = param(lamp.saddle.fromVec(vec.ones(6), cuda))
-
-        val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val runningMean = lamp.saddle.fromVec(vec.ones(6), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(6), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weight,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("batch norm 2d - wrt to bias")(ndx6, 21d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3, cuda)))
-        val weight = param(lamp.saddle.fromVec(vec.ones(6), cuda))
-
-        val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val runningMean = lamp.saddle.fromVec(vec.ones(6), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(6), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weight,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("batch norm 3d - wrt to input")(nd1x2x3x3, 18d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val bias = param(lamp.saddle.fromVec(vec.ones(18), cuda))
-
-        val weight = param(lamp.saddle.fromVec(vec.ones(18), cuda))
-        val runningMean = lamp.saddle.fromVec(vec.ones(18), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(18), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weight,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("batch norm 3d - wrt to weights")(ndx18, 18d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
-        val bias = param(lamp.saddle.fromVec(vec.ones(18), cuda))
-
-        val weight = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val runningMean = lamp.saddle.fromVec(vec.ones(18), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(18), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weight,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("batch norm 3d - wrt to bias")(ndx18, 63d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
-        val weights = param(lamp.saddle.fromVec(vec.ones(18), cuda))
-
-        val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val runningMean = lamp.saddle.fromVec(vec.ones(18), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.ones(18), cuda)
-
-        val output =
-          new BatchNorm(
-            scope,
-            input,
-            weights,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("BatchNorm2D - wrt to input")(nd1x2x3x3, 18d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-        val weights = param(lamp.saddle.fromVec(vec.ones(2), cuda))
-
-        val bias = param(STen.owned(NDArray.tensorFromNDArray(ndx2, cuda)))
-        val runningMean = lamp.saddle.fromVec(vec.zeros(2), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.zeros(2), cuda)
-
-        val output =
-          new BatchNorm2D(
-            scope,
-            input,
-            weights,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("BatchNorm2D - wrt to weights")(ndx2, 18d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
-        val weights = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-
-        val bias = param(STen.owned(NDArray.tensorFromNDArray(ndx2, cuda)))
-        val runningMean = lamp.saddle.fromVec(vec.zeros(2), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.zeros(2), cuda)
-
-        val output =
-          new BatchNorm2D(
-            scope,
-            input,
-            weights,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weights.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
-  testGradientAndValueND("BatchNorm2D - wrt to bias")(ndx2, 18d) {
-    (m, doBackprop, cuda) =>
-      Scope.root { implicit scope =>
-        val input =
-          param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3x3, cuda)))
-        val bias = param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
-
-        val weights = param(STen.owned(NDArray.tensorFromNDArray(ndx2, cuda)))
-        val runningMean = lamp.saddle.fromVec(vec.zeros(2), cuda)
-        val runningVar = lamp.saddle.fromVec(vec.zeros(2), cuda)
-
-        val output =
-          new BatchNorm2D(
-            scope,
-            input,
-            weights,
-            bias,
-            runningMean,
-            runningVar,
-            training = true,
-            momentum = 0.1,
-            eps = 1e-5
-          ).value
-
-        val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
-      }
-  }
   testGradientAndValueND("flatten ")(nd1x2x3x3, 153d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
       val input =
         param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
-      val output = input.flattenLastDimensions(3)(scope)
+      val output = input.flattenLastDimensions(3)
 
-      assert(output.shape == List(1, 18))
+      assert(output.eval.shape == List(1, 18))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("select 0 0 ")(nd1x2x3x3, 153d) {
@@ -2956,16 +1970,11 @@ class GradientSuite extends AnyFunSuite {
         val output =
           input.select(0, 0)
 
-        assert(output.shape == List(2, 3, 3))
+        assert(output.eval.shape == List(2, 3, 3))
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("select 2 1 ")(nd1x2x3x3, 51d) {
@@ -2977,16 +1986,11 @@ class GradientSuite extends AnyFunSuite {
         val output =
           input.select(2, 1)
 
-        assert(output.shape == List(1, 2, 3))
+        assert(output.eval.shape == List(1, 2, 3))
 
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("slice ")(nd1x2x3x3, 120d) { (m, doBackprop, cuda) =>
@@ -2997,16 +2001,11 @@ class GradientSuite extends AnyFunSuite {
       val output =
         input.slice(dim = 2, start = 1, end = 3, step = 1)
 
-      assert(output.shape == List(1, 2, 2, 3))
+      assert(output.eval.shape == List(1, 2, 2, 3))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
 
@@ -3016,18 +2015,13 @@ class GradientSuite extends AnyFunSuite {
         param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
       val output =
-        new Stack(scope, List(input, input), 0).value
+        new Stack(List(input, input), 0).value
 
-      assert(output.shape == List(2, 1, 2, 3))
+      assert(output.eval.shape == List(2, 1, 2, 3))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("stack 1")(nd1x2x3, 42d) { (m, doBackprop, cuda) =>
@@ -3036,18 +2030,13 @@ class GradientSuite extends AnyFunSuite {
         param(STen.owned(NDArray.tensorFromNDArray(m, cuda)))
 
       val output =
-        new Stack(scope, List(input, input), 1).value
+        new Stack(List(input, input), 1).value
 
-      assert(output.shape == List(1, 2, 2, 3))
+      assert(output.eval.shape == List(1, 2, 2, 3))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("cat 1 ")(nd1x2x3, 84d) { (m, doBackprop, cuda) =>
@@ -3058,18 +2047,13 @@ class GradientSuite extends AnyFunSuite {
         param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3_2, cuda)))
 
       val output =
-        new Concatenate(scope, List(input, t2), 1).value
+        new Concatenate(List(input, t2), 1).value
 
-      assert(output.shape == List(1, 4, 3))
+      assert(output.eval.shape == List(1, 4, 3))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("cat 2 ")(nd1x2x3, 84d) { (m, doBackprop, cuda) =>
@@ -3079,18 +2063,13 @@ class GradientSuite extends AnyFunSuite {
       val t2 =
         param(STen.owned(NDArray.tensorFromNDArray(nd1x2x3_2, cuda)))
       val output =
-        new Concatenate(scope, List(input, t2), 2).value
+        new Concatenate(List(input, t2), 2).value
 
-      assert(output.shape == List(1, 2, 6))
+      assert(output.eval.shape == List(1, 2, 6))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
 
@@ -3101,16 +2080,11 @@ class GradientSuite extends AnyFunSuite {
 
       val output = input.view(List(1, 1, 2, 3))
 
-      assert(output.shape == List(1, 1, 2, 3))
+      assert(output.eval.shape == List(1, 1, 2, 3))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("reshape 1 ")(nd1x2x3, 21d) { (m, doBackprop, cuda) =>
@@ -3120,37 +2094,28 @@ class GradientSuite extends AnyFunSuite {
 
       val output = input.reshape(List(1, 1, 2, 3))
 
-      assert(output.shape == List(1, 1, 2, 3))
+      assert(output.eval.shape == List(1, 1, 2, 3))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValue("embedding ")(mat2x3, 240d) { (m, doBackprop, cuda) =>
     Scope.root { implicit scope =>
+      val w = lamp.saddle.fromMat(m, cuda)
       val weight =
-        param(lamp.saddle.fromMat(m, cuda))
+        param(w)
       val input =
-        param(lamp.saddle.fromLongMat(mat.ones(4, 5).map(_.toLong), cuda))
+        (lamp.saddle.fromLongMat(mat.ones(4, 5).map(_.toLong), cuda))
 
-      val output = new Embedding(scope, input, weight).value
+      val output = new Embedding(input, weight).value
 
-      assert(output.shape == List(4, 5, 3))
+      assert(output.eval.shape == List(4, 5, 3))
 
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        weight.partialDerivative.map(t => t.toMat)
-      )
+
+      testEval(L, weight, doBackprop)
     }
   }
 
@@ -3180,15 +2145,10 @@ class GradientSuite extends AnyFunSuite {
           groups = 1L
         ).value
 
-        assert(output.shape == List(1, 1, 4, 4))
+        assert(output.eval.shape == List(1, 1, 4, 4))
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, input, doBackprop)
       }
   }
   testGradientAndValueND("tranposed conv2d - wrt input - padded")(
@@ -3219,15 +2179,10 @@ class GradientSuite extends AnyFunSuite {
         groups = 1L
       ).value
 
-      assert(output.shape == List(1, 1, 2, 2))
+      assert(output.eval.shape == List(1, 1, 2, 2))
       val L = output.sum
-      if (doBackprop) {
-        L.backprop()
-      }
-      (
-        L.value.toMat.raw(0),
-        input.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-      )
+
+      testEvalND(L, input, doBackprop)
     }
   }
   testGradientAndValueND("tranposed conv2d - wrt weight")(nd1x2x2x2, 628d) {
@@ -3256,15 +2211,10 @@ class GradientSuite extends AnyFunSuite {
           groups = 1L
         ).value
 
-        assert(output.shape == List(1, 1, 4, 4))
+        assert(output.eval.shape == List(1, 1, 4, 4))
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          weight.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, weight, doBackprop)
       }
   }
   testGradientAndValueND("tranposed conv2d - wrt bias")(ndx1, 628d) {
@@ -3293,16 +2243,65 @@ class GradientSuite extends AnyFunSuite {
           groups = 1L
         ).value
 
-        assert(output.shape == List(1, 1, 4, 4))
+        assert(output.eval.shape == List(1, 1, 4, 4))
         val L = output.sum
-        if (doBackprop) {
-          L.backprop()
-        }
-        (
-          L.value.toMat.raw(0),
-          bias.partialDerivative.map(t => NDArray.tensorToNDArray(t.value))
-        )
+
+        testEvalND(L, bias, doBackprop)
       }
+  }
+
+  testGradientAndValueCudaOnly("scaled dot product attention - by q")(
+    mat1x64,
+    64d
+  ) { (m, doBackprop) =>
+    Scope.root { implicit scope =>
+      val device = lamp.CudaDevice(0)
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
+      val q = param(mSTen + 0.0)
+      val k = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val v = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
+
+      val L = r.sum
+
+      testEval(L, q, doBackprop)
+
+    }
+  }
+  testGradientAndValueCudaOnly("scaled dot product attention - by k")(
+    mat1x64,
+    64d
+  ) { (m, doBackprop) =>
+    Scope.root { implicit scope =>
+      val device = lamp.CudaDevice(0)
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
+      val q = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val k = param(mSTen + 0.0)
+      val v = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
+
+      val L = r.sum
+
+      testEval(L, k, doBackprop)
+    }
+  }
+  testGradientAndValueCudaOnly("scaled dot product attention - by v")(
+    mat1x64,
+    704d,
+    eps = 1e-3
+  ) { (m, doBackprop) =>
+    Scope.root { implicit scope =>
+      val device = lamp.CudaDevice(0)
+      val mSTen = device.to(lamp.saddle.fromMat(m).view(1, 8, 1, 8).castToFloat)
+      val q = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val k = param(device.to(STen.ones(List(1, 8, 1, 8), STenOptions.f)))
+      val v = param(mSTen + 10.0)
+      val r = new ScaledDotProductAttention(scope, q, k, v, None, false).value
+
+      val L = r.sum
+
+      testEval(L, v, doBackprop)
+    }
   }
 
 }

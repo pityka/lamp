@@ -18,7 +18,7 @@ object DistributedTrain {
       s"Distributed training rank: ${config.rank} nrank:${config.nranks} gpu:${config.gpu}"
     )
     val device = CudaDevice(config.gpu)
-    val model = Model.allocateModel(device)
+    val model = Model.allocateModel(device,config.gradientCheckpointing, config.mixedPrecision)
 
     val actorSystem = akka.actor.ActorSystem(
       name = s"lm-${config.rank}",
@@ -50,7 +50,8 @@ akka {
           minibatchSize = config.trainBatchSize,
           numBatches = config.numBatchesPerEpoch,
           corpus = trainTokens,
-          blockLength = Model.contextLength
+          blockLength = Model.contextLength,
+          createMaxLength = true
         )
         .withoutEmptyBatches
         .everyNth(n = config.nranks, offset = config.rank)
@@ -61,7 +62,8 @@ akka {
           minibatchSize = config.trainBatchSize,
           numBatches = config.numBatchesPerEpoch,
           corpus = validTokens,
-          blockLength = Model.contextLength
+          blockLength = Model.contextLength,
+          createMaxLength = true
         )
         .withoutEmptyBatches
         .everyNth(n = config.nranks, offset = config.rank)
@@ -80,7 +82,8 @@ akka {
         },
         learningRate = simple(config.learningRate),
         beta2 = simple(config.beta2),
-        clip = Some(1d)
+        clip = Some(1d),
+        mixedPrecision = config.mixedPrecision
       )
 
       val checkpointedState = config.checkpointSave.flatMap { state =>

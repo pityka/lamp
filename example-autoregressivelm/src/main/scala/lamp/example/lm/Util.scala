@@ -11,7 +11,11 @@ object Util {
 
   def prepareCorpora(config: CliConfig)(implicit scope: Scope) = Scope.bracket {
     implicit scope =>
+      if (config.trainFile.isEmpty) {
+            throw new RuntimeException("Empty file path for train")
+          }
       for {
+       
 
         rawTrainCorpus <-
           Util.readBytesFromFile(config.trainFile, config.fileMaxLength)
@@ -21,7 +25,8 @@ object Util {
         codec <- Util.readOrTrainCodec(
           config.bpeFile,
           rawTrainCorpus.slice(0, 0, 300000, 1).toByteArray,
-          Model.codecFactory
+          Model.codecFactory,
+          
         )
 
         trainCorpus <-
@@ -29,7 +34,8 @@ object Util {
             rawTrainCorpus,
             new File(config.trainFile + ".tokens"),
             codec,
-            config.parallelism
+            config.parallelism,
+            Model.vocabularySize
           )
 
         _ = scribe.info(
@@ -46,7 +52,8 @@ object Util {
                    corp,
                    new File(config.validFile + ".tokens"),
                    codec,
-                   config.parallelism
+                   config.parallelism,
+                   Model.vocabularySize
                  )
                )
                .map(Option(_)))
@@ -84,6 +91,7 @@ object Util {
   def readBytesFromFile[S: Sc](file: String, maxLength: Long): IO[STen] =
     IO.interruptible {
       val l = math.min(maxLength, new File(file).length())
+      println(file)
       STen
         .fromFile(
           path = file,
@@ -111,7 +119,8 @@ object Util {
       corpus: STen,
       file: File,
       codec: Codec,
-      parallelism: Int
+      parallelism: Int,
+      vocabularySize: Int
   ): IO[STen] =
     if (file.canRead) {
       IO.blocking {
@@ -120,7 +129,6 @@ object Util {
       }
     } else {
       scribe.info(s"Encoding corpus")
-      import cats.syntax.all._
       val len = corpus.shape(0)
 
       val chunkSize = 1024 * 1024L * 10
@@ -131,6 +139,7 @@ object Util {
               .slice(0, start, math.min(start + chunkSize, len), 1)
               .toByteArray
             val enc = codec.encode(slice).map(_.toInt)
+            assert(enc.forall(_ < vocabularySize))
             STen.fromIntArray(enc, List(enc.length), CPU)
           }
       }.flatMap { list =>

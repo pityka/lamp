@@ -22,6 +22,7 @@ class GCNSuite extends AnyFunSuite {
 
   test1("gcn aggregation") { cuda =>
     Scope.root { implicit scope =>
+      implicit val fw = ForwardCache.selective
       val device = if (cuda) CudaDevice(0) else CPU
       val precision = DoublePrecision
       val nodesM = mat.rand(4, 4)
@@ -45,7 +46,7 @@ class GCNSuite extends AnyFunSuite {
       val aggregated =
         GCN.gcnAggregation(nodes, edges.select(1, 0), edges.select(1, 1))
 
-      val output = aggregated.value.toMat
+      val output = aggregated.forward.toMat
 
       val expected = {
         import org.saddle.linalg._
@@ -63,6 +64,7 @@ class GCNSuite extends AnyFunSuite {
 
   test1("gcn") { cuda =>
     Scope.root { implicit scope =>
+      implicit val fw = ForwardCache.selective
       val device = if (cuda) CudaDevice(0) else CPU
       val precision = DoublePrecision
       val tOpt = device.options(precision)
@@ -92,7 +94,7 @@ class GCNSuite extends AnyFunSuite {
               weights = param(STen.ones(List(4, 3), tOpt)),
               bias = Some(param(STen.ones(List(1, 3), tOpt)))
             ),
-            Fun(implicit scope => variable => variable.relu)
+            Fun(_=> variable => variable.relu)
           )
         )
       )
@@ -100,13 +102,13 @@ class GCNSuite extends AnyFunSuite {
       val graph = Graph(
         nodes,
         const(STen.scalarDouble(0d, nodes.options)), // unused
-        edges.value.select(1, 0),
-        edges.value.select(1, 1),
+        edges.constantValue.select(1, 0),
+        edges.constantValue.select(1, 1),
         STen.scalarLong(-1L, nodes.options) // unused
       )
 
       val nodeStates = module.forward(graph).nodeFeatures
-      val output = nodeStates.value.toMat
+      val output = nodeStates.forward.toMat
 
       val expected = {
         import org.saddle.linalg._
@@ -139,6 +141,7 @@ class GCNSuite extends AnyFunSuite {
     val precision = SinglePrecision
 
     Scope.root { implicit scope =>
+      implicit val fw = ForwardCache.selective
       val (featureT, labelsT, nodeIndex, unmaskedLabels) = {
         val frame = Frame(
           scala.io.Source
@@ -206,14 +209,14 @@ class GCNSuite extends AnyFunSuite {
               tOpt = device.options(precision),
               dropout = 0.95
             ),
-            GenericFun[Graph, Variable](_ => _.nodeFeatures),
+            GenericFun[Graph, Variable](_ => _ => _.nodeFeatures),
             Linear(
               in = 128,
               out = 7,
               tOpt = device.options(precision),
               bias = false
             ),
-            Fun(implicit scope => variable => variable.logSoftMax(1))
+            Fun(_ => variable => variable.logSoftMax(1))
           ),
           LossFunctions.NLL(7, classWeights, ignore = -100)
         )
@@ -224,8 +227,8 @@ class GCNSuite extends AnyFunSuite {
             targetPerNode = labelsT
           )
 
-        val (_, trainedModel, _, _) = IOLoops
-          .withSWA(
+        val (_, trainedModel, _, _,_) = IOLoops
+          .epochs(
             model = model,
             optimizerFactory = RAdam
               .factory(
@@ -233,9 +236,9 @@ class GCNSuite extends AnyFunSuite {
                 weightDecay = simple(5e-4d)
               ),
             trainBatchesOverEpoch = makeTrainingBatch,
-            warmupEpochs = 250,
-            swaEpochs = 50,
-            logger = Some(scribe.Logger("sdf"))
+            epochs = 100,
+            logger = Some(scribe.Logger("sdf")),
+            validationBatchesOverEpoch = None
           )
           .unsafeRunSync()
 
@@ -260,16 +263,16 @@ class GCNSuite extends AnyFunSuite {
               "node features",
               input = true
             )
-          case x if x.value.options.isSparse =>
+          case x if x.forward.options.isSparse =>
             lamp.onnx.VariableInfo(x, "graph adj", input = true)
           case x: ConstantWithoutGrad
-              if x.value.shape.head == input.nodeFeatures.shape.head =>
+              if x.forward.shape.head == input.nodeFeatures.shape.head =>
             lamp.onnx.VariableInfo(x, "graph degree", input = true)
         }
         println(file)
 
         val prediction = {
-          val argm = ATen.argmax(output.value.value, 1, false)
+          val argm = ATen.argmax(output.forward.value, 1, false)
           val r = lamp.saddle.SaddleTensorHelpers.toLongMat(argm).toVec
           argm.release
           r
@@ -290,11 +293,12 @@ class GCNSuite extends AnyFunSuite {
 
   test1("small graph mode batchstream") { cuda =>
     Scope.root { implicit scope =>
+      implicit val fw = ForwardCache.selective
       val device = if (cuda) CudaDevice(0) else CPU
       val precision = DoublePrecision
       val graphs = Seq(
         (
-          lamp.saddle.fromMat(mat.ones(5, 2), device, precision),
+          lamp.saddle.fromMat(mat.ones(5, 2), CPU, precision),
           lamp.saddle.fromLongMat(
             Mat(
               Vec(0L, 1L),
@@ -303,11 +307,11 @@ class GCNSuite extends AnyFunSuite {
               Vec(0L, 4L),
               Vec(1L, 2L)
             ).T,
-            device
+            CPU
           )
         ),
         (
-          lamp.saddle.fromMat(mat.zeros(5, 2), device, precision),
+          lamp.saddle.fromMat(mat.zeros(5, 2), CPU, precision),
           lamp.saddle.fromLongMat(
             Mat(
               Vec(0L, 1L),
@@ -316,7 +320,7 @@ class GCNSuite extends AnyFunSuite {
               Vec(0L, 4L),
               Vec(1L, 2L)
             ).T,
-            device
+            CPU
           )
         )
       ).map { case (nodes, edges) =>
@@ -328,7 +332,7 @@ class GCNSuite extends AnyFunSuite {
         )
       }
       val rng = new scala.util.Random()
-      val targets = lamp.saddle.fromVec(Vec(0d, 1d), device, precision)
+      val targets = lamp.saddle.fromVec(Vec(0d, 1d), CPU, precision)
       val batchStream = GraphBatchStream
         .smallGraphStream(2, graphs.toArray, targets, Some(rng),10000)
       val (batch, _) = batchStream.allocateBuffers(device).use{ buffers =>
@@ -351,6 +355,7 @@ class GCNSuite extends AnyFunSuite {
   }
   test1("forward/backward") { cuda =>
     Scope.root { implicit scope =>
+      implicit val fw = ForwardCache.selective
       val device = if (cuda) CudaDevice(0) else CPU
       val precision = DoublePrecision
       val tOpt = device.options(precision)
@@ -381,8 +386,8 @@ class GCNSuite extends AnyFunSuite {
       val graph = Graph(
         nodes,
         const(STen.scalarDouble(0d, nodes.options)), // unused
-        edges.value.select(1, 0),
-        edges.value.select(1, 1),
+        edges.forward.select(1, 0),
+        edges.forward.select(1, 1),
         graphIndices
       )
       val module = GCN(
@@ -392,26 +397,22 @@ class GCNSuite extends AnyFunSuite {
               weights = param(STen.ones(List(2, 3), tOpt)),
               bias = Some(param(STen.ones(List(1, 3), tOpt)))
             ),
-            Fun(implicit scope => _.relu)
+            Fun(_=> _.relu)
           )
         )
       )
 
       val graph2 = module.forward(graph)
       val nodeStates = graph2.nodeFeatures
-      assert(nodeStates.value.toMat.numRows == 10)
-      assert(nodeStates.value.toMat.numCols == 3)
-      nodeStates.sum.backprop()
-      assert(
-        module.transform.transform.m1.weights.partialDerivative.isDefined
-      )
+      assert(nodeStates.forward.toMat.numRows == 10)
+      assert(nodeStates.forward.toMat.numCols == 3)
 
-      val nodesStatesM = nodeStates.value.toMat
+      val nodesStatesM = nodeStates.forward.toMat
       val graphStates = VertexPooling.apply(graph2, VertexPooling.Mean)
 
-      val graphStatesM = graphStates.value.toMat
+      val graphStatesM = graphStates.forward.toMat
 
-      assert(graphStates.value.toMat.numRows == 2)
+      assert(graphStates.forward.toMat.numRows == 2)
       assert(
         graphStatesM == Mat(
           nodesStatesM.row(0, 1, 2, 3, 4).reduceCols((v, _) => v.mean),

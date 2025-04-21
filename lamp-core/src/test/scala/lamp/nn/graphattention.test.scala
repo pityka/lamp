@@ -11,11 +11,12 @@ import lamp.nn.graph.Graph
 import lamp.STen
 import lamp.saddle._
 import org.saddle.doubleOrd
+import lamp.autograd.Autograd.BackpropForwardCache
 
 class GraphAttentionSuite extends AnyFunSuite {
-
   test("graph attention") {
     Scope.root { implicit scope =>
+      implicit val fw : ForwardCache = BackpropForwardCache.simple
       /** node features, 5 x 3
         */
       val nodes = NDArray
@@ -132,7 +133,7 @@ class GraphAttentionSuite extends AnyFunSuite {
           wNodeValue = const(wNodeValue),
           wAttention = Some(const(wAttention)),
           numHeads = 2
-        ).value
+        ).eval
         .toMat
       assert(result.numRows == 5)
       assert(result.numCols == 6)
@@ -150,7 +151,7 @@ class GraphAttentionSuite extends AnyFunSuite {
           wNodeValue = const(wNodeValue),
           wAttention = None,
           numHeads = 2
-        ).value
+        ).eval
         .toMat
       assert(resultDot.numRows == 5)
       assert(resultDot.numCols == 6)

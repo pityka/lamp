@@ -5,6 +5,8 @@ import cats.effect.ExitCode
 import java.io.File
 
 case class CliConfig(
+    gradientCheckpointing: Boolean = false,
+    mixedPrecision: Boolean = false,
     gpus: Seq[Int] = Nil,
     trainFile: String = "",
     validFile: String = "",
@@ -20,7 +22,7 @@ case class CliConfig(
     checkpointSave: Option[String] = None,
     extend: Option[String] = None,
     extendLength: Int = 50,
-    gradientAccumSteps: Int = 5,
+    gradientAccumSteps: Int = 1,
     parallelism: Int = 64,
     // config for distributed training
     distributed: Boolean = false,
@@ -77,6 +79,12 @@ object CliParser {
       ),
       opt[Int]("batches-per-epoch").action((x, c) =>
         c.copy(numBatchesPerEpoch = x)
+      ),
+      opt[Boolean]("gradient-checkpoint").action((x, c) =>
+        c.copy(gradientCheckpointing = x)
+      ),
+      opt[Boolean]("mixed-precision").action((x, c) =>
+        c.copy(mixedPrecision = x)
       ),
       opt[Double]("learning-rate").action((x, c) => c.copy(learningRate = x)),
       opt[Double]("weight-decay").action((x, c) => c.copy(weightDecay = x)),

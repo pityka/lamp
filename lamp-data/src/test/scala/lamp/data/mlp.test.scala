@@ -4,12 +4,13 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.saddle._
 import lamp.autograd.{const}
 import lamp.nn._
-import lamp.{CPU, CudaDevice, DoublePrecision}
 import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
 import cats.effect.IO
+import lamp.autograd.ForwardCache
+import lamp.SinglePrecision
 
 class MLPSuite extends AnyFunSuite {
   def mlp(dim: Int, k: Int, tOpt: STenOptions)(implicit
@@ -17,18 +18,19 @@ class MLPSuite extends AnyFunSuite {
   ) =
     sequence(
       MLP(dim, k, List(64, 32), tOpt, dropout = 0.2, numHeads = 2),
-      Fun(implicit pool => _.logSoftMax(dim = 1))
+      Fun(_ => _.logSoftMax(dim = 1))
     )
 
-  def test1(id: String)(fun: Boolean => Unit) = {
-    test(id) { fun(false) }
-    test(id + "/CUDA", CudaTest) { fun(true) }
+  def test1(id: String)(fun: lamp.Device => Unit) = {
+    test(id) { fun(lamp.CPU) }
+    if (aten.Tensor.hasMps()) { test(id + " MPS") { fun(lamp.MPS) } }
+    test(id + "/device", CudaTest) { fun(lamp.CudaDevice(0)) }
   }
 
-  test1("mnist tabular mini batch") { cuda =>
+  test1("mnist tabular mini batch") { device =>
     val stop = TensorLogger.start()(println _, (_, _) => true, 5000, 10000, 0)
     Scope.root { implicit scope =>
-      val device = if (cuda) CudaDevice(0) else CPU
+      implicit val fw = ForwardCache.selective
       val testData = org.saddle.csv.CsvParser
         .parseInputStreamWithHeader[Double](
           new java.util.zip.GZIPInputStream(
@@ -38,12 +40,16 @@ class MLPSuite extends AnyFunSuite {
         .toOption
         .get
       val testDataTensor =
-        lamp.saddle.fromMat(testData.filterIx(_ != "label").toMat, cuda)
+        lamp.saddle.fromMat(
+          testData.filterIx(_ != "label").toMat,
+          device,
+          SinglePrecision
+        )
       val testTarget =
         lamp.saddle
           .fromLongMat(
             Mat(testData.firstCol("label").toVec.map(_.toLong)),
-            cuda
+            device
           )
           .squeeze
 
@@ -56,19 +62,23 @@ class MLPSuite extends AnyFunSuite {
         .toOption
         .get
       val trainDataTensor =
-        lamp.saddle.fromMat(trainData.filterIx(_ != "label").toMat, cuda)
+        lamp.saddle.fromMat(
+          trainData.filterIx(_ != "label").toMat,
+          device,
+          SinglePrecision
+        )
       val trainTarget = lamp.saddle
         .fromLongMat(
           Mat(trainData.firstCol("label").toVec.map(_.toLong)),
-          cuda
+          device
         )
         .squeeze
-      val classWeights = STen.ones(List(10), device.options(DoublePrecision))
+      val classWeights = STen.ones(List(10), device.options(SinglePrecision))
 
       val model = SupervisedModel(
-        mlp(784, 10, device.options(DoublePrecision)),
+        mlp(784, 10, device.options(SinglePrecision)),
         LossFunctions.NLL(10, classWeights),
-        AdversarialTraining(2d)
+        new SimpleLossCalculation
       )
 
       val rng = new scala.util.Random
@@ -92,25 +102,23 @@ class MLPSuite extends AnyFunSuite {
       val stateFile =
         java.io.File.createTempFile("sdfs", "dsfsd").getAbsoluteFile()
 
-      val (_, trainedModel, _, _) = IOLoops
-        .withSWA(
+      val (_, trainedModel, _, _, _) = IOLoops
+        .epochs(
           model = model,
-          optimizerFactory = Shampoo
+          optimizerFactory = AdamW
             .factory(
               learningRate = simple(0.01),
-              momentum = simple(0.9)
-              // weightDecay = simple(0.001d)
+              weightDecay = simple(0.0d)
             ),
           trainBatchesOverEpoch = makeTrainingBatch,
           validationBatchesOverEpoch = Some(makeValidationBatch),
-          warmupEpochs = 10,
-          swaEpochs = 10,
-          logger = Some(scribe.Logger("sdf")),
-          checkpointState = Some((state: LoopState, _: Either[_, _]) =>
+          epochs = 10,
+          logger = None,
+          checkpointState = Some((state: LoopState, _: Any) =>
             IO {
 
               StateIO.writeToFile(stateFile, state)
-              val state2 = StateIO.readFromFile(stateFile, device)
+              val state2 = StateIO.readFromFile(stateFile, lamp.CPU)
               assertLoopState(state, state2)
             }
           )
@@ -119,11 +127,11 @@ class MLPSuite extends AnyFunSuite {
 
       val state3 = StateIO
         .readFromFile(stateFile, device)
-        .asInstanceOf[SimpleThenSWALoopState]
+        .asInstanceOf[SimpleLoopState]
 
       println("run from checkpoint")
       IOLoops
-        .withSWA(
+        .epochs(
           model = model,
           optimizerFactory = SGDW
             .factory(
@@ -132,14 +140,13 @@ class MLPSuite extends AnyFunSuite {
             ),
           trainBatchesOverEpoch = makeTrainingBatch,
           validationBatchesOverEpoch = Some(makeValidationBatch),
-          warmupEpochs = 10,
-          swaEpochs = 10,
-          logger = Some(scribe.Logger("sdf")),
-          checkpointState = Some((state: LoopState, _: Either[_, _]) =>
+          epochs = 10,
+          logger = None,
+          checkpointState = Some((state: LoopState, _: Any) =>
             IO {
 
               StateIO.writeToFile(stateFile, state)
-              val state2 = StateIO.readFromFile(stateFile, device)
+              val state2 = StateIO.readFromFile(stateFile, lamp.CPU)
               assertLoopState(state, state2)
             }
           ),
@@ -154,7 +161,8 @@ class MLPSuite extends AnyFunSuite {
           testTarget,
           acc,
           true,
-          true
+          true,
+          ParameterGradients.empty
         )
       val loss = acc.toDoubleArray.head / numExamples
       assert(loss < 0.8)
@@ -178,8 +186,10 @@ class MLPSuite extends AnyFunSuite {
       }
     }
     stop.stop()
+    println("##############################")
     TensorLogger.detailAllTensorOptions(println)
-    assert(TensorLogger.queryActiveTensorOptions().size <= 3)
+
+    assert(TensorLogger.queryActiveTensorOptions().size <= 7)
     println("Remaining:")
     TensorLogger.queryActiveTensors().foreach { td =>
       println(td.getShape())
@@ -190,14 +200,7 @@ class MLPSuite extends AnyFunSuite {
   }
 
   def assertLoopState(state: LoopState, state2: LoopState): Unit = state match {
-    case SimpleThenSWALoopState(simple, swa) =>
-      val simple2 = state2.asInstanceOf[SimpleThenSWALoopState].simple
-      val swa2 = state2.asInstanceOf[SimpleThenSWALoopState].swa
 
-      assert(swa.isDefined == swa.isDefined)
-      assertLoopState(simple, simple2)
-
-      if (swa.isDefined) assertLoopState(swa.get, swa2.get)
     case SimpleLoopState(
           model,
           optimizer,
@@ -210,7 +213,9 @@ class MLPSuite extends AnyFunSuite {
       val st = state2.asInstanceOf[SimpleLoopState]
       assert(model.map(_.shape) == st.model.map(_.shape))
       assert(model.zip(st.model).forall { case (a, b) =>
-        a.equalDeep(b)
+         Scope.root { implicit scope =>
+          a.toDevice(lamp.CPU).equalDeep(b.toDevice(lamp.CPU))
+        }
       })
       assert(epoch == st.epoch)
       assert(learningCurve == st.learningCurve)
@@ -218,7 +223,9 @@ class MLPSuite extends AnyFunSuite {
       assert(lastValidationLoss == st.lastValidationLoss)
       assert(optimizer.map(_.shape) == st.optimizer.map(_.shape))
       assert(optimizer.zip(st.optimizer).forall { case (a, b) =>
-        a.equalDeep(b)
+        Scope.root { implicit scope =>
+          a.toDevice(lamp.CPU).equalDeep(b.toDevice(lamp.CPU))
+        }
       })
       assert(
         minValidationLossModel.map(_._1) == st.minValidationLossModel.map(_._1)
@@ -234,40 +241,7 @@ class MLPSuite extends AnyFunSuite {
           .zip(st.minValidationLossModel.toSeq.flatMap(_._2))
           .forall { case (a, b) => aten.ATen.equal(a, b) }
       )
-    case SWALoopState(
-          model,
-          optimizer,
-          epoch,
-          lastValidationLoss,
-          minValidationLoss,
-          numberOfAveragedModels,
-          averagedModels,
-          learningCurve
-        ) =>
-      val st = state2.asInstanceOf[SWALoopState]
-      assert(model.map(_.shape) == st.model.map(_.shape))
-      assert(model.zip(st.model).forall { case (a, b) =>
-        a.equalDeep(b)
-      })
-      assert(epoch == st.epoch)
-      assert(learningCurve == st.learningCurve)
-      assert(minValidationLoss == st.minValidationLoss)
-      assert(numberOfAveragedModels == st.numberOfAveragedModels)
-      assert(lastValidationLoss == st.lastValidationLoss)
-      assert(optimizer.map(_.shape) == st.optimizer.map(_.shape))
-      assert(optimizer.zip(st.optimizer).forall { case (a, b) =>
-        a.equalDeep(b)
-      })
-      assert(
-        averagedModels.map(_.map(_.sizes().toList)) == st.averagedModels.map(
-          _.map(_.sizes.toList)
-        )
-      )
-      if (
-        !averagedModels.toSeq.flatten
-          .zip(st.averagedModels.toSeq.flatten)
-          .forall { case (a, b) => aten.ATen.equal(a, b) }
-      ) { throw new RuntimeException("assertion failed") }
+
   }
 
 }

@@ -10,12 +10,11 @@ import lamp.Sc
 import lamp.nn._
 
 import lamp.STen
-import lamp.autograd.Constant
-import lamp.autograd.{const}
 import lamp.STenOptions
 
 import lamp.autograd.Mean
 import lamp.Movable
+import lamp.autograd.ForwardCache
 
 /** Input to language model
   *
@@ -37,7 +36,7 @@ import lamp.Movable
   *   positions.
   */
 case class LanguageModelInput(
-    tokens: Constant,
+    tokens: STen,
     maxLength: Option[STen],
     positions: Option[STen]
 )
@@ -78,15 +77,16 @@ case class LanguageModelLoss(
     loss: LossFunction
 ) extends GenericModule[LossInput, Variable] {
   def state = languageModel.state
-  def forward[S: Sc](x: LossInput): Variable = {
+  def forward[S:Sc, F:FW](x: LossInput): Variable = {
     val output = languageModel.forward(x.input)
-    val (l1, _) =
+    
+    val l1 =
       loss
         .apply(
           output.languageModelLogits.logSoftMax(dim = 2).flatten(0, 1),
           x.languageModelTarget.view(-1L)
         )
-
+    
     l1
   }
 }
@@ -182,8 +182,10 @@ case class LanguageModelOutput(
     encoded: Variable,
     languageModelLogits: Variable
 ) {
-  def toSTen =
-    LanguageModelOutputNonVariable(encoded.value, languageModelLogits.value)
+  def toSTen(implicit  fw: ForwardCache) =
+    {
+      LanguageModelOutputNonVariable(encoded.forward, languageModelLogits.forward)
+    }
 }
 
 /* Same as LanguageModelOutput but holds raw tensors, not variables */
@@ -219,9 +221,9 @@ case class LanguageModelModule(
   def state =
     tokenEmbedding.state ++ positionEmbedding.state ++ encoder.state ++ finalNorm.state // ++ lmHead.state
 
-  def forward[S: Sc](x: LanguageModelInput): LanguageModelOutput = {
+  def forward[S:Sc, F:FW](x: LanguageModelInput): LanguageModelOutput = {
 
-    val pos = const(
+    val pos = (
       STen.arange_l(0, x.tokens.shape(1), 1, x.tokens.options).unsqueeze(0)
     )
     val embedded =
@@ -231,13 +233,13 @@ case class LanguageModelModule(
     val encoderOutputAtPredictionPositions =
       x.positions.fold(encoded)(positions =>
         encoded
-          .view(List(-1, encoded.shape(2)))
-          .indexSelect(dim = 0, index = const(positions.view(-1)))
+          .view(List(-1, encoded.shape.apply(2)))
+          .indexSelect(dim = 0, index = (positions.view(-1)))
           .view(
             List(
-              encoded.shape(0),
-              positions.shape(1),
-              encoded.shape(2)
+              encoded.shape.apply(0),
+              positions.shape.apply(1),
+              encoded.shape.apply(2)
             )
           )
       )

@@ -9,6 +9,7 @@ import lamp.nn.NoTag
 import scribe.Logger
 import aten.Tensor
 import lamp.saddle._
+import lamp.autograd.Autograd.BackpropForwardCache
 object Umap {
 
   private[lamp] def binarySearch(
@@ -131,11 +132,11 @@ object Umap {
 
     def loss(
         locations: Variable,
-        index1: Variable,
-        index2: Variable,
-        index3: Variable,
-        index4: Variable,
-        b: Variable
+        index1: STen,
+        index2: STen,
+        index3: STen,
+        index4: STen,
+        b: STen
     )(implicit scope: Scope) = {
 
       val locations_1 = locations.indexSelect(0, index1)
@@ -146,13 +147,13 @@ object Umap {
         locations_1.euclideanDistance(locations_2, 1).view(List(-1))
       val attractions =
         if (minDist == 0d) {
-          (locNorm1 * b).sum * (-1)
+          (locNorm1 * const(b)).sum * (-1)
         } else {
           (new CappedShiftedNegativeExponential(
             scope,
             locNorm1,
             minDist
-          ).value.log * b).sum
+          ).value.log * const(b)).sum
         }
 
       val locNorm2 =
@@ -170,7 +171,7 @@ object Umap {
         }
 
       if (balanceAttractionsAndRepulsions)
-        (attractions / b.sum + repulsions * (repulsionStrength / locations_3
+        (attractions / const(b).sum + repulsions * (repulsionStrength / index3
           .sizes(0))) * (-1)
       else (attractions + repulsions) * (-1)
     }
@@ -188,17 +189,17 @@ object Umap {
           precision
         )
       )
-      val index1 = const(
+      val index1 = (
         indexIT
       )
       val index2 = {
         val indexJ = edgeWeights.col(1).map(_.toLong)
-        const(
+        (
           lamp.saddle.fromLongVec(indexJ, device)
         )
       }
 
-      val b = const(
+      val b = (
         lamp.saddle.fromVec(edgeWeights.col(2), device, precision)
       )
 
@@ -206,7 +207,7 @@ object Umap {
         weightDecay = simple(0.0),
         learningRate = simple(lr),
         clip = Some(1d)
-      )(List(locations.value -> NoTag))
+      )(List(locations.constantValue -> NoTag))
 
       def sampleRepulsivePairsT(n: Int, positiveSample: Option[STen])(implicit
           scope: Scope
@@ -226,6 +227,7 @@ object Umap {
         }
       }
 
+      val pd = Map.empty[Variable,STen]
       var i = 0
       var lastLoss = 0d
       while (i < iterations) {
@@ -233,7 +235,7 @@ object Umap {
           val positiveSample =
             positiveSamples.map(m =>
               STen.randint(
-                index1.shape(0),
+                index1.shape.apply(0),
                 List(math.min(m, index1.shape(0))),
                 index1.options
               )
@@ -242,18 +244,18 @@ object Umap {
           val (index3T, index4T) = {
             var (index3, index4) =
               sampleRepulsivePairsT(negativeSampleSize, positiveSample)
-            val i3 = const(
+            val i3 = (
               index3
             )
-            val i4 = const(
+            val i4 = (
               index4
             )
             (i3, i4)
           }
 
-          def select(a: Variable) = positiveSample match {
+          def select(a: STen) : STen = positiveSample match {
             case None    => a
-            case Some(i) => a.indexSelect(0, const(i))
+            case Some(i) => a.indexSelect(0, (i))
           }
 
           val lossV = loss(
@@ -264,22 +266,23 @@ object Umap {
             index4 = index4T,
             b = select(b)
           )
-          val lossAsDouble = lossV.value.toMat.raw(0)
+          val lossAsDouble = lossV.eval.toMat.raw(0)
           lastLoss = lossAsDouble
           logger.foreach(_.info(s"loss in epoch: ${(i, lossAsDouble)}"))
 
           val gradients = {
-            locations.zeroGrad()
-            lossV.backprop()
-            locations.partialDerivative
+            implicit val fw =  BackpropForwardCache.simple(scope)
+            lossV.forward
+            Autograd.backprop(lossV,pd,fw,false)(scope)
           }
-          optimizer.step(List(gradients), 1d)
+
+          optimizer.step(List(gradients(locations)), 1d)
         }
         i += 1
       }
       optimizer.release()
-
-      val jLoc = locations.value.toMat
+      
+      val jLoc = locations.eval.toMat
       (jLoc, lastLoss)
     }
 

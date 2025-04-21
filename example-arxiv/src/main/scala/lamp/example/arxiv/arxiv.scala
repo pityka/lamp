@@ -106,8 +106,8 @@ object Train extends App {
                 dropout = 0.5,
                 nonLinearity = false
               ),
-              GenericFun[Graph, Variable](_ => _.nodeFeatures),
-              Fun(scope => variable => variable.logSoftMax(1)(scope))
+              GenericFun[Graph, Variable](_ => _ =>  _.nodeFeatures),
+              Fun(_ => variable => variable.logSoftMax(1))
             ),
             LossFunctions.NLL(numClasses, classWeights, ignore = -100)
           )
@@ -149,10 +149,11 @@ object Train extends App {
             .unsafeRunSync()
 
           val accuracy = {
+            implicit val fw = ForwardCache.selective
             val output =
               trainedModel.module.asEval.forward(graph.toVariable)
             val prediction = {
-              val argm = output.value.argmax(1, false)
+              val argm = output.eval.argmax(1, false)
               val r =
                 argm.toLongMat.toVec.take(testIdx.toVec.toArray)
               r

@@ -152,7 +152,7 @@ package object kmeans {
       low = 0L,
       high = instances.sizes(0),
       size = List(num.toLong),
-      tensorOptions = STenOptions.l
+      tensorOptions = instances.device.to(STenOptions.l)
     )
     instances.indexSelect(dim = 0, index = idx)
   }

@@ -123,16 +123,26 @@ object EmptyMovable {
 object Movable {
   implicit class MovableSyntax[T: Movable](t: T) {
     def tensors = implicitly[Movable[T]].list(t)
+  
   }
   def empty[T] = new EmptyMovable[T]
   def nonEmpty[T](extract: T => List[Tensor]) = new Movable[T] {
-    def list(t: T) = extract(t)
+    def list(t: T) = {
+      assert(t != null)
+      extract(t)
+    }
   }
   def by[T, K: Movable](convert: T => K) = new Movable[T] {
-    def list(t: T) = convert(t).tensors
+    def list(t: T) = {
+      assert(t != null)
+      convert(t).tensors
+    }
   }
   implicit def stensorIsMovable: Movable[STen] = new Movable[STen] {
-    def list(m: STen) = List(m.value)
+    def list(m: STen) = {
+      assert(m != null)
+      List(m.value)
+    }
   }
 
   @scala.annotation.nowarn
@@ -143,12 +153,15 @@ object Movable {
 
   implicit def OptionIsMovable[T: Movable]: Movable[Option[T]] =
     new Movable[Option[T]] {
+      
       def list(m: Option[T]) =
         m.toList.flatMap(m => implicitly[Movable[T]].list(m)).toList
     }
   implicit def EitherIsMovable[T1: Movable, T2: Movable]
       : Movable[Either[T1, T2]] =
     new Movable[Either[T1, T2]] {
+
+
       def list(m: Either[T1, T2]) =
         m.fold(_.tensors, _.tensors)
     }
@@ -287,6 +300,13 @@ final class Scope private {
   /** Immediately release the resources managed by this Scope */
   def release(): Unit = manage[Unit](_ => ())
 
+  def release(t:Tensor) = {
+    if (resources.remove(Left(t))) {
+      t.release 
+
+    }
+  }
+
   private def manageMovable[A](
       op: Scope => A
   )(implicit movable: Movable[A]): (A, List[ResourceType]) = {
@@ -409,7 +429,9 @@ final class Scope private {
       while (rs.nonEmpty) {
         val resource = rs.head
         rs = rs.tail
-        try resource.fold(_.release(), _.release())
+        try {
+          resource.fold(_.release(), _.release())
+        }
         catch {
           case t: Throwable =>
             if (toThrow == null) toThrow = t

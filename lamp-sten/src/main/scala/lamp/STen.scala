@@ -214,8 +214,13 @@ object STen {
 
   def scalarLong(value: Long, options: STenOptions)(implicit scope: Scope) =
     Tensor.scalarLong(value, options.toLong.value).owned
-  def scalarDouble[S: Sc](value: Double, options: STenOptions) =
+  def scalarDouble[S: Sc](value: Double, options: STenOptions) = if (
+    !options.isDouble
+  ) scalarFloat(value.toFloat, options)
+  else
     Tensor.scalarDouble(value, options.toDouble.value).owned
+  def scalarFloat[S: Sc](value: Float, options: STenOptions) =
+    Tensor.scalarFloat(value, options.toFloat.value).owned
 
   def ones[S: Sc](
       size: Seq[Long],
@@ -558,7 +563,7 @@ object STen {
 
     val (q, k, v) = {
       val undef =
-        if (attentionBias.isEmpty) Some(Tensor.undefined)
+        if (attentionBias.isEmpty) Some(Tensor.undefined())
         else None
       val r = ATen._scaled_dot_product_cudnn_attention_backward(
         gradOutput.value,
@@ -720,6 +725,7 @@ case class STenOptions(value: aten.TensorOptions) {
   def isLong = value.isLong
   def isCPU = value.isCPU
   def isCuda = value.isCuda
+  def isMps = value.isMps
   def isSparse = value.isSparse
   def deviceIndex = value.deviceIndex
 
@@ -767,6 +773,8 @@ object STenOptions {
     */
   def fromScalarType[S: Sc](b: Byte) =
     owned(aten.TensorOptions.fromScalarType(b))
+  def fromScalarType[S: Sc](b: Byte, device: Device) =
+    device.to(owned(aten.TensorOptions.fromScalarType(b)))
   implicit class OwnedSyntaxOp(t: aten.TensorOptions) {
     def owned[S: Sc] = STenOptions.owned(t)
   }
@@ -912,6 +920,8 @@ case class STen private (
     *   - 7 for Double
     */
   def scalarTypeByte = Scope.root { implicit scope => options.scalarTypeByte }
+
+  def toDevice(device: Device)(implicit scope: Scope) = copyToDevice(device)
 
   /** Returns a copy of this tensor on the given device */
   def copyToDevice(device: Device)(implicit scope: Scope) = {

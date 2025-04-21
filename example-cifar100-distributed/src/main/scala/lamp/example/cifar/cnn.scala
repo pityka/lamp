@@ -12,7 +12,7 @@ case class Residual[M1 <: Module, M2 <: Module](
     left: Option[M2 with Module]
 ) extends Module {
   override def state = right.state ++ left.toList.flatMap(_.state)
-  def forward[S: Sc](x: Variable) = {
+  def forward[S: Sc,F:FW](x: Variable) = {
     val r = right.forward(x)
     val l = left.map(_.forward(x)).getOrElse(x)
     (r + l)
@@ -47,8 +47,8 @@ object Residual {
             stride = stride,
             tOpt = tOpt
           ),
-          BatchNorm2D(outChannels, tOpt = tOpt),
-          Fun(implicit pool => _.relu),
+          LayerNorm(List(outChannels), tOpt = tOpt),
+          Fun(_ => _.relu),
           Dropout(dropout, true),
           Conv2D(
             inChannels = outChannels,
@@ -58,7 +58,7 @@ object Residual {
             stride = 1,
             tOpt = tOpt
           ),
-          BatchNorm2D(outChannels, tOpt = tOpt)
+          LayerNorm(List(outChannels), tOpt = tOpt)
         ),
         left =
           if (inChannels == outChannels && stride == 1) None
@@ -73,11 +73,11 @@ object Residual {
                   padding = 0,
                   tOpt = tOpt
                 ),
-                BatchNorm2D(outChannels, tOpt = tOpt)
+                LayerNorm(List(outChannels), tOpt = tOpt)
               )
             )
       ),
-      Fun(implicit pool => _.relu),
+      Fun(_ => _.relu),
       Dropout(dropout, true)
     )
 
@@ -131,8 +131,8 @@ object Cnn {
       Fun(implicit pool =>
         new AvgPool2D(pool, _, kernelSize = 8, padding = 0, stride = 1).value
       ),
-      Fun(implicit pool => _.flattenLastDimensions(3)),
-      Fun(implicit pool => _.logSoftMax(dim = 1))
+      Fun(_ => _.flattenLastDimensions(3)),
+      Fun(_ => _.logSoftMax(dim = 1))
     )
 
 

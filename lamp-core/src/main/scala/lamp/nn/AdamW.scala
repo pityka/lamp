@@ -13,19 +13,21 @@ object AdamW {
       eps: Double = 1e-8,
       clip: Option[Double] = None,
       debias: Boolean = true,
-      mixedPrecision: Boolean = false
+      mixedPrecision: Boolean = false,
+      printGradientNorm: Boolean = false
   ) =
     (parameters: Seq[(STen, PTag)]) =>
       AdamW(
-        parameters,
-        weightDecay,
-        learningRate,
-        beta1,
-        beta2,
-        eps,
-        clip,
-        debias,
-        mixedPrecision
+        parameters = parameters,
+        weightDecay = weightDecay,
+        learningRate = learningRate,
+        beta1 = beta1,
+        beta2 = beta2,
+        eps = eps,
+        clip0 = clip,
+        debias = debias,
+        mixedPrecision = mixedPrecision,
+        printGradientNorm = printGradientNorm
       )
 }
 
@@ -41,7 +43,8 @@ case class AdamW(
     eps: Double = 1e-8,
     clip0: Option[Double] = None,
     debias: Boolean = true,
-    mixedPrecision: Boolean = false
+    mixedPrecision: Boolean = false,
+    printGradientNorm: Boolean = false
 ) extends Optimizer {
   val scope0 = Scope.free
 
@@ -88,31 +91,32 @@ case class AdamW(
     state.zip(tensors).foreach { case (current, incoming) =>
       current.copyFrom(incoming)
     }
-    stepCount = stepCountSTen.toDoubleArray.apply(0).toLong
+    Scope.root{ implicit scope =>
+    stepCount = stepCountSTen.toDevice(lamp.CPU).toLongArray.apply(0).toLong
+    }
 
   }
 
   var stepCount = 0L
-  val stepCountSTen = STen.scalarDouble(0, STenOptions.d)(scope0)
+  val stepCountSTen = STen.scalarLong(0, STenOptions.l)(scope0)
   def state = List(stepCountSTen) ++ mt ++ vt ++ workingCopy.flatMap(_.toList)
   def release() = {
     scope0.release()
   }
-  def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
-    clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
+  def step(gradients: Seq[STen], scheduleFactor: Double) = {
+    clip.foreach { theta => gradientClippingInPlace(gradients, theta, printGradientNorm || stepCount < 1) }
     stepCount += 1
-    stepCountSTen += 1d
+    stepCountSTen += 1L
 
     parameters
       .zip(gradients)
       .zip(mt)
       .zip(vt)
       .zip(workingCopy)
-      .filter(_._1._1._1._2.isDefined)
       .foreach {
 
         case (
-              ((((paramInModel, tag), Some(gradients0)), mt), vt),
+              ((((paramInModel, tag), gradients0), mt), vt),
               paramWorkingCopy
             ) =>
           val wd = weightDecay(tag)
@@ -169,9 +173,7 @@ case class AdamW(
             }
 
           }
-        case _ =>
-          // won't happen see filter above, suppressing warning
-          ???
+        
       }
   }
 }

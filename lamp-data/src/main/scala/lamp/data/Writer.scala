@@ -184,7 +184,7 @@ object Writer {
       model: GenericModule[A, B],
       bufferSize: Int = 16384
   ) = {
-    writeTensorsIntoFile(model.state.map(_._1.value), file, bufferSize)
+    writeTensorsIntoFile(model.state.map(_._1.constantValue), file, bufferSize)
   }
 
 }

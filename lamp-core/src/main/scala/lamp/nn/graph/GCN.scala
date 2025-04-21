@@ -1,7 +1,7 @@
 package lamp.nn.graph
 
 import lamp.nn._
-import lamp.autograd.{BatchNorm => _, Dropout => _, _}
+import lamp.autograd.{ Dropout => _, _}
 import aten.ATen
 import lamp.Sc
 import lamp.STen
@@ -14,7 +14,7 @@ case class GCN[M <: Module](
   def state =
     transform.state
 
-  override def forward[S: Sc](
+  override def forward[S:Sc, F:FW](
       x: Graph
   ): Graph = {
     val message = GCN.gcnAggregation(x.nodeFeatures, x.edgeI, x.edgeJ)
@@ -122,7 +122,7 @@ object GCN {
     * @return
     *   N x D aggregated features
     */
-  def gcnAggregation[S: Sc](
+  def gcnAggregation[S: Sc,F:FW](
       nodeFeatures: Variable,
       edgeI: STen,
       edgeJ: STen
@@ -131,11 +131,11 @@ object GCN {
       nodeFeatures.options,
       edgeI,
       edgeJ,
-      nodeFeatures.sizes(0)
+      nodeFeatures.shape.apply(0)
     )
     gcnAggregation(nodeFeatures, degrees, a)
   }
-  def gcnAggregation[S: Sc](
+  def gcnAggregation(
       nodeFeatures: Variable,
       degrees: Variable,
       a: Variable
@@ -169,8 +169,8 @@ object GCN {
             Left(
               sequence(
                 Linear(in = in, out = out, tOpt = tOpt, bias = false),
-                BatchNorm(features = out, tOpt = tOpt),
-                Fun(scope => input => input.relu(scope)),
+                LayerNorm(normalizedShape = List(out), tOpt = tOpt),
+                Fun(_ => input => input.relu),
                 Dropout(dropout, training = true)
               )
             )
@@ -178,7 +178,7 @@ object GCN {
             Right(
               sequence(
                 Linear(in = in, out = out, tOpt = tOpt, bias = false),
-                BatchNorm(features = out, tOpt = tOpt)
+                LayerNorm(normalizedShape = List(out), tOpt = tOpt)
               )
             )
         )

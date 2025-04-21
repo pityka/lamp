@@ -8,10 +8,14 @@ import lamp._
 private[lamp] object SaddleTensorHelpers {
 
   def toMat(t0: Tensor): Mat[Double] = {
-    val t = if (t0.isCuda) t0.cpu else t0
+
+    val t =
+      if (t0.isCuda || t0.isMps()) t0.cpu
+      else t0
+
     try {
       if (t.scalarTypeByte() != 7) {
-        val tmp = ATen._cast_Double(t0, true)
+        val tmp = t.to(STenOptions.d.value, false, true)
         val mat = toMat(tmp)
         tmp.release
         mat
@@ -41,7 +45,7 @@ private[lamp] object SaddleTensorHelpers {
     }
   }
   def toFloatMat(t0: Tensor) = {
-    val t = if (t0.isCuda) t0.cpu else t0
+    val t = if (t0.isCuda || t0.isMps()) t0.cpu else t0
     try {
       assert(
         t.scalarTypeByte == 6,
@@ -66,7 +70,7 @@ private[lamp] object SaddleTensorHelpers {
     }
   }
   def toLongMat(t0: Tensor) = {
-    val t = if (t0.isCuda) t0.cpu else t0
+    val t = if (t0.isCuda || t0.isMps()) t0.cpu else t0
     try {
       assert(
         t.scalarTypeByte == 4,
@@ -118,7 +122,7 @@ private[lamp] object SaddleTensorHelpers {
 
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.unsafe { implicit scope =>
-        t.to(device.options(precision).value, true, true)
+        t.to(device.options(precision).value, false, true)
       }
       t.release
       t2
@@ -147,7 +151,7 @@ private[lamp] object SaddleTensorHelpers {
     }
     if (device != CPU) {
       val t2 = Scope.unsafe { implicit scope =>
-        t.to(device.options(SinglePrecision).value, true, true)
+        t.to(device.options(SinglePrecision).value, false, true)
       }
       t.release
       t2
@@ -158,21 +162,39 @@ private[lamp] object SaddleTensorHelpers {
       device: Device,
       precision: FloatingPointPrecision
   ) = {
-    val arr = m.toArray
-    val t = ATen.zeros(
-      Array(m.numRows.toLong, m.numCols.toLong),
-      STenOptions.d.value
-    )
-    if (arr.nonEmpty) {
-      assert(t.copyFromDoubleArray(arr))
-    }
-    if (device != CPU || precision != DoublePrecision) {
+    if (device == MPS) {
+      val arr = m.toArray
+      val t = ATen.zeros(
+        Array(m.numRows.toLong, m.numCols.toLong),
+        STenOptions.f.value
+      )
+      if (arr.nonEmpty) {
+        assert(t.copyFromFloatArray(arr.map(_.toFloat)))
+      }
+
       val t2 = Scope.unsafe { implicit scope =>
-        t.to(device.options(precision).value, true, true)
+        t.to(device.options(precision).value, false, true)
       }
       t.release
       t2
-    } else t
+
+    } else {
+      val arr = m.toArray
+      val t = ATen.zeros(
+        Array(m.numRows.toLong, m.numCols.toLong),
+        STenOptions.d.value
+      )
+      if (arr.nonEmpty) {
+        assert(t.copyFromDoubleArray(arr))
+      }
+      if (device != CPU || precision != DoublePrecision) {
+        val t2 = Scope.unsafe { implicit scope =>
+          t.to(device.options(precision).value, false, true)
+        }
+        t.release
+        t2
+      } else t
+    }
   }
   def fromLongMat(m: Mat[Long], cuda: Boolean = false): Tensor =
     fromLongMat(m, device = if (cuda) CudaDevice(0) else CPU)
@@ -232,7 +254,7 @@ private[lamp] object SaddleTensorHelpers {
     }
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.unsafe { implicit scope =>
-        t.to(device.options(precision).value, true, true)
+        t.to(device.options(precision).value, false, true)
       }
       t.release
       t2

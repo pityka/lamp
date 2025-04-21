@@ -57,7 +57,7 @@ object TensorHelpers {
     assert(t.copyFromDoubleArray(arr))
     if (device != CPU || precision != DoublePrecision) {
       val t2 = Scope.unsafe { implicit scope =>
-        t.to(device.options(precision).value, true, true)
+        t.to(device.options(precision).value, false, true)
       }
       t.release
       t2
@@ -220,7 +220,7 @@ object TensorHelpers {
   }
 
   def toDoubleArray(t0: Tensor) = {
-    val t = if (t0.isCuda) t0.cpu else t0
+    val t = if (t0.isCuda || t0.isMps()) t0.cpu else t0
     try {
       if (t.scalarTypeByte() == 6) {
         assert(
@@ -250,7 +250,7 @@ object TensorHelpers {
   }
 
   def toByteArray(t0: Tensor) = {
-    val t = if (t0.isCuda) t0.cpu else t0
+    val t = if (t0.isCuda || t0.isMps()) t0.cpu else t0
     try {
       assert(
         t.scalarTypeByte == 1,
@@ -268,7 +268,7 @@ object TensorHelpers {
     }
   }
   def toLongArray(t0: Tensor) = {
-    val t = if (t0.isCuda) t0.cpu else t0
+    val t = if (t0.isCuda|| t0.isMps()) t0.cpu else t0
     try {
       assert(
         t.scalarTypeByte == 4,
@@ -287,7 +287,7 @@ object TensorHelpers {
   }
 
   def toIntArray(t0: Tensor) = {
-    val t = if (t0.isCuda) t0.cpu else t0
+    val t = if (t0.isCuda|| t0.isMps()) t0.cpu else t0
     try {
       assert(
         t.scalarTypeByte == 3,
@@ -306,7 +306,7 @@ object TensorHelpers {
   }
 
   def toShortArray(t0: Tensor) = {
-    val t = if (t0.isCuda) t0.cpu else t0
+    val t = if (t0.isCuda|| t0.isMps()) t0.cpu else t0
     try {
       assert(
         t.scalarTypeByte == 2,
@@ -324,7 +324,7 @@ object TensorHelpers {
     }
   }
   def toFloatArray(t0: Tensor) = {
-    val t = if (t0.isCuda) t0.cpu else t0
+    val t = if (t0.isCuda|| t0.isMps()) t0.cpu else t0
     try {
       assert(
         t.scalarTypeByte == 6,

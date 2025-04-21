@@ -7,6 +7,7 @@ import lamp.scope
 import lamp.STen
 import lamp.Movable
 import lamp.EmptyMovable
+import lamp.autograd.Autograd.BackpropForwardCache
 
 case class Recursive[A, M <: GenericModule[A, A]](
     member: M with GenericModule[A, A],
@@ -14,7 +15,7 @@ case class Recursive[A, M <: GenericModule[A, A]](
 ) extends GenericModule[A, A] {
   override def state = member.state
 
-  def forward[S: Sc](x: A) =
+  def forward[S: Sc, F: FW](x: A) =
     (0 until n).foldLeft(x)((x, _) => member.forward(x))
 
 }
@@ -42,7 +43,7 @@ case class EitherModule[
 ) extends GenericModule[A, B] {
   override def state =
     members.fold(_.state, _.state)
-  def forward[S: Sc](x: A) =
+  def forward[S: Sc, F: FW](x: A) =
     members.fold(_.forward(x), _.forward(x))
 }
 object EitherModule {
@@ -85,7 +86,7 @@ case class Sequential[A, M <: GenericModule[A, A]](
         (param, Sequential.Tag(ptag, idx))
       }
     }
-  def forward[S: Sc](x: A) =
+  def forward[S: Sc, F: FW](x: A) =
     members.foldLeft(x) { case (x, m) =>
       m.forward(x)
     }
@@ -119,7 +120,7 @@ object Sequential {
 
 case class Fun(fun: Scope => Variable => Variable) extends Module {
   def state = Nil
-  def forward[S: Sc](x: Variable): Variable = fun(scope)(x)
+  def forward[S: Sc, F: FW](x: Variable): Variable = fun(scope)(x)
 }
 object Fun {
   implicit val trainingMode: TrainingMode[Fun] = TrainingMode.identity[Fun]
@@ -127,16 +128,17 @@ object Fun {
 }
 case class Debug(fun: (STen, Boolean, Boolean) => Unit) extends Module {
   def state = Nil
-  def forward[S: Sc](x: Variable): Variable = x.debug(fun)
+  def forward[S: Sc, F: FW](x: Variable): Variable = ??? // x.debug(fun)
 }
 object Debug {
   implicit val trainingMode: TrainingMode[Debug] = TrainingMode.identity[Debug]
   implicit val load: Load[Debug] = Load.identity[Debug]
 }
 
-case class GenericFun[A, B](fun: Scope => A => B) extends GenericModule[A, B] {
+case class GenericFun[A, B](fun: Scope => ForwardCache => A => B)
+    extends GenericModule[A, B] {
   def state = Nil
-  def forward[S: Sc](x: A): B = fun(scope)(x)
+  def forward[S: Sc, F: FW](x: A): B = fun(scope)(implicitly[ForwardCache])(x)
 }
 object GenericFun {
   implicit def trainingMode[A, B]: TrainingMode[GenericFun[A, B]] =
@@ -150,7 +152,7 @@ case class WrapFun[A, B, M <: GenericModule[A, B], O](
     fun: (A, B) => O
 ) extends GenericModule[A, (B, O)] {
   def state = module.state
-  def forward[S: Sc](a: A): (B, O) = {
+  def forward[S: Sc, F: FW](a: A): (B, O) = {
     val b = module.forward(a)
     val o = fun(a, b)
     (b, o)
@@ -168,66 +170,12 @@ object WrapFun {
       : Load[WrapFun[A, B, M, O]] =
     Load.compose(_.module)
 }
-case class LiftedModule[M <: Module](mod: M with Module)
-    extends StatefulModule[Variable, Variable, Unit] {
-  def state = mod.state
-  def forward[S: Sc](x: (Variable, Unit)) = (mod.forward(x._1), ())
-}
-object LiftedModule {
-  implicit def trainingMode[
-      M <: Module: TrainingMode
-  ]: TrainingMode[LiftedModule[M]] =
-    TrainingMode.make[LiftedModule[M]](
-      m => m.copy(mod = m.mod.asEval),
-      m => m.copy(mod = m.mod.asTraining)
-    )
-  implicit def load[
-      M <: Module: Load
-  ]: Load[LiftedModule[M]] =
-    Load.make[LiftedModule[M]](m => tensors => m.mod.load(tensors))
-  implicit def initState[M <: Module]: InitState[LiftedModule[M], Unit] =
-    InitState.make[LiftedModule[M], Unit](_ => ())
-}
-
-case class UnliftedModule[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
-    statefulModule: M with StatefulModule2[A, B, C, D]
-)(implicit init: InitState[M, C])
-    extends GenericModule[A, B] {
-  def state = statefulModule.state
-  def forward[S: Sc](x: A) =
-    statefulModule.forward((x, statefulModule.initState))._1
-}
-object UnliftedModule {
-  implicit def trainingMode[A, B, C, D, M <: StatefulModule2[A, B, C, D]](
-      implicit
-      t: TrainingMode[M],
-      is: InitState[M, C]
-  ): TrainingMode[UnliftedModule[A, B, C, D, M]] =
-    TrainingMode.make[UnliftedModule[A, B, C, D, M]](
-      m => UnliftedModule[A, B, C, D, M](m.statefulModule.asEval),
-      m => UnliftedModule[A, B, C, D, M](m.statefulModule.asTraining)
-    )
-  implicit def load[A, B, C, D, M <: StatefulModule2[A, B, C, D]: Load]
-      : Load[UnliftedModule[A, B, C, D, M]] =
-    Load.make[UnliftedModule[A, B, C, D, M]](m =>
-      tensors => m.statefulModule.load(tensors)
-    )
-  implicit def initState[A, B, C, D, M <: StatefulModule2[A, B, C, D]](implicit
-      is: InitState[M, C]
-  ): InitState[UnliftedModule[A, B, C, D, M], Unit] =
-    InitState.make[UnliftedModule[A, B, C, D, M], Unit](m =>
-      is.initState(m.statefulModule)
-    )
-}
 
 object GenericModule {
   implicit def movable[A, B]: Movable[GenericModule[A, B]] =
     Movable.nonEmpty[GenericModule[A, B]] { m =>
       m.state
-        .flatMap(_._1 match {
-          case ConstantWithGrad(value, pd) => List(value.value, pd.value)
-          case ConstantWithoutGrad(value)  => List(value.value)
-        })
+        .flatMap(v => List(v._1.constantValue.value))
         .toList
     }
 }
@@ -251,7 +199,7 @@ object GenericModule {
   *     weights -> Weights
   *   ) ++ bias.toList.map(b => (b, Bias))
   *
-  *   def forward[S: Sc](x: Variable): Variable = {
+  *   def forward[S:Sc, F:FW](x: Variable): Variable = {
   *     val v = x.mm(weights)
   *     bias.map(_ + v).getOrElse(v)
   *
@@ -275,10 +223,10 @@ trait GenericModule[A, B] {
     *
     * In addition of `x` it can also use all the `state to compute its value.
     */
-  def forward[S: Sc](x: A): B
+  def forward[S: Sc, F: FW](x: A): B
 
   /** Alias of forward */
-  def apply[S: Sc](a: A): B = forward(a)
+  def apply[S: Sc, F: FW](a: A): B = forward(a)
 
   /** List of optimizable, or non-optimizable, but stateful parameters
     *
@@ -287,35 +235,57 @@ trait GenericModule[A, B] {
   def state: Seq[(Constant, PTag)]
 
   /** Returns the state variables which need gradient computation. */
-  final def parameters =
-    state.filter(v => v._1.needsGrad)
-
-  final def zeroGrad() = {
-    parameters.foreach { case (param, _) =>
-      param.zeroGrad()
+  final def parameters: Seq[(ConstantWithGrad, PTag)] =
+    state.collect { case (t: ConstantWithGrad, tag) =>
+      (t, tag)
     }
-  }
 
   /** Computes the gradient of loss with respect to the parameters. */
-  final def gradients(
+  final def computeGradientsAndDestroyGraph(
       loss: Variable,
-      zeroGrad: Boolean = true
-  ): Seq[Option[STen]] = {
+      pd: Map[Variable, STen],
+      scope: Scope,
+      zeroGrad: Boolean,
+      fw: BackpropForwardCache,
+      printZeroGradients: Boolean
+  ): Map[Variable, STen] = {
     if (zeroGrad) {
-      parameters.foreach { case (param, _) =>
-        param.zeroGrad()
+      pd.foreach { case (_, pd) =>
+        pd.zero_()
       }
     }
-    loss.backprop()
-    val g = parameters.map { case (param, _) =>
-      param.partialDerivative
+    val updated = Autograd.backprop(loss, pd, fw, printZeroGradients)(scope)
+
+    (updated)
+  }
+
+  final def computeGradientsAndDestroyGraph(
+      loss: Variable,
+      fw: BackpropForwardCache,
+      printZeroGradients: Boolean
+  )(implicit scope: Scope): Seq[STen] = {
+    val map = Map[Variable, STen]()
+    val map2 = computeGradientsAndDestroyGraph(
+      loss = loss,
+      pd = map,
+      scope = scope,
+      zeroGrad = true,
+      fw = fw,
+      printZeroGradients = printZeroGradients
+    )
+    parameters.map { v =>
+      if (map2.contains(v._1))
+        map2(v._1)
+      else {
+        v._1.allocatePartialDerivative
+      }
     }
-    g
+
   }
 
   /** Returns the total number of optimizable parameters. */
   final def learnableParameters =
-    parameters.filter(_._1.needsGrad).map(_._1.value.numel).sum
+    parameters.map(_._1.constantValue.numel).sum
 }
 
 /** A small trait to mark paramters for unique identification */
@@ -597,45 +567,4 @@ object Load {
       tensors
     )
   }
-}
-
-/** Type class about how to initialize recurrent neural networks */
-trait InitState[M, C] {
-  def initState(m: M): C
-}
-object InitState {
-  def make[M, C](f: M => C) = new InitState[M, C] {
-    def initState(m: M) = f(m)
-  }
-}
-
-case class MappedState[A, B, C, D, M <: StatefulModule[A, B, C]](
-    statefulModule: M with StatefulModule[A, B, C],
-    map: C => D
-) extends StatefulModule2[A, B, C, D] {
-  def state = statefulModule.state
-  def forward[S: Sc](x: (A, C)) = {
-    val (b, c) = statefulModule.forward(x)
-    (b, map(c))
-  }
-}
-object MappedState {
-  implicit def trainingMode[A, B, C, D, M <: StatefulModule[A, B, C]](implicit
-      t: TrainingMode[M]
-  ): TrainingMode[MappedState[A, B, C, D, M]] =
-    TrainingMode.make[MappedState[A, B, C, D, M]](
-      m => MappedState[A, B, C, D, M](m.statefulModule.asEval, m.map),
-      m => MappedState[A, B, C, D, M](m.statefulModule.asTraining, m.map)
-    )
-  implicit def load[A, B, C, D, M <: StatefulModule[A, B, C]: Load]
-      : Load[MappedState[A, B, C, D, M]] =
-    Load.make[MappedState[A, B, C, D, M]](m =>
-      tensors => m.statefulModule.load(tensors)
-    )
-  implicit def initState[A, B, C, D, M <: StatefulModule[A, B, C]](implicit
-      is: InitState[M, C]
-  ): InitState[MappedState[A, B, C, D, M], C] =
-    InitState.make[MappedState[A, B, C, D, M], C](m =>
-      is.initState(m.statefulModule)
-    )
 }

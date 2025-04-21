@@ -31,9 +31,10 @@ import java.io.FileInputStream
 import java.util.zip.ZipInputStream
 import lamp.data
 import java.io.File
+import lamp.autograd.Autograd
 
 case class CliConfig(
-    cuda: Boolean = false,
+    gpu: Boolean = false,
     wiki2: String = "",
     trainBatchSize: Int = 32,
     validationBatchSize: Int = 32,
@@ -51,7 +52,7 @@ object Train extends App {
   val parser1 = {
     import builder._
     OParser.sequence(
-      opt[Unit]("gpu").action((_, c) => c.copy(cuda = true)),
+      opt[Unit]("gpu").action((_, c) => c.copy(gpu = true)),
       opt[String]("wiki2").action((x, c) => c.copy(wiki2 = x)),
       opt[Int]("train-batch").action((x, c) => c.copy(trainBatchSize = x)),
       opt[Int]("validation-batch").action((x, c) =>
@@ -144,7 +145,9 @@ object Train extends App {
           s"Vocabulary size ${vocab.size}, train num sentences: ${trainParagraphs.map(_.size).sum}"
         )
 
-        val device = if (config.cuda) CudaDevice(0) else CPU
+        val device = if (config.gpu) {
+          if (aten.Tensor.hasMps) MPS else CudaDevice(0)
+        } else CPU
         val tensorOptions = device.options(SinglePrecision)
 
         val maxLength = 32
@@ -173,7 +176,12 @@ object Train extends App {
               .loadFromFile(net, new File(load), device, false)
               .unsafeRunSync()
           }
-        val model = SupervisedModel(net, LossFunctions.Identity)
+        val model = SupervisedModel(
+          net,
+          LossFunctions.Identity,
+          printMemoryAllocations = false,
+          cacheStrategy = Autograd.CacheStrategy.SelectivelyCache
+        )
 
         scribe.info("Learnable parameters: " + net.learnableParameters)
 
@@ -182,35 +190,34 @@ object Train extends App {
           lamp.data.bert.minibatchesFromParagraphs(
             minibatchSize = config.trainBatchSize,
             dropLast = true,
-              paragraphs = trainParagraphs,
-              maximumTokenId = maxToken,
-              clsToken = clsToken,
-              sepToken = sepToken,
-              padToken = padToken,
-              maskToken = maskToken,
-              maxLength = maxLength,
-            
+            paragraphs = trainParagraphs,
+            maximumTokenId = maxToken,
+            clsToken = clsToken,
+            sepToken = sepToken,
+            padToken = padToken,
+            maskToken = maskToken,
+            maxLength = maxLength,
             rng = rng
           )
         val validEpochs = (_: IOLoops.TrainingLoopContext) =>
           lamp.data.bert.minibatchesFromParagraphs(
             minibatchSize = config.trainBatchSize,
             dropLast = true,
-              paragraphs = validParagraphs,
-              maximumTokenId = maxToken,
-              clsToken = clsToken,
-              sepToken = sepToken,
-              padToken = padToken,
-              maskToken = maskToken,
-              maxLength = maxLength,
-            
+            paragraphs = validParagraphs,
+            maximumTokenId = maxToken,
+            clsToken = clsToken,
+            sepToken = sepToken,
+            padToken = padToken,
+            maskToken = maskToken,
+            maxLength = maxLength,
             rng = rng
           )
 
-        val optimizer = RAdam.factory(
+        val optimizer = AdamW.factory(
           weightDecay = simple(0.00),
           learningRate = simple(config.learningRate),
-          clip = Some(1d)
+          clip = Some(1d),
+          printGradientNorm = false
         )
 
         val (_, trainedModel, _, _, _) = IOLoops

@@ -21,9 +21,9 @@ import lamp.HalfPrecision
 import lamp.SinglePrecision
 import lamp.Scope
 import lamp.STen
-import lamp.onnx.VariableInfo
 import lamp.data.{EndStream, EmptyBatch, NonEmptyBatch}
 import cats.effect.unsafe.implicits.global
+import lamp.autograd.ForwardCache
 
 object Cifar {
   def loadImageFile(
@@ -48,6 +48,7 @@ object Cifar {
         case HalfPrecision   => images0.castToHalf
         case SinglePrecision => images0.castToFloat
         case DoublePrecision => images0.castToDouble
+        case _ => ???
       }
       println(images)
       (label2, images)
@@ -239,6 +240,7 @@ object Train extends App {
                   .use {
                     case NonEmptyBatch(batch) =>
                       IO {
+                        implicit val fw = ForwardCache.selective
                         val output = trained.module.forward(batch._1)
                         val file = new java.io.File("cifar10.lamp.example.onnx")
                         lamp.onnx.serializeToFile(
@@ -247,14 +249,14 @@ object Train extends App {
                           domain = "lamp.example.cifar"
                         ) {
                           case x if x == output =>
-                            VariableInfo(
+                            lamp.onnx.VariableInfo(
                               variable = output,
                               name = "output",
                               input = false,
                               docString = "log probabilities"
                             )
                           case x if x == batch._1 =>
-                            VariableInfo(
+                            lamp.onnx.VariableInfo(
                               variable = batch._1,
                               name = "input",
                               input = true,

@@ -6,133 +6,129 @@ import aten.ATen
 import aten.Tensor
 import lamp.Device
 import lamp.autograd.Variable
-import lamp.nn.StatefulModule
-import lamp.nn.InitState
-import lamp.nn.FreeRunningRNN
 import lamp.Scope
 import lamp.STen
 import scala.collection.compat.immutable.ArraySeq
-import lamp.nn.InitStateSyntax
 
 object Text {
-  def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
-      batch: Seq[Vector[Long]],
-      device: Device,
-      module: M with StatefulModule[Variable, Variable, T],
-      steps: Int
-  )(implicit
-      is: InitState[M, T],
-      scope: Scope
-  ): STen = {
-    Scope { implicit scope =>
-      val predictionBatch = makePredictionBatch(batch, device)
+  // def sequencePrediction[T, M <: StatefulModule[Variable, Variable, T]](
+  //     batch: Seq[Vector[Long]],
+  //     device: Device,
+  //     module: M with StatefulModule[Variable, Variable, T],
+  //     steps: Int
+  // )(implicit
+  //     is: InitState[M, T],
+  //     scope: Scope
+  // ): STen = {
+  //   Scope { implicit scope =>
+  //     val predictionBatch = makePredictionBatch(batch, device)
 
-      FreeRunningRNN(module, steps)
-        .forward(predictionBatch -> module.initState)
-        ._1
-        .argmax(2, false)
-        .value
+  //     FreeRunningRNN(module, steps)
+  //       .forward(predictionBatch -> module.initState)
+  //       ._1
+  //       .argmax(2, false)
+  //       .value
 
-    }
-  }
-  def sequencePredictionBeam[T, M <: StatefulModule[Variable, Variable, T]](
-      prefix: Vector[Long],
-      device: Device,
-      module: M with StatefulModule[Variable, Variable, T],
-      steps: Int,
-      startSequence: Int,
-      endOfSequence: Int
-  )(implicit
-      is: InitState[M, T],
-      scope: Scope
-  ): Seq[(STen, Double)] = {
-    val k = 3
+  //   }
+  // }
+  // def sequencePredictionBeam[T, M <: StatefulModule[Variable, Variable, T]](
+  //     prefix: Vector[Long],
+  //     device: Device,
+  //     module: M with StatefulModule[Variable, Variable, T],
+  //     steps: Int,
+  //     startSequence: Int,
+  //     endOfSequence: Int
+  // )(implicit
+  //     is: InitState[M, T],
+  //     scope: Scope
+  // ): Seq[(STen, Double)] = {
+  //   val k = 3
 
-    Scope { implicit scope =>
-      val predictionBatch = makePredictionBatch(Vector(prefix), device)
+  //   Scope { implicit scope =>
+  //     val predictionBatch = makePredictionBatch(Vector(prefix), device)
 
-      def loop(
-          n: Int,
-          buffers: Seq[(Seq[(Variable, T, Int)], Double)]
-      ): Seq[(Seq[Variable], Double)] = {
+  //     def loop(
+  //         n: Int,
+  //         buffers: Seq[(Seq[(Variable, T, Int)], Double)]
+  //     ): Seq[(Seq[Variable], Double)] = {
 
-        if (n == 0) {
-          buffers.map(b => (b._1.map(_._1), b._2))
-        } else {
-          val candidates = buffers.flatMap { case (sequence, logProb0) =>
-            val (lastOutput, lastState, lastToken) = sequence.last
-            if (lastToken == endOfSequence) {
-              List(
-                (
-                  sequence,
-                  lastOutput,
-                  logProb0,
-                  lastState,
-                  lastToken
-                )
-              )
-            } else {
-              val (output, state) =
-                module.forward((lastOutput, lastState))
+  //       if (n == 0) {
+  //         buffers.map(b => (b._1.map(_._1), b._2))
+  //       } else {
+  //         val candidates = buffers.flatMap { case (sequence, logProb0) =>
+  //           val (lastOutput, lastState, lastToken) = sequence.last
+  //           if (lastToken == endOfSequence) {
+  //             List(
+  //               (
+  //                 sequence,
+  //                 lastOutput,
+  //                 logProb0,
+  //                 lastState,
+  //                 lastToken
+  //               )
+  //             )
+  //           } else {
+  //             val (output, state) =
+  //               module.forward((lastOutput, lastState))
 
-              val lastChar = if (output.shape(0) > 1) {
-                val lastTimeStep1 =
-                  output.select(0, output.shape(0) - 1)
+  //             val lastChar = if (output.shape(0) > 1) {
+  //               val lastTimeStep1 =
+  //                 output.select(0, output.shape(0) - 1)
 
-                lastTimeStep1.view((1L :: lastTimeStep1.shape))
+  //               lastTimeStep1.view((1L :: lastTimeStep1.shape))
 
-              } else output
+  //             } else output
 
-              (0 until lastChar.shape(2).toInt).map { i =>
-                val selected = lastChar.select(2L, i.toLong)
-                val tmp =
-                  Tensor.scalarLong(i.toLong, selected.options.toLong.value)
-                val index = ATen._unsafe_view(tmp, Array(1L, 1L))
-                tmp.release
-                val logProb = selected.toDoubleArray.apply(0)
-                (
-                  sequence,
-                  selected.assign(const(STen.owned(index))),
-                  logProb + logProb0,
-                  state,
-                  i
-                )
-              }
-            }
+  //             (0 until lastChar.shape(2).toInt).map { i =>
+  //               val selected = lastChar.select(2L, i.toLong)
+  //               val tmp =
+  //                 Tensor.scalarLong(i.toLong, selected.options.toLong.value)
+  //               val index = ATen._unsafe_view(tmp, Array(1L, 1L))
+  //               tmp.release
+  //               val logProb = selected.toDoubleArray.apply(0)
+  //               (
+  //                 sequence,
+  //                 selected.assign(const(STen.owned(index))),
+  //                 logProb + logProb0,
+  //                 state,
+  //                 i
+  //               )
+  //             }
+  //           }
 
-          }
-          val (chosen, _) = candidates.sortBy(_._3).reverse.splitAt(k)
-          val newBuffers = chosen.map {
-            case (sequence, selected, logProb, state, i) =>
-              (sequence :+ ((selected, state, i)), logProb)
-          }
+  //         }
+  //         val (chosen, _) = candidates.sortBy(_._3).reverse.splitAt(k)
+  //         val newBuffers = chosen.map {
+  //           case (sequence, selected, logProb, state, i) =>
+  //             (sequence :+ ((selected, state, i)), logProb)
+  //         }
 
-          loop(
-            n - 1,
-            newBuffers
-          )
-        }
-      }
+  //         loop(
+  //           n - 1,
+  //           newBuffers
+  //         )
+  //       }
+  //     }
 
-      val ret = loop(
-        steps,
-        Seq(Seq((predictionBatch, module.initState, startSequence)) -> 0d)
-      ).sortBy(_._2)
-        .reverse
-        .map { case (seq, logProb) =>
-          val catted = Variable
-            .concatenateAddNewDim(
-              seq.map(v => v.select(0, v.shape(0) - 1))
-            )
-            .view(List(seq.size))
+  //     val ret = loop(
+  //       steps,
+  //       Seq(Seq((predictionBatch, module.initState, startSequence)) -> 0d)
+  //     ).sortBy(_._2)
+  //       .reverse
+  //       .map { case (seq, logProb) =>
+  //         val catted = Variable
+  //           .concatenateAddNewDim(
+  //             seq.map(v => v.select(0, v.shape(0) - 1))
+  //           )
+  //           .view(List(seq.size))
 
-          (catted, logProb)
-        }
+  //         (catted, logProb)
+  //       }
 
-      ret.map(v => (v._1.value.cloneTensor, v._2))
+  //     ret.map(v => (v._1.value.cloneTensor, v._2))
 
-    }
-  }
+  //   }
+  // }
 
   /** Convert back to text. Tensor shape: time x batch x dim
     */

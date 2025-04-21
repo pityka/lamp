@@ -6,7 +6,7 @@ import lamp.nn._
 
 import lamp.STen
 import lamp.autograd.Constant
-import lamp.autograd.{param, const}
+import lamp.autograd.{param}
 import lamp.STenOptions
 
 import lamp.autograd.Mean
@@ -45,16 +45,16 @@ case class BertLoss(
     wholeSentenceLoss: LossFunction
 ) extends GenericModule[BertLossInput, Variable] {
   def state = pretrain.state
-  def forward[S: Sc](x: BertLossInput): Variable = {
+  def forward[S: Sc,F:FW](x: BertLossInput): Variable = {
     val output = pretrain.forward(x.input)
-    val (l1, _) =
+    val l1 =
       mlmLoss
         .apply(
           output.languageModelScores.flatten(0, 1),
           x.maskedLanguageModelTarget.view(-1L)
         )
 
-    val (l2, _) = wholeSentenceLoss.apply(
+    val l2 = wholeSentenceLoss.apply(
       output.wholeSentenceBinaryClassifierScore,
       x.wholeSentenceTarget
     )
@@ -174,8 +174,8 @@ object BertLoss {
   * @param positions
   */
 case class BertPretrainInput(
-    tokens: Constant,
-    segments: Constant,
+    tokens: STen,
+    segments: STen,
     positions: STen,
     maxLength: Option[STen]
 )
@@ -213,7 +213,7 @@ case class BertPretrainModule(
 ) extends GenericModule[BertPretrainInput, BertPretrainOutput] {
   def state = encoder.state ++ mlm.state ++ wholeSentenceBinaryClassifier.state
 
-  def forward[S: Sc](x: BertPretrainInput): BertPretrainOutput = {
+  def forward[S: Sc, F:FW](x: BertPretrainInput): BertPretrainOutput = {
 
     val encoded = encoder.forward((x.tokens, x.segments, x.maxLength))
     val mlmScores = mlm.forward((encoded, x.positions)).logSoftMax(dim = 2)
@@ -279,7 +279,7 @@ object BertPretrainModule {
     ),
     wholeSentenceBinaryClassifier = sequence(
       Linear(embeddingDim, wholeStentenceHiddenDim, tOpt),
-      Fun(scope => _.tanh(scope)),
+      Fun(_ => _.tanh),
       Linear(wholeStentenceHiddenDim, 1, tOpt)
     )
   )
@@ -314,17 +314,17 @@ case class MaskedLanguageModelModule(
 ) extends GenericModule[(Variable, STen), Variable] {
   def state = mlp.state
 
-  def forward[S: Sc](x: (Variable, STen)): Variable = {
+  def forward[S: Sc,F:FW](x: (Variable, STen)): Variable = {
     val (encoderOutput, predictionPositions) = x
     val encoderOutputAtPredictionPositions =
       encoderOutput
-        .view(List(-1, encoderOutput.shape(2)))
-        .indexSelect(dim = 0, index = const(predictionPositions.view(-1)))
+        .view(List(-1, encoderOutput.shape.apply(2)))
+        .indexSelect(dim = 0, index = (predictionPositions.view(-1)))
         .view(
           List(
-            encoderOutput.shape(0),
+            encoderOutput.shape.apply(0),
             predictionPositions.shape(1),
-            encoderOutput.shape(2)
+            encoderOutput.shape.apply(2)
           )
         )
     mlp.forward(encoderOutputAtPredictionPositions)
@@ -352,7 +352,7 @@ object MaskedLanguageModelModule {
   ): MaskedLanguageModelModule = MaskedLanguageModelModule(
     sequence(
       Linear(inputDim, hiddenDim, tOpt),
-      Fun(scope => _.relu(scope)),
+      Fun(_ => _.relu),
       LayerNorm(List(hiddenDim), tOpt),
       Linear(hiddenDim, vocabularySize, tOpt)
     )
@@ -387,14 +387,14 @@ case class BertEncoder(
     segmentEmbedding: Embedding,
     positionalEmbedding: Constant,
     blocks: Seq[TransformerEncoderBlock]
-) extends GenericModule[(Variable, Variable, Option[STen]), Variable] {
+) extends GenericModule[(STen, STen, Option[STen]), Variable] {
   def state = tokenEmbedding.state ++ segmentEmbedding.state ++ List(
     positionalEmbedding ->
       BertEncoder.PositionalEmbeddingWeight
   ) ++ blocks.map(_.state).foldLeft(List.empty[(Constant, PTag)])(_ ++ _)
-  def forward[S: Sc](x: (Variable, Variable, Option[STen])): Variable = {
+  def forward[S: Sc,F:FW](x: (STen, STen, Option[STen])): Variable = {
     val (tokens, segments, maxLength) = x
-    val embedded = tokenEmbedding.forward(tokens) + segmentEmbedding.forward(
+    val embedded : Variable = tokenEmbedding.forward(tokens) + segmentEmbedding.forward(
       segments
     ) + positionalEmbedding.slice(
       dim = 1,
@@ -402,7 +402,11 @@ case class BertEncoder(
       end = tokens.shape(1),
       step = 1
     )
-    blocks.foldLeft(embedded) { (a, block) => block.forward((a, maxLength)) }
+    blocks.foldLeft(embedded) { (a, block) => 
+      block.forward(
+      (a, maxLength)
+      )
+    }
   }
 }
 object BertEncoder {
@@ -430,7 +434,7 @@ object BertEncoder {
           .drop(m.tokenEmbedding.state.size)
           .take(m.segmentEmbedding.state.size)
       )
-      m.positionalEmbedding.value.copyFrom(
+      m.positionalEmbedding.constantValue.copyFrom(
         tensors
           .drop(m.tokenEmbedding.state.size + m.segmentEmbedding.state.size)
           .head

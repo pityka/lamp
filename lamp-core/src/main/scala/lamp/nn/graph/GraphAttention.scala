@@ -16,7 +16,7 @@ case class GraphAttention(
     numHeads: Int
 ) extends GenericModule[Graph, Graph] {
 
-  override def forward[S: Sc](x: Graph): Graph = {
+  override def forward[S: Sc,F:FW](x: Graph): Graph = {
     val activation = GraphAttention.multiheadGraphAttention(
       nodeFeatures = x.nodeFeatures,
       edgeFeatures = x.edgeFeatures,
@@ -116,21 +116,21 @@ object GraphAttention {
     *   next node representation (without relu, dropout) and a tensor with the
     *   original node and edge features ligned up like [N_i, N_j, E_ij]
     */
-  def multiheadGraphAttention[S: Sc](
+  def multiheadGraphAttention[S: Sc,F:FW](
       nodeFeatures: Variable,
       edgeFeatures: Variable,
       edgeI: STen,
       edgeJ: STen,
-      wNodeKey1: Variable,
-      wNodeKey2: Variable,
-      wEdgeKey: Variable,
-      wNodeValue: Variable,
-      wAttention: Option[Variable],
+      wNodeKey1: Constant,
+      wNodeKey2: Constant,
+      wEdgeKey: Constant,
+      wNodeValue: Constant,
+      wAttention: Option[Constant],
       numHeads: Int
   ) = {
 
     def mm(a: Variable, b: Variable) =
-      a.mm(b).view(List(a.shape(0), numHeads, b.shape(1) / numHeads))
+      a.mm(b).view(List(a.shape.apply(0), numHeads, b.shape.apply(1) / numHeads))
 
     val nodeKey1 = mm(nodeFeatures, wNodeKey1)
     val nodeKey2 = mm(nodeFeatures, wNodeKey2)
@@ -143,16 +143,16 @@ object GraphAttention {
           Variable.cat(
             List(
               nodeKey1
-                .indexSelect(dim = 0, const(edgeI)),
+                .indexSelect(dim = 0, (edgeI)),
               nodeKey2
-                .indexSelect(dim = 0, const(edgeJ)),
+                .indexSelect(dim = 0, (edgeJ)),
               edgeKey
             ),
             dim = 2
           )
         }
 
-        val K = ninjeij.shape(2)
+        val K = ninjeij.shape.apply(2)
         (ninjeij
           .transpose(0, 1) bmm wAttention
           .view(List(K, numHeads, 1))
@@ -160,37 +160,37 @@ object GraphAttention {
 
       case None =>
         val ni =
-          nodeKey1.indexSelect(dim = 0, const(edgeI))
+          nodeKey1.indexSelect(dim = 0, (edgeI))
         val nj =
-          nodeKey2.indexSelect(dim = 0, const(edgeJ))
-        val prod = ((ni * nj) * (1d / math.sqrt(ni.shape(1).toDouble)))
+          nodeKey2.indexSelect(dim = 0, (edgeJ))
+        val prod = ((ni * nj) * (1d / math.sqrt(ni.shape.apply(1).toDouble)))
         val dot = prod
           .sum(dim = List(2), keepDim = true)
         dot + edgeKey.reshape(List(-1, numHeads, 1))
 
     }
-    val c = const(activations.value.max)
+    val c = const(activations.forward.max)
     val e = (activations - c).exp
-    val lse = e.indexAdd(const(edgeJ), 0, nodeFeatures.shape(0)).log + c
-    val lseBroadCast = lse.indexSelect(dim = 0, const(edgeJ))
+    val lse = e.indexAdd((edgeJ), 0, nodeFeatures.shape.apply(0)).log + c
+    val lseBroadCast = lse.indexSelect(dim = 0, (edgeJ))
     val logsoftmax = activations - lseBroadCast
     val a = logsoftmax.exp.view(List(-1, numHeads, 1))
 
     assert(
-      nodeValue.shape(1) % numHeads == 0,
+      nodeValue.shape.apply(1) % numHeads == 0,
       s"wNodeValue and numHeads size do not align ${wNodeValue
-        .shape(1)} $numHeads"
+        .shape.apply(1)} $numHeads"
     )
 
     val h = {
       val nodeValueScatter = nodeValue
-        .indexSelect(dim = 0, const(edgeI))
+        .indexSelect(dim = 0, (edgeI))
 
       (a * nodeValueScatter)
         .reshape(
-          List(-1, nodeValueScatter.shape(1) * nodeValueScatter.shape(2))
+          List(-1, nodeValueScatter.shape.apply(1) * nodeValueScatter.shape.apply(2))
         )
-        .indexAdd(const(edgeJ), 0, nodeFeatures.shape(0))
+        .indexAdd((edgeJ), 0, nodeFeatures.shape.apply(0))
 
     }
 
@@ -203,11 +203,12 @@ object GraphAttention {
       m => m.copy(dropout = m.dropout.asTraining)
     )
   implicit val load : Load[GraphAttention] = Load.make[GraphAttention] { m => parameters =>
-    m.wNodeKey1.value.copyFrom(parameters(0))
-    m.wNodeKey2.value.copyFrom(parameters(1))
-    m.wEdgeKey.value.copyFrom(parameters(2))
-    m.wNodeValue.value.copyFrom(parameters(3))
-    m.wAttention.foreach(_.value.copyFrom(parameters(4)))
+    
+    m.wNodeKey1.constantValue.copyFrom(parameters(0))
+    m.wNodeKey2.constantValue.copyFrom(parameters(1))
+    m.wEdgeKey.constantValue.copyFrom(parameters(2))
+    m.wNodeValue.constantValue.copyFrom(parameters(3))
+    m.wAttention.foreach(_.constantValue.copyFrom(parameters(4)))
 
   }
 

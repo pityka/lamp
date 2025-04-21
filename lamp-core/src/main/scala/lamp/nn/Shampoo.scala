@@ -83,8 +83,8 @@ case class Shampoo(
   def release() = {
     scope.release()
   }
-  def step(gradients: Seq[Option[STen]], scheduleFactor: Double) = {
-    clip.foreach { theta => gradientClippingInPlace(gradients, theta) }
+  def step(gradients: Seq[STen], scheduleFactor: Double) = {
+    clip.foreach { theta => gradientClippingInPlace(gradients, theta, false) }
     stepCount += 1
     stepCountSTen += 1d
     parameters
@@ -92,13 +92,10 @@ case class Shampoo(
       .zip(lt)
       .zip(rt)
       .zip(lastGradient)
-      .filter(_._1._1._1._2.isDefined)
       .foreach {
-        case (((((_, _), None), _), _), _) =>
-          // won't happent, see filter above
-          ???
+        
         case (
-              ((((param, tag), Some(gradients)), (lt, ltinv)), (rt, rtinv)),
+              ((((param, tag), gradients), (lt, ltinv)), (rt, rtinv)),
               lastGradient
             ) =>
           val lr = learningRate(tag)

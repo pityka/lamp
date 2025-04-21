@@ -115,7 +115,7 @@ case class Seq2[T1, T2, T3, M1 <: GenericModule[T1, T2], M2 <: GenericModule[
     m1.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 0)) } ++
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) }
 
-  def forward[S: Sc](x: T1) = m2.forward(m1.forward(x))
+  def forward[S:Sc, F:FW](x: T1) = m2.forward(m1.forward(x))
 
 }
 
@@ -168,7 +168,7 @@ case class Seq3[T1, T2, T3, T4, M1 <: GenericModule[
       m2.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 1)) } ++
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) }
 
-  def forward[S: Sc](x: T1) = {
+  def forward[S:Sc, F:FW](x: T1) = {
     m3.forward(m2.forward(m1.forward(x)))
   }
 
@@ -248,7 +248,7 @@ case class Seq4[
       m3.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 2)) } ++
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) }
 
-  def forward[S: Sc](x: T1) = {
+  def forward[S:Sc, F:FW](x: T1) = {
     m4.forward(m3.forward(m2.forward(m1.forward(x))))
   }
 
@@ -358,7 +358,7 @@ case class Seq5[
       m4.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 3)) } ++
       m5.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 4)) }
 
-  def forward[S: Sc](x: T1) = {
+  def forward[S:Sc, F:FW](x: T1) = {
     m5.forward(m4.forward(m3.forward(m2.forward(m1.forward(x)))))
   }
 
@@ -543,7 +543,7 @@ case class Seq6[
       m5.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 4)) } ++
       m6.state.map { case (param, ptag) => (param, Sequential.Tag(ptag, 5)) }
 
-  def forward[S: Sc](x: T1) = {
+  def forward[S:Sc, F:FW](x: T1) = {
     m6.forward(m5.forward(m4.forward(m3.forward(m2.forward(m1.forward(x))))))
   }
 

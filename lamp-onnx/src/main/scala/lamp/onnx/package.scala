@@ -83,48 +83,49 @@ package object onnx {
         ox.TypeProto.Value.TensorType(value =
           ox.TypeProto.Tensor(
             elemType = Scope.root { implicit scope =>
-              v.value.options.scalarTypeByte match {
+              v.eval.options.scalarTypeByte match {
                 case 4 => Some(DataType.INT64.index)
                 case 6 => Some(DataType.FLOAT.index)
                 case 7 => Some(DataType.DOUBLE.index)
               }
             },
-            shape = Some(
+            shape =  Scope.unsafe { implicit scope =>Some(
               TensorShapeProto(dim =
-                v.value.shape.map(shapeL =>
+                v.eval.shape.map(shapeL =>
                   TensorShapeProto.Dimension(value =
                     TensorShapeProto.Dimension.Value.DimValue(shapeL)
                   )
                 )
               )
-            )
+            )}
           )
         )
       )
 
-    val graph = output.wengert.reverse
+    val graph = Autograd.topologicalSort(output).reverse
     val info = graph.collect(infoFun)
 
-    val inputs = info.filter(_.input).map(_.variable.id)
-    val nameMap = info.map { input => input.variable.id -> input.name }.toMap
+    val inputs = info.filter(_.input).map(_.variable)
 
-    def makeName(u: AnyRef) =
+    val nameMap = info.map { input => input.variable -> input.name }.toMap
+
+    def makeName(u: Variable) =
       nameMap.get(u).getOrElse(u.toString.replace("-", "_"))
 
     val namer = new NameMap {
-      def apply(u: AnyRef): String = makeName(u)
+      def apply(u: Variable): String = makeName(u)
     }
 
     val constantNodes = graph.collect { case x: ConstantWithoutGrad =>
       x
     }
     val (inputNodes, nonInputConstantNodes) =
-      constantNodes.partition(v => inputs.contains(v.id))
+      constantNodes.partition(v => inputs.contains(v))
 
     val parameters = graph.collect { case x: ConstantWithGrad =>
       x
     }
-    val convertedNodes = graph.collect { case variable: VariableNonConstant =>
+    val convertedNodes = graph.collect { case variable: LazyVariableNonConstant =>
       opset.translate(namer, variable)
 
     }
@@ -151,37 +152,37 @@ package object onnx {
           name = Some("graph1"),
           node = nodes,
           initializer = constants ++ (nonInputConstantNodes ++ parameters)
-            .filterNot(v => Scope.root { implicit scope => v.options.isSparse })
+            .filterNot(v => Scope.root { implicit scope => v.eval.options.isSparse })
             .map { variable =>
               ox.TensorProto(
-                name = Some(makeName(variable.id)),
+                name = Some(namer(variable)),
                 docString = info
-                  .find(_.variable.id == variable.id)
+                  .find(_.variable == variable)
                   .map(_.docString),
-                dims = variable.shape,
+                dims = Scope.root{implicit scope => variable.eval.shape},
                 dataType = Scope.root { implicit scope =>
-                  variable.options.scalarTypeByte match {
+                  variable.eval.options.scalarTypeByte match {
                     case 4 => Some(ox.TensorProto.DataType.INT64.index)
                     case 6 => Some(ox.TensorProto.DataType.FLOAT.index)
                     case 7 => Some(ox.TensorProto.DataType.DOUBLE.index)
                   }
                 },
-                rawData = Some(tensorAsByteString(variable.value))
+                rawData = Some(tensorAsByteString(variable.constantValue))
               )
             },
           sparseInitializer = (nonInputConstantNodes ++ parameters)
-            .filter(v => Scope.root { implicit scope => v.options.isSparse })
+            .filter(v => Scope.root { implicit scope => v.eval.options.isSparse })
             .map { variable =>
               Scope.unsafe { implicit scope =>
-                val coalesced = variable.value.coalesce
+                val coalesced = variable.constantValue.coalesce
                 val values = coalesced.values
                 val indices = coalesced.indices
                 ox.SparseTensorProto(
                   values = Some(
                     ox.TensorProto(
-                      name = Some(makeName(variable.id)),
+                      name = Some(namer(variable)),
                       docString = info
-                        .find(_.variable.id == variable.id)
+                        .find(_.variable == variable)
                         .map(_.docString),
                       dims = values.shape,
                       dataType = values.options.scalarTypeByte match {
@@ -203,23 +204,23 @@ package object onnx {
                       rawData = Some(tensorAsByteString(indices))
                     )
                   ),
-                  dims = variable.shape
+                  dims = variable.eval.shape
                 )
               }
             },
           input = inputNodes.map { variable =>
             ox.ValueInfoProto(
-              name = Some(makeName(variable.id)),
+              name = Some(namer(variable)),
               `type` = Some(makeType(variable)),
               docString =
-                info.find(_.variable.id == variable.id).map(_.docString)
+                info.find(_.variable == variable).map(_.docString)
             )
           },
           output = List(
             ox.ValueInfoProto(
-              name = Some(makeName(output.id)),
+              name = Some(namer(output)),
               `type` = Some(makeType(output)),
-              docString = info.find(_.variable.id == output.id).map(_.docString)
+              docString = info.find(_.variable == output).map(_.docString)
             )
           )
         )

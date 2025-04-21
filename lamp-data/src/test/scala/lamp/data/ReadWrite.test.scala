@@ -69,8 +69,8 @@ class ReadWriteSuite extends AnyFunSuite {
       val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt))
       Reader.loadFromFile(net2, file, CPU, false).unsafeRunSync()
       net2.state.zip(net.state).foreach { case ((loaded, _), (orig, _)) =>
-        val ndL = NDArray.tensorToFloatNDArray(loaded.value.value)
-        val ndO = NDArray.tensorToFloatNDArray(orig.value.value)
+        val ndL = NDArray.tensorToFloatNDArray(loaded.constantValue.value)
+        val ndO = NDArray.tensorToFloatNDArray(orig.constantValue.value)
         assert(ndL.toVec == ndO.toVec)
       }
     }
@@ -85,14 +85,14 @@ class ReadWriteSuite extends AnyFunSuite {
       val net2 = Sequential(Linear(5, 5, topt), Linear(5, 5, topt.toDouble))
       Reader.loadFromFile(net2, file, CPU, false).unsafeRunSync()
       net2.state.zip(net.state).foreach { case ((loaded, _), (orig, _)) =>
-        loaded.value.scalarTypeByte match {
+        loaded.constantValue.scalarTypeByte match {
           case 6 =>
-            val ndL = NDArray.tensorToFloatNDArray(loaded.value.value)
-            val ndO = NDArray.tensorToFloatNDArray(orig.value.value)
+            val ndL = NDArray.tensorToFloatNDArray(loaded.constantValue.value)
+            val ndO = NDArray.tensorToFloatNDArray(orig.constantValue.value)
             assert(ndL.toVec == ndO.toVec)
           case 7 =>
-            val ndL = NDArray.tensorToNDArray(loaded.value.value)
-            val ndO = NDArray.tensorToNDArray(orig.value.value)
+            val ndL = NDArray.tensorToNDArray(loaded.constantValue.value)
+            val ndO = NDArray.tensorToNDArray(orig.constantValue.value)
             assert(ndL.toVec == ndO.toVec)
         }
       }
