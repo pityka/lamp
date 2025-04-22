@@ -137,6 +137,7 @@ package object languagemodel {
       scopeInResource.evalMap { implicit scope =>
         IO.interruptible {
           val corpusLength = corpus.shape(0)
+          assert(corpusLength - blockLength - 1 > 0,s"corpus length = $corpusLength block length = $blockLength")
           val (tokens, targets, maxLength) = Scope { implicit scope =>
             val starts = STen
               .randint(

@@ -7,14 +7,14 @@ import lamp.autograd.Autograd
 object Model {
 
   val vocabularySize = 256
-  val contextLength = 384
+  val contextLength = 1024
 
   val codecFactory = IdentityCodecFactory
 
   def allocateModel(
       device: Device,
       gradientCheckpointing: Boolean,
-      mixedPrecision: Boolean
+      mixedPrecision: Boolean,
   )(implicit
       scope: Scope
   ) = {

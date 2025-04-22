@@ -649,11 +649,11 @@ object Autograd {
         case _ =>
           ()
       }
-    fw.allValues.foreach { sten =>
+    fw.allValues.distinct.foreach { sten =>
       intermediateTensorCount += 1
       intermediateTensorStorage += sten.numBytes
     }
-    partialDerivatives.foreach { case (_, sten) =>
+    partialDerivatives.values.toList.distinct.foreach { case sten =>
       pdTensorCount += 1
       pdTensorStorage += sten.numBytes
     }
