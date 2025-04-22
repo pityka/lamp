@@ -13,11 +13,12 @@ import lamp.Scope
 import lamp.STen
 import lamp.saddle._
 import cats.effect.unsafe.implicits.global
+import aten.Tensor
 
 class GCNSuite extends AnyFunSuite {
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
-    test(id + "/CUDA", CudaTest) { fun(true) }
+    if (Tensor.hasCuda) {test(id + "/CUDA") { fun(true) }}
   }
 
   test1("gcn aggregation") { cuda =>

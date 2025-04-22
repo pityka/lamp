@@ -12,6 +12,7 @@ object Train {
       config: CliConfig,
       trainTokens: STen,
       validTokens: Option[STen],
+      codec: Codec
   )(implicit scope: Scope): IO[Unit] = Scope.bracket(scope) { implicit scope =>
     val device =
       if (config.gpus.nonEmpty) {if (aten.Tensor.hasMps) 
@@ -92,8 +93,27 @@ object Train {
             .getOrElse(IO.unit)
         )
       )
-      .map { _ =>
+      .flatMap { case (_,model,_,_,_) =>
         scribe.info("Training done.")
+
+        val rawPrefix = "Hello there, what to say?".getBytes("US-ASCII")
+
+      val encodedPrefix = codec.encode(rawPrefix)
+
+      lamp.data.languagemodel
+        .autoregressiveInference(
+          model.module.languageModel.asEval,
+          modelBlockSize = Model.contextLength,
+          prefix = encodedPrefix,
+          length = config.extendLength,
+          temperature = config.samplingTemperature
+        )(scope)
+        .map { inferred =>
+          val decoded = codec.decode(inferred)
+
+          scribe.info(s"Extended:\n${new String(decoded)}\n")
+
+        }
 
       }
 

@@ -735,14 +735,16 @@ object Autograd {
           )
         if (pdNotNeeded && printZeroGradients) {
           Scope.root { implicit scope =>
-            val pd = mutable(v)
-            val norm = pd
-              .view(-1)
-              .norm2(List(0), false)
-              .toDevice(lamp.CPU)
-              .toDoubleArray(0)
-            if (norm < 1e-5) {
-              println(s"Near zero gradient of $v $norm")
+            val pd = mutable.get(v)
+            pd.foreach { pd =>
+              val norm = pd
+                .view(-1)
+                .norm2(List(0), false)
+                .toDevice(lamp.CPU)
+                .toDoubleArray(0)
+              if (norm < 1e-5) {
+                println(s"Near zero gradient of $v $norm")
+              }
             }
           }
         }

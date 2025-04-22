@@ -7,14 +7,13 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.DoublePrecision
 import lamp.CPU
 import lamp.saddle._
-import lamp.nn.CudaTest
 import lamp.CudaDevice
 import lamp.Scope
-
+import aten.Tensor
 class KnnSuite extends AnyFunSuite {
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
-    test(id + "/CUDA", CudaTest) { fun(true) }
+    if (Tensor.hasCuda) {test(id + "/CUDA") { fun(true) }}
   }
 
   test1("euclidean") { cuda =>

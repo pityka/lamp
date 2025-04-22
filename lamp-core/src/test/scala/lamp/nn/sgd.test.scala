@@ -6,12 +6,13 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.Scope
 import lamp.saddle._
 import org.scalatest.compatible.Assertion
+import aten.Tensor
 
 class SGDSuite extends AnyFunSuite {
 implicit val AssertionIsMovable : lamp.EmptyMovable[Assertion] = lamp.Movable.empty[Assertion]
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
-    test(id + "/CUDA", CudaTest) { fun(true) }
+    if (Tensor.hasCuda) {test(id + "/CUDA") { fun(true) }}
   }
 
   test1("SGD noop") { cuda =>

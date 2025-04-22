@@ -15,13 +15,13 @@ import cats.effect.kernel.Resource
 import lamp.autograd.Autograd.BackpropForwardCache
 import lamp.autograd.Autograd.CacheStrategy
 import lamp.Device
-
+import aten.Tensor
 class TransformerSuite extends AnyFunSuite {
 
   def test1(id: String)(fun: Device => Unit) = {
     test(id) { fun(CPU) }
     if (aten.Tensor.hasMps) {test(id+" MPS") { fun( lamp.MPS) }}
-    test(id + "/CUDA", CudaTest) { fun(CudaDevice(0)) }
+    if (Tensor.hasCuda) {test(id + "/CUDA") { fun(CudaDevice(0)) }}
   }
 
   test1("clickbait") { device =>

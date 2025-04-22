@@ -9,7 +9,7 @@ import lamp.data.CodecFactory
 import lamp.example.lm.Model
 object Util {
 
-  def prepareCorpora(config: CliConfig)(implicit scope: Scope) = Scope.bracket {
+  def prepareCorpora(config: CliConfig, rawTrainCorpus: STen, codec: Codec)(implicit scope: Scope) = Scope.bracket {
     implicit scope =>
       if (config.trainFile.isEmpty) {
             throw new RuntimeException("Empty file path for train")
@@ -17,17 +17,7 @@ object Util {
       for {
        
 
-        rawTrainCorpus <-
-          Util.readBytesFromFile(config.trainFile, config.fileMaxLength)
-
-        _ = scribe.info(f"Read raw corpus ${rawTrainCorpus.shape(0)}%,d")
-
-        codec <- Util.readOrTrainCodec(
-          config.bpeFile,
-          rawTrainCorpus.slice(0, 0, 300000, 1).toByteArray,
-          Model.codecFactory,
-          
-        )
+        
 
         trainCorpus <-
           Util.encodeOrReadTokens(

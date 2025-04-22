@@ -23,11 +23,26 @@ object Main extends IOApp {
         scribe.info(s"Config: $config")
         Scope.inResource.use(scope =>
           for {
-            corpora <- Util.prepareCorpora(config)(scope)
+            rawTrainCorpus <-
+              Util.readBytesFromFile(config.trainFile, config.fileMaxLength)(
+                scope
+              )
+
+            _ = scribe.info(f"Read raw corpus ${rawTrainCorpus.shape(0)}%,d")
+
+            codec <- Util.readOrTrainCodec(
+              config.bpeFile,
+              rawTrainCorpus.slice(0, 0, 300000, 1)(scope).toByteArray,
+              Model.codecFactory
+            )
+            corpora <- Util.prepareCorpora(config, rawTrainCorpus, codec)(scope)
             _ <-
               if (!config.distributed)
-                Train.train(config, corpora._1, corpora._2)(scope)
-              else DistributedTrain.train(config, corpora._1, corpora._2.get)(scope)
+                Train.train(config, corpora._1, corpora._2, codec)(scope)
+              else
+                DistributedTrain.train(config, corpora._1, corpora._2.get)(
+                  scope
+                )
           } yield ExitCode(0)
         )
 

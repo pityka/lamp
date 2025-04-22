@@ -11,7 +11,7 @@ import cats.effect.unsafe.implicits.global
 import cats.effect.IO
 import lamp.autograd.ForwardCache
 import lamp.SinglePrecision
-
+import aten.Tensor
 class MLPSuite extends AnyFunSuite {
   def mlp(dim: Int, k: Int, tOpt: STenOptions)(implicit
       pool: Scope
@@ -24,7 +24,7 @@ class MLPSuite extends AnyFunSuite {
   def test1(id: String)(fun: lamp.Device => Unit) = {
     test(id) { fun(lamp.CPU) }
     if (aten.Tensor.hasMps()) { test(id + " MPS") { fun(lamp.MPS) } }
-    test(id + "/device", CudaTest) { fun(lamp.CudaDevice(0)) }
+    if (Tensor.hasCuda) {test(id + "/device") { fun(lamp.CudaDevice(0)) }}
   }
 
   test1("mnist tabular mini batch") { device =>

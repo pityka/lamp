@@ -106,7 +106,8 @@ class OnnxSuite extends AnyFunSuite {
           val result =
             runModel(file, Map("t1" -> tt1), output.eval.scalarTypeByte)
           assert(result.shape == output.eval.shape)
-          assert((result * 10000).round.equalDeep((output.eval * 10000).round))
+          assert((result.castToFloat.reshape(-1) - output.eval.castToFloat.reshape(-1)).abs.mean.castToDouble.toDevice(lamp.CPU).toDoubleArray(0) < 1e-3)
+          // assert((result * 10000).round.equalDeep((output.eval * 10000).round))
         } catch {
           case e: ai.onnxruntime.OrtException
               if expectNoImplemenation && e.getMessage

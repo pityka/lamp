@@ -77,8 +77,6 @@ lazy val commonSettings = Seq(
   cancelable in Global := true
 )
 
-lazy val Cuda = config("cuda").extend(Test)
-lazy val AllTest = config("alltest").extend(Test)
 
 val saddleVersion = "4.0.0-M11"
 val upickleVersion = "3.1.4"
@@ -116,8 +114,6 @@ lazy val akkacommunicator = project
 
 lazy val sten = project
   .in(file("lamp-sten"))
-  .configs(Cuda)
-  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-sten",
@@ -127,25 +123,14 @@ lazy val sten = project
       "org.typelevel" %% "cats-effect" % catsEffectVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    Test / testOptions += Tests.Argument("-l", "cuda slow"),
-    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
-    AllTest / testOptions := Nil
   )
 
 lazy val core = project
   .in(file("lamp-core"))
-  .configs(Cuda)
-  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-core",
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    Test / testOptions += Tests.Argument("-l", "cuda slow"),
-    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
-    AllTest / testOptions := Nil,
+    
     libraryDependencies ++= List(
       "io.github.pityka" %% "saddle-linalg" % saddleVersion % "test"
     )
@@ -154,8 +139,6 @@ lazy val core = project
 
 lazy val data = project
   .in(file("lamp-data"))
-  .configs(Cuda)
-  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-data",
@@ -164,11 +147,7 @@ lazy val data = project
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % jsoniterscalaVersion,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
     ),
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    Test / testOptions += Tests.Argument("-l", "cuda slow"),
-    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
-    AllTest / testOptions := Nil
+    
   )
   .dependsOn(core % "test->test;compile->compile", onnx % "test")
 
@@ -187,46 +166,32 @@ lazy val safetensors = project
 
 lazy val umap = project
   .in(file("lamp-umap"))
-  .configs(Cuda)
-  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-umap",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    Test / testOptions += Tests.Argument("-l", "cuda slow"),
-    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
-    AllTest / testOptions := Nil
+    
   )
   .dependsOn(data, knn, saddlecompat % "test")
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val kmeans = project
   .in(file("lamp-kmeans"))
-  .configs(Cuda)
-  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-kmeans",
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
     ),
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    Test / testOptions += Tests.Argument("-l", "cuda slow"),
-    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
-    AllTest / testOptions := Nil
+    
   )
   .dependsOn(data, knn, saddlecompat % "test")
   .dependsOn(core % "test->test;compile->compile")
 
 lazy val onnx = project
   .in(file("lamp-onnx"))
-  .configs(Cuda)
-  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-onnx",
@@ -238,11 +203,7 @@ lazy val onnx = project
     Compile / PB.targets := Seq(
       scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
     ),
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    Test / testOptions += Tests.Argument("-l", "cuda slow"),
-    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
-    AllTest / testOptions := Nil
+    
   )
   .dependsOn(core % "test->test;compile->compile")
 
@@ -262,8 +223,6 @@ lazy val forest = project
 
 lazy val knn = project
   .in(file("lamp-knn"))
-  .configs(Cuda)
-  .configs(AllTest)
   .settings(commonSettings: _*)
   .settings(
     name := "lamp-knn",
@@ -271,11 +230,7 @@ lazy val knn = project
       "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
       "io.github.pityka" %% "saddle-linalg" % saddleVersion
     ),
-    inConfig(Cuda)(Defaults.testTasks),
-    inConfig(AllTest)(Defaults.testTasks),
-    Test / testOptions += Tests.Argument("-l", "cuda slow"),
-    Cuda / testOptions := List(Tests.Argument("-n", "cuda")),
-    AllTest / testOptions := Nil
+    
   )
   .dependsOn(core, saddlecompat)
   .dependsOn(core % "test->test;compile->compile")

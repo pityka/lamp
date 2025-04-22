@@ -15,7 +15,7 @@ class AdamWSuite extends AnyFunSuite {
   def test1(id: String)(fun: lamp.Device => Unit) = {
     test(id) { fun(lamp.CPU) }
     if (aten.Tensor.hasMps) {test(id+" MPS") { fun(lamp.MPS) }}
-    test(id + "/CUDA", CudaTest) { fun(CudaDevice(0)) }
+    if (aten.Tensor.hasCuda) {test(id + "/CUDA") { fun(CudaDevice(0)) }}
   }
 
   test1("AdamW without weight decay") { device =>

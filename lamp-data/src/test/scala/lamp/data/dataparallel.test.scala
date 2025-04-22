@@ -22,7 +22,8 @@ class DataParallelLoopSuite extends AnyFunSuite {
       Fun(_ => _.logSoftMax(dim = 1))
     )
 
-  test("mnist tabular mini batch - data parallel gpu", CudaTest) {
+    if (Tensor.hasCuda) {
+  test("mnist tabular mini batch - data parallel gpu") {
     Scope.root { implicit scope =>
       Tensor.manual_seed(123L)
       val device = CPU
@@ -101,6 +102,7 @@ class DataParallelLoopSuite extends AnyFunSuite {
       ()
     }
   }
+}
   test("mnist tabular mini batch - data parallel cpu") {
     Scope.root { implicit scope =>
       Tensor.manual_seed(123L)

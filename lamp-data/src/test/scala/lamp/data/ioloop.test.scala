@@ -11,7 +11,7 @@ import lamp.Scope
 import lamp.STen
 import lamp.STenOptions
 import cats.effect.unsafe.implicits.global
-
+import aten.Tensor
 class IOLoopSuite extends AnyFunSuite {
   def logisticRegression(dim: Int, k: Int, tOpt: STenOptions)(implicit
       pool: Scope
@@ -23,7 +23,7 @@ class IOLoopSuite extends AnyFunSuite {
 
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
-    test(id + "/CUDA", CudaTest) { fun(true) }
+    if (Tensor.hasCuda) {test(id + "/CUDA") { fun(true) }}
   }
 
   test1("mnist tabular full batch") { cuda =>
@@ -67,7 +67,7 @@ class IOLoopSuite extends AnyFunSuite {
           device.options(DoublePrecision)
         ),
         LossFunctions.NLL(10, classWeights),
-        printMemoryAllocations = true
+        printMemoryAllocations = false
       )
 
       val (epoch, trainedModel, learningCurve,_, _) = IOLoops

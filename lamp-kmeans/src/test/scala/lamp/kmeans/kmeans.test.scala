@@ -3,16 +3,15 @@ package lamp.kmeans
 import lamp.saddle._
 import org.saddle._
 import org.scalatest.funsuite.AnyFunSuite
-import lamp.nn.CudaTest
 import lamp.Scope
 import lamp.STen
 import lamp.CudaDevice
 import lamp.CPU
-
+import aten.Tensor
 class KmeansSuite extends AnyFunSuite {
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
-    test(id + "/CUDA", CudaTest) { fun(true) }
+    if (Tensor.hasCuda) {test(id + "/CUDA") { fun(true) }}
   }
 
   test1("simple") { cuda =>

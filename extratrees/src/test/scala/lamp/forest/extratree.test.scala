@@ -520,10 +520,10 @@ class ExtraTreesSuite extends AnyFunSuite {
       target = target,
       nMin = 1,
       k = 1,
-      m = 100,
+      m = 10,
       parallelism = 1,
       bestSplit = false,
-      maxDepth = 200
+      maxDepth = 20
     )
     val output = predictRegression(trees, features)
     val correct =
@@ -541,10 +541,10 @@ class ExtraTreesSuite extends AnyFunSuite {
       numClasses = 2,
       nMin = 1,
       k = 1,
-      m = 100,
+      m = 10,
       parallelism = 1,
       bestSplit = false,
-      maxDepth = 200
+      maxDepth = 20
     )
     val output = predictClassification(trees, features).col(1)
     val correct =

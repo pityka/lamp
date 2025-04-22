@@ -53,12 +53,21 @@ class SimpleLossCalculation[I] extends LossCalculation[I] {
       val loss = lossFunction(output, target)
       val lossValue = loss.forward.cloneTensor
       val outputValue = output.forward.cloneTensor
-      
-      val numInstances = if (outputValue.shape.nonEmpty) outputValue.shape(0) else if (target.shape.nonEmpty) target.shape(0) else 1
 
-        if (printMemoryAllocations) {
-          println("Allocation report before backward pass.")
-        println(Autograd.graphMemoryAllocationReport(loss, forwardCache,partialDerivatives))
+      val numInstances =
+        if (outputValue.shape.nonEmpty) outputValue.shape(0)
+        else if (target.shape.nonEmpty) target.shape(0)
+        else 1
+
+      if (printMemoryAllocations) {
+        println("Allocation report before backward pass.")
+        println(
+          Autograd.graphMemoryAllocationReport(
+            loss,
+            forwardCache,
+            partialDerivatives
+          )
+        )
       }
 
       if (computeGradients) {
@@ -73,13 +82,13 @@ class SimpleLossCalculation[I] extends LossCalculation[I] {
 
         if (printMemoryAllocations) {
           println("Allocation report after backward pass.")
-        println(Autograd.graphMemoryAllocationReport(loss, forwardCache,updatedPd))
-      }
+          println(
+            Autograd.graphMemoryAllocationReport(loss, forwardCache, updatedPd)
+          )
+        }
 
         (lossValue, numInstances, updatedPd)
       } else {
-
-        
 
         (lossValue, numInstances, partialDerivatives)
       }
@@ -114,7 +123,7 @@ case class SupervisedModel[I, M <: GenericModule[I, Variable]](
     lossFunction: LossFunction,
     lossCalculation: LossCalculation[I] = new SimpleLossCalculation[I],
     printMemoryAllocations: Boolean = false,
-    cacheStrategy : CacheStrategy = CacheStrategy.AlwaysCache,
+    cacheStrategy: CacheStrategy = CacheStrategy.AlwaysCache,
     printZeroGradients: Boolean = false
 )(implicit tm: TrainingMode[M]) {
   def asEval = copy(module = module.asEval)

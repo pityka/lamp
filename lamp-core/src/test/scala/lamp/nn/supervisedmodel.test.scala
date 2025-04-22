@@ -22,8 +22,8 @@ class SupervisedModelSuite extends AnyFunSuite {
 
   def test1(id: String)(fun: Device => Unit) = {
     test(id) { fun(CPU) }
-    test(id+" MPS") { fun(MPS) }
-    test(id + "/CUDA", CudaTest) { fun(CudaDevice(0)) }
+    if (aten.Tensor.hasMps) {test(id+" MPS") { fun(MPS) }}
+    if (aten.Tensor.hasCuda()) {test(id + "/CUDA") { fun(CudaDevice(0)) }}
   }
 
   test1("mnist tabular") { cuda =>

@@ -4,18 +4,19 @@ import org.saddle._
 import org.scalatest.funsuite.AnyFunSuite
 import aten.ATen
 import aten.TensorOptions
-import lamp.nn.CudaTest
 import lamp.util.syntax
 import lamp.Scope
 import lamp.saddle.SaddleTensorHelpers
 
 class SaddleTensorHelpersuite extends AnyFunSuite {
 
-  test("to/from cuda", CudaTest) {
+  if (aten.Tensor.hasCuda()) {
+  test("to/from cuda") {
     val eye = ATen.eye_1(3, 3, TensorOptions.d.cuda)
     val m = SaddleTensorHelpers.toMat(eye)
     assert(m == mat.ident(3))
   }
+}
   test("to/from double") {
     val eye = ATen.eye_1(3, 3, TensorOptions.d)
     val m = SaddleTensorHelpers.toMat(eye)

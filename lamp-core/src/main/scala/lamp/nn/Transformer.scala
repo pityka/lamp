@@ -10,7 +10,6 @@ import lamp.STenOptions
 import lamp.Scope
 import lamp.FloatingPointPrecision
 import lamp.Device
-import lamp.autograd.ScaledDotProductAttention
 
 /** TransformerEncoder module
   *
@@ -961,16 +960,16 @@ object MultiheadAttention {
       isCuda && aligned && nQ == nK && !linearized && (causalMask || maxLength.isEmpty) && (dropout == 0d || !trainDropout)
 
     val attention =
-      if (useEfficientAttentionKernel)
-        new ScaledDotProductAttention(
-          scope = implicitly[Scope],
-          query = q1.view(List(nB, nQ, numHeads, -1)),
-          key = k1.view(List(nB, nQ, numHeads, -1)),
-          valueIn = v1.view(List(nB, nQ, numHeads, -1)),
-          attentionBias = None,
-          isCausal = causalMask
-        ).value
-          .flatten(2, 3)
+      if (false && useEfficientAttentionKernel) { ???}
+        // new ScaledDotProductAttention(
+        //   scope = implicitly[Scope],
+        //   query = q1.view(List(nB, nQ, numHeads, -1)),
+        //   key = k1.view(List(nB, nQ, numHeads, -1)),
+        //   valueIn = v1.view(List(nB, nQ, numHeads, -1)),
+        //   attentionBias = None,
+        //   isCausal = causalMask
+        // ).value
+        //   .flatten(2, 3)
       else {
 
         // (batch * numHeads) x num queries x hidden/numHeads

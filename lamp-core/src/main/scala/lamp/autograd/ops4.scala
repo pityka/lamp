@@ -618,93 +618,93 @@ case class ElementWiseMaximum(a: Variable, b: Variable) extends Op {
 
 }
 
-case class ScaledDotProductAttention(
-    scope: Scope,
-    query: Variable,
-    key: Variable,
-    valueIn: Variable,
-    attentionBias: Option[STen],
-    isCausal: Boolean
-) extends Op {
+// case class ScaledDotProductAttention(
+//     scope: Scope,
+//     query: Variable,
+//     key: Variable,
+//     valueIn: Variable,
+//     attentionBias: Option[STen],
+//     isCausal: Boolean
+// ) extends Op {
 
-  val value = Variable.withAux(
-    this,
-    { implicit scope => implicit forward =>
-      val (out, lse, cumsq, cumsk, maxq, maxk, philoxseed, philoxoffset) =
-        STen.scaledDotProductAttention(
-          query.forward,
-          key.forward,
-          valueIn.forward,
-          attentionBias,
-          isCausal
-        )
-      (
-        out,
-        List(
-          lse,
-          cumsq,
-          cumsk,
-          STen.fromLongArray(Array(maxq, maxk)),
-          philoxseed,
-          philoxoffset
-        )
-      )
-    }
-  )
+//   val value = Variable.withAux(
+//     this,
+//     { implicit scope => implicit forward =>
+//       val (out, lse, cumsq, cumsk, maxq, maxk, philoxseed, philoxoffset) =
+//         STen.scaledDotProductAttention(
+//           query.forward,
+//           key.forward,
+//           valueIn.forward,
+//           attentionBias,
+//           isCausal
+//         )
+//       (
+//         out,
+//         List(
+//           lse,
+//           cumsq,
+//           cumsk,
+//           STen.fromLongArray(Array(maxq, maxk)),
+//           philoxseed,
+//           philoxoffset
+//         )
+//       )
+//     }
+//   )
 
-  val params =
-    List(
-      query.missingBackward,
-      key.missingBackward,
-      valueIn.missingBackward
-    )
-  override val joinedBackward = Some { _ => helper =>
-    val p = helper.p
-    implicit val fw = helper.forwardCache
-    val (out, aux) = value.forwardAux
-    val lse = aux(0)
-    val cumsq = aux(1)
-    val cumsk = aux(2)
-    val arr = aux(3).toLongArray
-    val maxq = arr(0)
-    val maxk = arr(1)
-    val philoxseed = aux(4)
-    val philoxoffset = aux(5)
-    Scope.root { implicit scope =>
-      val (gQ, gK, gV) = STen.scaledDotProductAttentionBackward(
-        p,
-        (query.forward),
-        (key.forward),
-        (valueIn.forward),
-        out,
-        attentionBias,
-        lse,
-        isCausal,
-        philoxseed,
-        philoxoffset,
-        cumsq,
-        cumsk,
-        maxq,
-        maxk
-      )
-      if (needsGrad(query)) {
-        val (outQ) = helper.partialDerivative(query)(scope)
-        outQ += (gQ)
-      }
-      if (needsGrad(key)) {
-        val (outK) = helper.partialDerivative(key)(scope)
-        outK += (gK)
-      }
+//   val params =
+//     List(
+//       query.missingBackward,
+//       key.missingBackward,
+//       valueIn.missingBackward
+//     )
+//   override val joinedBackward = Some { _ => helper =>
+//     val p = helper.p
+//     implicit val fw = helper.forwardCache
+//     val (out, aux) = value.forwardAux
+//     val lse = aux(0)
+//     val cumsq = aux(1)
+//     val cumsk = aux(2)
+//     val arr = aux(3).toLongArray
+//     val maxq = arr(0)
+//     val maxk = arr(1)
+//     val philoxseed = aux(4)
+//     val philoxoffset = aux(5)
+//     Scope.root { implicit scope =>
+//       val (gQ, gK, gV) = STen.scaledDotProductAttentionBackward(
+//         p,
+//         (query.forward),
+//         (key.forward),
+//         (valueIn.forward),
+//         out,
+//         attentionBias,
+//         lse,
+//         isCausal,
+//         philoxseed,
+//         philoxoffset,
+//         cumsq,
+//         cumsk,
+//         maxq,
+//         maxk
+//       )
+//       if (needsGrad(query)) {
+//         val (outQ) = helper.partialDerivative(query)(scope)
+//         outQ += (gQ)
+//       }
+//       if (needsGrad(key)) {
+//         val (outK) = helper.partialDerivative(key)(scope)
+//         outK += (gK)
+//       }
 
-      if (needsGrad(valueIn)) {
-        val (outVIn) = helper.partialDerivative(valueIn)(scope)
-        outVIn += (gV)
-      }
-    }
+//       if (needsGrad(valueIn)) {
+//         val (outVIn) = helper.partialDerivative(valueIn)(scope)
+//         outVIn += (gV)
+//       }
+//     }
 
-  }
+//   }
 
-}
+// }
 
 // case class Debug(
 //     scope: Scope,

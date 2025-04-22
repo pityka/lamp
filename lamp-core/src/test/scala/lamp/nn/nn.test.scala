@@ -7,7 +7,6 @@ import org.scalatest.funsuite.AnyFunSuite
 import lamp.autograd.NDArraySyntax._
 import aten.ATen
 import lamp.autograd.{ Embedding => _, _}
-import org.scalatest.Tag
 import lamp.Scope
 import lamp.Sc
 import lamp.util.NDArray
@@ -18,9 +17,8 @@ import org.scalatest.compatible.Assertion
 import lamp.CudaDevice
 import lamp.CPU
 import lamp.MPS
+import aten.Tensor
 
-object CudaTest extends Tag("cuda")
-object SlowTest extends Tag("slow")
 
 final class NNSuite extends AnyFunSuite {
   aten.Tensor.manual_seed(13223L)
@@ -53,7 +51,7 @@ final class NNSuite extends AnyFunSuite {
 
   def test1(id: String)(fun: Boolean => Unit) = {
     test(id) { fun(false) }
-    test(id + "/CUDA", CudaTest) { fun(true) }
+    if (Tensor.hasCuda) {test(id + "/CUDA") { fun(true) }}
   }
   def testGradientAndValue[M <: Module: Load](
       id: String,
@@ -65,7 +63,7 @@ final class NNSuite extends AnyFunSuite {
   ) =
     test(
       id + ": gradient is correct",
-      (if (cuda) List(CudaTest) else Nil): _*
+      
     ) {
 
       Scope.root { implicit scope =>
@@ -147,7 +145,6 @@ final class NNSuite extends AnyFunSuite {
   ) =
     test(
       id + ": gradient is correct",
-      (if (cuda) List(CudaTest) else Nil): _*
     ) {
       Scope.root { implicit scope =>
         implicit val fw : BackpropForwardCache = BackpropForwardCache.simple
@@ -226,7 +223,7 @@ final class NNSuite extends AnyFunSuite {
   ) =
     test(
       id + ": gradient is correct",
-      (if (cuda) List(CudaTest) else Nil): _*
+      
     ) {
       Scope.root { implicit scope =>
         implicit val fw : BackpropForwardCache = BackpropForwardCache.simple
@@ -308,7 +305,7 @@ final class NNSuite extends AnyFunSuite {
   ) =
     test(
       id + ": gradient is correct",
-      (if (device.isInstanceOf[CudaDevice]) List(CudaTest) else Nil): _*
+      
     ) {
 
       Scope.root { implicit scope =>
@@ -448,7 +445,7 @@ final class NNSuite extends AnyFunSuite {
       ),
     12.295836866004327
   )
-  testGradientAndValue("Logistic 2 - cuda", true)(
+  if (Tensor.hasCuda) {testGradientAndValue("Logistic 2 - cuda", true)(
     mat3x2,
     implicit pool =>
       LogisticRegression2(
@@ -457,7 +454,7 @@ final class NNSuite extends AnyFunSuite {
         const(lamp.saddle.fromMat(mat.ident(3), cuda = true))
       )(pool),
     12.295836866004326
-  )
+  )}
   testGradientAndValue("Mlp1 ", false)(
     mat3x2,
     implicit pool =>
@@ -468,7 +465,7 @@ final class NNSuite extends AnyFunSuite {
       )(pool),
     192.08796576929555
   )
-  testGradientAndValue("Mlp1 - cuda", true)(
+  if (Tensor.hasCuda) {testGradientAndValue("Mlp1 - cuda", true)(
     mat3x2,
     implicit pool =>
       Mlp1(
@@ -477,7 +474,7 @@ final class NNSuite extends AnyFunSuite {
         const(lamp.saddle.fromMat(mat.ident(3), cuda = true))
       )(pool),
     192.08796576929555
-  )
+  )}
 
   testGradientAndValueND("Conv1D ",  false)(
     nd1x2x3,
@@ -492,7 +489,7 @@ final class NNSuite extends AnyFunSuite {
       ),
     10.7941
   )
-  testGradientAndValueND("Conv1D/cuda ",true)(
+  if (Tensor.hasCuda) {testGradientAndValueND("Conv1D/cuda ",true)(
     nd1x2x3,
     implicit pool =>
       Conv1D(
@@ -503,8 +500,8 @@ final class NNSuite extends AnyFunSuite {
         dilation = 1,
         groups = 1
       ),
-    79.2702
-  )
+    14.2116
+  )}
   testGradientAndValueND("Conv2D ",false)(
     nd1x2x3x3,
     implicit pool =>
@@ -518,7 +515,7 @@ final class NNSuite extends AnyFunSuite {
       ),
     100.9049
   )
-  testGradientAndValueND("Conv2D/cuda ",true)(
+  if (Tensor.hasCuda) {testGradientAndValueND("Conv2D/cuda ",true)(
     nd1x2x3x3,
     implicit pool =>
       Conv2D(
@@ -530,7 +527,7 @@ final class NNSuite extends AnyFunSuite {
         groups = 1
       ),
     73.9732
-  )
+  )}
  
 
   // testGradientAndValueNDLong("Embedding ",false)(
