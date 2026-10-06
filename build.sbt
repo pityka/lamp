@@ -308,7 +308,7 @@ lazy val example_cifar100 = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
+      "com.github.scopt" %% "scopt" % "4.2.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -340,7 +340,7 @@ lazy val example_timemachine = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
+      "com.github.scopt" %% "scopt" % "4.2.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -353,7 +353,7 @@ lazy val example_bert = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
+      "com.github.scopt" %% "scopt" % "4.2.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion
     )
@@ -367,7 +367,7 @@ lazy val example_autoregressivelm = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
+      "com.github.scopt" %% "scopt" % "4.2.0",
       "com.typesafe.akka" %% "akka-actor" % "2.6.20",
       "com.typesafe.akka" %% "akka-remote" % "2.6.20",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
@@ -387,7 +387,7 @@ lazy val experiment_recursivelm = project
     publishArtifact in packageDoc := false,
     sources in (Compile, doc) := Seq.empty,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
+      "com.github.scopt" %% "scopt" % "4.2.0",
       "io.github.pityka" %% "saddle-core" % saddleVersion,
       "com.outr" %% "scribe" % scribeVersion,
       "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % jsoniterscalaVersion % "compile-internal"
@@ -403,7 +403,7 @@ lazy val example_arxiv = project
     publishArtifact := false,
     publish / skip := true,
     libraryDependencies ++= Seq(
-      "com.github.scopt" %% "scopt" % "4.1.0",
+      "com.github.scopt" %% "scopt" % "4.2.0",
       "com.outr" %% "scribe" % scribeVersion,
       "io.github.pityka" %% "saddle-binary" % saddleVersion,
       "io.github.pityka" %% "saddle-core" % saddleVersion,
